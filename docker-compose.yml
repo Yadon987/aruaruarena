@@ -1,0 +1,57 @@
+services:
+  # ----------------------------------------------------------------------------
+  # 🛠️ 開発用 DynamoDB (永続化あり)
+  # Port: 8000
+  # ----------------------------------------------------------------------------
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: aruaruarena-dynamodb
+    ports:
+      - "8000:8000"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ----------------------------------------------------------------------------
+  # 🧪 テスト用 DynamoDB (インメモリ・高速)
+  # Port: 8002
+  # ----------------------------------------------------------------------------
+  dynamodb-test:
+    image: amazon/dynamodb-local:latest
+    container_name: aruaruarena-dynamodb-test
+    ports:
+      - "8002:8000"
+    command: "-jar DynamoDBLocal.jar -inMemory -sharedDb"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ----------------------------------------------------------------------------
+  # 👁️ DynamoDB GUI Admin
+  # URL: http://localhost:8001
+  # ----------------------------------------------------------------------------
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    container_name: aruaruarena-dynamodb-admin
+    ports:
+      - "8001:8001"
+    environment:
+      DYNAMO_ENDPOINT: "http://dynamodb-local:8000"
+      AWS_REGION: "ap-northeast-1"
+      AWS_ACCESS_KEY_ID: "local"
+      AWS_SECRET_ACCESS_KEY: "local"
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+
+volumes:
+  dynamodb-data:
