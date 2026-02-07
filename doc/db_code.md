@@ -2,63 +2,84 @@
 
 Project aruaruarena {
   database_type: 'DynamoDB'
-  Note: 'DynamoDB (NoSQL), オンデマンドモード, submissions は永久保存, rate_limits / content_dedup はTTLで自動削除'
+  Note: '''
+  DynamoDB (NoSQL), オンデマンドモード
+  [制約事項]
+  - posts: 永久保存 (updated_at は意図的に除外)
+  - judges_count: 最大3人 (3人完了で scored)
+  - rate_limits, duplicate_checks: TTLにより自動削除
+  '''
 }
 
-Table submissions {
-  submission_id varchar [pk, note: 'UUID, Partition Key']
-  nickname varchar(20) [not null, note: '1-20文字（表示は8文字超で省略）']
-  content varchar(30) [not null, note: '3-30文字（grapheme単位で厳密カウント）']
-  content_norm_hash varchar [not null, note: '正規化後ハッシュ（重複検出の追跡用）']
-  rate_limit_key varchar [not null, note: 'ip#hash または nick#hash（投稿時のレート制限キー）']
-  average_score decimal(4,1) [note: '平均点（小数第1位）例: 87.3']
-  judged_count int [note: '成功した審査員数（0-3）']
-  status varchar [not null, default: 'judging', note: 'judging / scored / failed']
-  created_at bigint [not null, note: 'UnixTimestamp (seconds)']
-  updated_at bigint [not null, note: 'UnixTimestamp (seconds)']
-  ranking_pk varchar [not null, default: 'general', note: 'GSI用の固定Partition Key']
-  rank_key varchar [note: 'GSI Sort Key（採点確定後にセット）']
+Table posts {
+  // Partition Key
+  id            string        [pk, note: 'UUID']
+  
+  // Attributes
+  nickname      string        [not null, note: '1-20文字（表示は8文字超で省略）']
+  body          string        [not null, note: '3-30文字（grapheme単位で厳密カウント）']
+  status        string        [not null, note: 'judging / scored / failed (App default: judging, scored時はGSI PKに使用)']
+  
+  // Scoring
+  average_score number        [note: '平均点 (小数第1位: Decimal/Float) 例: 87.3']
+  judges_count  number        [not null, note: '成功した審査員数 (0-3の整数, App default: 0)']
+
+  // GSI: RankingIndex (TOP50取得用)
+  score_key     string        [note: 'GSI Sort Key (status=scoredのみ設定, 他はNULL)']
+
+  // Timestamps
+  created_at    number        [not null, note: 'UnixTimestamp (seconds/整数)']
 
   indexes {
-    (ranking_pk, rank_key) [name: 'RankingIndex', note: 'GSI: TOP50取得・順位COUNT用']
+    (status, score_key) [name: 'RankingIndex', note: 'status=scored でTOP50取得 (スパースインデックス)']
   }
+
+  Note: '''
+  score_key の構成（ランクが高い順かつ同点は早い順）:
+  inv_score = 1000 - (average_score * 10)
+  score_key = format("%04d#%010d#%s", inv_score, created_at, id)
+  '''
 }
 
 Table judgements {
-  submission_id varchar [not null, note: 'Partition Key（投稿ID）']
-  judge_sort varchar [not null, note: 'Sort Key: judge_name#created_at#judgement_id']
-  judgement_id varchar [not null, note: 'UUID']
-  judge_name varchar [not null, note: 'hiroyuki / dewi / nakao']
-  created_at bigint [not null, note: 'UnixTimestamp (seconds)']
-  success boolean [not null, default: true, note: 'API成功/失敗']
-  empathy int [note: '共感度 0-20点']
-  humor int [note: '面白さ 0-20点']
-  brevity int [note: '簡潔さ 0-20点']
-  originality int [note: '独創性 0-20点']
-  expression int [note: '表現力 0-20点']
-  total_score int [note: '合計点 0-100点']
-  comment text [note: '審査コメント']
-  catchphrase varchar [note: '口癖セリフ']
-  error_code varchar [note: 'timeout / provider_error など（失敗時）']
+  // Primary Key (上書き型: 再審査時は同じpersonaで上書き)
+  post_id       string        [not null, note: 'Partition Key']
+  persona       string        [not null, note: 'Sort Key: hiroyuki / dewi / nakao']
+
+  // Attributes
+  id            string        [not null, note: 'UUID (ログ・デバッグ用)']
+  succeeded     boolean       [not null, note: 'API成功/失敗 (App default: false)']
+  error_code    string        [note: '失敗時: timeout / provider_error など']
+
+  // Scores (失敗時はNULL)
+  empathy       number        [note: '共感度 (0-20の整数)']
+  humor         number        [note: '面白さ (0-20の整数)']
+  brevity       number        [note: '簡潔さ (0-20の整数)']
+  originality   number        [note: '独創性 (0-20の整数)']
+  expression    number        [note: '表現力 (0-20の整数)']
+  total_score   number        [note: '合計点 (0-100の整数)']
+  comment       string        [note: '審査コメント']
+
+  // Timestamps
+  judged_at     number        [not null, note: '最終審査日時 (UnixTimestamp/整数)']
 
   indexes {
-    (submission_id, judge_sort) [pk, name: 'PrimaryKey']
+    (post_id, persona) [pk, name: 'PrimaryKey']
   }
+
+  Note: '再審査時は上書き保存。過去の履歴はCloudWatch Logsで管理。'
 }
 
 Table rate_limits {
-  key varchar [pk, note: 'ip#hash または nick#hash']
-  last_posted_at bigint [not null, note: 'UnixTimestamp (seconds)']
-  expires_at bigint [not null, note: 'TTL（5分後）自動削除']
+  identifier    string        [pk, note: 'PK: ip#hash または nick#hash']
+  expires_at    number        [not null, note: 'TTL (UnixTimestamp/整数, 5分後自動削除)']
 }
 
-Table content_dedup {
-  content_norm_hash varchar [pk, note: 'Partition Key（正規化後ハッシュ）']
-  created_at bigint [not null, note: 'UnixTimestamp (seconds)']
-  expires_at bigint [not null, note: 'TTL（24時間後）自動削除']
-  submission_id varchar [note: '最初に登録された投稿ID（トレース用）']
+Table duplicate_checks {
+  body_hash     string        [pk, note: 'PK: 正規化後ハッシュ']
+  post_id       string        [note: '最初に登録された投稿ID（トレース用）']
+  expires_at    number        [not null, note: 'TTL (UnixTimestamp/整数, 24時間後自動削除)']
 }
 
-Ref: judgements.submission_id > submissions.submission_id
-Ref: content_dedup.submission_id > submissions.submission_id
-Ref: submissions.rate_limit_key > rate_limits.key
+Ref: judgements.post_id > posts.id
+Ref: duplicate_checks.post_id > posts.id

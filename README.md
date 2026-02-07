@@ -24,6 +24,10 @@
   - TOP 50ランキング
   - 自分の投稿位置を即座に確認可能
 
+- 🖼️ **動的OGP画像生成**
+  - 審査完了時にOGP画像を自動生成
+  - SNSシェア時に投稿内容・スコアを表示
+
 - 🎨 **キャラクターアニメーション**
   - 審査中にキャラクターが動く（Framer Motion）
   - ランダムで口癖を発言
@@ -89,6 +93,46 @@
 
 ---
 
+## 🖼️ OGP画像生成
+
+### 概要
+SNSでシェアされた際に、投稿内容とスコアを含む動的なOGP画像を表示します。
+
+### 戦略: ウォームアップ方式
+審査完了時にOGP画像を事前生成し、CloudFrontにキャッシュします。
+
+```
+審査完了 → RubyスレッドでOGP URLにリクエスト → CloudFrontがキャッシュ → SNSクローラーは高速取得
+```
+
+### フロー
+1. **審査完了**: `status` が `scored` に変更
+2. **ウォームアップ**: `Thread.new` で自身のOGP URLにHTTPリクエスト（最大0.5秒待機）
+3. **画像生成**: `mini_magick` でベース画像にテキスト合成
+4. **キャッシュ**: CloudFrontが1週間キャッシュ
+5. **SNSシェア**: キャッシュ済み画像を即座に配信
+
+### 実装例
+```ruby
+# app/models/post.rb
+def warm_ogp_cache
+  thread = Thread.new do
+    uri = URI("https://api.example.com/ogp/posts/#{id}.png")
+    Net::HTTP.get(uri)
+  rescue => e
+    Rails.logger.warn("OGP warmup failed: #{e.message}")
+  end
+  thread.join(0.5)  # 最大0.5秒だけ待つ（Lambda環境対策）
+end
+```
+
+### メリット
+- ✅ 追加コストなし（S3保存不要）
+- ✅ インフラ追加なし（SQS/Job不要）
+- ✅ SNSクローラーのタイムアウト回避
+
+---
+
 ## 🛠️ 技術スタック
 
 ### Backend
@@ -96,6 +140,7 @@
 - **DynamoDB** (NoSQL、オンデマンドモード)
 - **AWS Lambda** (Dockerコンテナデプロイ)
 - **API Gateway** (HTTP API)
+- **mini_magick** (動的OGP画像生成)
 - **RSpec** (テスト)
 
 ### Frontend
@@ -113,7 +158,7 @@
 
 ### Infrastructure
 - **Terraform** (IaC)
-- **AWS CloudFront** (CDN)
+- **AWS CloudFront** (CDN + OGPキャッシュ)
 - **AWS S3** (静的ホスティング)
 - **AWS EventBridge** (ウォームアップ)
 - **GitHub Actions** (CI/CD)
@@ -136,7 +181,7 @@ graph TB
     end
 
     subgraph "AWS CloudFront + S3"
-        CloudFront[CloudFront<br/>CDN]
+        CloudFront[CloudFront<br/>CDN + OGPキャッシュ]
         S3Static[S3 Bucket<br/>静的ホスティング]
     end
 
@@ -145,13 +190,14 @@ graph TB
     end
 
     subgraph "AWS Lambda (Container)"
-        Lambda[Lambda Function<br/>Ruby 3.2 + Rails 8.0 API<br/>- Dynamoid<br/>- AI Judge Service]
+        Lambda[Lambda Function<br/>Ruby 3.2 + Rails 8.0 API<br/>- Dynamoid<br/>- AI Judge Service<br/>- OGP Generator]
     end
 
     subgraph "AWS DynamoDB"
-        DynamoSubmissions[(submissions<br/>テーブル)]
+        DynamoPosts[(posts<br/>テーブル)]
         DynamoJudgements[(judgements<br/>テーブル)]
         DynamoRateLimits[(rate_limits<br/>テーブル)]
+        DynamoDuplicateChecks[(duplicate_checks<br/>テーブル)]
     end
 
     subgraph "AI APIs"
@@ -186,9 +232,10 @@ graph TB
     ReactApp -->|API Request| APIGateway
     APIGateway --> Lambda
     
-    Lambda --> DynamoSubmissions
+    Lambda --> DynamoPosts
     Lambda --> DynamoJudgements
     Lambda --> DynamoRateLimits
+    Lambda --> DynamoDuplicateChecks
     
     Lambda -.->|並列審査| Gemini
     Lambda -.->|並列審査| GLM4
@@ -204,9 +251,10 @@ graph TB
     style Browser fill:#e1f5ff
     style ReactApp fill:#61dafb
     style Lambda fill:#ff9900
-    style DynamoSubmissions fill:#4053d6
+    style DynamoPosts fill:#4053d6
     style DynamoJudgements fill:#4053d6
     style DynamoRateLimits fill:#4053d6
+    style DynamoDuplicateChecks fill:#4053d6
     style Gemini fill:#4285f4
     style GLM4 fill:#00d4aa
     style GPT fill:#10a37f
@@ -224,10 +272,11 @@ aruaruarena/
 │   ├── app/
 │   │   ├── controllers/
 │   │   │   └── api/
-│   │   │       ├── submissions_controller.rb
-│   │   │       └── rankings_controller.rb
+│   │   │       ├── posts_controller.rb
+│   │   │       ├── rankings_controller.rb
+│   │   │       └── ogp_controller.rb
 │   │   ├── models/
-│   │   │   ├── submission.rb
+│   │   │   ├── post.rb
 │   │   │   └── judgement.rb
 │   │   ├── services/
 │   │   │   ├── ai_judge_service.rb
@@ -236,12 +285,9 @@ aruaruarena/
 │   │   │   ├── openai_service.rb
 │   │   │   ├── spam_detector.rb
 │   │   │   ├── rate_limiter.rb
-│   │   │   └── ranking_service.rb
+│   │   │   └── ogp_generator.rb
 │   │   └── lambda.rb
 │   ├── spec/
-│   │   ├── services/
-│   │   └── support/
-│   │       └── vcr_cassettes/
 │   ├── Gemfile
 │   ├── Dockerfile
 │   └── config/
@@ -251,7 +297,7 @@ aruaruarena/
 ├── frontend/                 # React SPA
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── SubmissionForm.tsx
+│   │   │   ├── PostForm.tsx
 │   │   │   ├── RankingList.tsx
 │   │   │   ├── JudgePanel.tsx
 │   │   │   ├── PrivacyPolicy.tsx
@@ -260,7 +306,7 @@ aruaruarena/
 │   │   │       ├── DewiAvatar.tsx
 │   │   │       └── NakaoAvatar.tsx
 │   │   ├── hooks/
-│   │   │   ├── useSubmission.ts
+│   │   │   ├── usePost.ts
 │   │   │   ├── useRanking.ts
 │   │   │   └── useLocalStorage.ts
 │   │   ├── utils/
@@ -284,6 +330,9 @@ aruaruarena/
 │   ├── ci.yml
 │   └── deploy.yml
 │
+├── doc/
+│   └── db_code.md            # DB設計書
+│
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -299,6 +348,7 @@ aruaruarena/
 - Docker & Docker Compose
 - AWS CLI
 - Terraform 1.6+
+- ImageMagick（OGP画像生成用）
 
 ### API Keys（必須）
 - Gemini API Key (Google AI Studio)
@@ -326,9 +376,10 @@ APP_ENV=development
 AWS_REGION=ap-northeast-1
 
 # DynamoDB
-DYNAMODB_TABLE_SUBMISSIONS=aruaruarena-submissions
+DYNAMODB_TABLE_POSTS=aruaruarena-posts
 DYNAMODB_TABLE_JUDGEMENTS=aruaruarena-judgements
 DYNAMODB_TABLE_RATE_LIMITS=aruaruarena-rate-limits
+DYNAMODB_TABLE_DUPLICATE_CHECKS=aruaruarena-duplicate-checks
 DYNAMODB_ENDPOINT=http://localhost:8000
 
 # AI APIs
@@ -410,40 +461,40 @@ terraform apply
 
 ## 📡 API仕様
 
-### POST /api/submissions
+### POST /api/posts
 あるあるを投稿
 
 **リクエスト**
 ```json
 {
   "nickname": "太郎",
-  "content": "スヌーズ押して二度寝"
+  "body": "スヌーズ押して二度寝"
 }
 ```
 
 **レスポンス**
 ```json
 {
-  "submission_id": "550e8400-e29b-41d4-a716-446655440000",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "status": "judging"
 }
 ```
 
-### GET /api/submissions/:id
+### GET /api/posts/:id
 投稿詳細と審査状況
 
 **レスポンス**
 ```json
 {
-  "submission_id": "550e8400-...",
+  "id": "550e8400-...",
   "nickname": "太郎",
-  "content": "スヌーズ押して二度寝",
+  "body": "スヌーズ押して二度寝",
   "average_score": 85.3,
   "rank": 12,
   "total_count": 500,
   "judgements": [
     {
-      "judge_name": "hiroyuki",
+      "persona": "hiroyuki",
       "total_score": 82,
       "empathy": 14,
       "humor": 17,
@@ -451,20 +502,19 @@ terraform apply
       "originality": 19,
       "expression": 14,
       "comment": "それって本当にあるあるですか？",
-      "catchphrase": "なんかデータとかあるんですか？",
-      "status": "completed"
+      "success": true
     },
     {
-      "judge_name": "dewi",
+      "persona": "dewi",
       "total_score": 90,
       "comment": "まぁ、共感できるわ！",
-      "status": "completed"
+      "success": true
     },
     {
-      "judge_name": "nakao",
+      "persona": "nakao",
       "total_score": 84,
       "comment": "わかるわかる！",
-      "status": "completed"
+      "success": true
     }
   ]
 }
@@ -479,9 +529,9 @@ terraform apply
   "rankings": [
     {
       "rank": 1,
-      "submission_id": "aaa-111",
+      "id": "aaa-111",
       "nickname": "太郎",
-      "content": "スヌーズ押して二度寝",
+      "body": "スヌーズ押して二度寝",
       "average_score": 95.3
     }
   ],
@@ -489,7 +539,7 @@ terraform apply
 }
 ```
 
-### GET /api/my-rank/:submission_id
+### GET /api/my-rank/:id
 自分の順位確認
 
 **レスポンス**
@@ -497,84 +547,77 @@ terraform apply
 {
   "rank": 123,
   "total_count": 500,
-  "submission": { /* ... */ }
+  "post": { /* ... */ }
 }
 ```
 
-### POST /api/submissions/:id/rejudge
+### POST /api/posts/:id/rejudge
 失敗した審査員の再審査
 
 **リクエスト**
 ```json
 {
-  "failed_judges": ["dewi"]
+  "failed_personas": ["dewi"]
 }
 ```
+
+### GET /ogp/posts/:id.png
+動的OGP画像取得
 
 ---
 
 ## 🗄️ データベース設計
 
-### submissions テーブル
+詳細は [doc/db_code.md](doc/db_code.md) を参照。
 
-**Primary Key**: `submission_id` (String)
+### posts テーブル
 
 | 属性 | 型 | 説明 |
 |-----|---|------|
-| submission_id | String | UUID |
+| id | String | UUID (Primary Key) |
 | nickname | String | 1-20文字 |
-| content | String | 3-30文字（grapheme） |
-| content_norm_hash | String | 正規化後のハッシュ（重複検出） |
+| body | String | 3-30文字（grapheme） |
 | average_score | Number | 小数第1位（例: 87.3） |
-| score10 | Number | average_score × 10（整数化） |
-| inv_score10 | Number | 1000 - score10 |
-| created_at | Number | UnixTimestamp |
-| ranking_pk | String | 常に "general" |
-| rank_key | String | ソートキー（下記） |
+| judges_count | Number | 成功した審査員数（0-3） |
+| status | String | judging / scored / failed |
+| score_key | String | GSI SK (スコア降順 + 作成日時昇順) |
+| status | String | GSI PK (`scored` の場合のみインデックスされる) |
 
 **GSI: RankingIndex**
-- Partition Key: `ranking_pk`
-- Sort Key: `rank_key`
-
-**rank_keyの構成**（同点は早い投稿が上）
-```ruby
-inv_score10_padded = format('%04d', inv_score10)
-created_at_padded = format('%010d', created_at)
-rank_key = "#{inv_score10_padded}##{created_at_padded}##{submission_id}"
-```
+- Partition Key: `status`
+- Sort Key: `score_key`
+- 用途: TOP50ランキング取得 (`ScanIndexForward=false` / スパースインデックス)
 
 ### judgements テーブル
 
-**Primary Key**: `judgement_id` (String)
-
 | 属性 | 型 | 説明 |
 |-----|---|------|
-| judgement_id | String | UUID |
-| submission_id | String | 投稿ID |
-| judge_name | String | hiroyuki/dewi/nakao |
-| empathy | Number | 0-20 |
-| humor | Number | 0-20 |
-| brevity | Number | 0-20 |
-| originality | Number | 0-20 |
-| expression | Number | 0-20 |
-| total_score | Number | 0-100 |
-| comment | String | コメント |
-| catchphrase | String | 口癖 |
-| success | Boolean | 成功/失敗 |
-| created_at | Number | UnixTimestamp |
+| post_id | String | Partition Key |
+| persona | String | Sort Key: hiroyuki / dewi / nakao (上書き型) |
+| id | String | UUID (ログ・デバッグ用) |
+| succeeded | Boolean | API成功/失敗 (App default: false) |
+| error_code | String | 失敗時のエラーコード |
+| empathy, humor, brevity, originality, expression | Number | 各0-20点（失敗時はNULL） |
+| total_score | Number | 0-100点（失敗時はNULL） |
+| comment | String | 審査コメント（失敗時はNULL） |
+| judged_at | Number | 最終審査日時 (UnixTimestamp) |
 
-**GSI: SubmissionIndex**
-- Partition Key: `submission_id`
+> **Note:** 再審査時は同じ persona で上書き保存。過去履歴は CloudWatch Logs で管理。
 
 ### rate_limits テーブル
 
-**Primary Key**: `key` (String)
+| 属性 | 型 | 説明 |
+|-----|---|------|
+| identifier | String | Primary Key (`ip#hash` または `nick#hash`) |
+| expires_at | Number | TTL（5分後に自動削除） |
+
+### duplicate_checks テーブル
 
 | 属性 | 型 | 説明 |
 |-----|---|------|
-| key | String | `ip#<hash>` または `nick#<hash>` |
-| last_posted_at | Number | 最終投稿日時 |
-| expires_at | Number | TTL（5分後に自動削除） |
+| body_hash | String | Primary Key（正規化後ハッシュ） |
+| expires_at | Number | TTL（24時間後に自動削除） |
+| post_id | String | 最初に登録された投稿ID（トレース用） |
 
 ---
 
@@ -611,15 +654,13 @@ rank_key = "#{inv_score10_padded}##{created_at_padded}##{submission_id}"
 - AI: $6.75
 - **合計: $7.53**
 
-**$200クレジット残高: 約$192**
-
 ---
 
 ## 🔐 セキュリティ
 
 ### 実装済み
 - ✅ レート制限（IP/ニックネーム5分制限）
-- ✅ スパム検出（同一テキスト、文字種類数）
+- ✅ スパム検出（同一テキスト24時間制限）
 - ✅ 入力バリデーション
 - ✅ HTTPS強制（CloudFront）
 - ✅ CORS設定
@@ -713,4 +754,3 @@ MIT License
 ---
 
 **🏟️ あるあるアリーナで、あなたの「あるある」を世界に届けよう！**
-
