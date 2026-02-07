@@ -577,11 +577,11 @@ terraform apply
 | id | String | UUID (Primary Key) |
 | nickname | String | 1-20文字 |
 | body | String | 3-30文字（grapheme） |
-| average_score | Number | 小数第1位（例: 87.3） |
-| judges_count | Number | 成功した審査員数（0-3） |
-| status | String | judging / scored / failed |
+| average_score | Number | 平均点 (小数第1位: Decimal/Float) |
+| judges_count | Number | 成功した審査員数 (0-3の整数, App default: 0) |
+| status | String | judging / scored / failed (GSI PK兼用) |
 | score_key | String | GSI SK (スコア降順 + 作成日時昇順) |
-| status | String | GSI PK (`scored` の場合のみインデックスされる) |
+| created_at | Number | UnixTimestamp (seconds/整数) |
 
 **GSI: RankingIndex**
 - Partition Key: `status`
@@ -754,3 +754,28 @@ MIT License
 ---
 
 **🏟️ あるあるアリーナで、あなたの「あるある」を世界に届けよう！**
+
+---
+
+## 🎨 UI/UX Design
+
+### Sound Design (BGM & SE)
+「レトロフューチャー＆プレイフル」をテーマに、誰もが知るクラシック曲を使用。
+
+#### BGM (Classical Masterpieces)
+| シーン | 曲名 (原曲) | イメージ・演出意図 |
+|:---:|:---|:---|
+| **トップ / 投稿** | 🎵 <br> **ラデツキー行進曲** <br> (ヨハン・シュトラウス1世) | **手拍子・祝祭感** <br> 「これから楽しいことが始まる！」というポジティブな導入。 |
+| **審査中 (Wait)** | 🐎 <br> **クシコス・ポスト** <br> (ネッケ) | **疾走感・運動会** <br> AIが全力で審査して駆け抜けているスピード感を演出。 |
+| **結果発表 (Success)** | 🏆 <br> **天国と地獄 (ラスト)** <br> (オッフェンバック) | **大団円・ゴール** <br> ゴールテープを切った瞬間の盛り上がり。勝利のファンファーレ。 |
+| **結果発表 (Fail)** | ⚡ <br> **運命 (冒頭)** <br> (ベートーヴェン) | **衝撃・ガーン！** <br> わかりやすい失敗音。「ジャジャジャジャーン！」 |
+
+#### SE (Sound Effects)
+- **Click**: カチッ（硬質なシステム音）
+- **Count Up**: ピピピピ...（得点上昇）
+- **Stamp**: ドン！（重低音で決定時の高揚感）
+- **Mute Toggle**: 必須（デフォルトOFF/ON切り替え）
+
+#### Technical Stack
+- **Library**: **Howler.js** (Web Audio API wrapper)
+- **Format**: `.mp3` (汎用性重視)
