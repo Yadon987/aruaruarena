@@ -24,14 +24,14 @@ Table posts {
   average_score number        [note: '平均点 (小数第1位: Decimal/Float) 例: 87.3']
   judges_count  number        [not null, note: '成功した審査員数 (0-3の整数, App default: 0)']
 
-  // GSI: RankingIndex (TOP50取得用)
+  // GSI: RankingIndex (TOP20取得用)
   score_key     string        [note: 'GSI Sort Key (status=scoredのみ設定, 他はNULL)']
 
   // Timestamps
   created_at    number        [not null, note: 'UnixTimestamp (seconds/整数)']
 
   indexes {
-    (status, score_key) [name: 'RankingIndex', note: 'status=scored でTOP50取得 (スパースインデックス)']
+    (status, score_key) [name: 'RankingIndex', note: 'status=scored でTOP20取得 (スパースインデックス)']
   }
 
   Note: '''
@@ -41,7 +41,7 @@ Table posts {
   '''
 }
 
-Table judgements {
+Table judgments {
   // Primary Key (上書き型: 再審査時は同じpersonaで上書き)
   post_id       string        [not null, note: 'Partition Key']
   persona       string        [not null, note: 'Sort Key: hiroyuki / dewi / nakao']
@@ -81,5 +81,5 @@ Table duplicate_checks {
   expires_at    number        [not null, note: 'TTL (UnixTimestamp/整数, 24時間後自動削除)']
 }
 
-Ref: judgements.post_id > posts.id
+Ref: judgments.post_id > posts.id
 Ref: duplicate_checks.post_id > posts.id

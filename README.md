@@ -16,8 +16,8 @@
 ### ✨ 特徴
 
 - 🤖 **AI審査員3人による自動採点**
-  - ひろゆき風（Gemini Pro）: 論理的、否定的、独創性重視
-  - デヴィ婦人風（GLM-4）: 上品、感情的、言語センス重視
+  - ひろゆき風（Gemini 2.5 Flash）: 論理的、否定的、独創性重視
+  - デヴィ婦人風（GLM-4.7-FlashX）: 上品、感情的、言語センス重視
   - 中尾彬風（GPT-4o-mini）: 豪快、共感的、総合的な笑い重視
 
 - 📊 **リアルタイムランキング**
@@ -152,8 +152,8 @@ end
 - **Playwright** (E2Eテスト)
 
 ### AI APIs
-- **Gemini Pro** (Google) - ひろゆき風
-- **GLM-4** (Zhipu AI) - デヴィ婦人風
+- **Gemini 2.5 Flash** (Google) - ひろゆき風
+- **GLM-4.7-FlashX** (Zhipu AI) - デヴィ婦人風
 - **GPT-4o-mini** (OpenAI) - 中尾彬風
 
 ### Infrastructure
@@ -195,14 +195,14 @@ graph TB
 
     subgraph "AWS DynamoDB"
         DynamoPosts[(posts<br/>テーブル)]
-        DynamoJudgements[(judgements<br/>テーブル)]
+        DynamoJudgments[(judgments<br/>テーブル)]
         DynamoRateLimits[(rate_limits<br/>テーブル)]
         DynamoDuplicateChecks[(duplicate_checks<br/>テーブル)]
     end
 
     subgraph "AI APIs"
-        Gemini[Google Gemini Pro<br/>ひろゆき風]
-        GLM4[Zhipu GLM-4<br/>デヴィ婦人風]
+        Gemini[Google Gemini 2.5 Flash<br/>ひろゆき風]
+        GLM4[Zhipu GLM-4.7-FlashX<br/>デヴィ婦人風]
         GPT[OpenAI GPT-4o-mini<br/>中尾彬風]
     end
 
@@ -233,7 +233,7 @@ graph TB
     APIGateway --> Lambda
     
     Lambda --> DynamoPosts
-    Lambda --> DynamoJudgements
+    Lambda --> DynamoJudgments
     Lambda --> DynamoRateLimits
     Lambda --> DynamoDuplicateChecks
     
@@ -252,7 +252,7 @@ graph TB
     style ReactApp fill:#61dafb
     style Lambda fill:#ff9900
     style DynamoPosts fill:#4053d6
-    style DynamoJudgements fill:#4053d6
+    style DynamoJudgments fill:#4053d6
     style DynamoRateLimits fill:#4053d6
     style DynamoDuplicateChecks fill:#4053d6
     style Gemini fill:#4285f4
@@ -277,7 +277,7 @@ aruaruarena/
 │   │   │       └── ogp_controller.rb
 │   │   ├── models/
 │   │   │   ├── post.rb
-│   │   │   └── judgement.rb
+│   │   │   └── judgment.rb
 │   │   ├── services/
 │   │   │   ├── ai_judge_service.rb
 │   │   │   ├── gemini_service.rb
@@ -331,7 +331,7 @@ aruaruarena/
 │   └── deploy.yml
 │
 ├── doc/
-│   └── db_code.md            # DB設計書
+│   └── db_schema.md            # DB設計書
 │
 ├── docker-compose.yml
 ├── .env.example
@@ -352,7 +352,7 @@ aruaruarena/
 
 ### API Keys（必須）
 - Gemini API Key (Google AI Studio)
-- GLM-4 API Key (Zhipu AI)
+- GLM-4.7-FlashX API Key (Zhipu AI)
 - OpenAI API Key
 
 ### 1. リポジトリのクローン
@@ -377,7 +377,7 @@ AWS_REGION=ap-northeast-1
 
 # DynamoDB
 DYNAMODB_TABLE_POSTS=aruaruarena-posts
-DYNAMODB_TABLE_JUDGEMENTS=aruaruarena-judgements
+DYNAMODB_TABLE_JUDGEMENTS=aruaruarena-judgments
 DYNAMODB_TABLE_RATE_LIMITS=aruaruarena-rate-limits
 DYNAMODB_TABLE_DUPLICATE_CHECKS=aruaruarena-duplicate-checks
 DYNAMODB_ENDPOINT=http://localhost:8000
@@ -492,7 +492,7 @@ terraform apply
   "average_score": 85.3,
   "rank": 12,
   "total_count": 500,
-  "judgements": [
+  "judgments": [
     {
       "persona": "hiroyuki",
       "total_score": 82,
@@ -568,7 +568,7 @@ terraform apply
 
 ## 🗄️ データベース設計
 
-詳細は [doc/db_code.md](doc/db_code.md) を参照。
+詳細は [doc/db_schema.md](doc/db_schema.md) を参照。
 
 ### posts テーブル
 
@@ -579,16 +579,16 @@ terraform apply
 | body | String | 3-30文字（grapheme） |
 | average_score | Number | 平均点 (小数第1位: Decimal/Float) |
 | judges_count | Number | 成功した審査員数 (0-3の整数, App default: 0) |
-| status | String | judging / scored / failed (GSI PK兼用) |
+| status | String | judging / scored / failed (App default: judging, GSI PK兼用) |
 | score_key | String | GSI SK (スコア降順 + 作成日時昇順) |
 | created_at | Number | UnixTimestamp (seconds/整数) |
 
 **GSI: RankingIndex**
 - Partition Key: `status`
 - Sort Key: `score_key`
-- 用途: TOP50ランキング取得 (`ScanIndexForward=false` / スパースインデックス)
+- 用途: TOP20ランキング取得 (`ScanIndexForward=false` / スパースインデックス)
 
-### judgements テーブル
+### judgments テーブル
 
 | 属性 | 型 | 説明 |
 |-----|---|------|
@@ -597,10 +597,10 @@ terraform apply
 | id | String | UUID (ログ・デバッグ用) |
 | succeeded | Boolean | API成功/失敗 (App default: false) |
 | error_code | String | 失敗時のエラーコード |
-| empathy, humor, brevity, originality, expression | Number | 各0-20点（失敗時はNULL） |
-| total_score | Number | 0-100点（失敗時はNULL） |
-| comment | String | 審査コメント（失敗時はNULL） |
-| judged_at | Number | 最終審査日時 (UnixTimestamp) |
+| empathy, humor, brevity, originality, expression | Number | 各0-20の整数 (失敗時はNULL) |
+| total_score | Number | 0-100の整数 (失敗時はNULL) |
+| comment | String | 審査コメント (失敗時はNULL) |
+| judged_at | Number | 最終審査日時 (UnixTimestamp/整数) |
 
 > **Note:** 再審査時は同じ persona で上書き保存。過去履歴は CloudWatch Logs で管理。
 
@@ -644,8 +644,8 @@ terraform apply
 
 | API | 単価 | 月額（500投稿） |
 |-----|------|----------------|
-| Gemini Pro | ~$0.001 | $0.50 |
-| GLM-4 | ~$0.002 | $1.00 |
+| Gemini 2.5 Flash | ~$0.001 | $0.50 |
+| GLM-4.7-FlashX | ~$0.002 | $1.00 |
 | GPT-4o-mini | ~$0.0015 | $0.75 |
 | **合計** | - | **$2.25/月** |
 
