@@ -330,8 +330,9 @@ aruaruarena/
 │   ├── ci.yml
 │   └── deploy.yml
 │
-├── doc/
-│   └── db_schema.md            # DB設計書
+├── docs/
+│   ├── db_schema.md          # DB設計書
+│   └── screen_design.md      # 画面遷移・UI設計書
 │
 ├── docker-compose.yml
 ├── .env.example
@@ -568,7 +569,7 @@ terraform apply
 
 ## 🗄️ データベース設計
 
-詳細は [doc/db_schema.md](doc/db_schema.md) を参照。
+詳細は [docs/db_schema.md](docs/db_schema.md) を参照。
 
 ### posts テーブル
 
