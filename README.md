@@ -268,74 +268,86 @@ graph TB
 
 ```
 aruaruarena/
-├── backend/                  # Rails API
+├── .github/
+│   ├── workflows/
+│   │   ├── test.yml            # CI: RSpec, RuboCop, Brakeman
+│   │   └── deploy.yml          # CD: Deploy to AWS Lambda
+│   └── ISSUE_TEMPLATE/
+│       ├── spec.md             # 仕様策定 (SDD/TDD)
+│       └── bug_report.md       # バグ報告
+│
+├── backend/                  # Rails 8 API Mode
 │   ├── app/
 │   │   ├── controllers/
-│   │   │   └── api/
+│   │   │   └── api/v1/       # API Versioning
 │   │   │       ├── posts_controller.rb
 │   │   │       ├── rankings_controller.rb
 │   │   │       └── ogp_controller.rb
 │   │   ├── models/
 │   │   │   ├── post.rb
 │   │   │   └── judgment.rb
-│   │   ├── services/
+│   │   ├── services/         # Business Logic
 │   │   │   ├── ai_judge_service.rb
-│   │   │   ├── gemini_service.rb
-│   │   │   ├── glm_service.rb
-│   │   │   ├── openai_service.rb
 │   │   │   ├── spam_detector.rb
 │   │   │   ├── rate_limiter.rb
 │   │   │   └── ogp_generator.rb
-│   │   └── lambda.rb
-│   ├── spec/
+│   │   ├── adapters/         # AI API Adapters (Strategy Pattern)
+│   │   │   ├── base_ai_adapter.rb
+│   │   │   ├── gemini_adapter.rb
+│   │   │   ├── glm_adapter.rb
+│   │   │   └── openai_adapter.rb
+│   │   └── prompts/          # AI Prompt Templates
+│   │       ├── hiroyuki.txt
+│   │       ├── dewi.txt
+│   │       └── nakao.txt
+│   │   └── lambda.rb         # Lambda Handler
+│   ├── config/
+│   │   ├── initializers/
+│   │   │   ├── dynamoid.rb   # DynamoDB Config
+│   │   │   └── cors.rb
+│   │   └── routes.rb
+│   ├── spec/                 # Testing (TDD/RSpec)
+│   │   ├── factories/        # FactoryBot
+│   │   │   ├── posts.rb
+│   │   │   └── judgments.rb
+│   │   ├── models/
+│   │   ├── requests/         # API Integration Tests
+│   │   │   └── api/v1/
+│   │   ├── services/
+│   │   ├── adapters/
+│   │   └── support/          # Test Config
+│   │       ├── dynamoid.rb   # DynamoDB Local for Test
+│   │       ├── vcr.rb        # API Mocking
+│   │       └── factory_bot.rb
 │   ├── Gemfile
 │   ├── Dockerfile
-│   └── config/
-│       ├── dynamoid.rb
-│       └── routes.rb
+│   └── compose.yml           # Backend Services
 │
-├── frontend/                 # React SPA
+├── frontend/                 # React SPA (Vite)
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── PostForm.tsx
-│   │   │   ├── RankingList.tsx
-│   │   │   ├── JudgePanel.tsx
-│   │   │   ├── PrivacyPolicy.tsx
-│   │   │   └── avatars/
-│   │   │       ├── HiroyukiAvatar.tsx
-│   │   │       ├── DewiAvatar.tsx
-│   │   │       └── NakaoAvatar.tsx
 │   │   ├── hooks/
-│   │   │   ├── usePost.ts
-│   │   │   ├── useRanking.ts
-│   │   │   └── useLocalStorage.ts
 │   │   ├── utils/
-│   │   │   └── graphemeLength.ts
 │   │   └── App.tsx
 │   ├── package.json
 │   └── vite.config.ts
 │
-├── terraform/                # インフラ
+├── terraform/                # Infrastructure as Code
 │   ├── main.tf
 │   ├── dynamodb.tf
 │   ├── lambda.tf
 │   ├── s3.tf
 │   ├── cloudfront.tf
-│   ├── api_gateway.tf
-│   ├── warmup.tf
-│   ├── variables.tf
-│   └── outputs.tf
+│   └── api_gateway.tf
 │
-├── .github/workflows/
-│   ├── ci.yml
-│   └── deploy.yml
+├── docs/                     # Documentation
+│   ├── db_schema.md          # DB Schema (DynamoDB)
+│   ├── screen_design.md      # UI/UX Design
+│   └── Gemfile.md            # Dependency Policy
 │
-├── docs/
-│   ├── db_schema.md          # DB設計書
-│   └── screen_design.md      # 画面遷移・UI設計書
-│
-├── docker-compose.yml
-├── .env.example
+├── .gitignore
+├── CLAUDE.md                 # AI Agent Rules
+├── .coderabbit.yaml          # AI Review Config
 └── README.md
 ```
 
