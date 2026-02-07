@@ -90,7 +90,7 @@ bundle exec rails console
 |---------|--------|
 | 画面設計・UI/UX | `docs/screen_design.md` |
 | DB設計 | `docs/db_schema.md` |
-| Gem一覧 | `docs/Gemfile.md` |
+| Gem一覧 | `Gemfile` |
 | APIエンドポイント | `README.md` または `docs/api_spec.md` |
 | デザインシステム | `.docs/DESIGN_SYSTEM_*.md` |
 
