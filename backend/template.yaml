@@ -71,4 +71,4 @@ Parameters:
 Outputs:
   RailsApiEndpoint:
     Description: "API Gateway endpoint URL"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+    Value: !Sub "https://${RailsApi}.execute-api.${AWS::Region}.amazonaws.com/"
