@@ -10,8 +10,8 @@ resource "aws_apigatewayv2_api" "lambda" {
 }
 
 resource "aws_apigatewayv2_stage" "lambda" {
-  api_id = aws_apigatewayv2_api.lambda.id
-  name   = "$default"
+  api_id      = aws_apigatewayv2_api.lambda.id
+  name        = "$default"
   auto_deploy = true
 
   default_route_settings {
@@ -23,9 +23,9 @@ resource "aws_apigatewayv2_stage" "lambda" {
 resource "aws_apigatewayv2_integration" "lambda" {
   api_id = aws_apigatewayv2_api.lambda.id
 
-  integration_uri    = aws_lambda_function.app.invoke_arn
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
+  integration_uri        = aws_lambda_function.app.invoke_arn
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
   payload_format_version = "2.0"
 }
 
