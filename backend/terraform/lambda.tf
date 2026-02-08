@@ -10,11 +10,11 @@ resource "aws_lambda_function" "app" {
 
   environment {
     variables = {
-      RAILS_ENV             = "production"
+      RAILS_ENV                = "production"
       RAILS_SERVE_STATIC_FILES = "true"
-      RAILS_LOG_TO_STDOUT   = "info" # debug -> info to save CloudWatch costs
-      SECRET_KEY_BASE       = var.secret_key_base
-      DYNAMODB_TABLE_POSTS  = aws_dynamodb_table.posts.name
+      RAILS_LOG_TO_STDOUT      = "info" # debug -> info to save CloudWatch costs
+      SECRET_KEY_BASE          = var.secret_key_base
+      DYNAMODB_TABLE_POSTS     = aws_dynamodb_table.posts.name
     }
   }
 
