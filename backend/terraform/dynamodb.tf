@@ -29,8 +29,9 @@ resource "aws_dynamodb_table" "posts" {
   }
 
   # Global Secondary Index: RankingIndex
+  # Dynamoidの :ranking_index に対応（kebab-caseで統一）
   global_secondary_index {
-    name            = "RankingIndex"
+    name            = "ranking-index"
     hash_key        = "status"
     range_key       = "score_key"
     projection_type = "ALL"
@@ -94,7 +95,7 @@ resource "aws_dynamodb_table" "judgments" {
 # -----------------------------------------------------------------------------
 # rate_limitsテーブル（レート制限）
 # Partition Key: identifier (ip#hash or nick#hash)
-# TTL: 5分後自動削除
+# TTL: 5分後自動削除（PITRは不要：短期間のデータであり、復旧ポイントの必要性が低いため）
 # -----------------------------------------------------------------------------
 resource "aws_dynamodb_table" "rate_limits" {
   name         = "aruaruarena-rate-limits"
@@ -107,7 +108,7 @@ resource "aws_dynamodb_table" "rate_limits" {
     type = "S"
   }
 
-  # TTL有効化
+  # TTL有効化（5分後自動削除）
   ttl {
     attribute_name = "expires_at"
     enabled        = true
@@ -123,7 +124,7 @@ resource "aws_dynamodb_table" "rate_limits" {
 # -----------------------------------------------------------------------------
 # duplicate_checksテーブル（重複チェック）
 # Partition Key: body_hash
-# TTL: 24時間後自動削除
+# TTL: 24時間後自動削除（PITRは不要：短期間のデータであり、復旧ポイントの必要性が低いため）
 # -----------------------------------------------------------------------------
 resource "aws_dynamodb_table" "duplicate_checks" {
   name         = "aruaruarena-duplicate-checks"
@@ -136,7 +137,7 @@ resource "aws_dynamodb_table" "duplicate_checks" {
     type = "S"
   }
 
-  # TTL有効化
+  # TTL有効化（24時間後自動削除）
   ttl {
     attribute_name = "expires_at"
     enabled        = true

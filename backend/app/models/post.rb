@@ -79,6 +79,10 @@ class Post
   end
 
   # ランキング順位を計算
+  #
+  # @note 効率上の注意: GSIに対してクエリを実行するため、投稿数が増えると遅延が発生する可能性があります
+  #       ランキングAPIなど高頻度で呼ばれる場合は、順位情報のキャッシュを検討してください
+  #
   # @return [Integer] 順位（1位スタート）
   def calculate_rank(total_count: nil)
     return nil unless status == 'scored'

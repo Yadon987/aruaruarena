@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :judgment do
-    post
+    association :post, :scored  # scored traitを使用（審査にはscored状態の投稿が必要）
     persona { 'hiroyuki' }
     id { SecureRandom.uuid }
     succeeded { true }

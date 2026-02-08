@@ -141,6 +141,13 @@ RSpec.describe Post, type: :model do
       expect(post.status).to eq('failed')
       expect(post.score_key).to be_nil
     end
+
+    it 'failedからscoredに変更するとscore_keyが設定されること' do
+      failed_post = create(:post, status: 'failed', average_score: 75.0)
+      failed_post.update_status!('scored')
+      expect(failed_post.status).to eq('scored')
+      expect(failed_post.score_key).to be_present
+    end
   end
 
   describe '#calculate_rank' do
@@ -159,6 +166,15 @@ RSpec.describe Post, type: :model do
     it 'scored以外はnilを返すこと' do
       post = create(:post, status: 'judging')
       expect(post.calculate_rank).to be_nil
+    end
+
+    it '同点の場合は古い投稿が上位になること' do
+      # 同じスコアで作成日時が異なる投稿を作成
+      post_newer = create(:post, status: 'scored', average_score: 90.0, created_at: 1_738_042_000)
+      post_older = create(:post, status: 'scored', average_score: 90.0, created_at: 1_738_039_000)
+
+      # 古い投稿の方が上位
+      expect(post_older.calculate_rank).to be < post_newer.calculate_rank
     end
   end
 end
