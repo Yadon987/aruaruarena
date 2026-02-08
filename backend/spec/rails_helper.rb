@@ -7,33 +7,46 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 require 'rspec/rails'
 # Add additional requires below this line. Rails is not loaded until this point!
 
+# Define support path
+support_path = Rails.root.join('spec/support/**/*.rb')
+
+# FactoryBot configuration
+require 'support/factory_bot'
+
+# Dynamoid (DynamoDB ORM) test configuration
+require 'support/dynamoid'
+
+# VCR configuration
+require 'support/vcr'
+
 # Requires supporting ruby files with custom matchers and macros, etc, in
-# spec/support/ and its subdirectories. Files matching `spec/**/*_spec.rb` are
-# run as spec files by default. This means that files in spec/support that end
-# in _spec.rb will both be required and run as specs, causing the specs to be
-# run twice. It is recommended that you do not name files matching this glob to
-# end with _spec.rb. You can configure this pattern with the --pattern
-# option on the command line or in ~/.rspec, .rspec or `.rspec-local`.
-#
-# The following line is provided for convenience purposes. It has the downside
-# of increasing the boot-up time by auto-requiring all files in the support
-# directory. Alternatively, in the individual `*_spec.rb` files, manually
-# require only the support files necessary.
-#
-# Rails.root.glob('spec/support/**/*.rb').sort_by(&:to_s).each { |f| require f }
+# spec/support/ and its subdirectories.
+Dir[support_path].sort.each { |f| require f }
 
 RSpec.configure do |config|
   # Remove this line to enable support for ActiveRecord
   config.use_active_record = false
 
-  # If you enable ActiveRecord support you should uncomment these lines,
-  # note if you'd prefer not to run each example within a transaction, you
-  # should set use_transactional_fixtures to false.
-  #
-  # config.fixture_paths = [
-  #   Rails.root.join('spec/fixtures')
-  # ]
-  # config.use_transactional_fixtures = true
+  # FactoryBot syntax methods
+  config.include FactoryBot::Syntax::Methods
+
+  # DatabaseCleaner for Dynamoid (using list_tables as in root config)
+  config.before(:suite) do
+    # Cleanup test tables
+    if defined?(Dynamoid)
+      Dynamoid.adapter.list_tables.each do |table|
+        Dynamoid.adapter.delete_table(table) if table.start_with?('test_')
+      end
+    end
+  end
+
+  # Shoulda Matchers configuration
+  config.include(Shoulda::Matchers::ActiveModel, type: :model)
+  # Dynamic include based on availability for ActiveRecord matchers if needed, 
+  # but keeping consistent with root config which had it:
+  if defined?(Shoulda::Matchers::ActiveRecord)
+    config.include(Shoulda::Matchers::ActiveRecord, type: :model)
+  end
 
   # RSpec Rails uses metadata to mix in different behaviours to your tests,
   # for example enabling you to call `get` and `post` in request specs. e.g.:
@@ -50,7 +63,7 @@ RSpec.configure do |config|
   # behaviour is considered legacy and will be removed in a future version.
   #
   # To enable this behaviour uncomment the line below.
-  # config.infer_spec_type_from_file_location!
+  config.infer_spec_type_from_file_location!
 
   # Filter lines from Rails gems in backtraces.
   config.filter_rails_from_backtrace!

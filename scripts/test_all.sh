@@ -1,28 +1,39 @@
 #!/bin/bash
-# ~/workspace/tekumemo/bin/test_all.sh
-# 
-# ⚠️ 重要: このスクリプトはDocker環境専用です ⚠️
-# Docker環境でコンテナ内でテストを実行します。
-# ホストマシン上で直接実行しないでください。
-#
-# 前提条件:
-#   - Docker EngineがWSL2上で起動していること
-#   - docker-compose.ymlで定義されたコンテナが起動していること
-# 
-# 使い方:
-#   1. 実行権限を付与（初回のみ）:
-#      chmod +x bin/test_all.sh
-#   
-#   2. スクリプトを実行:
-#      ./bin/test_all.sh
-#
-# このスクリプトは以下を自動で実行します:
-#   1. Dockerコンテナの起動確認
-#   2. テストデータベースの準備
-#   3. RuboCopによるコードスタイルチェック
-#   4. RSpecによる全テスト実行
+set -e
 
-set -e  # エラーが発生したら即座に終了
+# ==========================================
+# 全テスト実行スクリプト (backend)
+# ==========================================
+
+# プロジェクトルートに移動
+cd "$(dirname "$0")/.."
+
+echo "🚀 backendのテストを開始します..."
+echo "----------------------------------------"
+
+# backendディレクトリへ移動
+cd backend
+
+# DynamoDB Localの起動確認 (簡易版)
+if ! curl -s http://localhost:8000 > /dev/null; then
+  echo "⚠️  DynamoDB Local (port 8000) が応答しません。"
+  echo "   'docker compose up -d' を実行してコンテナを起動してください。"
+  # 自動起動を試みる場合はコメントアウト解除
+  # docker compose up -d dynamodb-local
+  # sleep 5
+  exit 1
+fi
+
+echo "✅ DynamoDB Local OK"
+
+# テスト実行
+# DYNAMODB_ENDPOINTを明示的に指定して実行
+echo "🧪 Running RSpec..."
+DYNAMODB_ENDPOINT=http://localhost:8000 bundle exec rspec
+
+echo "----------------------------------------"
+echo "🎉 テスト完了！"
+# エラーが発生したら即座に終了
 
 # 終了時にファイルの所有権を修正（Dockerがrootで作ったファイルをユーザー権限に戻す）
 # sudoがパスワードを要求する場合の対策として、Dockerコンテナ内からchownを実行する

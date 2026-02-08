@@ -46,7 +46,7 @@ group :development, :test do
   gem "pry-rails"
 
   # Testing Framework
-  gem "rspec-rails", "~> 7.0" # Note: RSpec Rails 7.x supports Rails 8
+  gem "rspec-rails", "~> 8.0" # Updated to match root version
   gem "faker"
 
   # Code Quality
