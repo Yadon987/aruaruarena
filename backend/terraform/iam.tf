@@ -37,7 +37,12 @@ resource "aws_iam_role_policy" "dynamodb_access" {
           "dynamodb:BatchGetItem",
           "dynamodb:BatchWriteItem"
         ]
-        Resource = aws_dynamodb_table.posts.arn
+        Resource = [
+          aws_dynamodb_table.posts.arn,
+          aws_dynamodb_table.judgments.arn,
+          aws_dynamodb_table.rate_limits.arn,
+          aws_dynamodb_table.duplicate_checks.arn
+        ]
       }
     ]
   })

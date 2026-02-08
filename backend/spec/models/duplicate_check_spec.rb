@@ -31,15 +31,19 @@ RSpec.describe DuplicateCheck, type: :model do
 
   describe '.check' do
     it '既存のチェックを返すこと' do
-      create(:duplicate_check, body_hash: 'hash123', post_id: 'post-1')
-      result = described_class.check('テスト投稿') # 事前にハッシュを計算
+      body = 'テスト投稿'
+      hash = described_class.generate_body_hash(body)
+      create(:duplicate_check, body_hash: hash, post_id: 'post-1')
 
-      # ハッシュ計算ロジックにより、実際の実装ではモックが必要になる可能性があります
-      # ここでは基本的な動作を示します
+      result = described_class.check(body)
+
+      expect(result).to be_present
+      expect(result.post_id).to eq('post-1')
     end
 
     it '存在しない場合はnilを返すこと' do
-      # 実装に応じてテストを調整
+      result = described_class.check('存在しない投稿')
+      expect(result).to be_nil
     end
   end
 

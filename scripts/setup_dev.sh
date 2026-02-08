@@ -20,6 +20,7 @@ echo "💎 [2/3] Backend: bundle install..."
 cd backend
 bundle check || bundle install
 echo "   ✅ bundle install完了"
+cd ..
 
 # 3. データベース準備 (DynamoDB Local)
 # DynamoDBはスキーマレスなのでマイグレーション不要だが、

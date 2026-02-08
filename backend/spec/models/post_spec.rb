@@ -117,7 +117,7 @@ RSpec.describe Post, type: :model do
 
     it '正しい形式のscore_keyを生成すること' do
       # inv_score = 1000 - (85.5 * 10) = 1000 - 855 = 145
-      # score_key = "0145#1738041600#test-uuid"
+      # score_key = "0145#01738041600#test-uuid" (created_atは10桁でゼロ埋め)
       expect(post.generate_score_key).to eq('0145#01738041600#test-uuid')
     end
 

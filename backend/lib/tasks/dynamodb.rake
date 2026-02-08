@@ -63,10 +63,18 @@ namespace :dynamodb do
 
     tables.each do |table|
       puts "  Deleting data from #{table}..."
-      Dynamoid.adapter.scan(table).each do |item|
-        key = { table => {} }
-        key[table][Dynamoid::Components::HashKey.new(table).to_s] = item[:id]
-        Dynamoid.adapter.delete_item(key)
+      # 各モデルに対応するテーブルを削除
+      case table
+      when 'aruaruarena-posts'
+        Post.all.each(&:delete)
+      when 'aruaruarena-judgments'
+        Judgment.all.each(&:delete)
+      when 'aruaruarena-rate-limits'
+        RateLimit.all.each(&:delete)
+      when 'aruaruarena-duplicate-checks'
+        DuplicateCheck.all.each(&:delete)
+      else
+        puts "    (skipped: unknown table)"
       end
     end
 
