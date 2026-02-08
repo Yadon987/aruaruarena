@@ -39,6 +39,7 @@ resource "aws_iam_role_policy" "dynamodb_access" {
         ]
         Resource = [
           aws_dynamodb_table.posts.arn,
+          "${aws_dynamodb_table.posts.arn}/index/*",  # GSI（ranking-index）へのアクセス権限
           aws_dynamodb_table.judgments.arn,
           aws_dynamodb_table.rate_limits.arn,
           aws_dynamodb_table.duplicate_checks.arn
