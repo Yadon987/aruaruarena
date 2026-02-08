@@ -33,7 +33,6 @@ class Post
 
   # Global Secondary Index: RankingIndex
   # status=scored の投稿のみ対象（スパースインデックス）
-  field :status, String
   global_secondary_index name: :ranking_index,
                          hash_key: :status,
                          range_key: :score_key
@@ -62,7 +61,7 @@ class Post
   # @return [String] score_key（例: "0127#1738041600#uuid"）
   def generate_score_key
     return nil if average_score.blank?
-    inv_score = 1000 - (average_score * 10).to_i
+    inv_score = 1000 - (average_score * 10).round  # 四捨五入
     format('%04d#%010d#%s', inv_score, created_at, id)
   end
 
@@ -70,7 +69,12 @@ class Post
   # @param new_status [String] 新しいステータス
   def update_status!(new_status)
     self.status = new_status
-    self.score_key = generate_score_key if status == 'scored'
+    if status == 'scored'
+      self.score_key = generate_score_key
+    else
+      # scored以外はscore_keyをクリア（GSIからの除外）
+      self.score_key = nil
+    end
     save!
   end
 
@@ -79,12 +83,12 @@ class Post
   def calculate_rank(total_count: nil)
     return nil unless status == 'scored'
 
-    # 同じスコア以上の投稿数をカウント
+    # 自分より上位の投稿数をカウント（LT = より小さい）
     higher_score_count = Post.where('status EQ ?', 'scored')
-                              .where('score_key LE ?', score_key)
+                              .where('score_key LT ?', score_key)
                               .count
 
-    higher_score_count
+    higher_score_count + 1  # 1位スタート
   end
 
   private

@@ -41,6 +41,11 @@ resource "aws_dynamodb_table" "posts" {
     enabled = true
   }
 
+  # サーバー側暗号化
+  server_side_encryption {
+    enabled = true
+  }
+
   # タグ
   tags = {
     Environment = var.environment
@@ -71,6 +76,11 @@ resource "aws_dynamodb_table" "judgments" {
 
   # PITR有効化
   point_in_time_recovery {
+    enabled = true
+  }
+
+  # サーバー側暗号化
+  server_side_encryption {
     enabled = true
   }
 

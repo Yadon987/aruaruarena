@@ -11,10 +11,9 @@ SimpleCov.start 'rails' do
   # カバレッジが閾値を下回った場合にテストを失敗させる
   refuse_coverage_drop
 
-  # フィルタ設定
+  # フィルタ設定（/spec/はSimpleCovが自動的に除外するため不要）
   add_filter '/bin/'
   add_filter '/db/'
-  add_filter '/spec/'
   add_filter '/test/'
   add_filter '/config/'
   add_filter '/vendor/'

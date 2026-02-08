@@ -8,7 +8,7 @@ VCR.configure do |config|
   config.cassette_library_dir = 'spec/fixtures/vcr_cassettes'
 
   # WebMockをフックしてHTTPリクエストを録音
-  # config.hook_into :webmock
+  config.hook_into :webmock
 
   # デフォルトで録音モード（:once: 新規なら録音、既存なら再生）
   config.default_cassette_options = {

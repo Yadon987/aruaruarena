@@ -33,7 +33,7 @@ class DuplicateCheck
     # 全角→半角、カタカナ→ひらがな、空白統一、小文字化
     normalized = body
       .unicode_normalize(:NFKC)      # 全角→半角
-      .tr('ぁ-ん', 'ァ-ン')           # ひらがな→カタカナ
+      .tr('ァ-ン', 'ぁ-ん')           # カタカナ→ひらがな
       .gsub(/\s+/, ' ')              # 空白統一
       .strip.downcase                # 前後空白削除 + 小文字化
 

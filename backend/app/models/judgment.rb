@@ -65,7 +65,7 @@ class Judgment
   end
 
   # エラーコードのバリデーション（失敗時のみ必須）
-  validates :error_code, presence: true, on: :failure
+  validates :error_code, presence: true, unless: :succeeded?
 
   # Callbacks
   before_create :set_judged_at
