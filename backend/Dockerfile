@@ -52,18 +52,17 @@ RUN bundle exec bootsnap precompile app/ lib/
 FROM base
 
 # Copy built artifacts: gems, application
-COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
-COPY --from=build /rails /rails
-
-# Run and own only the runtime files as a non-root user for security
+# Create user first
 RUN groupadd --system --gid 1000 rails && \
-    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
-    chown -R rails:rails log tmp
+    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash
+
+# Copy built artifacts: gems, application with correct ownership
+COPY --from=build --chown=1000:1000 "${BUNDLE_PATH}" "${BUNDLE_PATH}"
+COPY --from=build --chown=1000:1000 /rails /rails
+
 USER 1000:1000
 
 # Entrypoint prepares the database.
-ENTRYPOINT ["/rails/bin/docker-entrypoint"]
-
-# Start server via Thruster by default, this can be overwritten at runtime
-EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]
+# Entrypoint for AWS Lambda (requires aws_lambda_ric gem)
+ENTRYPOINT ["bundle", "exec", "aws_lambda_ric"]
+CMD ["app.handler"]

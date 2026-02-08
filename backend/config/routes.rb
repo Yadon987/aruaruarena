@@ -1,7 +1,10 @@
 Rails.application.routes.draw do
+  # Health check endpoint (for AWS/Load Balancer)
+  get "health", to: "health_check#index"
+
   # API routes
   namespace :api do
-    # Health check endpoint
-    get :health, to: 'health#check'
+    # Health check endpoint (for Client/Frontend)
+    get :health, to: 'health_check#index'
   end
 end
