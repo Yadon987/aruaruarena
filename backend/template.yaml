@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  aruaruarena-backend
+
+  Rails 8 API running on AWS Lambda using Lamby
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        RAILS_ENV: production
+        RAILS_SERVE_STATIC_FILES: true
+        RAILS_LOG_TO_STDOUT: true
+
+Resources:
+  RailsApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: v1
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - X-Amz-Date
+          - Authorization
+          - X-Api-Key
+          - X-Amz-Security-Token
+        AllowOrigins:
+          - "*"
+
+  RailsFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      DockerTag: ruby3.2-v1
+      DockerContext: .
+      Dockerfile: Dockerfile
+    Properties:
+      PackageType: Image
+      Events:
+        HttpApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref RailsApi
+            PayloadFormatVersion: '2.0'
+      Environment:
+        Variables:
+          SECRET_KEY_BASE: !Ref SecretKeyBase
+          DYNAMODB_TABLE_POSTS: !Ref DynamoDBTablePosts
+          # 他の環境変数は必要に応じて追加
+
+  # 簡易的なDynamoDBテーブル定義（本番はTerraform推奨だが、動作確認用に定義可能）
+  # ここでは省略し、外部リソースを参照するか、Terraformで管理することを想定
+
+Parameters:
+  SecretKeyBase:
+    Type: String
+    Description: Rails Secret Key Base
+    NoEcho: true
+  DynamoDBTablePosts:
+    Type: String
+    Default: aruaruarena-posts
+
+Outputs:
+  RailsApiEndpoint:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"

@@ -11,32 +11,29 @@
 
 ```
 aruaruarena/
-├── app/                      # アプリケーションコア
-│   ├── controllers/          # HTTPリクエストハンドリング
-│   ├── models/               # データモデルとバリデーション
-│   ├── services/             #★ ビジネスロジック (Fat Controller回避)
-│   ├── adapters/             #★ 外部API連携 (AI, etc.)
-│   ├── prompts/              #★ AIプロンプトテンプレート
-│   └── serializers/          # JSONレスポンス整形
-│
-├── config/                   # 設定ファイル
-│   ├── initializers/         # 初期化設定 (Dynamoid, CORS)
-│   └── routes.rb             # ルーティング定義
-│
-├── spec/                     #★ テスト (RSpec)
-│   ├── factories/            # テストデータ定義 (FactoryBot)
-│   ├── models/               # モデルテスト
-│   ├── requests/             # APIエンドポイントテスト (Integration)
-│   ├── services/             # サービス単体テスト
-│   └── support/              # テスト設定・ヘルパー
+├── backend/                  # Rails APIルート
+│   ├── app/                  # アプリケーションコア
+│   │   ├── controllers/      # HTTPリクエストハンドリング
+│   │   ├── models/           # データモデルとバリデーション
+│   │   ├── services/         #★ ビジネスロジック (Fat Controller回避)
+│   │   ├── adapters/         #★ 外部API連携 (AI, etc.)
+│   │   ├── prompts/          #★ AIプロンプトテンプレート
+│   │   └── serializers/      # JSONレスポンス整形
+│   │
+│   ├── config/               # 設定ファイル
+│   │   ├── initializers/     # 初期化設定 (Dynamoid, CORS)
+│   │   └── routes.rb         # ルーティング定義
+│   │
+│   └── spec/                 #★ テスト (RSpec)
+│       ├── factories/        # テストデータ定義 (FactoryBot)
+│       ├── models/           # モデルテスト
+│       ├── requests/         # APIエンドポイントテスト
+│       ├── services/         # サービス単体テスト
+│       └── support/          # テスト設定・ヘルパー
 │
 ├── docs/                     # プロジェクトドキュメント
-│
 ├── .github/                  # GitHub設定 (CI/CD, Templates)
-│
-├── terraform/                # インフラコード (AWS)
-│
-└── backend/                  # (Optional: モノレポ構成時のルート)
+└── terraform/                # インフラコード (AWS)
 ```
 
 ---
