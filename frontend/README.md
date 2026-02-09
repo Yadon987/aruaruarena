@@ -1,13 +1,14 @@
 # あるあるアリーナ - フロントエンド
 
-React 18 + TypeScript + Vite で構築された「あるあるアリーナ」のフロントエンドアプリケーション。
+React 19 + TypeScript + Vite で構築された「あるあるアリーナ」のフロントエンドアプリケーション。
 
 ## 技術スタック
 
-- **React 18** - UIライブラリ
+- **React 19** - UIライブラリ
 - **TypeScript 5** - 型安全な開発
 - **Vite 7** - 高速なビルドツール（SWC使用）
 - **SWC** - 超高速コンパイラ（Rust製）
+- **Tailwind CSS 3** - ユーティリティファーストCSSフレームワーク
 
 ## 開発環境のセットアップ
 
@@ -28,6 +29,36 @@ npm run dev
 | `npm run dev` | 開発サーバーを起動（HMR有効） |
 | `npm run build` | 本番用ビルド |
 | `npm run preview` | ビルド後のプレビュー |
+
+## Tailwind CSS
+
+### カスタムテーマ
+
+以下のカラーパレットが定義されています：
+
+```tsx
+// プライマリ（青）
+className="bg-primary-500" // #3b82f6
+
+// セカンダリ（緑）
+className="bg-secondary-500" // #10b981
+
+// エラー（赤）
+className="bg-error-500" // #ef4444
+```
+
+### レスポンシブブレークポイント
+
+| プレフィックス | 最小幅 | 使用例 |
+|--------------|--------|--------|
+| `sm:` | 640px | `sm:text-lg` |
+| `md:` | 768px | `md:text-xl` |
+| `lg:` | 1024px | `lg:text-2xl` |
+| `xl:` | 1280px | `xl:text-3xl` |
+
+### ダークモード（将来対応）
+
+`darkMode: 'class'`戦略を採用しており、将来的にダークモード対応が可能です。
 
 ## 環境変数
 
