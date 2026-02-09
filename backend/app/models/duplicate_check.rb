@@ -11,20 +11,20 @@ class DuplicateCheck
   # テーブル設定
   table name: 'aruaruarena-duplicate-checks', key: :body_hash
 
-  # Primary Key
-  field :body_hash,  String # 正規化後ハッシュ
+  # Primary Key（自動的にString型として扱われるため、field定義は不要）
+  # field :body_hashはDynamoidによって自動的に管理されます
 
   # Attributes
-  field :post_id,    String # 最初に投稿ID
-  field :expires_at, Integer # TTL（24時間後 = 86400秒）
+  field :post_id,    :string # 最初に投稿ID
+  field :expires_at, :string # TTL（24時間後 = 86400秒、UnixTimestampを文字列として保存）
 
-  # TTLをDynamoDBに伝えるための設定
-  self.ttl_attribute = :expires_at
+  # TTL設定（DynamoDB側で設定されるため、モデル側では特別な設定不要）
+  # expires_atフィールドはDynamoDBのTTL機能によって自動削除されます
 
   # バリデーション
   validates :body_hash,  presence: true
   validates :post_id,    presence: true
-  validates :expires_at, presence: true, numericality: { only_integer: true }
+  validates :expires_at, presence: true
 
   # 本文からハッシュを生成（正規化付き）
   # @param body [String] 本文
@@ -32,10 +32,10 @@ class DuplicateCheck
   def self.generate_body_hash(body)
     # 全角→半角、カタカナ→ひらがな、空白統一、小文字化
     normalized = body
-      .unicode_normalize(:NFKC)      # 全角→半角
-      .tr('ァ-ン', 'ぁ-ん')           # カタカナ→ひらがな
-      .gsub(/\s+/, ' ')              # 空白統一
-      .strip.downcase                # 前後空白削除 + 小文字化
+                 .unicode_normalize(:nfkc) # 全角→半角（小文字に修正）
+                 .tr('ァ-ン', 'ぁ-ん') # カタカナ→ひらがな
+                 .gsub(/\s+/, ' ')              # 空白統一
+                 .strip.downcase                # 前後空白削除 + 小文字化
 
     Digest::SHA256.hexdigest(normalized)
   end
@@ -45,7 +45,7 @@ class DuplicateCheck
   # @return [DuplicateCheck, nil] 既存のチェック、なければnil
   def self.check(body)
     hash = generate_body_hash(body)
-    find_by(body_hash: hash)
+    where(body_hash: hash).first
   end
 
   # 重複チェックを登録
@@ -58,7 +58,7 @@ class DuplicateCheck
     create!(
       body_hash: hash,
       post_id: post_id,
-      expires_at: Time.now.to_i + (hours * 3600)
+      expires_at: (Time.now.to_i + (hours * 3600)).to_s
     )
   end
 end

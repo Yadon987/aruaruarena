@@ -10,19 +10,18 @@ class RateLimit
   # テーブル設定
   table name: 'aruaruarena-rate-limits', key: :identifier
 
-  # Primary Key
-  field :identifier, String # ip#hash または nick#hash
+  # Primary Key（自動的にString型として扱われるため、field定義は不要）
+  # field :identifierはDynamoidによって自動的に管理されます
 
-  # TTL設定（5分後 = 300秒）
-  field :expires_at, Integer
+  # TTL設定（5分後 = 300秒、UnixTimestampを文字列として保存）
+  field :expires_at, :string
 
-  # TTLをDynamoDBに伝えるための設定
-  # Dynamoidではttl_attributeを指定
-  self.ttl_attribute = :expires_at
+  # TTL設定（DynamoDB側で設定されるため、モデル側では特別な設定不要）
+  # expires_atフィールドはDynamoDBのTTL機能によって自動削除されます
 
   # バリデーション
   validates :identifier, presence: true
-  validates :expires_at, presence: true, numericality: { only_integer: true }
+  validates :expires_at, presence: true
 
   # IPアドレスから識別子を生成
   # @param ip [String] IPアドレス
@@ -42,7 +41,7 @@ class RateLimit
   # @param identifier [String] 識別子
   # @return [Boolean] trueなら制限中（投稿不可）
   def self.limited?(identifier)
-    find_by(identifier: identifier).present?
+    where(identifier: identifier).first.present?
   end
 
   # レート制限を設定
@@ -52,7 +51,7 @@ class RateLimit
   def self.set_limit(identifier, seconds: 300)
     create!(
       identifier: identifier,
-      expires_at: Time.now.to_i + seconds
+      expires_at: (Time.now.to_i + seconds).to_s
     )
   end
 end

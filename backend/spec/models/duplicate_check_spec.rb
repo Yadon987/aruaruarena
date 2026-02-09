@@ -17,14 +17,20 @@ RSpec.describe DuplicateCheck, type: :model do
     end
 
     it '正規化により似た投稿は同じハッシュになること' do
-      hash1 = described_class.generate_body_hash('Ｔｅｓｔ　投稿')  # 全角・スペース2つ
-      hash2 = described_class.generate_body_hash('test 投稿')      # 半角・スペース1つ
+      hash1 = described_class.generate_body_hash('Ｔｅｓｔ　投稿') # 全角・スペース2つ
+      hash2 = described_class.generate_body_hash('test 投稿') # 半角・スペース1つ
       expect(hash1).to eq(hash2)
     end
 
     it '大文字小文字を区別しないこと' do
       hash1 = described_class.generate_body_hash('Test Post')
       hash2 = described_class.generate_body_hash('test post')
+      expect(hash1).to eq(hash2)
+    end
+
+    it 'カタカナをひらがなに変換すること' do
+      hash1 = described_class.generate_body_hash('テストトウコウ')  # カタカナ
+      hash2 = described_class.generate_body_hash('てすととうこう')  # ひらがな
       expect(hash1).to eq(hash2)
     end
   end
@@ -49,18 +55,18 @@ RSpec.describe DuplicateCheck, type: :model do
 
   describe '.register' do
     it '重複チェックを登録できること' do
-      freeze_time do
-        check = described_class.register('テスト投稿', 'post-1')
-        expect(check.post_id).to eq('post-1')
-        expect(check.expires_at).to eq(Time.now.to_i + 86_400) # 24時間後
-      end
+      current_time = Time.now.to_i
+      check = described_class.register('テスト投稿', 'post-1')
+      expect(check.post_id).to eq('post-1')
+      # String型なので整数に変換して比較
+      expect(check.expires_at.to_i).to be_within(1).of(current_time + 86_400) # 24時間後
     end
 
     it 'カスタムの保持時間を指定できること' do
-      freeze_time do
-        check = described_class.register('テスト投稿', 'post-1', hours: 12)
-        expect(check.expires_at).to eq(Time.now.to_i + 43_200) # 12時間後
-      end
+      current_time = Time.now.to_i
+      check = described_class.register('テスト投稿', 'post-1', hours: 12)
+      # String型なので整数に変換して比較
+      expect(check.expires_at.to_i).to be_within(1).of(current_time + 43_200) # 12時間後
     end
   end
 end

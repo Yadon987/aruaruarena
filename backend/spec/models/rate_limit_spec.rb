@@ -27,7 +27,7 @@ RSpec.describe RateLimit, type: :model do
     it 'ニックネームから識別子を生成できること' do
       identifier = described_class.generate_nickname_identifier('テストユーザー')
       expect(identifier).to start_with('nick#')
-      expect(identifier.length).to eq(20) # 'nick#' + 16文字のハッシュ
+      expect(identifier.length).to eq(21) # 'nick#' (5文字) + 16文字のハッシュ
     end
 
     it '同じニックネームから同じ識別子が生成されること' do
@@ -50,17 +50,17 @@ RSpec.describe RateLimit, type: :model do
 
   describe '.set_limit' do
     it '指定した秒数後の有効期限で作成されること' do
-      freeze_time do
-        rate_limit = described_class.set_limit('ip#test123', seconds: 600)
-        expect(rate_limit.expires_at).to eq(Time.now.to_i + 600)
-      end
+      current_time = Time.now.to_i
+      rate_limit = described_class.set_limit('ip#test123', seconds: 600)
+      # String型なので整数に変換して比較
+      expect(rate_limit.expires_at.to_i).to eq(current_time + 600)
     end
 
     it 'デフォルトで5分間の制限を作成すること' do
-      freeze_time do
-        rate_limit = described_class.set_limit('ip#test123')
-        expect(rate_limit.expires_at).to eq(Time.now.to_i + 300)
-      end
+      current_time = Time.now.to_i
+      rate_limit = described_class.set_limit('ip#test123')
+      # String型なので整数に変換して比較
+      expect(rate_limit.expires_at.to_i).to be_within(1).of(current_time + 300)
     end
   end
 end

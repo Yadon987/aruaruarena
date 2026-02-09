@@ -1,145 +1,24 @@
-# CLAUDE.md - Aruaru Arena
+# CLAUDE.md
 
-## プロジェクト概要
-Ruby on Rails 8 API + DynamoDB で構築された「あるあるアリーナ」。
-ユーザーの「あるある」投稿を3人のAI審査員（ひろゆき風/デヴィ婦人風/中尾彬風）が採点・ランキング化する対戦型Webアプリ。
+## Build & Test Commands
+- **Run All Tests**: `./scripts/test_all.sh`
+  - Runs RuboCop (auto-correct), Brakeman, DynamoDB Local check, and RSpec.
+- **RuboCop (Auto Correct)**: `bundle exec rubocop -a`
+- **RuboCop (Check only)**: `bundle exec rubocop`
+- **Brakeman**: `bundle exec brakeman`
+- **RSpec**: `bundle exec rspec`
 
----
+## Reference Commands
+- **List Files**: `ls -la`
+- **File Content**: `cat`
+- **Git Status**: `git status`
+- **Git Log**: `git log --oneline -n 20`
+- **Git Diff**: `git diff`
 
-## 技術スタック
+## Server Commands
+- **Rails Server**: `bundle exec rails s`
+- **Rails Console**: `bundle exec rails c`
 
-| カテゴリ | 技術 |
-|---------|------|
-| Backend | Ruby 3.2+, Rails 8.0+ (API mode) |
-| Database | DynamoDB (NoSQL) |
-| Serverless | AWS Lambda |
-| Testing | RSpec 8.0+, FactoryBot |
-| Frontend | React 18 + TypeScript (別リポジトリ) |
-| AI APIs | Gemini 2.5 Flash, GLM-4.7-FlashX, GPT-4o-mini |
-
----
-
-## 🚫 絶対禁止事項
-
-以下は**絶対に行ってはいけません**。違反を発見したら即座に修正してください。
-
-1. **`.permit!`** の使用 → 必ず `.permit(:attr1, :attr2)` を明示
-2. **N+1クエリ** → `includes` / `preload` / `eager_load` を使用
-3. **トランザクションなし** で複数DB操作
-4. **ハードコード** された機密情報（APIキー、パスワード）
-5. **テストなし** で機能を実装
-6. **`binding.pry`** を本番コードに残す
-7. **日本語以外** でコメント・コミットメッセージを書く
-
----
-
-## ✅ 必須コーディングルール
-
-### モデル
-- すべてのバリデーションはモデルレイヤーで実装
-- アソシエーションには `dependent:` オプションを明示
-
-### コントローラー
-- RESTful 7アクション遵守
-- 1メソッド15行以内
-- 統一エラーフォーマット: `{ error: "...", code: "..." }`
-
-### サービスオブジェクト
-- 配置: `app/services/`
-- 命名: 動詞 + 名詞 + Service（例: `CreatePostService`）
-
-### テスト（TDD必須）
-- Red → Green → Refactor サイクル
-- `describe`, `context`, `it` で構造化
-- カバレッジ90%以上（SimpleCov）
-
----
-
-## 🔬 変更後の検証手順
-
-コードを変更したら、**必ず以下を実行**して検証してください：
-
-```bash
-# 1. テスト実行
-bundle exec rspec
-
-# 2. Lint（自動修正）
-bundle exec rubocop -A
-
-# 3. セキュリティスキャン
-bundle exec brakeman -q
-
-# 4. 動作確認（必要時）
-bundle exec rails console
-```
-
----
-
-## 💬 コミュニケーションスタイル
-
-- **言語**: 常に日本語で応答
-- **トーン**: 教育的メンター「らんて君」として振る舞う
-- **コメント**: 日本語で丁寧に記述
-- **コミット**: `type: 日本語` 形式（例: "feat: 日本語"、"fix: 日本語"、"test: 日本語"のような「英語: 日本語」に統一。1行目： コミットのタイトル（短く簡潔に。50文字以内推奨）2行目： 必ず空行にする（これが超重要です。タイトルと本文の区切り線になります）3行目以降： 詳細な内容。ここで箇条書きを使います。）
-
----
-
-## 📚 詳細情報の参照先
-
-| カテゴリ | 参照先 |
-|---------|--------|
-| 画面設計・UI/UX | `docs/screen_design.md` |
-| DB設計 | `docs/db_schema.md` |
-| Gem一覧 | `Gemfile` |
-| APIエンドポイント | `README.md` または `docs/api_spec.md` |
-| デザインシステム | `.docs/DESIGN_SYSTEM_*.md` |
-
----
-
-## 🔧 主要コマンド
-
-```bash
-# サーバー起動
-bundle exec rails server
-
-# コンソール
-bundle exec rails console
-
-# テスト
-bundle exec rspec
-
-# カバレッジレポート
-COVERAGE=true bundle exec rspec
-```
-
----
-
-## 🔌 利用可能なスキル
-
-- `.agent/skills/coderabbit-review/SKILL.md`: CodeRabbit風コードレビュー
-
----
-
-## プロジェクト固有の注意点
-
-### 審査ステータス
-| ステータス | 説明 |
-|-----------|------|
-| `judging` | 審査中（デフォルト） |
-| `scored` | 審査成功（2人以上成功） |
-| `failed` | 審査失敗（1人以下成功） |
-
-### レート制限
-- 投稿: IP/ニックネームごとに5分1回
-
----
-
-## 迷ったら
-
-1. Railsガイド（https://railsguides.jp/）を確認
-2. `docs/` ディレクトリの設計書を参照
-3. 同じ修正を2回したら、このファイルに追加
-
----
-
-*このドキュメントはプロジェクトの進化に合わせて更新してください*
+## Infrastructure
+- **Terraform Plan**: `cd backend/terraform && terraform plan`
+- **Terraform Apply**: `cd backend/terraform && terraform apply`

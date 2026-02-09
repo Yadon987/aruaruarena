@@ -20,28 +20,32 @@ class Judgment
 
   # テーブル設定
   table name: 'aruaruarena-judgments',
-         key: { hash: :post_id, range: :persona }
+        key: :post_id,
+        range_key: :persona
 
-  # Primary Key
-  field :post_id, String # Partition Key
-  field :persona, String # Sort Key
+  # Primary Key（自動的にString型として扱われるため、field定義は不要）
+  # field :post_idはDynamoidによって自動的に管理されます
+  # field :personaはDynamoidによって自動的に管理されます
 
   # Attributes
-  field :id,            String # UUID
-  field :succeeded,     Boolean, default: false
-  field :error_code,    String
+  field :id,            :string # UUID
+  field :succeeded,     :boolean, default: false
+  field :error_code,    :string
 
   # Scores（失敗時はNULL）
-  field :empathy,       Integer
-  field :humor,         Integer
-  field :brevity,       Integer
-  field :originality,   Integer
-  field :expression,    Integer
-  field :total_score,   Integer
-  field :comment,       String
+  field :empathy,       :integer
+  field :humor,         :integer
+  field :brevity,       :integer
+  field :originality,   :integer
+  field :expression,    :integer
+  field :total_score,   :integer
+  field :comment,       :string
 
-  # Timestamp
-  field :judged_at,     Integer
+  # Timestamp（UnixTimestampを文字列として保存）
+  field :judged_at,     :string
+
+  # DynamoidのRange Key用アクセサ（明示的に追加）
+  attr_accessor :persona
 
   # アソシエーション
   belongs_to :post
@@ -51,16 +55,22 @@ class Judgment
   validates :persona,   presence: true, inclusion: { in: %w[hiroyuki dewi nakao] }
   validates :id,        presence: true
   validates :succeeded, inclusion: { in: [true, false] }
-  validates :judged_at, presence: true, numericality: { only_integer: true }
+  validates :judged_at, presence: true # String型でUnixTimestampを保存
 
   # スコア範囲のバリデーション（成功時のみ必須）
   with_options if: :succeeded? do
-    validates :empathy,     presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
-    validates :humor,       presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
-    validates :brevity,     presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
-    validates :originality, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
-    validates :expression,  presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
-    validates :total_score, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
+    validates :empathy,     presence: true,
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+    validates :humor,       presence: true,
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+    validates :brevity,     presence: true,
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+    validates :originality, presence: true,
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+    validates :expression,  presence: true,
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+    validates :total_score, presence: true,
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
     validates :comment,     presence: true
   end
 
@@ -103,8 +113,8 @@ class Judgment
 
   private
 
-  # 審査日時を設定
+  # 審査日時を設定（UnixTimestampを文字列として保存）
   def set_judged_at
-    self.judged_at ||= Time.now.to_i
+    self.judged_at ||= Time.now.to_i.to_s
   end
 end

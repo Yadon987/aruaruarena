@@ -14,38 +14,50 @@ RSpec.describe Post, type: :model do
       it '1文字以上20文字以下であること' do
         subject.nickname = 'a'
         expect(subject).to be_valid
+      end
 
+      it '20文字も有効であること' do
         subject.nickname = 'a' * 20
         expect(subject).to be_valid
+      end
 
+      it '空文字は無効であること' do
         subject.nickname = ''
         expect(subject).not_to be_valid
+      end
 
+      it '21文字は無効であること' do
         subject.nickname = 'a' * 21
         expect(subject).not_to be_valid
       end
     end
 
     describe 'body' do
-      it '3文字以上30文字以下であること（grapheme単位）' do
+      it '3文字は有効であること' do
         subject.body = 'abc'
         expect(subject).to be_valid
+      end
 
+      it '30文字も有効であること' do
         subject.body = 'a' * 30
         expect(subject).to be_valid
+      end
 
+      it '2文字は無効であること' do
         subject.body = 'ab'
         expect(subject).not_to be_valid
+      end
 
+      it '31文字は無効であること' do
         subject.body = 'a' * 31
         expect(subject).not_to be_valid
       end
 
       it '絵文字もgraphemeとしてカウントすること' do
-        subject.body = '😀😀😀'  # 3 grapheme clusters
+        subject.body = '😀😀😀' # 3 grapheme clusters
         expect(subject).to be_valid
 
-        subject.body = '😀😀'    # 2 grapheme clusters
+        subject.body = '😀😀' # 2 grapheme clusters
         expect(subject).not_to be_valid
       end
     end
@@ -112,13 +124,13 @@ RSpec.describe Post, type: :model do
             id: 'test-uuid',
             status: 'scored',
             average_score: 85.5,
-            created_at: 1_738_041_600)
+            created_at: '1738041600') # String型で渡す
     end
 
     it '正しい形式のscore_keyを生成すること' do
       # inv_score = 1000 - (85.5 * 10) = 1000 - 855 = 145
-      # score_key = "0145#01738041600#test-uuid" (created_atは10桁でゼロ埋め)
-      expect(post.generate_score_key).to eq('0145#01738041600#test-uuid')
+      # score_key = "0145#1738041600#test-uuid" (created_atは文字列)
+      expect(post.generate_score_key).to eq('0145#1738041600#test-uuid')
     end
 
     it 'average_scoreがnilの場合はnilを返すこと' do
@@ -152,14 +164,14 @@ RSpec.describe Post, type: :model do
 
   describe '#calculate_rank' do
     before do
-      # テストデータ作成
-      create(:post, status: 'scored', average_score: 95.0, created_at: 1_738_040_000)
-      create(:post, status: 'scored', average_score: 90.0, created_at: 1_738_041_000)
-      create(:post, status: 'scored', average_score: 90.0, created_at: 1_738_040_000)
+      # テストデータ作成（String型でcreated_atを設定）
+      create(:post, :scored, average_score: 95.0, created_at: '1738040000')
+      create(:post, :scored, average_score: 90.0, created_at: '1738041000')
+      create(:post, :scored, average_score: 90.0, created_at: '1738040000')
     end
 
     it '正しい順位を計算できること' do
-      post = create(:post, status: 'scored', average_score: 85.0, created_at: 1_738_042_000)
+      post = create(:post, :scored, average_score: 85.0, created_at: '1738042000')
       expect(post.calculate_rank).to eq(4) # 4位
     end
 
@@ -170,8 +182,8 @@ RSpec.describe Post, type: :model do
 
     it '同点の場合は古い投稿が上位になること' do
       # 同じスコアで作成日時が異なる投稿を作成
-      post_newer = create(:post, status: 'scored', average_score: 90.0, created_at: 1_738_042_000)
-      post_older = create(:post, status: 'scored', average_score: 90.0, created_at: 1_738_039_000)
+      post_newer = create(:post, :scored, average_score: 90.0, created_at: '1738042000')
+      post_older = create(:post, :scored, average_score: 90.0, created_at: '1738039000')
 
       # 古い投稿の方が上位
       expect(post_older.calculate_rank).to be < post_newer.calculate_rank

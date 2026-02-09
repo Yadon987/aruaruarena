@@ -2,9 +2,11 @@
 
 FactoryBot.define do
   factory :judgment do
-    association :post, :scored  # scored traitを使用（審査にはscored状態の投稿が必要）
-    persona { 'hiroyuki' }
+    # 各テストで一意のpost_idを設定
+    post_id { SecureRandom.uuid }
+
     id { SecureRandom.uuid }
+    persona { 'hiroyuki' }
     succeeded { true }
     error_code { nil }
     empathy { 15 }
@@ -14,7 +16,12 @@ FactoryBot.define do
     expression { 15 }
     total_score { 75 }
     comment { 'それって本当？' }
-    judged_at { Time.now.to_i }
+    judged_at { Time.now.to_i.to_s } # String型に変更
+
+    # Range Keyは直接設定（attr_accessorで追加したアクセサ）
+    after(:build) do |judgment, evaluator|
+      judgment.persona ||= evaluator.persona || 'hiroyuki'
+    end
 
     trait :failed do
       succeeded { false }

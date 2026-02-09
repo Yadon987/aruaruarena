@@ -13,16 +13,16 @@ VCR.configure do |config|
   # デフォルトで録音モード（:once: 新規なら録音、既存なら再生）
   config.default_cassette_options = {
     record: :once,
-    match_requests_on: [:method, :uri, :body]
+    match_requests_on: %i[method uri body]
   }
 
   # DynamoDB Localへのリクエストを無視
   config.ignore_localhost = true
 
   # 機密情報のフィルタリング
-  config.filter_sensitive_data('<GEMINI_API_KEY>') { ENV['GEMINI_API_KEY'] }
-  config.filter_sensitive_data('<GLM_API_KEY>') { ENV['GLM_API_KEY'] }
-  config.filter_sensitive_data('<OPENAI_API_KEY>') { ENV['OPENAI_API_KEY'] }
+  config.filter_sensitive_data('<GEMINI_API_KEY>') { ENV.fetch('GEMINI_API_KEY', nil) }
+  config.filter_sensitive_data('<GLM_API_KEY>') { ENV.fetch('GLM_API_KEY', nil) }
+  config.filter_sensitive_data('<OPENAI_API_KEY>') { ENV.fetch('OPENAI_API_KEY', nil) }
 
   # カセットがない場合の挙動
   config.configure_rspec_metadata!

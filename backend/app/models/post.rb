@@ -18,18 +18,17 @@ class Post
   # 読み書きのキャパシティ（オンデマンドモードでは無効）
   # capacity_mode: :on_demand
 
-  # Primary Key
-  field :id,            String # UUID
-  #timestampsは使用しない（DynamoDBの型が合わないため）
+  # Primary Keyは自動的にString型として扱われるため、field定義は不要
+  # field :idはDynamoidによって自動的に管理されます
 
   # Attributes
-  field :nickname,      String
-  field :body,          String
-  field :status,        String, default: 'judging'
-  field :average_score, Float
-  field :judges_count,  Integer, default: 0
-  field :score_key,     String
-  field :created_at,    Integer
+  field :nickname,      :string
+  field :body,          :string
+  field :status,        :string, default: 'judging'
+  field :average_score, :number
+  field :judges_count,  :integer, default: 0
+  field :score_key,     :string
+  field :created_at,    :string # UnixTimestamp（数値として扱うがString型で保存）
 
   # Global Secondary Index: RankingIndex
   # status=scored の投稿のみ対象（スパースインデックス）
@@ -38,15 +37,16 @@ class Post
                          range_key: :score_key
 
   # アソシエーション
-  has_many :judgments, foreign_key: :post_id
+  has_many :judgments
 
   # バリデーション
   validates :id,          presence: true
   validates :nickname,    presence: true, length: { in: 1..20 }
   validates :body,        presence: true
   validates :status,      presence: true, inclusion: { in: %w[judging scored failed] }
-  validates :judges_count, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 3 }
-  validates :created_at,  presence: true, numericality: { only_integer: true }
+  validates :judges_count, presence: true,
+                           numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 3 }
+  validates :created_at, presence: true # String型でUnixTimestampを保存
 
   # 本文のgrapheme数をバリデーション
   validate :body_grapheme_length
@@ -55,13 +55,14 @@ class Post
   validates :average_score, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }, allow_nil: true
 
   # Callbacks
-  before_create :set_created_at
+  before_validation :set_created_at, on: :create
 
   # スコア付き投稿のscore_keyを生成
   # @return [String] score_key（例: "0127#1738041600#uuid"）
   def generate_score_key
     return nil if average_score.blank?
-    inv_score = 1000 - (average_score * 10).round  # 四捨五入
+
+    inv_score = 1000 - (average_score * 10).round # 四捨五入
     format('%04d#%010d#%s', inv_score, created_at, id)
   end
 
@@ -69,12 +70,12 @@ class Post
   # @param new_status [String] 新しいステータス
   def update_status!(new_status)
     self.status = new_status
-    if status == 'scored'
-      self.score_key = generate_score_key
-    else
-      # scored以外はscore_keyをクリア（GSIからの除外）
-      self.score_key = nil
-    end
+    self.score_key = if status == 'scored'
+                       generate_score_key
+                     else
+                       # scored以外はscore_keyをクリア（GSIからの除外）
+                       nil
+                     end
     save!
   end
 
@@ -84,15 +85,19 @@ class Post
   #       ランキングAPIなど高頻度で呼ばれる場合は、順位情報のキャッシュを検討してください
   #
   # @return [Integer] 順位（1位スタート）
-  def calculate_rank(total_count: nil)
+  def calculate_rank
     return nil unless status == 'scored'
+    return nil if score_key.blank? # score_keyが設定されていない場合はnilを返す
 
-    # 自分より上位の投稿数をカウント（LT = より小さい）
-    higher_score_count = Post.where('status EQ ?', 'scored')
-                              .where('score_key LT ?', score_key)
-                              .count
+    # GSIに対してクエリを実行して、自分より上位の投稿数をカウント
+    # Dynamoid 3.xではEnumeratorを返すため、to_aで配列に変換
+    higher_posts = Post.where(status: 'scored')
+                       .where('score_key.lt': score_key)
+                       .to_a
 
-    higher_score_count + 1  # 1位スタート
+    higher_score_count = higher_posts.count
+
+    higher_score_count + 1 # 1位スタート
   end
 
   private
@@ -102,13 +107,13 @@ class Post
     return if body.blank?
 
     length = body.grapheme_clusters.length
-    if length < 3 || length > 30
-      errors.add(:body, "は3〜30文字である必要があります（現在: #{length}文字）")
-    end
+    return unless length < 3 || length > 30
+
+    errors.add(:body, "は3〜30文字である必要があります（現在: #{length}文字）")
   end
 
-  # 作成日時を設定
+  # 作成日時を設定（UnixTimestampを文字列として保存）
   def set_created_at
-    self.created_at ||= Time.now.to_i
+    self.created_at ||= Time.now.to_i.to_s
   end
 end

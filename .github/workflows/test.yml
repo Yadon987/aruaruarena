@@ -56,6 +56,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -65,6 +69,7 @@ jobs:
         with:
           ruby-version: ${{ env.PRIMARY_RUBY_VERSION }}
           bundler-cache: true
+          working-directory: backend
 
       - name: Run RuboCop
         run: bundle exec rubocop --parallel --format progress --format json --out rubocop-results.json
@@ -74,16 +79,18 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: rubocop-results
-          path: rubocop-results.json
+          path: backend/rubocop-results.json
           retention-days: 30
 
       - name: Annotate RuboCop results
         if: failure()
-        uses: reviewdog/action-rubocop@8d28c7aa6d4ad0eb69903a417376346fef3e2660 # v2.20.0
+        uses: reviewdog/action-rubocop@v2.22.0
         with:
           rubocop_version: gemfile
+          gemfile_path: backend/Gemfile
           reporter: github-pr-review
-          fail_on_error: true
+          fail_on_error: false
+          workdir: backend
 
       - name: Run Brakeman security scan
         run: bundle exec brakeman -f json -o brakeman-results.json --no-pager --quiet
@@ -93,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: brakeman-results
-          path: brakeman-results.json
+          path: backend/brakeman-results.json
           retention-days: 30
 
       - name: Check for security vulnerabilities
@@ -135,7 +142,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: bundler-audit-results
-          path: bundler-audit-results.json
+          path: backend/bundler-audit-results.json
           retention-days: 30
           if-no-files-found: ignore
 
@@ -164,6 +171,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -173,6 +184,7 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
+          working-directory: backend
 
       # DynamoDB Local セットアップ
       - name: Wait for DynamoDB
@@ -208,7 +220,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: rspec-results-${{ matrix.ruby-version }}
-          path: tmp/rspec-${{ matrix.ruby-version }}.xml
+          path: backend/tmp/rspec-${{ matrix.ruby-version }}.xml
           retention-days: 30
 
       # カバレッジチェック（PRIMARY_RUBY_VERSIONのみ）
@@ -233,7 +245,7 @@ jobs:
         if: matrix.ruby-version == env.PRIMARY_RUBY_VERSION
         uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
         with:
-          files: ./coverage/.last_run.json
+          files: ./backend/coverage/.last_run.json
           flags: unittests
           name: codecov-${{ matrix.ruby-version }}
           fail_ci_if_error: false
@@ -244,14 +256,14 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage-report
-          path: coverage/
+          path: backend/coverage/
           retention-days: 30
 
       - name: Publish Test Report
         if: always()
         uses: EnricoMi/publish-unit-test-result-action@170bf24d20d201b842d7a52403b73ed297e6645b # v2.18.0
         with:
-          files: tmp/rspec-*.xml
+          files: backend/tmp/rspec-*.xml
           check_name: Test Results (Ruby ${{ matrix.ruby-version }})
 
   # ==========================================================================

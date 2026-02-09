@@ -4,7 +4,7 @@ namespace :dynamodb do
   desc 'DynamoDBテーブルの一覧を表示'
   task list_tables: :environment do
     tables = Dynamoid.adapter.list_tables
-    puts "=== DynamoDB Tables ==="
+    puts '=== DynamoDB Tables ==='
     tables.each { |table| puts "  - #{table}" }
     puts "Total: #{tables.count} tables"
   end
@@ -20,7 +20,7 @@ namespace :dynamodb do
       post = Post.create!(
         id: SecureRandom.uuid,
         nickname: Faker::Name.first_name,
-        body: ['スヌーズ押して二度寝', '上司のメール既読スルー', '仕事中にYouTube開く'][i % 3],
+        body: %w[スヌーズ押して二度寝 上司のメール既読スルー 仕事中にYouTube開く][i % 3],
         status: 'scored',
         average_score: rand(60.0..95.0).round(1),
         judges_count: 3,
@@ -74,7 +74,7 @@ namespace :dynamodb do
       when 'aruaruarena-duplicate-checks'
         DuplicateCheck.all.each(&:delete)
       else
-        puts "    (skipped: unknown table)"
+        puts '    (skipped: unknown table)'
       end
     end
 
