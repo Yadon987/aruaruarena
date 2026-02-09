@@ -63,15 +63,27 @@ echo "--- 2. 設定ファイルの検証 (Path Alias & ESLint) ---"
 # AC: パスエイリアスが設定されている (tsconfig.json)
 check_config "tsconfig.json" "\"@features/.*\""
 check_config "tsconfig.json" "\"@shared/.*\""
+check_config "tsconfig.json" "\"@/.*\"" # 追加: @/ エイリアス
 
 # AC: パスエイリアスが設定されている (vite.config.ts)
 # シンプルな文字列マッチングを行う
 check_config "vite.config.ts" "@features"
 check_config "vite.config.ts" "@shared"
+check_config "vite.config.ts" "'@':" # 追加: @ エイリアス
 
 # AC: ESLint設定 (Circular Dependency & Resolver)
 check_config ".eslintrc.cjs" "import/resolver"
 check_config ".eslintrc.cjs" "import/no-cycle"
+
+echo "--- 3. サンプル構造の検証 (Placeholders) ---"
+# AC: 新しい機能（投稿）を追加する場合の構造
+check_dir "src/features/post"
+check_config "src/features/post/index.ts" "export" # バレルエクスポート確認
+
+# AC: 共通コンポーネント（Button）の構造 (Co-location)
+check_dir "src/shared/components/Button"
+check_config "src/shared/components/Button/index.ts" "export" # バレルエクスポート確認
+
 
 echo "--- 検証結果 ---"
 if [ $FAILURES -eq 0 ]; then
