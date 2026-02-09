@@ -147,7 +147,7 @@
 **概要**: React + Vite + TypeScript環境の構築と共通設定
 
 **ストーリー**:
-- [ ] E04-01: Viteプロジェクトの作成 (React + TypeScript)
+- [x] E04-01: Viteプロジェクトの作成 (React + TypeScript)
 - [ ] E04-02: Tailwind CSSの導入と設定
 - [ ] E04-03: ESLint / Prettier の設定
 - [ ] E04-04: ディレクトリ構成の整備
