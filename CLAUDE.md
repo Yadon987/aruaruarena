@@ -55,6 +55,63 @@ Ruby on Rails 8 API + DynamoDB で構築された「あるあるアリーナ」�
 
 ---
 
+## 🎯 Gitワークフローのベストプラクティス
+
+### ブランチ戦略
+
+**機能ブランチはmainから直接分岐してください**
+
+```bash
+# ✅ 良い例
+git checkout main
+git pull origin main
+git checkout -b feature/new-feature
+
+# ❌ 悪い例
+git checkout -b intermediate-branch
+git checkout -b feature/new-feature  # 中間ブランチから分岐
+```
+
+**理由**:
+- 中間ブランチ (`03-frontend-setup` 等) を作ると、mainとのマージ時にコンフリクトが発生しやすくなる
+- mainから直接分岐することで、履歴がクリーンになり、マージが容易になる
+
+### 定期的なmainとの同期
+
+機能ブランチで開発中は、**定期的にmainの最新をマージ**してください：
+
+```bash
+git fetch origin main
+git merge origin/main
+```
+
+**頻度**: 毎日1回以上、またはmainに重要な変更がマージされた直後
+
+**理由**:
+- 差分を小さく保ち、コンフリクトを防ぐ
+- mainの最新の変更を早期に取り込むことで、後での大きな修正を回避
+
+### 小さなPRに分割
+
+1つのEpic（E04等）を複数の小さなPRに分割してください：
+
+```bash
+# ✅ 良い例
+feature/e04-01-vite-setup      # E04-01のみ
+feature/e04-02-tailwind-setup  # E04-02のみ
+feature/e04-03-eslint-setup    # E04-03のみ
+
+# ❌ 悪い例
+feature/e04-all-setup  # E04-01〜04全部
+```
+
+**理由**:
+- マージの競合を防ぐ
+- コードレビューが容易になる
+- 各機能の独立性が保たれる
+
+---
+
 ## 🔬 変更後の検証手順
 
 コードを変更したら、**必ず以下を実行**して検証してください：
