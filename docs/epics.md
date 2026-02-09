@@ -16,9 +16,9 @@
 
 | Epic ID | Epic名 | 優先順位 | 依存関係 | ステータス |
 |---------|--------|----------|----------|-----------|
-| E01 | テスト環境構築（バックエンド） | P0（最優先） | なし |  |
-| E02 | インフラ構築（AWS） | P0（最優先） | なし | 進行中 |
-| E03 | DynamoDBスキーマ定義 | P0（最優先） | E02 |  |
+| E01 | テスト環境構築（バックエンド） | P0（最優先） | なし | 進捗中 |
+| E02 | インフラ構築（AWS） | P0（最優先） | なし | ✅ 完了 |
+| E03 | DynamoDBスキーマ定義 | P0（最優先） | E02 | ✅ 完了 |
 | E04 | フロントエンド基盤構築 | P0（最優先） | なし |  |
 | E05 | 投稿API | P0（最優先） | E03 |  |
 | E06 | AI審査システム | P0（最優先） | E05 |  |
@@ -46,16 +46,22 @@
 
 **ストーリー**:
 - [x] E01-01: RSpecの設定（spec/spec_helper.rb）
-- [x] E01-02: FactoryBotの設定（spec/factories/）
+- [~] E01-02: FactoryBotの設定（spec/factories/）
   - ✅ spec/support/factory_bot.rbは作成済み
-  - ✅ spec/factories/ディレクトリもbackendに移行済み
-- [x] E01-03: SimpleCovの設定（カバレッジ90%以上）
-- [x] E01-04: VCR（API Mocking）の設定
-- [x] E01-05: DynamoDB Localとの連携（spec/support/dynamoid.rb）
+  - ❌ spec/factories/ディレクトリが未作成
+- [ ] E01-03: SimpleCovの設定（カバレッジ90%以上）
+- [ ] E01-04: VCR（API Mocking）の設定
+- [ ] E01-05: DynamoDB Localとの連携（spec/support/dynamoid.rb）
 - [x] E01-06: RuboCopの設定（.rubocop.yml）
 - [x] E01-07: Brakemanの設定（セキュリティスキャン）
   - ✅ Gemfileに含まれている
   - ✅ 設定ファイル不要（コマンドラインツール）
+
+**次のステップ**:
+1. SimpleCovの設定ファイル `.simplecov` を作成
+2. VCRの設定ファイル `spec/support/vcr.rb` を作成
+3. DynamoDB Localとの連携設定 `spec/support/dynamoid.rb` を作成
+4. `spec/factories/` ディレクトリを作成し、ファクトリファイルを追加
 
 **受入基準**:
 - `bundle exec rspec` でテスト実行可能
@@ -91,8 +97,8 @@
 - [x] E02-03: DynamoDBテーブルの作成
 - [x] E02-04: API Gatewayの設定
 - [x] E02-05: S3 + CloudFrontの設定（S3のみ完了）
-- [ ] E02-06: EventBridgeの設定
-- [ ] E02-07: GitHub Actions（CI/CD）の実装
+- [ ] E02-06: EventBridgeの設定（TODO: 実施予定）
+- [ ] E02-07: GitHub Actions（CI/CD）の実装（TODO: 実施予定）
 
 **受入基準**:
 - 月額コスト: $0.26/月（AWS）+ $2.25/月（AI）
@@ -118,20 +124,20 @@
 - duplicate_checks（重複チェック）
 
 **ストーリー**:
-- [ ] E03-01: postsテーブルの設計（PK: id, GSI: RankingIndex）
-- [ ] E03-02: judgmentsテーブルの設計（PK: post_id, SK: persona）
-- [ ] E03-03: rate_limitsテーブルの設計（PK: identifier, TTL）
-- [ ] E03-04: duplicate_checksテーブルの設計（PK: body_hash, TTL）
-- [ ] E03-05: GSI（RankingIndex）の定義
-- [ ] E03-06: TTL設定の実装
-- [ ] E03-07: Dynamoidモデルの実装
-- [ ] E03-08: マイグレーションスクリプトの作成
+- [x] E03-01: postsテーブルの設計（PK: id, GSI: RankingIndex）
+- [x] E03-02: judgmentsテーブルの設計（PK: post_id, SK: persona）
+- [x] E03-03: rate_limitsテーブルの設計（PK: identifier, TTL）
+- [x] E03-04: duplicate_checksテーブルの設計（PK: body_hash, TTL）
+- [x] E03-05: GSI（RankingIndex）の定義
+- [x] E03-06: TTL設定の実装
+- [x] E03-07: Dynamoidモデルの実装
+- [x] E03-08: マイグレーションスクリプトの作成
 
 **受入基準**:
-- docs/db_schema.md に従った設計
-- PITR（Point-In-Time Recovery）有効化
-- TTLによる自動削除設定
-- score_keyのフォーマット: `inv_score#created_at#id`
+- ✅ docs/db_schema.md に従った設計
+- ✅ PITR（Point-In-Time Recovery）有効化
+- ✅ TTLによる自動削除設定
+- ✅ score_keyのフォーマット: `inv_score#created_at#id`
 
 **関連ファイル**:
 - `app/models/post.rb`
@@ -148,7 +154,7 @@
 
 **ストーリー**:
 - [x] E04-01: Viteプロジェクトの作成 (React + TypeScript)
-- [ ] E04-02: Tailwind CSSの導入と設定
+- [x] E04-02: Tailwind CSSの導入と設定
 - [ ] E04-03: ESLint / Prettier の設定
 - [ ] E04-04: ディレクトリ構成の整備
 - [ ] E04-05: 共通型定義 (Types) の作成
