@@ -9,6 +9,7 @@ React 19 + TypeScript + Vite で構築された「あるあるアリーナ」の
 - **Vite 7** - 高速なビルドツール（SWC使用）
 - **SWC** - 超高速コンパイラ（Rust製）
 - **Tailwind CSS 3** - ユーティリティファーストCSSフレームワーク
+- **Vitest** - テストフレームワーク
 
 ## 開発環境のセットアップ
 
@@ -24,11 +25,16 @@ npm run dev
 
 ## 利用可能なスクリプト
 
-| コマンド          | 説明                          |
-| ----------------- | ----------------------------- |
-| `npm run dev`     | 開発サーバーを起動（HMR有効） |
-| `npm run build`   | 本番用ビルド                  |
-| `npm run preview` | ビルド後のプレビュー          |
+| コマンド           | 説明                          |
+| ------------------ | ----------------------------- |
+| `npm run dev`      | 開発サーバーを起動（HMR有効） |
+| `npm run build`    | 本番用ビルド                  |
+| `npm run preview`  | ビルド後のプレビュー          |
+| `npm run test`     | テスト実行（watchモード）     |
+| `npm run test:run`  | テスト実行（CIモード）       |
+| `npm run test:ui`   | テストUIの起動               |
+| `npm run lint`      | ESLint実行                   |
+| `npm run lint:fix`  | ESLint自動修正               |
 
 ## Tailwind CSS
 

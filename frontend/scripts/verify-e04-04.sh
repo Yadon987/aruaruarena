@@ -59,11 +59,11 @@ check_dir "src/shared/constants"
 check_dir "src/styles"
 check_dir "src/routes"
 
-echo "--- 2. 設定ファイルの検証 (Path Alias & ESLint) ---"
 # AC: パスエイリアスが設定されている (tsconfig.json)
-check_config "tsconfig.json" "\"@features/.*\""
-check_config "tsconfig.json" "\"@shared/.*\""
-check_config "tsconfig.json" "\"@/.*\"" # 追加: @/ エイリアス
+# 引用符の有無に関わらずチェックできるようパターンを緩和
+check_config "tsconfig.json" "@features/.*"
+check_config "tsconfig.json" "@shared/.*"
+check_config "tsconfig.json" "@/.*" # 追加: @/ エイリアス
 
 # AC: パスエイリアスが設定されている (vite.config.ts)
 # シンプルな文字列マッチングを行う
@@ -84,6 +84,32 @@ check_config "src/features/post/index.ts" "export" # バレルエクスポート
 check_dir "src/shared/components/Button"
 check_config "src/shared/components/Button/index.ts" "export" # バレルエクスポート確認
 
+
+echo "--- 4. コマンド実行検証 (Build, Lint, Test) ---"
+
+# ビルドチェック (既存)
+if npm run build > /dev/null 2>&1; then
+  echo "✅ [OK] ビルド成功 (npm run build)"
+else
+  echo "❌ [NG] ビルド失敗"
+  FAILURES=$((FAILURES+1))
+fi
+
+# 追加: Lintチェック
+if npm run lint > /dev/null 2>&1; then
+  echo "✅ [OK] Lint成功 (npm run lint)"
+else
+  echo "❌ [NG] Lint失敗"
+  FAILURES=$((FAILURES+1))
+fi
+
+# 追加: テスト実行チェック (Vitest)
+if npm run test:run > /dev/null 2>&1; then
+  echo "✅ [OK] テスト成功 (npm run test:run)"
+else
+  echo "❌ [NG] テスト失敗"
+  FAILURES=$((FAILURES+1))
+fi
 
 echo "--- 検証結果 ---"
 if [ $FAILURES -eq 0 ]; then
