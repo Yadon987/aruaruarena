@@ -107,13 +107,37 @@ if [ $rspec_exit -eq 0 ] || [ $rspec_exit -eq 2 ]; then
     echo "   現在のカバレッジ: ${coverage}%"
   fi
   echo "🎉 全てのテストが成功しました！"
-  exit 0
+fi
+
+echo ""
+echo "backend tests finished."
+echo "----------------------------------------"
+
+# 4. Frontendテスト実行
+echo "🧪 Running Frontend Tests..."
+echo "----------------------------------------"
+
+cd ../frontend
+
+# 依存関係のインストール確認（node_modulesがない場合のみ）
+if [ ! -d "node_modules" ]; then
+  echo "📦 Installing dependencies..."
+  npm ci
+fi
+
+# テスト実行
+set +e
+npm run test
+frontend_test_exit=$?
+set -e
+
+if [ $frontend_test_exit -eq 0 ]; then
+  echo "✅ Frontend Tests Passed"
 else
-  echo "🚨 テストが失敗しました"
-  echo ""
-  echo "修正のヒント:"
-  echo "  1. 上記のエラーログを確認してください"
-  echo "  2. 該当のspecファイルを個別に実行して詳細を確認:"
-  echo "     bundle exec rspec spec/path/to/failing_spec.rb -fd"
+  echo "🚨 Frontend Tests Failed"
   exit 1
 fi
+
+echo "----------------------------------------"
+echo "🎉 全てのテストが成功しました！"
+exit 0
