@@ -5,6 +5,12 @@ import {
   type GetPostResponse,
   type GetRankingResponse,
 } from '../types/api'
+import {
+  HTTP_STATUS,
+  API_TIMEOUT,
+  API_ERROR_CODE,
+  API_DEFAULTS,
+} from '../constants/api'
 
 // 環境変数の取得（Vite）
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -29,20 +35,93 @@ export class ApiClientError extends Error {
 }
 
 /**
+ * ネットワークエラーを ApiClientError に変換
+ *
+ * @param error - キャッチされたエラー
+ * @throws ApiClientError - 変換されたエラー
+ */
+function handleNetworkError(error: unknown): never {
+  // タイムアウトエラー
+  if (error instanceof Error && error.name === 'AbortError') {
+    throw new ApiClientError(
+      'Request timeout',
+      API_ERROR_CODE.TIMEOUT,
+      HTTP_STATUS.REQUEST_TIMEOUT
+    )
+  }
+
+  // ネットワークエラー
+  if (error instanceof TypeError) {
+    throw new ApiClientError(
+      'Network error',
+      API_ERROR_CODE.NETWORK_ERROR,
+      0
+    )
+  }
+
+  throw error
+}
+
+/**
+ * HTTPレスポンスエラーを ApiClientError に変換
+ *
+ * @param response - エラーレスポンス
+ * @throws ApiClientError - 変換されたエラー
+ */
+async function handleHttpError(response: Response): Promise<never> {
+  let errorCode: string = API_ERROR_CODE.HTTP_ERROR
+  let errorMessage: string = `HTTP ${response.status} Error`
+
+  // ステータスコードに基づくエラーコードの推測
+  if (response.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
+    errorCode = API_ERROR_CODE.RATE_LIMITED
+  }
+
+  // バックエンドからのエラー情報をパース
+  try {
+    const error: ApiError = await response.json()
+    if (error.code) errorCode = error.code
+    if (error.error) errorMessage = error.error
+  } catch {
+    // JSONパース失敗時はデフォルト値を使用
+  }
+
+  throw new ApiClientError(errorMessage, errorCode, response.status)
+}
+
+/**
+ * レスポンスボディをパース
+ *
+ * @param response - fetchレスポンス
+ * @returns パースされたレスポンスデータ
+ */
+async function parseResponseBody<T>(response: Response): Promise<T> {
+  // 204 No Content のハンドリング
+  if (response.status === HTTP_STATUS.NO_CONTENT) {
+    return {} as T
+  }
+
+  return response.json()
+}
+
+/**
  * 汎用リクエスト関数
+ *
+ * @param path - APIパス (例: '/posts')
+ * @param options - fetch オプション + タイムアウト設定
+ * @returns パースされたレスポンスデータ
+ * @throws ApiClientError - ネットワークエラー、HTTPエラー、タイムアウト時
  */
 async function request<T>(
   path: string,
   options?: RequestInit & { timeout?: number }
 ): Promise<T> {
-  const timeout = options?.timeout ?? 10000
+  const timeout = options?.timeout ?? API_TIMEOUT.DEFAULT
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeout)
 
-  let response: Response
-
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,
@@ -51,51 +130,18 @@ async function request<T>(
       ...options,
       signal: controller.signal,
     })
-  } catch (error) {
+
     clearTimeout(timeoutId)
 
-    // タイムアウトエラーの識別
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new ApiClientError('Request timeout', 'TIMEOUT', 408)
+    if (!response.ok) {
+      await handleHttpError(response)
     }
 
-    // ネットワークエラー
-    if (error instanceof TypeError) {
-      throw new ApiClientError('Network error', 'NETWORK_ERROR', 0)
-    }
-
-    throw error
+    return parseResponseBody<T>(response)
+  } catch (error) {
+    clearTimeout(timeoutId)
+    handleNetworkError(error)
   }
-
-  clearTimeout(timeoutId)
-
-  // 204 No Content のハンドリング
-  if (response.status === 204) {
-    return {} as T
-  }
-
-  if (!response.ok) {
-    // JSONパース失敗時のフォールバック
-    let errorCode = 'HTTP_ERROR'
-    let errorMessage = `HTTP ${response.status} Error`
-
-    // レート制限エラーの識別
-    if (response.status === 429) {
-      errorCode = 'RATE_LIMITED'
-    }
-
-    try {
-      const error: ApiError = await response.json()
-      if (error.code) errorCode = error.code
-      if (error.error) errorMessage = error.error
-    } catch {
-      // JSONパース失敗時はデフォルト値を使用
-    }
-
-    throw new ApiClientError(errorMessage, errorCode, response.status)
-  }
-
-  return response.json()
 }
 
 /**
@@ -111,7 +157,7 @@ export const api = {
     get: (id: string) => request<GetPostResponse>(`/posts/${id}`),
   },
   rankings: {
-    list: (limit = 20) =>
+    list: (limit: number = API_DEFAULTS.RANKING_LIMIT) =>
       request<GetRankingResponse>(`/rankings?limit=${limit}`),
   },
 }
