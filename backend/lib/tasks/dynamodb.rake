@@ -66,13 +66,13 @@ namespace :dynamodb do
       # 各モデルに対応するテーブルを削除
       case table
       when 'aruaruarena-posts'
-        Post.all.each(&:delete)
+        Post.find_each(&:delete)
       when 'aruaruarena-judgments'
-        Judgment.all.each(&:delete)
+        Judgment.find_each(&:delete)
       when 'aruaruarena-rate-limits'
-        RateLimit.all.each(&:delete)
+        RateLimit.find_each(&:delete)
       when 'aruaruarena-duplicate-checks'
-        DuplicateCheck.all.each(&:delete)
+        DuplicateCheck.find_each(&:delete)
       else
         puts '    (skipped: unknown table)'
       end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # VCR（Video Cassette Recorder）の設定
 # 外部API（Gemini, GLM, OpenAI）のモックに使用
 

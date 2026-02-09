@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 Rails.application.routes.draw do
   # Health check endpoint (for AWS/Load Balancer)
   get 'health', to: 'health_check#index'
