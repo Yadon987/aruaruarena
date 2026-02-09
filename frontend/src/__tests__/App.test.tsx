@@ -1,7 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
 import App from '../App'
-import React from 'react'
 
 // ReactQueryDevtools をモックして、レンダリングされたら特定の要素を表示するようにする
 // モジュール自体がインストールされていても、App.tsx で使われていなければ表示されない
@@ -14,8 +13,11 @@ describe('App Integration', () => {
     // import.meta.env.DEV が true 前提の環境（Vitestデフォルト）で
     // App 内に ReactQueryDevtools があることを確認
     // 現状の App.tsx には含まれていないため失敗する
+    const originalEnv = process.env.NODE_ENV
+    process.env.NODE_ENV = 'development'
     render(<App />)
     expect(screen.getByTestId('react-query-devtools')).toBeInTheDocument()
+    process.env.NODE_ENV = originalEnv
   })
 
   // TODO: QueryClient設定の検証（GREEN実装後に追加）

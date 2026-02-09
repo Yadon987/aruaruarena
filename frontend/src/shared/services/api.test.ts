@@ -54,10 +54,7 @@ describe('E04-06: API Client', () => {
 
       const result = await api.posts.get('valid-uuid')
 
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/posts/valid-uuid',
-        expect.any(Object)
-      )
+      expect(fetchMock).toHaveBeenCalledWith('/api/posts/valid-uuid', expect.any(Object))
       expect(result).toEqual(mockResponse)
     })
 
@@ -73,10 +70,7 @@ describe('E04-06: API Client', () => {
 
       const result = await api.rankings.list()
 
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/rankings?limit=20',
-        expect.any(Object)
-      )
+      expect(fetchMock).toHaveBeenCalledWith('/api/rankings?limit=20', expect.any(Object))
       expect(result).toEqual(mockResponse)
     })
 
@@ -86,10 +80,7 @@ describe('E04-06: API Client', () => {
 
       await api.rankings.list(10)
 
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/rankings?limit=10',
-        expect.any(Object)
-      )
+      expect(fetchMock).toHaveBeenCalledWith('/api/rankings?limit=10', expect.any(Object))
     })
   })
 
@@ -186,7 +177,9 @@ describe('E04-06: API Client', () => {
       fetchMock.mockResolvedValueOnce({
         ok: false,
         status: 500,
-        json: async () => { throw new Error('Invalid JSON') },
+        json: async () => {
+          throw new Error('Invalid JSON')
+        },
       })
 
       try {
@@ -224,10 +217,7 @@ describe('E04-06: API Client', () => {
 
       await api.posts.create({ nickname: 'test', body: 'body' })
 
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringMatching(/^\/api\//),
-        expect.any(Object)
-      )
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\//), expect.any(Object))
     })
   })
 

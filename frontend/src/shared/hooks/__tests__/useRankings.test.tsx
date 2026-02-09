@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { renderHook, waitFor } from '@testing-library/react'
 import { ReactNode } from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 // @ts-ignore
-import { useRankings } from '../useRankings'
 import { api, ApiClientError } from '../../services/api'
+import { useRankings } from '../useRankings'
 
 // api モジュールのモック化
 vi.mock('../../services/api', () => ({
@@ -14,7 +14,11 @@ vi.mock('../../services/api', () => ({
     },
   },
   ApiClientError: class extends Error {
-    constructor(public message: string, public code: string, public status: number) {
+    constructor(
+      public message: string,
+      public code: string,
+      public status: number
+    ) {
       super(message)
     }
   },

@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { renderHook, waitFor } from '@testing-library/react'
 import { ReactNode } from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 // @ts-ignore
-import { usePost } from '../usePost'
 import { api } from '../../services/api'
+import { usePost } from '../usePost'
 
 vi.mock('../../services/api', () => ({
   api: {
