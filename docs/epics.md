@@ -158,7 +158,7 @@
 - [x] E04-03: ESLint / Prettier の設定
 - [x] E04-04: ディレクトリ構成の整備
 - [x] E04-05: 共通型定義 (Types) の作成
-- [ ] E04-06: APIクライアント(axios/fetch)の基盤実装
+- [x] E04-06: APIクライアント(axios/fetch)の基盤実装
 - [ ] E04-07: TanStack Query / Framer Motion の導入
 - [ ] E04-08: Playwrightの導入と設定
 - [ ] E04-09: テスト用モックサーバー（MSW）の導入
