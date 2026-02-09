@@ -55,6 +55,8 @@ yarn-error.log
 # Testing & Coverage
 # ==============================================================================
 /coverage/
+backend/coverage/
+/backend/coverage/
 /spec/examples.txt
 rspec_*.txt
 

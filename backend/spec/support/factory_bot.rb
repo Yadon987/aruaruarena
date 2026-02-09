@@ -1,13 +1,14 @@
+# frozen_string_literal: true
+
 # FactoryBot configuration for DynamoDB (Dynamoid)
+require 'factory_bot'
+
 RSpec.configure do |config|
-  # Include FactoryBot methods for all specs
+  # FactoryBot syntax methods
   config.include FactoryBot::Syntax::Methods
 
-  # Set factory directory
-  config.factory_bot = false
-  
-  # Configure FactoryBot for Dynamoid
-  FactoryBot.define do
-    # No ActiveRecord configuration needed
+  # Factories directoryの指定
+  config.before(:suite) do
+    FactoryBot.find_definitions
   end
 end

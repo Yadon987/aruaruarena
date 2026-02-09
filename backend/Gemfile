@@ -1,60 +1,60 @@
-source "https://rubygems.org"
+source 'https://rubygems.org'
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 # =============================================================================
 # Core
 # =============================================================================
 # Use specific railties instead of full "rails" to avoid ActiveRecord dependency issues
-# gem "rails", "~> 8.0.0" 
-gem "railties", "~> 8.0.0"
-gem "activemodel", "~> 8.0.0"
-gem "actionpack", "~> 8.0.0"
-gem "actionview", "~> 8.0.0"
-gem "activejob", "~> 8.0.0"
-gem "puma", ">= 5.0"
-gem "bootsnap", require: false
+# gem "rails", "~> 8.0.0"
+gem 'actionpack', '~> 8.0.0'
+gem 'actionview', '~> 8.0.0'
+gem 'activejob', '~> 8.0.0'
+gem 'activemodel', '~> 8.0.0'
+gem 'bootsnap', require: false
+gem 'puma', '>= 5.0'
+gem 'railties', '~> 8.0.0'
 
 # =============================================================================
 # API & Network
 # =============================================================================
-gem "rack-cors"
-gem "faraday"
-gem "parallel"
+gem 'faraday'
+gem 'parallel'
+gem 'rack-cors'
 
 # =============================================================================
 # Database (DynamoDB)
 # =============================================================================
-gem "dynamoid", "~> 3.11"
-gem "aws-sdk-dynamodb"
+gem 'aws-sdk-dynamodb'
+gem 'dynamoid', '~> 3.11'
 
 # =============================================================================
 # Image Processing
 # =============================================================================
-gem "mini_magick"
+gem 'mini_magick'
 
 # =============================================================================
 # Utilities
 # =============================================================================
-gem "tzinfo-data", platforms: %i[ windows jruby ]
+gem 'tzinfo-data', platforms: %i[windows jruby]
 
 # =============================================================================
 # Development & Test
 # =============================================================================
 group :development, :test do
   # Debugging
-  gem "debug", platforms: %i[ mri windows ]
-  gem "pry-rails"
+  gem 'debug', platforms: %i[mri windows]
+  gem 'pry-rails'
 
   # Testing Framework
-  gem "rspec-rails", "~> 7.0" # Note: RSpec Rails 7.x supports Rails 8
-  gem "faker"
+  gem 'faker'
+  gem 'rspec-rails', '~> 8.0' # Updated to match root version
 
   # Code Quality
-  gem "rubocop-rails", require: false
-  gem "brakeman", require: false
+  gem 'brakeman', require: false
+  gem 'rubocop-rails', require: false
 
   # Environment
-  gem "dotenv-rails"
+  gem 'dotenv-rails'
 end
 
 # =============================================================================
@@ -62,22 +62,22 @@ end
 # =============================================================================
 group :test do
   # Coverage
-  gem "simplecov", require: false
+  gem 'simplecov', require: false
 
   # Test Fixtures
-  gem "factory_bot"
+  gem 'factory_bot'
 
   # Matchers & Mocks
-  gem "shoulda-matchers"
-  gem "webmock"
-  gem "vcr"
+  gem 'shoulda-matchers'
+  gem 'vcr'
+  gem 'webmock'
 
   # CI Integration
-  gem "rspec_junit_formatter", "~> 0.6"
+  gem 'rspec_junit_formatter', '~> 0.6'
 end
 
 # =============================================================================
 # Lambda
 # =============================================================================
-gem "lamby"
-gem "aws_lambda_ric"
+gem 'aws_lambda_ric'
+gem 'lamby'

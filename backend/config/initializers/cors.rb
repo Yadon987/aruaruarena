@@ -15,9 +15,9 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
       origins ENV.fetch('FRONTEND_URL', 'https://your-domain.com')
     end
 
-    resource "*",
-      headers: :any,
-      methods: [:get, :post, :put, :patch, :delete, :options, :head],
-      expose: ['Authorization']
+    resource '*',
+             headers: :any,
+             methods: %i[get post put patch delete options head],
+             expose: ['Authorization']
   end
 end
