@@ -36,7 +36,7 @@ fi
 
 # 4. Fix Path - Auto-fix
 echo "[Test 4] Verifying auto-fix..."
-npm run lint:fix src/BadCode.tsx > /dev/null 2>&1 || true # lint:fix might return non-zero if some errors are not auto-fixable
+npx eslint --fix src/BadCode.tsx > /dev/null 2>&1 || true # eslint --fix might return non-zero if some errors are not auto-fixable
 
 # Check if file changed (formatting fixed)
 if grep -q "return <div>Bad Indentation</div>;" src/BadCode.tsx; then
@@ -45,7 +45,7 @@ if grep -q "return <div>Bad Indentation</div>;" src/BadCode.tsx; then
    # return <div>Bad Indentation</div>
    # Let's check if the file content changed at all or standard formatting applied.
    # Better check: does it pass format check now?
-   if npm run format:check src/BadCode.tsx > /dev/null 2>&1; then
+   if npx prettier --check src/BadCode.tsx > /dev/null 2>&1; then
       echo "✅ Auto-fix successfully formatted the code"
    else 
       echo "⚠️  Auto-fix ran but format check still failing (might be non-fixable lint errors)"

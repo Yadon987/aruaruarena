@@ -31,7 +31,7 @@ SimpleCov.start 'rails' do
   use_merging true
   merge_timeout 3600
 
-  # フォーマッター設定（HTMLとJSON両方を出力）
+  # フォーマッター設定（HTMLとテキスト両方を出力）
   formatter SimpleCov::Formatter::MultiFormatter.new([
                                                        SimpleCov::Formatter::HTMLFormatter,
                                                        SimpleCov::Formatter::SimpleFormatter

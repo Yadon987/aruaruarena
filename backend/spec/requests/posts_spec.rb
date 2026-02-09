@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe 'Posts', type: :request do
   # コントローラー未実装のためPending
-  describe 'Blog Draft Feature API', skip: 'Not implemented yet' do
+  describe 'Blog Draft Feature API', skip: '未実装のためスキップ' do
     let(:user_id) { SecureRandom.uuid }
     let(:headers) { { 'X-User-ID' => user_id } } # 認証ヘッダーの想定
 
