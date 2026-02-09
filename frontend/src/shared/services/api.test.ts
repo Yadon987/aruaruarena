@@ -230,4 +230,133 @@ describe('E04-06: API Client', () => {
       )
     })
   })
+
+  describe('HTTPエラー: 追加ステータスコード', () => {
+    it('401 Unauthorized', async () => {
+      const errorResponse = { error: '認証が必要です', code: 'UNAUTHORIZED' }
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => errorResponse,
+      })
+
+      try {
+        await api.posts.get('some-id')
+        throw new Error('Expected ApiClientError to be thrown')
+      } catch (unknownError: unknown) {
+        expect(unknownError).toBeInstanceOf(ApiClientError)
+        const error = unknownError as ApiClientError
+        expect(error.status).toBe(401)
+        expect(error.code).toBe('UNAUTHORIZED')
+      }
+    })
+
+    it('403 Forbidden', async () => {
+      const errorResponse = { error: 'アクセス権限がありません', code: 'FORBIDDEN' }
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => errorResponse,
+      })
+
+      try {
+        await api.posts.create({ nickname: 'test', body: 'body' })
+        throw new Error('Expected ApiClientError to be thrown')
+      } catch (unknownError: unknown) {
+        expect(unknownError).toBeInstanceOf(ApiClientError)
+        const error = unknownError as ApiClientError
+        expect(error.status).toBe(403)
+      }
+    })
+
+    it('404 Not Found', async () => {
+      const errorResponse = { error: 'リソースが見つかりません', code: 'NOT_FOUND' }
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => errorResponse,
+      })
+
+      try {
+        await api.posts.get('non-existent-id')
+        throw new Error('Expected ApiClientError to be thrown')
+      } catch (unknownError: unknown) {
+        expect(unknownError).toBeInstanceOf(ApiClientError)
+        const error = unknownError as ApiClientError
+        expect(error.status).toBe(404)
+      }
+    })
+
+    it('502 Bad Gateway', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        json: async () => ({ error: 'Bad Gateway', code: 'BAD_GATEWAY' }),
+      })
+
+      try {
+        await api.posts.get('some-id')
+        throw new Error('Expected ApiClientError to be thrown')
+      } catch (unknownError: unknown) {
+        expect(unknownError).toBeInstanceOf(ApiClientError)
+        const error = unknownError as ApiClientError
+        expect(error.status).toBe(502)
+      }
+    })
+
+    it('503 Service Unavailable', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({ error: 'Service Unavailable', code: 'SERVICE_UNAVAILABLE' }),
+      })
+
+      try {
+        await api.posts.get('some-id')
+        throw new Error('Expected ApiClientError to be thrown')
+      } catch (unknownError: unknown) {
+        expect(unknownError).toBeInstanceOf(ApiClientError)
+        const error = unknownError as ApiClientError
+        expect(error.status).toBe(503)
+      }
+    })
+  })
+
+  describe('カスタム設定', () => {
+    it('カスタムタイムアウト: timeout オプションが正しく動作する', async () => {
+      const abortError = new Error('The user aborted a request.')
+      abortError.name = 'AbortError'
+      fetchMock.mockRejectedValueOnce(abortError)
+
+      try {
+        // @ts-ignore - timeout オプションは内部実装
+        await api.posts.get('some-id', { timeout: 1000 })
+        throw new Error('Expected ApiClientError to be thrown')
+      } catch (unknownError: unknown) {
+        expect(unknownError).toBeInstanceOf(ApiClientError)
+        const error = unknownError as ApiClientError
+        expect(error.code).toBe('TIMEOUT')
+      }
+    })
+  })
+
+  describe('エラーコードのフォールバック', () => {
+    it('429エラー: バックエンドがエラーコードを返さない場合、RATE_LIMITED が使用される', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        json: async () => ({ error: 'Too many requests' }), // code プロパティなし
+      })
+
+      try {
+        await api.posts.create({ nickname: 'test', body: 'body' })
+        throw new Error('Expected ApiClientError to be thrown')
+      } catch (unknownError: unknown) {
+        expect(unknownError).toBeInstanceOf(ApiClientError)
+        const error = unknownError as ApiClientError
+        expect(error.code).toBe('RATE_LIMITED')
+        expect(error.message).toBe('Too many requests')
+      }
+    })
+  })
 })
