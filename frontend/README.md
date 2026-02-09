@@ -24,11 +24,11 @@ npm run dev
 
 ## 利用可能なスクリプト
 
-| コマンド | 説明 |
-|---------|------|
-| `npm run dev` | 開発サーバーを起動（HMR有効） |
-| `npm run build` | 本番用ビルド |
-| `npm run preview` | ビルド後のプレビュー |
+| コマンド          | 説明                          |
+| ----------------- | ----------------------------- |
+| `npm run dev`     | 開発サーバーを起動（HMR有効） |
+| `npm run build`   | 本番用ビルド                  |
+| `npm run preview` | ビルド後のプレビュー          |
 
 ## Tailwind CSS
 
@@ -38,27 +38,28 @@ npm run dev
 
 ```tsx
 // プライマリ（青）
-className="bg-primary-500" // #3b82f6
+className = 'bg-primary-500' // #3b82f6
 
 // セカンダリ（緑）
-className="bg-secondary-500" // #10b981
+className = 'bg-secondary-500' // #10b981
 
 // エラー（赤）
-className="bg-error-500" // #ef4444
+className = 'bg-error-500' // #ef4444
 ```
 
 ### レスポンシブブレークポイント
 
-| プレフィックス | 最小幅 | 使用例 |
-|--------------|--------|--------|
-| `sm:` | 640px | `sm:text-lg` |
-| `md:` | 768px | `md:text-xl` |
-| `lg:` | 1024px | `lg:text-2xl` |
-| `xl:` | 1280px | `xl:text-3xl` |
+| プレフィックス | 最小幅 | 使用例        |
+| -------------- | ------ | ------------- |
+| `sm:`          | 640px  | `sm:text-lg`  |
+| `md:`          | 768px  | `md:text-xl`  |
+| `lg:`          | 1024px | `lg:text-2xl` |
+| `xl:`          | 1280px | `xl:text-3xl` |
 
 ### ダークモード（将来対応）
 
 `darkMode: 'class'`戦略を採用しており、将来的にダークモード対応が可能です。
+
 ## 環境変数
 
 `.env` ファイルを作成して以下の環境変数を設定してください：
