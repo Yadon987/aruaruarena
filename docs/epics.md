@@ -92,7 +92,7 @@
 - [x] E02-04: API Gatewayの設定
 - [x] E02-05: S3 + CloudFrontの設定（S3のみ完了）
 - [ ] E02-06: EventBridgeの設定
-- [ ] E02-07: GitHub Actions（CI/CD）の実装
+- [x] E02-07: GitHub Actions（CI/CD）の実装
 
 **受入基準**:
 - 月額コスト: $0.26/月（AWS）+ $2.25/月（AI）
