@@ -50,4 +50,24 @@ describe('useReducedMotion', () => {
     const { result } = renderHook(() => useReducedMotion())
     expect(result.current).toBe(false)
   })
+
+  it('マウント時に addEventListener が呼ばれる', () => {
+    // 検証内容: イベントリスナーの登録
+    const { result } = renderHook(() => useReducedMotion())
+    expect(result.current).toBeDefined()
+    expect(matchMediaMock().addEventListener).toHaveBeenCalledWith(
+      'change',
+      expect.any(Function)
+    )
+  })
+
+  it('アンマウント時に removeEventListener が呼ばれる', () => {
+    // 検証内容: イベントリスナーの解除（メモリリーク防止）
+    const { unmount } = renderHook(() => useReducedMotion())
+    unmount()
+    expect(matchMediaMock().removeEventListener).toHaveBeenCalledWith(
+      'change',
+      expect.any(Function)
+    )
+  })
 })

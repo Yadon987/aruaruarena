@@ -26,7 +26,11 @@ describe('useCreatePost', () => {
   let queryClient: QueryClient
 
   beforeEach(() => {
-    queryClient = new QueryClient()
+    queryClient = new QueryClient({
+      defaultOptions: {
+        mutations: { retry: false },
+      },
+    })
     vi.clearAllMocks()
   })
 
@@ -61,5 +65,25 @@ describe('useCreatePost', () => {
     result.current.mutate({ nickname: 'tester', body: 'fail' })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
+  })
+
+  it('投稿成功時にランキングキャッシュを無効化する', async () => {
+    // 検証内容: キャッシュ無効化戦略
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
+
+    const mockResponse = { id: 'new-id', status: 'judging' }
+    // @ts-ignore
+    api.posts.create.mockResolvedValue(mockResponse)
+
+    const { result } = renderHook(() => useCreatePost(), { wrapper })
+
+    result.current.mutate({ nickname: 'test', body: 'body' })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    // ランキングキャッシュが無効化されることを確認
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['rankings'],
+    })
   })
 })

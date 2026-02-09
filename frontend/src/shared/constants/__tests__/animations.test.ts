@@ -9,9 +9,33 @@ describe('animations constants', () => {
       expect(TRANSITIONS.page.duration).toBe(0.5)
     })
 
+    it('page.ease が easeInOut である', () => {
+      // 検証内容: 画面遷移のイージング関数が仕様通りか
+      // @ts-ignore
+      expect(TRANSITIONS.page.ease).toBe('easeInOut')
+    })
+
     it('modal.duration が 0.3 である', () => {
       // 検証内容: モーダルのアニメーション時間が仕様通りか
       expect(TRANSITIONS.modal.duration).toBe(0.3)
+    })
+
+    it('modal.ease が easeOut である', () => {
+      // 検証内容: モーダルのイージング関数が仕様通りか
+      // @ts-ignore
+      expect(TRANSITIONS.modal.ease).toBe('easeOut')
+    })
+
+    it('fadeIn.duration が 0.2 である', () => {
+      // 検証内容: フェードインのアニメーション時間が仕様通りか
+      // @ts-ignore
+      expect(TRANSITIONS.fadeIn.duration).toBe(0.2)
+    })
+
+    it('fadeIn.ease が easeIn である', () => {
+      // 検証内容: フェードインのイージング関数が仕様通りか
+      // @ts-ignore
+      expect(TRANSITIONS.fadeIn.ease).toBe('easeIn')
     })
   })
 
@@ -28,6 +52,16 @@ describe('animations constants', () => {
       expect(VARIANTS.modal).toHaveProperty('initial')
       expect(VARIANTS.modal).toHaveProperty('animate')
       expect(VARIANTS.modal).toHaveProperty('exit')
+    })
+
+    it('modal の scale プロパティが正しく設定されている', () => {
+      // 検証内容: モーダルのスケールアニメーション
+      // @ts-ignore
+      expect(VARIANTS.modal.initial.scale).toBe(0.95)
+      // @ts-ignore
+      expect(VARIANTS.modal.animate.scale).toBe(1)
+      // @ts-ignore
+      expect(VARIANTS.modal.exit.scale).toBe(0.95)
     })
 
     it('overlay に initial, animate, exit が含まれる', () => {

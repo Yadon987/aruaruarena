@@ -44,13 +44,29 @@ describe('usePost', () => {
     expect(api.posts.get).toHaveBeenCalledWith('123')
   })
 
-  it('空文字IDの場合は API 呼び出しを行い（enabled: falseを確認したいが、結果としてデータが取得されないことで検証）', async () => {
+  it('空文字IDの場合はfetchStatusがidleになる', async () => {
     // 検証内容: IDが空の場合の挙動（enabled: false）
-    // useQueryのenabledオプションは直接テストしにくいが、fetchが呼ばれないことで確認
+    // fetchStatus: idle はクエリが実行されていないことを明示的に示す
     const { result } = renderHook(() => usePost(''), { wrapper })
 
-    expect(result.current.isLoading).toBe(false) // enabled: false なら loading すら始まらない（status: pending, fetchStatus: idle）
-    // fetchStatus を見るのが確実だが、一旦 fetch が呼ばれないことで確認
+    expect(result.current.fetchStatus).toBe('idle')
     expect(api.posts.get).not.toHaveBeenCalled()
+  })
+
+  it('有効なIDの場合はfetchStatusがfetchingになる', async () => {
+    // 検証内容: 通常のデータ取得時の挙動
+    const mockPost = { id: '123', nickname: 'test', body: 'body' }
+    // @ts-ignore
+    api.posts.get.mockResolvedValue(mockPost)
+
+    const { result } = renderHook(() => usePost('123'), { wrapper })
+
+    // 最初はfetching状態
+    expect(result.current.fetchStatus).toBe('fetching')
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    // 完了後はidleに戻る
+    expect(result.current.fetchStatus).toBe('idle')
   })
 })

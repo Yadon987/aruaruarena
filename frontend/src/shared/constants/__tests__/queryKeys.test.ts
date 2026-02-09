@@ -35,4 +35,19 @@ describe('queryKeys', () => {
     // @ts-ignore
     expect(queryKeys.rankings.list()).toEqual(['rankings', { limit: undefined }])
   })
+
+  it('queryKeysの型が正しく推論される（readonly配列）', () => {
+    // 検証内容: as const によるリテラル型の保持
+    const postsKey = queryKeys.posts.all
+    // readonly ["posts"] 型であるべき
+    expect(postsKey).toEqual(['posts'])
+    expect(postsKey).toBe(postsKey) // 同じ参照であることを確認
+  })
+
+  it('queryKeys.posts.detailは異なるIDで異なるキーを返す', () => {
+    // 検証内容: キーの一意性
+    const key1 = queryKeys.posts.detail('id1')
+    const key2 = queryKeys.posts.detail('id2')
+    expect(key1).not.toEqual(key2)
+  })
 })

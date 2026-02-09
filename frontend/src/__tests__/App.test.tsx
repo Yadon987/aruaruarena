@@ -17,4 +17,12 @@ describe('App Integration', () => {
     render(<App />)
     expect(screen.getByTestId('react-query-devtools')).toBeInTheDocument()
   })
+
+  // TODO: QueryClient設定の検証（GREEN実装後に追加）
+  // - staleTime: 5分 (300,000ms)
+  // - gcTime: 10分 (600,000ms)
+  // - retry: ネットワークエラー時のみ1回
+  // - refetchOnWindowFocus: false
+  // 注: QueryClientの内部設定は直接テストしにくいため、
+  //     挙動ベースのテスト（例: 同一クエリの再取得確認）で検証する
 })

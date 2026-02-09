@@ -67,4 +67,36 @@ describe('useRankings', () => {
 
   // その他の細かい境界値テストやリトライロジックのテストは
   // QueryClientの設定に依存するため、ここでは基本的な挙動を確認する
+
+  it('limitパラメータがAPI呼び出しに正しく渡される', async () => {
+    // 検証内容: limitパラメータの伝達
+    const mockData = { rankings: [], total_count: 0 }
+    // @ts-ignore
+    api.rankings.list.mockResolvedValue(mockData)
+
+    const limit = 15
+    const { result } = renderHook(() => useRankings(limit), { wrapper })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(api.rankings.list).toHaveBeenCalledWith(limit)
+  })
+
+  it('異なるlimitでクエリキーが変わる', async () => {
+    // 検証内容: limitによるクエリキーの変化（キャッシュ分離）
+    const mockData = { rankings: [], total_count: 0 }
+    // @ts-ignore
+    api.rankings.list.mockResolvedValue(mockData)
+
+    const { result: result1 } = renderHook(() => useRankings(10), { wrapper })
+    const { result: result2 } = renderHook(() => useRankings(20), { wrapper })
+
+    await waitFor(() => expect(result1.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result2.current.isSuccess).toBe(true))
+
+    // 異なるlimitは異なるクエリキーになる
+    // (実際の実装ではqueryKeys.rankings.list(limit)が使われる)
+    expect(api.rankings.list).toHaveBeenCalledWith(10)
+    expect(api.rankings.list).toHaveBeenCalledWith(20)
+  })
 })
