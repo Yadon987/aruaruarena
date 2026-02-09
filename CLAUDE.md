@@ -60,16 +60,9 @@ Ruby on Rails 8 API + DynamoDB で構築された「あるあるアリーナ」�
 ### ブランチ戦略
 
 **機能ブランチはmainから直接分岐してください**
-
 ```bash
-# ✅ 良い例
-git checkout main
-git pull origin main
-git checkout -b feature/new-feature
-
-# ❌ 悪い例
-git checkout -b intermediate-branch
-git checkout -b feature/new-feature  # 中間ブランチから分岐
+# ✅ 良い例　git checkout main　git pull origin main　git checkout -b feature/new-feature
+# ❌ 悪い例　git checkout -b intermediate-branch
 ```
 
 **理由**:
