@@ -16,9 +16,9 @@
 
 | Epic ID | Epic名 | 優先順位 | 依存関係 | ステータス |
 |---------|--------|----------|----------|-----------|
-| E01 | テスト環境構築（バックエンド） | P0（最優先） | なし |  |
+| E01 | テスト環境構築（バックエンド） | P0（最優先） | なし | ✅ 完了 |
 | E02 | インフラ構築（AWS） | P0（最優先） | なし | 進行中 |
-| E03 | DynamoDBスキーマ定義 | P0（最優先） | E02 |  |
+| E03 | DynamoDBスキーマ定義 | P0（最優先） | E02 | ✅ 完了 |
 | E04 | フロントエンド基盤構築 | P0（最優先） | なし |  |
 | E05 | 投稿API | P0（最優先） | E03 |  |
 | E06 | AI審査システム | P0（最優先） | E05 |  |
@@ -118,20 +118,20 @@
 - duplicate_checks（重複チェック）
 
 **ストーリー**:
-- [ ] E03-01: postsテーブルの設計（PK: id, GSI: RankingIndex）
-- [ ] E03-02: judgmentsテーブルの設計（PK: post_id, SK: persona）
-- [ ] E03-03: rate_limitsテーブルの設計（PK: identifier, TTL）
-- [ ] E03-04: duplicate_checksテーブルの設計（PK: body_hash, TTL）
-- [ ] E03-05: GSI（RankingIndex）の定義
-- [ ] E03-06: TTL設定の実装
-- [ ] E03-07: Dynamoidモデルの実装
-- [ ] E03-08: マイグレーションスクリプトの作成
+- [x] E03-01: postsテーブルの設計（PK: id, GSI: RankingIndex）
+- [x] E03-02: judgmentsテーブルの設計（PK: post_id, SK: persona）
+- [x] E03-03: rate_limitsテーブルの設計（PK: identifier, TTL）
+- [x] E03-04: duplicate_checksテーブルの設計（PK: body_hash, TTL）
+- [x] E03-05: GSI（RankingIndex）の定義
+- [x] E03-06: TTL設定の実装
+- [x] E03-07: Dynamoidモデルの実装
+- [x] E03-08: マイグレーションスクリプトの作成
 
 **受入基準**:
-- docs/db_schema.md に従った設計
-- PITR（Point-In-Time Recovery）有効化
-- TTLによる自動削除設定
-- score_keyのフォーマット: `inv_score#created_at#id`
+- ✅ docs/db_schema.md に従った設計
+- ✅ PITR（Point-In-Time Recovery）有効化
+- ✅ TTLによる自動削除設定
+- ✅ score_keyのフォーマット: `inv_score#created_at#id`
 
 **関連ファイル**:
 - `app/models/post.rb`
