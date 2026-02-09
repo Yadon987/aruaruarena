@@ -51,7 +51,6 @@ class Judgment
   belongs_to :post
 
   # バリデーション
-  validates :post_id,   presence: true
   validates :persona,   presence: true, inclusion: { in: %w[hiroyuki dewi nakao] }
   validates :id,        presence: true
   validates :succeeded, inclusion: { in: [true, false] }
@@ -85,23 +84,37 @@ class Judgment
   # @return [Hash] バイアス適用後のスコア
   def self.apply_persona_bias(base_scores, persona)
     scores = base_scores.dup
-
-    case persona
-    when 'hiroyuki'
-      # ひろゆき風: 独創性(+3)、共感度(-2)
-      scores[:originality] = [scores[:originality] + 3, 20].min
-      scores[:empathy] = [scores[:empathy] - 2, 0].max
-    when 'dewi'
-      # デヴィ婦人風: 表現力(+3)、面白さ(+2)
-      scores[:expression] = [scores[:expression] + 3, 20].min
-      scores[:humor] = [scores[:humor] + 2, 20].min
-    when 'nakao'
-      # 中尾彬風: 面白さ(+3)、共感度(+2)
-      scores[:humor] = [scores[:humor] + 3, 20].min
-      scores[:empathy] = [scores[:empathy] + 2, 20].min
-    end
-
+    apply_bias_by_persona(scores, persona)
     scores
+  end
+
+  # ペルソナごとのバイアス適用
+  # @param scores [Hash] スコア（破壊的変更）
+  # @param persona [String] ペルソナID
+  def self.apply_bias_by_persona(scores, persona)
+    case persona
+    when 'hiroyuki' then apply_hiroyuki_bias(scores)
+    when 'dewi'     then apply_dewi_bias(scores)
+    when 'nakao'    then apply_nakao_bias(scores)
+    end
+  end
+
+  # ひろゆき風: 独創性(+3)、共感度(-2)
+  def self.apply_hiroyuki_bias(scores)
+    scores[:originality] = [scores[:originality] + 3, 20].min
+    scores[:empathy]     = [scores[:empathy] - 2, 0].max
+  end
+
+  # デヴィ婦人風: 表現力(+3)、面白さ(+2)
+  def self.apply_dewi_bias(scores)
+    scores[:expression] = [scores[:expression] + 3, 20].min
+    scores[:humor]      = [scores[:humor] + 2, 20].min
+  end
+
+  # 中尾彬風: 面白さ(+3)、共感度(+2)
+  def self.apply_nakao_bias(scores)
+    scores[:humor]   = [scores[:humor] + 3, 20].min
+    scores[:empathy] = [scores[:empathy] + 2, 20].min
   end
 
   # 合計点を計算

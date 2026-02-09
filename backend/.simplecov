@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # SimpleCov設定ファイル
 # カバレッジ90%以上を要求
 
@@ -25,6 +27,13 @@ SimpleCov.start 'rails' do
   add_group 'Adapters', 'app/adapters'
   add_group 'Libraries', 'lib'
 
-  # マージしたくないディレクトリを指定
+  # 結果の永続化を有効化
+  use_merging true
   merge_timeout 3600
+
+  # フォーマッター設定（HTMLとJSON両方を出力）
+  formatter SimpleCov::Formatter::MultiFormatter.new([
+                                                       SimpleCov::Formatter::HTMLFormatter,
+                                                       SimpleCov::Formatter::SimpleFormatter
+                                                     ])
 end

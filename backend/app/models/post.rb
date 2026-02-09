@@ -37,7 +37,7 @@ class Post
                          range_key: :score_key
 
   # アソシエーション
-  has_many :judgments
+  has_many :judgments, dependent: :destroy
 
   # バリデーション
   validates :id,          presence: true
@@ -63,19 +63,15 @@ class Post
     return nil if average_score.blank?
 
     inv_score = 1000 - (average_score * 10).round # 四捨五入
-    format('%04d#%010d#%s', inv_score, created_at, id)
+    format('%<s1>04d#%<s2>010d#%<s3>s', s1: inv_score, s2: created_at, s3: id)
   end
 
   # ステータスを更新してscore_keyを設定
   # @param new_status [String] 新しいステータス
   def update_status!(new_status)
     self.status = new_status
-    self.score_key = if status == 'scored'
-                       generate_score_key
-                     else
-                       # scored以外はscore_keyをクリア（GSIからの除外）
-                       nil
-                     end
+    # scored以外はscore_keyをクリア（GSIからの除外）
+    self.score_key = (generate_score_key if status == 'scored')
     save!
   end
 

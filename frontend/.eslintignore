@@ -1,0 +1,15 @@
+# 依存関係
+node_modules
+dist
+build
+
+# 環境変数
+.env
+.env.*
+!.env.example
+
+# その他
+.cache
+.vscode
+coverage
+*.config.js

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
+// eslint-disable-next-line import/no-unresolved
 import viteLogo from '/vite.svg'
 import './App.css'
 
@@ -14,8 +15,12 @@ function App() {
 
         {/* テスト1: 基本的なユーティリティクラス */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-primary-500 mb-2">1. 基本クラス（文字色・太字）</h3>
-          <p className="text-blue-500 font-bold">これは青い太字テキストです（text-blue-500 font-bold）</p>
+          <h3 className="text-lg font-semibold text-primary-500 mb-2">
+            1. 基本クラス（文字色・太字）
+          </h3>
+          <p className="text-blue-500 font-bold">
+            これは青い太字テキストです（text-blue-500 font-bold）
+          </p>
         </div>
 
         {/* テスト2: カスタムカラー */}
@@ -30,7 +35,9 @@ function App() {
 
         {/* テスト3: レスポンシブ */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-primary-500 mb-2">3. レスポンシブ（画面幅640px以上でフォントサイズ拡大）</h3>
+          <h3 className="text-lg font-semibold text-primary-500 mb-2">
+            3. レスポンシブ（画面幅640px以上でフォントサイズ拡大）
+          </h3>
           <p className="text-sm md:text-lg text-gray-700">
             このテキストは画面幅640px以上で大きくなります（text-sm md:text-lg）
           </p>
