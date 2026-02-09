@@ -1,5 +1,7 @@
 #!/bin/bash
-set -e
+
+# Note: set -eを使用せず、明示的なエラーハンドリングを実装
+# すべてのエラーを収集してレポートするため
 
 # プロジェクトルートに移動
 cd "$(dirname "$0")/.."
@@ -49,10 +51,13 @@ echo "--- 4. バレルエクスポート確認 ---"
 check_content "src/shared/types/index.ts" "export type"
 
 echo "--- 5. ビルドチェック ---"
-# 型定義がない状態でのビルドチェックは必ずしも失敗しない（空ファイルは有効なTS）ため、
+# 型定義がない状態でのビルドチェックは必ずしも失敗しない（空ファイルは有効なTS）のため、
 # ここのチェックは「ビルドが通ること」を確認するものだが、
 # 定義欠損の判定で既にFAILURESが増えているはず。
-if npm run build > /dev/null 2>&1; then
+# 明示的にビルド結果をチェックしてエラーを収集します
+npm run build > /dev/null 2>&1
+BUILD_RESULT=$?
+if [ $BUILD_RESULT -eq 0 ]; then
     echo "✅ [OK] ビルド成功"
 else
     echo "❌ [NG] ビルド失敗"
