@@ -1,30 +1,11 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { queryClient } from './shared/config/queryClient'
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
-import { ApiClientError } from './shared/services/api'
 // eslint-disable-next-line import/no-unresolved
 import viteLogo from '/vite.svg'
 import './App.css'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: (failureCount, error) => {
-        if (error instanceof ApiClientError) {
-          if (error.code === 'VALIDATION_ERROR' || error.code === 'RATE_LIMITED') {
-            return false
-          }
-        }
-        return failureCount < 1
-      },
-      refetchOnWindowFocus: false,
-    },
-    mutations: {
-      retry: 0,
-    },
-  },
-})
 
 function App() {
   const [count, setCount] = useState(0)
