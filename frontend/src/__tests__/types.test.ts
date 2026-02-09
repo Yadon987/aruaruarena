@@ -156,8 +156,8 @@ describe('E04-05: 共通型定義 (Types) の作成', () => {
       // 定数をインポートしていることを確認
       expect(domainContent).toContain('import { JUDGE, POST_STATUS }')
       // 定数から型を導出していることを確認
-      expect(domainContent).toContain('typeof JUDGE.PERSONAS[number]')
-      expect(domainContent).toContain('typeof POST_STATUS.VALUES[number]')
+      expect(domainContent).toContain('(typeof JUDGE.PERSONAS)[number]')
+      expect(domainContent).toContain('(typeof POST_STATUS.VALUES)[number]')
     })
 
     it('domain.ts と constants/validation.ts で同じリテラル値を使用している', () => {
