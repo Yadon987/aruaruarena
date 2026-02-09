@@ -1,3 +1,7 @@
+# frozen_string_literal: true
+
+# rubocop:disable Style/GlobalVars
+
 require_relative 'config/boot'
 require 'lamby'
 require_relative 'config/application'
