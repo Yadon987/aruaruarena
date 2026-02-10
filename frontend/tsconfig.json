@@ -32,5 +32,5 @@
     /* Type Declarations */
     "types": ["vitest/globals", "@testing-library/jest-dom", "node"]
   },
-  "include": ["src"]
+  "include": ["src", "e2e"]
 }
