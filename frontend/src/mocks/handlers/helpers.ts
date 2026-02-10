@@ -6,12 +6,24 @@
 import { MOCK, RANKING } from './constants'
 
 /**
+ * モック投稿データの型
+ */
+interface MockPost {
+  id: string
+  nickname: string
+  body: string
+  status: 'judging' | 'scored' | 'failed'
+  average_score?: number
+  created_at: string
+}
+
+/**
  * モック投稿データを生成する
  *
  * @param overrides - オーバーライドするプロパティ
  * @returns モック投稿データ
  */
-export function createMockPost(overrides?: Partial<ReturnType<typeof createMockPost>>) {
+export function createMockPost(overrides?: Partial<MockPost>) {
   return {
     id: MOCK.UUID_PREFIX + Date.now(),
     nickname: MOCK.DEFAULT_NICKNAME,

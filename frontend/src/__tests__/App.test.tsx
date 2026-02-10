@@ -16,6 +16,12 @@ describe('App Integration', () => {
     expect(screen.getByTestId('react-query-devtools')).toBeInTheDocument()
   })
 
+  it('Viteのデフォルトコンテンツが表示されない', () => {
+    render(<App />)
+    expect(screen.queryByText(/Vite \+ React/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/count is/i)).not.toBeInTheDocument()
+  })
+
   // TODO: QueryClient設定の検証（GREEN実装後に追加）
   // - staleTime: 5分 (300,000ms)
   // - gcTime: 10分 (600,000ms)
