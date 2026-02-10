@@ -161,7 +161,7 @@
 - [x] E04-06: APIクライアント(axios/fetch)の基盤実装
 - [x] E04-07: TanStack Query / Framer Motion の導入
 - [x] E04-08: Playwrightの導入と設定
-- [ ] E04-09: テスト用モックサーバー（MSW）の導入
+- [x] E04-09: テスト用モックサーバー（MSW）の導入
 
 **関連ファイル**:
 - `frontend/package.json`
@@ -177,11 +177,11 @@
 **エンドポイント**: `POST /api/posts`
 
 **ストーリー**:
-- [ ] E05-01: 投稿バリデーション（ニックネーム1-20文字、本文3-30文字）
-- [ ] E05-02: DynamoDBへの投稿保存
-- [ ] E05-03: UUID生成・レスポンス返却
-- [ ] E05-04: 初期ステータス `judging` の設定
-- [ ] E05-05: RSpecテスト（正常系・異常系）
+- [x] E05-01: 投稿バリデーション（ニックネーム1-20文字、本文3-30文字）
+- [x] E05-02: DynamoDBへの投稿保存
+- [x] E05-03: UUID生成・レスポンス返却
+- [x] E05-04: 初期ステータス `judging` の設定
+- [x] E05-05: RSpecテスト（正常系・異常系）
 - [ ] E05-06: 審査トリガー（Lambda内でThread並列実行）
   - **採用方式**: Thread.newでJudgePostServiceを非同期実行
   - **理由**: Lambda環境ではSidekiq等が使えないため

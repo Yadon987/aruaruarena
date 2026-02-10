@@ -1,91 +1,92 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
-import { useState } from 'react'
 import reactLogo from './assets/react.svg'
-// eslint-disable-next-line import/no-unresolved
-import viteLogo from '/vite.svg'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
     <QueryClientProvider client={queryClient}>
-      <>
-        {/* Tailwind CSS動作確認テストセクション */}
-        <div className="mb-8 p-6 bg-white rounded-lg shadow-md max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Tailwind CSS 動作確認</h2>
+      <div className="p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Tailwind CSS 動作確認</h2>
 
-          {/* テスト1: 基本的なユーティリティクラス */}
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-primary-500 mb-2">
-              1. 基本クラス（文字色・太字）
-            </h3>
+        {/* 1. 基本クラス */}
+        <div className="mb-6 p-4 border rounded shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2 border-b pb-1">
+            1. 基本クラス
+          </h3>
+          <div className="space-y-2">
+            <p className="text-gray-600">
+              比較用：これは標準の太さのテキストです (font-normal)
+            </p>
             <p className="text-blue-500 font-bold">
-              これは青い太字テキストです（text-blue-500 font-bold）
+              検証用：これは青い太字テキストです (text-blue-500 font-bold)
             </p>
-          </div>
-
-          {/* テスト2: カスタムカラー */}
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-primary-500 mb-2">2. カスタムカラー</h3>
-            <div className="flex gap-4">
-              <div className="px-4 py-2 bg-primary-500 text-white rounded">プライマリ</div>
-              <div className="px-4 py-2 bg-secondary-500 text-white rounded">セカンダリ</div>
-              <div className="px-4 py-2 bg-error-500 text-white rounded">エラー</div>
-            </div>
-          </div>
-
-          {/* テスト3: レスポンシブ */}
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-primary-500 mb-2">
-              3. レスポンシブ（画面幅640px以上でフォントサイズ拡大）
-            </h3>
-            <p className="text-sm md:text-lg text-gray-700">
-              このテキストは画面幅640px以上で大きくなります（text-sm md:text-lg）
-            </p>
-          </div>
-
-          {/* テスト4: ボタン */}
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-primary-500 mb-2">4. インタラクティブ要素</h3>
-            <button className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded transition-colors">
-              ホバーで色が変わるボタン
-            </button>
-          </div>
-
-          {/* テスト5: スペースとパディング */}
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-primary-500 mb-2">5. スペースとパディング</h3>
-            <div className="p-4 m-2 bg-gray-100 rounded border-2 border-primary-300">
-              パディング4、マージン2、背景グレー、丸角、ボーダー
-            </div>
           </div>
         </div>
 
-        {/* 既存のVite + Reactサンプル */}
-        <div className="text-center">
-          <div className="flex justify-center gap-8 mb-4">
-            <a href="https://vite.dev" target="_blank" rel="noopener noreferrer">
-              <img src={viteLogo} className="logo" alt="Vite logo" />
-            </a>
-            <a href="https://react.dev" target="_blank" rel="noopener noreferrer">
+        {/* 2. カスタムカラー */}
+        <div className="mb-6 p-4 border rounded shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2 border-b pb-1">
+            2. カスタムカラー
+          </h3>
+          <div className="flex gap-4">
+            <span className="px-4 py-2 bg-primary-500 text-white rounded">Primary</span>
+            <span className="px-4 py-2 bg-secondary-500 text-white rounded">Secondary</span>
+            <span className="px-4 py-2 bg-error-500 text-white rounded">Error</span>
+          </div>
+        </div>
+
+        {/* 3. レスポンシブ */}
+        <div className="mb-6 p-4 border rounded shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2 border-b pb-1">
+            3. レスポンシブ
+          </h3>
+          <p className="text-sm md:text-lg bg-gray-100 p-2 rounded">
+            画面幅でサイズ変 (text-sm &rarr; md:text-lg) <br />
+            <span className="text-xs text-gray-500">※ウィンドウ幅を変えて確認してください</span>
+          </p>
+        </div>
+
+        {/* 4. インタラクティブ */}
+        <div className="mb-6 p-4 border rounded shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2 border-b pb-1">
+            4. インタラクティブ
+          </h3>
+          <button className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded transition-colors duration-200">
+            ホバーしてみてください
+          </button>
+        </div>
+
+        {/* 5. スペース・パディング */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            5. スペース・パディング (検証用ボックス)
+          </h3>
+          <p className="text-sm text-gray-600 mb-2">※外枠の点線と、内側のボックスの間に隙間(マージン)があれば成功です</p>
+          <div className="border-2 border-dashed border-gray-300 bg-yellow-50 inline-block">
+             <div className="p-4 m-2 bg-white rounded border-2 border-primary-300 text-center shadow-sm">
+               p-4 m-2
+             </div>
+          </div>
+        </div>
+
+        {/* 6. アニメーション (追加リクエスト) */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            6. アニメーション動作確認
+          </h3>
+          <div className="flex items-center justify-center p-6 bg-gray-50 border rounded">
+            <a href="https://react.dev" target="_blank" rel="noreferrer">
               <img src={reactLogo} className="logo react" alt="React logo" />
             </a>
           </div>
-          <h1 className="text-4xl font-bold mb-4">Vite + React</h1>
-          <div className="card">
-            <button onClick={() => setCount((count) => count + 1)} className="bg-gray-800">
-              count is {count}
-            </button>
-            <p className="mt-4 text-gray-600">
-              Edit <code>src/App.tsx</code> and save to test HMR
-            </p>
-          </div>
-          <p className="read-the-docs mt-4">Click on the Vite and React logos to learn more</p>
+          <p className="text-center text-sm text-gray-500 mt-2">
+            ロゴが回転していれば成功です (animation: logo-spin)
+          </p>
         </div>
-      </>
+
+      </div>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )

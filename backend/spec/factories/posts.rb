@@ -9,7 +9,7 @@ FactoryBot.define do
     average_score { nil }
     judges_count { 0 }
     score_key { nil }
-    created_at { Time.now.to_i }
+    created_at { Time.now.to_i.to_s }
 
     trait :scored do
       status { 'scored' }

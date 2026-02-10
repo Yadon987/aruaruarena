@@ -44,7 +44,7 @@ RSpec.configure do |config|
   end
 
   # 各テスト前にテーブルをクリーンアップ
-  config.before(:each, type: :model) do
+  config.before(:each) do
     # Dynamoid.adapter.list_tablesでテーブルの存在を確認
     existing_tables = Dynamoid.adapter.list_tables
 
