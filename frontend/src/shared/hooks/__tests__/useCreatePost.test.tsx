@@ -2,10 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-// @ts-ignore
 import { queryKeys } from '../../constants/queryKeys'
 import { api } from '../../services/api'
-// @ts-ignore
 import { useCreatePost } from '../useCreatePost'
 
 // api モジュールのモック化
@@ -16,11 +14,6 @@ vi.mock('../../services/api', () => ({
     },
   },
 }))
-
-// queryKeys のモック化（存在しない場合のエラー回避のため、本来は実装依存だがテストを通すためにモックが必要かも）
-// ここでは、useCreatePost内でインポートエラーになることを期待しているが、
-// モジュール単位でのテストなので、依存モジュールが存在しないとテスト実行自体ができない可能性がある。
-// 一旦このまま進める。
 
 describe('useCreatePost', () => {
   let queryClient: QueryClient
@@ -83,7 +76,7 @@ describe('useCreatePost', () => {
 
     // ランキングキャッシュが無効化されることを確認
     expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['rankings'],
+      queryKey: queryKeys.rankings.all,
     })
   })
 })
