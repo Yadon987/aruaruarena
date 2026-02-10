@@ -52,7 +52,7 @@ describe('E04-09: MSW Integration', () => {
   describe('異常系', () => {
     it('存在しないIDで404エラーが返る', async () => {
       // エラーハンドラーを一時的に適用
-      mswServer.use(errorHandlers[0])
+      mswServer.use(errorHandlers.notFound)
 
       try {
         await api.posts.get('non-existent')
@@ -111,7 +111,7 @@ describe('E04-09: MSW Integration', () => {
 
     it('ネットワークエラーがスローされる', async () => {
       // エラーハンドラーを一時的に適用
-      mswServer.use(errorHandlers[3])
+      mswServer.use(errorHandlers.networkError)
 
       try {
         await api.posts.get('network-error')

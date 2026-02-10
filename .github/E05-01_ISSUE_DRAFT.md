@@ -161,8 +161,8 @@ end
 before_validation :sanitize_inputs
 
 def sanitize_inputs
-  self.nickname = nickname&.strip&.gsub("\u3000", '')&.strip # 全角空白も除去
-  self.body = body&.strip&.gsub("\u3000", '')&.strip
+  self.nickname = nickname&.gsub(/\A[ \u3000]+|[ \u3000]+\z/, '') # 前後の半角・全角空白のみ除去
+  self.body = body&.gsub(/\A[ \u3000]+|[ \u3000]+\z/, '')
 end
 ```
 

@@ -5,8 +5,12 @@ import './index.css'
 
 async function enableMocking() {
   if (import.meta.env.DEV) {
-    const { mswWorker } = await import('./mocks/browser')
-    await mswWorker.start({ onUnhandledRequest: 'bypass' })
+    try {
+      const { mswWorker } = await import('./mocks/browser')
+      await mswWorker.start({ onUnhandledRequest: 'bypass' })
+    } catch (error) {
+      console.error('MSWの起動に失敗しました:', error)
+    }
   }
 }
 
