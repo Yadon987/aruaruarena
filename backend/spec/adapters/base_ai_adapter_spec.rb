@@ -441,6 +441,160 @@ RSpec.describe BaseAiAdapter do
       end
     end
 
+    context 'スコア範囲チェック' do
+      it 'スコアが-1の場合はinvalid_responseエラーコードを返すこと（境界値）' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => { empathy: -1, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
+      end
+
+      it 'スコアが0の場合は有効であること（境界値）' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => { empathy: 0, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be true
+      end
+
+      it 'スコアが20の場合は有効であること（境界値）' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => { empathy: 20, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be true
+      end
+
+      it 'スコアが21の場合はinvalid_responseエラーコードを返すこと（境界値）' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => { empathy: 21, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
+      end
+
+      it 'スコアが浮動小数点数の場合はinvalid_responseエラーコードを返すこと' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => { empathy: 15.5, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
+      end
+
+      it 'スコアが文字列の数字の場合はinvalid_responseエラーコードを返すこと' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => { empathy: "15", humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
+      end
+    end
+
+    context 'レスポンス形式のバリデーション' do
+      it 'scoresがnilの場合は有効であること（空スコア許容）' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => nil, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be true
+      end
+
+      it 'scoresが空ハッシュの場合は有効であること（空スコア許容）' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => {}, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be true
+      end
+
+      it 'commentがnilの場合はinvalid_responseエラーコードを返すこと' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => base_scores, 'comment' => nil }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
+      end
+
+      it 'commentが空白のみの場合はinvalid_responseエラーコードを返すこと' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => base_scores, 'comment' => '   ' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
+      end
+
+      it 'commentが全角スペースのみの場合は有効であること（stripは全角を削除しない）' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => base_scores, 'comment' => '　' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be true
+      end
+    end
+
+    context 'タイムアウト境界値' do
+      it 'MAX_RETRIES回のリトライ後に成功すること' do
+        adapter.reset_call_count!
+        adapter.mock_response_proc = ->(attempt) {
+          raise Timeout::Error, 'API timeout' if attempt <= 3
+          described_class::JudgmentResult.new(
+            succeeded: true,
+            error_code: nil,
+            scores: base_scores,
+            comment: '成功'
+          )
+        }
+
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be true
+        expect(adapter.call_count).to eq(4) # 初回 + 3回リトライ
+      end
+
+      it 'MAX_RETRIES超過で失敗すること' do
+        adapter.reset_call_count!
+        adapter.mock_response_proc = ->(attempt) {
+          raise Timeout::Error, 'API timeout' if attempt <= 4 # 初回 + 4回リトライ
+          described_class::JudgmentResult.new(
+            succeeded: true,
+            error_code: nil,
+            scores: base_scores,
+            comment: '成功'
+          )
+        }
+
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('timeout')
+        expect(adapter.call_count).to eq(4) # 初回 + 3回リトライ（MAX_RETRIES=3）
+      end
+    end
+
+    context 'スレッドセーフティ' do
+      it '同じアダプターインスタンスを共有する場合にスレッドセーフであること' do
+        adapter.mock_response = described_class::JudgmentResult.new(
+          succeeded: true,
+          error_code: nil,
+          scores: base_scores,
+          comment: '成功'
+        )
+
+        threads = 10.times.map do
+          Thread.new { adapter.judge('テスト投稿', persona: 'hiroyuki') }
+        end
+
+        results = threads.map(&:value)
+        expect(results.size).to eq(10)
+        expect(results.all? { |r| r.succeeded }).to be true
+      end
+    end
+
     context 'ログ出力' do
       before do
         adapter.mock_response = described_class::JudgmentResult.new(
@@ -474,7 +628,7 @@ RSpec.describe BaseAiAdapter do
       it '失敗時にERRORレベルでログが出力されること' do
         adapter.mock_response_proc = ->(_) { raise Timeout::Error, 'timeout' }
 
-        expect(Rails.logger).to receive(:error).with(/審査失敗/)
+        expect(Rails.logger).to receive(:error).with(/審査失敗/).at_least(:once)
         adapter.judge('テスト投稿', persona: 'hiroyuki')
       end
     end
