@@ -21,17 +21,17 @@ RSpec.describe 'API::Posts', type: :request do
       it '有効なパラメータで投稿が作成される（201 Created）' do
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
-        
-        json = JSON.parse(response.body)
+
+        json = response.parsed_body
         expect(json['id']).to be_present
         expect(json['status']).to eq('judging')
       end
 
       # 検証: 日本語入力の確認
       it '日本語のニックネーム・本文で投稿成功' do
-        expect {
+        expect do
           post '/api/posts', params: valid_params.to_json, headers: valid_headers
-        }.to change(Post, :count).by(1)
+        end.to change(Post, :count).by(1)
         expect(response).to have_http_status(:created)
       end
 
@@ -68,7 +68,7 @@ RSpec.describe 'API::Posts', type: :request do
         params = { post: { nickname: ' 太郎 ', body: ' テスト投稿 ' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
 
-        json = JSON.parse(response.body)
+        json = response.parsed_body
         created_post = Post.find(json['id'])
         expect(created_post.nickname).to eq('太郎')
         expect(created_post.body).to eq('テスト投稿')
@@ -79,7 +79,7 @@ RSpec.describe 'API::Posts', type: :request do
         params = { post: { nickname: '　太郎　', body: '　テスト投稿　' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
 
-        json = JSON.parse(response.body)
+        json = response.parsed_body
         created_post = Post.find(json['id'])
         expect(created_post.nickname).to eq('太郎')
         expect(created_post.body).to eq('テスト投稿')
@@ -91,9 +91,9 @@ RSpec.describe 'API::Posts', type: :request do
       it 'ニックネーム空文字で422 VALIDATION_ERROR' do
         params = { post: { nickname: '', body: '本文テスト' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        
+
         expect(response).to have_http_status(:unprocessable_entity)
-        json = JSON.parse(response.body)
+        json = response.parsed_body
         expect(json['error']).to include('ニックネームを入力してください')
         expect(json['code']).to eq('VALIDATION_ERROR')
       end
@@ -109,9 +109,9 @@ RSpec.describe 'API::Posts', type: :request do
       it '本文空文字で422 VALIDATION_ERROR' do
         params = { post: { nickname: '太郎', body: '' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        
+
         expect(response).to have_http_status(:unprocessable_entity)
-        json = JSON.parse(response.body)
+        json = response.parsed_body
         expect(json['error']).to include('本文を入力してください')
       end
 
@@ -139,11 +139,11 @@ RSpec.describe 'API::Posts', type: :request do
           }
         }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        
+
         expect(response).to have_http_status(:created)
-        json = JSON.parse(response.body)
+        json = response.parsed_body
         expect(json['status']).to eq('judging')
-        
+
         created_post = Post.find(json['id'])
         expect(created_post.status).to eq('judging')
       end
@@ -151,9 +151,9 @@ RSpec.describe 'API::Posts', type: :request do
       # 検証: 不正なJSON
       it '不正なJSON形式で400 BAD_REQUEST' do
         post '/api/posts', params: '{ invalid json }', headers: valid_headers
-        
+
         expect(response).to have_http_status(:bad_request)
-        json = JSON.parse(response.body)
+        json = response.parsed_body
         expect(json['error']).to include('リクエスト形式が正しくありません')
         expect(json['code']).to eq('BAD_REQUEST')
       end
@@ -176,7 +176,7 @@ RSpec.describe 'API::Posts', type: :request do
       # 検証: 結合絵文字カウント
       it '結合絵文字が1 graphemeとしてカウントされる' do
         # 👨‍👩‍👧‍👦 (1 grapheme) + a (1) + b (1) = 3文字
-        params = { post: { nickname: '太郎', body: "👨‍👩‍👧‍👦ab" } }
+        params = { post: { nickname: '太郎', body: '👨‍👩‍👧‍👦ab' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
       end
@@ -184,7 +184,7 @@ RSpec.describe 'API::Posts', type: :request do
       # 検証: 絵文字修飾子
       it '絵文字修飾子が1 graphemeとしてカウントされる' do
         # 👨🏻‍💻 (1 grapheme) + ab (2) = 3文字
-        params = { post: { nickname: '太郎', body: "👨🏻‍💻ab" } }
+        params = { post: { nickname: '太郎', body: '👨🏻‍💻ab' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
       end
@@ -230,9 +230,9 @@ RSpec.describe 'API::Posts', type: :request do
         # nickname空, body空
         params = { post: { nickname: '', body: '' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        
+
         expect(response).to have_http_status(:unprocessable_entity)
-        json = JSON.parse(response.body)
+        json = response.parsed_body
         expect(json['error']).to include('ニックネームを入力してください')
       end
     end

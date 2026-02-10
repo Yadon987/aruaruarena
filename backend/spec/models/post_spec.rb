@@ -231,7 +231,7 @@ RSpec.describe Post, type: :model do
       # 30文字制限内
       post = build(:post, body: '👨‍👩‍👧‍👦' * 30)
       expect(post).to be_valid
-      
+
       # 31文字で制限超過
       post = build(:post, body: '👨‍👩‍👧‍👦' * 31)
       expect(post).not_to be_valid
