@@ -15,6 +15,15 @@ module Api
       post = Post.new(post_params.merge(id: SecureRandom.uuid))
 
       if post.save
+        # 非同期で審査を開始
+        Thread.new do
+          JudgePostService.call(post.id)
+        rescue StandardError => e
+          Rails.logger.error("[JudgePostService] Failed: #{e.class} - #{e.message}")
+          Rails.logger.error(e.backtrace.join("\n")) if Rails.env.development?
+          # Thread内の例外はレスポンスに影響しない
+        end
+
         render json: { id: post.id, status: post.status }, status: :created
       else
         render_validation_error(post)

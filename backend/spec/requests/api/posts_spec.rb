@@ -236,5 +236,42 @@ RSpec.describe 'API::Posts', type: :request do
         expect(json['error']).to include('ニックネームを入力してください')
       end
     end
+
+    context '非同期審査トリガー (E05-06)' do
+      # 検証: JudgePostServiceが非同期で呼び出される
+      it '投稿成功時にJudgePostServiceが非同期で呼び出されること' do
+        # JudgePostService.callが呼ばれることをモックで検証
+        call_count = 0
+        allow(JudgePostService).to receive(:call) do |*args|
+          call_count += 1
+          # Thread.sleepを入れてThreadが実行されるのを待つ
+          sleep(0.1)
+        end
+
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+
+        # Threadが実行されるのを少し待つ
+        sleep(0.2)
+
+        # レスポンスは即時に返る
+        expect(response).to have_http_status(:created)
+        expect(call_count).to eq(1)
+      end
+
+      # 検証: Thread内の例外はレスポンスに影響しない
+      it 'Thread内で例外が発生してもレスポンスには影響しないこと' do
+        # JudgePostService.callで例外を発生させる
+        allow(JudgePostService).to receive(:call) do
+          raise StandardError, 'Test error in JudgePostService'
+        end
+
+        # 例外が発生してもレスポンスは正常に返る
+        expect {
+          post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        }.not_to raise_error
+
+        expect(response).to have_http_status(:created)
+      end
+    end
   end
 end
