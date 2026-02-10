@@ -236,5 +236,72 @@ RSpec.describe 'API::Posts', type: :request do
         expect(json['error']).to include('ニックネームを入力してください')
       end
     end
+
+    context '非同期審査トリガー (E05-06)' do
+      # 検証: JudgePostServiceが非同期で呼び出される
+      it '投稿成功時にJudgePostServiceが非同期で呼び出されること' do
+        # JudgePostService.callが呼ばれることをモックで検証
+        call_count = 0
+        allow(JudgePostService).to receive(:call) do |*args|
+          call_count += 1
+        end
+
+        # リクエストをThread内で実行して完了を待機
+        thread = Thread.new do
+          post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        end
+        thread.join  # リクエストの完了を待機
+
+        # Thread内のJudgePostServiceは非同期なので、少し待つ
+        sleep(0.1)
+
+        # レスポンスは即時に返る
+        expect(response).to have_http_status(:created)
+        expect(call_count).to eq(1)
+      end
+
+      # 検証: Thread内の例外はレスポンスに影響しない
+      it 'Thread内で例外が発生してもレスポンスには影響しないこと' do
+        # JudgePostService.callで例外を発生させる
+        allow(JudgePostService).to receive(:call) do
+          raise StandardError, 'Test error in JudgePostService'
+        end
+
+        # 例外が発生してもレスポンスは正常に返る
+        expect {
+          post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        }.not_to raise_error
+
+        expect(response).to have_http_status(:created)
+      end
+
+      # 検証: Postが削除されている場合の挙動
+      it 'Postが削除されている場合は審査をスキップすること' do
+        # コントローラーの非同期呼び出しをスタブ化して競合を回避
+        allow(JudgePostService).to receive(:call)
+
+        # 投稿を作成
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        post_id = response.parsed_body['id']
+
+        # 投稿を削除
+        Post.find(post_id).destroy
+
+        # スタブを解除
+        allow(JudgePostService).to receive(:call).and_call_original
+
+        # JudgePostServiceが呼ばれてもRecordNotFoundでWARNログが出力されること
+        expect(Rails.logger).to receive(:warn).with(/\[JudgePostService\] Post not found: #{post_id}/)
+
+        # Thread内でJudgePostServiceを実行
+        thread = Thread.new do
+          JudgePostService.call(post_id)
+        end
+        thread.join
+
+        # 例外が発生しないこと
+        expect(thread.value).to be_nil
+      end
+    end
   end
 end

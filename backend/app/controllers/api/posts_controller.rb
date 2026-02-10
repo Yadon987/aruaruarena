@@ -15,6 +15,7 @@ module Api
       post = Post.new(post_params.merge(id: SecureRandom.uuid))
 
       if post.save
+        start_judgment_async(post)
         render json: { id: post.id, status: post.status }, status: :created
       else
         render_validation_error(post)
@@ -63,6 +64,33 @@ module Api
         error: ERROR_MESSAGE_INVALID_REQUEST,
         code: ERROR_CODE_BAD_REQUEST
       }, status: :bad_request
+    end
+
+    # 非同期で審査を開始する
+    #
+    # Thread.newでJudgePostServiceを非同期実行し、レスポンスには影響しないようにする
+    # Thread内で例外が発生した場合はログに出力のみ行う
+    #
+    # @param post [Post] 投稿オブジェクト
+    # @return [Thread] 生成されたThreadオブジェクト（テスト用）
+    def start_judgment_async(post)
+      Thread.new do
+        JudgePostService.call(post.id)
+      rescue StandardError => e
+        handle_judgment_error(e, post.id)
+      end
+    end
+
+    # Thread内の例外を処理する
+    #
+    # Thread内で例外が発生してもレスポンスには影響しないため、
+    # ERRORレベルでログを出力して監視可能にする
+    #
+    # @param error [Exception] 発生した例外
+    # @param _post_id [String] 投稿ID（将来のログ出力用に確保）
+    def handle_judgment_error(error, _post_id)
+      Rails.logger.error("[JudgePostService] Failed: #{error.class} - #{error.message}")
+      Rails.logger.error(error.backtrace.join("\n")) if Rails.env.development?
     end
   end
 end
