@@ -185,6 +185,11 @@ class BaseAiAdapter
     # スコアのバリデーション
     scores = response['scores'] || response[:scores]
 
+    # 必須キーの完全性チェック
+    if scores && !valid_score_keys?(scores)
+      return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
+    end
+
     # スコア範囲チェック
     if scores && !scores_within_range?(scores)
       return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
@@ -222,6 +227,15 @@ class BaseAiAdapter
   def scores_within_range?(scores)
     return true unless scores
     scores.values.all? { |v| valid_score?(v) }
+  end
+
+  # スコアキーが完整かチェックする
+  #
+  # @param scores [Hash] スコアハッシュ
+  # @return [Boolean] 必須キーが全て含まれる場合はtrue
+  def valid_score_keys?(scores)
+    return true unless scores
+    scores.keys.map(&:to_sym).sort == REQUIRED_SCORE_KEYS.sort
   end
 
   # コメントが有効かチェックする

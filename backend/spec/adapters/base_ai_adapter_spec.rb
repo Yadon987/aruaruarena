@@ -504,12 +504,13 @@ RSpec.describe BaseAiAdapter do
         expect(result.succeeded).to be true
       end
 
-      it 'scoresが空ハッシュの場合は有効であること（空スコア許容）' do
+      it 'scoresが空ハッシュの場合はinvalid_responseエラーコードを返すこと（必須キー欠損）' do
         adapter.mock_response_proc = ->(_) {
           { 'scores' => {}, 'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
-        expect(result.succeeded).to be true
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
       end
 
       it 'commentがnilの場合はinvalid_responseエラーコードを返すこと' do
@@ -536,6 +537,24 @@ RSpec.describe BaseAiAdapter do
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
         expect(result.succeeded).to be true
+      end
+
+      it 'スコアフィールドが一部欠落している場合はinvalid_responseエラーコードを返すこと' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => { humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
+      end
+
+      it 'スコアフィールドに余分なキーが含まれる場合はinvalid_responseエラーコードを返すこと' do
+        adapter.mock_response_proc = ->(_) {
+          { 'scores' => { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15, extra_score: 10 }, 'comment' => 'test' }
+        }
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
       end
     end
 

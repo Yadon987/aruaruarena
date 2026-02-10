@@ -51,6 +51,7 @@ class TestAdapter < BaseAiAdapter
       result = @mock_response_proc.call(@call_count)
       return result if result.is_a?(BaseAiAdapter::JudgmentResult)
       return create_error_result('invalid_response') if invalid_scores?(result)
+      return create_error_result('invalid_response') if invalid_score_keys?(result)
       return create_error_result('invalid_response') if empty_comment?(result)
       return result
     end
@@ -124,6 +125,18 @@ class TestAdapter < BaseAiAdapter
     return false unless scores # nilと空ハッシュは有効として扱う
 
     scores.values.any? { |v| !valid_score_value?(v) }
+  end
+
+  # スコアキーが完整かチェック
+  #
+  # @param response [Hash] レスポンスハッシュ
+  # @return [Boolean] 不完整な場合はtrue
+  def invalid_score_keys?(response)
+    scores = response.dig('scores') || response.dig(:scores)
+    return false unless scores # nilと空ハッシュは有効として扱う
+
+    required_keys = %w[empathy humor brevity originality expression]
+    scores.keys.map(&:to_s).sort != required_keys.sort
   end
 
   # スコア値が有効かチェック
