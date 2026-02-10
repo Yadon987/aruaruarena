@@ -5,7 +5,9 @@
 # 投稿に対して3人のAI審査員（ひろゆき風/デヴィ婦人風/中尾彬風）による
 # 並列審査を実行し、その結果をJudgmentテーブルに保存します。
 #
-# @note 本実装はE06-05で行い、本issueではスタブとしてWARNログを出力します
+# @note 本実装はE06-05で行い、本issueではスタブとしてNotImplementedErrorをraiseします
+# @note Thread.newで非同期実行されるため、Thread内の例外はレスポンスに影響しません
+# @note Postが削除されている場合（@post == nil）は、審査をスキップしてWARNログを出力します
 class JudgePostService
   # 投稿の審査を実行
   #
@@ -17,8 +19,10 @@ class JudgePostService
 
   # 初期化
   #
+  # Post.findで投稿を取得し、存在しない場合はWARNログを出力して@postをnilに設定
+  # Thread内でRecordNotFoundが発生しても、Thread外のレスポンスには影響しません
+  #
   # @param post_id [String] 投稿ID
-  # @raise [Dynamoid::Errors::RecordNotFound] 投稿が見つからない場合（WARNログを出力して@postをnilに設定）
   def initialize(post_id)
     @post = Post.find(post_id)
   rescue Dynamoid::Errors::RecordNotFound
