@@ -189,4 +189,59 @@ RSpec.describe Post, type: :model do
       expect(post_older.calculate_rank).to be < post_newer.calculate_rank
     end
   end
+
+  describe '#sanitize_inputs' do
+    # 検証: 前後の空白がstripされること
+    it '前後の半角空白を除去すること' do
+      post = build(:post, nickname: '  太郎  ', body: '  スヌーズ押して二度寝  ')
+      post.valid? # callback発火
+      expect(post.nickname).to eq('太郎')
+      expect(post.body).to eq('スヌーズ押して二度寝')
+    end
+
+    # 検証: 前後の全角空白がstripされること
+    it '前後の全角空白を除去すること' do
+      post = build(:post, nickname: '　太郎　', body: '　スヌーズ押して二度寝　')
+      post.valid?
+      expect(post.nickname).to eq('太郎')
+      expect(post.body).to eq('スヌーズ押して二度寝')
+    end
+
+    # 検証: 内部の空白は保持されること（半角・全角）
+    it '内部の連続する空白は保持すること' do
+      post = build(:post, nickname: '太　郎', body: 'スヌーズ  押して　二度寝')
+      post.valid?
+      expect(post.nickname).to eq('太　郎')
+      expect(post.body).to eq('スヌーズ  押して　二度寝')
+    end
+
+    # 検証: 空白のみの入力は空文字になり無効になること
+    it '空白のみの入力は無効（空文字）になること' do
+      post = build(:post, nickname: ' 　 ', body: ' 　 ')
+      expect(post).not_to be_valid
+      expect(post.errors[:nickname]).to include('を入力してください')
+      expect(post.errors[:body]).to include('を入力してください')
+    end
+  end
+
+  describe '文字数カウント詳細' do
+    # 検証: 結合絵文字が1文字としてカウントされること
+    it '結合絵文字（👨‍👩‍👧‍👦）を1文字としてカウントすること' do
+      # 👨‍👩‍👧‍👦 は7 codepointsだが1 grapheme cluster
+      # 30文字制限内
+      post = build(:post, body: '👨‍👩‍👧‍👦' * 30)
+      expect(post).to be_valid
+      
+      # 31文字で制限超過
+      post = build(:post, body: '👨‍👩‍👧‍👦' * 31)
+      expect(post).not_to be_valid
+    end
+
+    # 検証: 絵文字修飾子が1文字としてカウントされること
+    it '絵文字修飾子（👨🏻‍💻）を1文字としてカウントすること' do
+      # 👨🏻‍💻 は5 codepointsだが1 grapheme cluster
+      post = build(:post, body: '👨🏻‍💻' * 30) # 30文字
+      expect(post).to be_valid
+    end
+  end
 end
