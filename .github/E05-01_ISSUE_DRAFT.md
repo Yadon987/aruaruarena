@@ -161,15 +161,15 @@ end
 before_validation :sanitize_inputs
 
 def sanitize_inputs
-  self.nickname = nickname&.gsub(/\A[ \u3000]+|[ \u3000]+\z/, '') # 前後の半角・全角空白のみ除去
-  self.body = body&.gsub(/\A[ \u3000]+|[ \u3000]+\z/, '')
+  # 前後の空白（半角・全角）を除去、内部の空白は保持
+  self.nickname = nickname&.gsub(/\A[[:space:]]+|[[:space:]]+\z/, '')
+  self.body = body&.gsub(/\A[[:space:]]+|[[:space:]]+\z/, '')
 end
 ```
 
 **処理内容**:
-- 前後の半角空白（U+0020）を削除
-- 前後の全角空白（U+3000）も削除
-- 内部の連続空白はそのまま保持
+- 前後の半角空白（U+0020）・全角空白（U+3000）を削除
+- 内部の連続空白（半角・全角）はそのまま保持
 
 ### 非機能要件
 
@@ -180,7 +180,8 @@ end
   - HTMLタグ・JavaScriptコードの保存は許可（表示時はReactで自動エスケープ）
 - **ログ**:
   - バリデーションエラー時はWARNレベルでログ出力
-  - フォーマット: `[PostController] Validation failed: nickname=#{nickname}, body=#{body}, errors=#{errors.full_messages.join(', ')}`
+  - フォーマット: `[PostController] Validation failed: nickname_len=#{nickname&.length}, body_grapheme_len=#{body&.grapheme_clusters&.length}, errors=#{errors.full_messages.join(', ')}`
+  - **セキュリティ**: 生の入力値はログに出力しない（PII/不適切内容の保護）
   - 出力先: CloudWatch Logs（Lambda環境）/ 標準出力（ローカル開発）
 
 ### UI/UX設計
@@ -245,7 +246,7 @@ end
 | 項目 | 値 |
 |------|-----|
 | レベル | WARN |
-| フォーマット | `[PostController] Validation failed: nickname=#{nickname}, body=#{body}, errors=#{errors.full_messages.join(', ')}` |
+| フォーマット | `[PostController] Validation failed: nickname_len=#{len}, body_grapheme_len=#{len}, errors=#{errors}` |
 | 出力先 | CloudWatch Logs（Lambda環境）/ 標準出力（ローカル開発） |
 
 ### AIプロンプト設計
