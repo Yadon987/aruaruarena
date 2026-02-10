@@ -244,14 +244,16 @@ RSpec.describe 'API::Posts', type: :request do
         call_count = 0
         allow(JudgePostService).to receive(:call) do |*args|
           call_count += 1
-          # Thread.sleepを入れてThreadが実行されるのを待つ
-          sleep(0.1)
         end
 
-        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        # リクエストをThread内で実行して完了を待機
+        thread = Thread.new do
+          post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        end
+        thread.join  # リクエストの完了を待機
 
-        # Threadが実行されるのを少し待つ
-        sleep(0.2)
+        # Thread内のJudgePostServiceは非同期なので、少し待つ
+        sleep(0.1)
 
         # レスポンスは即時に返る
         expect(response).to have_http_status(:created)
@@ -271,6 +273,28 @@ RSpec.describe 'API::Posts', type: :request do
         }.not_to raise_error
 
         expect(response).to have_http_status(:created)
+      end
+
+      # 検証: Postが削除されている場合の挙動
+      it 'Postが削除されている場合は審査をスキップすること' do
+        # 投稿を作成
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        post_id = response.parsed_body['id']
+
+        # 投稿を削除
+        Post.find(post_id).destroy
+
+        # JudgePostServiceが呼ばれてもRecordNotFoundでWARNログが出力されること
+        expect(Rails.logger).to receive(:warn).with(/\[JudgePostService\] Post not found: #{post_id}/)
+
+        # Thread内でJudgePostServiceを実行
+        thread = Thread.new do
+          JudgePostService.call(post_id)
+        end
+        thread.join
+
+        # 例外が発生しないこと
+        expect(thread.value).to be_nil
       end
     end
   end

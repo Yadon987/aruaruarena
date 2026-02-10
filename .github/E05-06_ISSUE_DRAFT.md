@@ -167,6 +167,116 @@ end
 - JudgePostService内でAPI呼び出しのタイムアウトを管理（E06で実装）
 - Thread自体にはタイムアウトを設定しない（Lambdaの制限時間内で実行）
 
+#### 5. メモリ使用量
+
+**見積もり**:
+- 基本プロセス: 約50-100MB（Rails, Gems, AWS SDK）
+- 1Threadあたり: 約70-130MB（AI API + DynamoDB）
+- 安全な並列数: 2-3個
+
+**制約**:
+- Lambdaメモリ: 512MB
+- 推奨最大並列数: 3個
+- 保守値: 2個までを安全域とする
+
+**連続投稿への対応**:
+- E09（レート制限・スパム対策）で5分1回の制限を実装済み
+- 同時実行数は自然と制限される
+
+#### 6. Lambda環境の挙動
+
+**凍結/再起動時の挙動**:
+- Lambdaがアイドル状態で凍結された場合、Thread内の処理は破棄される
+- 再起動時はThreadは継続不可能（別プロセスになるため）
+- タイムアウト時（30秒）はすべての処理が強制終了される
+
+**対応方針**:
+- Thread内で処理中の投稿は、次回のポーリング（GET /api/posts/:id）で
+  statusが"judging"のままの場合に再審査が必要
+- E06-05で再審査ロジックを実装
+
+#### 7. CloudWatch監視（E06以降で実装）
+
+**監視すべきメトリクス**:
+- ThreadSuccess: 成功したThread数
+- ThreadErrors: 失敗したThread数（エラータイプ別）
+- ThreadDuration: Thread実行時間
+- MemoryUsage: メモリ使用量
+
+**実装方法**:
+- E06-05でカスタムメトリクス送信を実装
+- Aws::CloudWatch::Clientを使用
+- namespace: 'AruAruArena'
+
+#### 8. ログ設計
+
+**Thread IDの付与**:
+- Thread.new実行時にThread IDを付与
+- ログにはThread IDを含めてデバッグを容易にする
+
+**改善案（E06以降で実装）**:
+```ruby
+Thread.new do
+  thread_id = Thread.current.object_id
+  Rails.logger.info("[Thread:#{thread_id}] Starting judgment for post #{post.id}")
+  JudgePostService.call(post.id)
+rescue StandardError => e
+  Rails.logger.error("[Thread:#{thread_id}] Failed: #{e.class} - #{e.message}")
+end
+```
+
+#### 9. 審査失敗時の再審査
+
+**失敗した場合の挙動**:
+- Thread内で例外が発生した場合、投稿のstatusは"judging"のまま
+- ユーザーはGET /api/posts/:idでポーリング（3秒ごと）
+- statusが"judging"のまま60秒経過した場合、クライアント側でエラー表示
+
+**再審査のトリガー**:
+- E11（再審査API）で手動再審査が可能
+- 自動再審査はE06-05で実装検討
+
+#### 10. DynamoDBトランザクション（将来の改善）
+
+**現状**:
+- Dynamoidはトランザクションを直接サポートしていない
+- statusとjudges_countは別々に更新
+
+**将来の改善案**:
+- Aws::DynamoDB::Clientのtransact_write_itemsを使用
+- リトライロジックの実装（指数バックオフ）
+- 競合状態の回避
+
+**実装時期**:
+- E06-07（ステータス更新）で検討
+- トランザクション失敗時の再審査ロジックも合わせて実装
+
+#### 11. post_idのバリデーション（将来の改善）
+
+**現状**:
+- Post.findでRecordNotFound例外が発生
+- Thread内で例外ハンドリングあり
+
+**将来の改善案**:
+- UUID形式のバリデーション
+- nil/空文字の事前チェック
+- コントローラー層でのバリデーション
+
+**実装時期**:
+- E09（レート制限・スパム対策）で検討
+- またはE06-05でJudgePostService実装時に追加
+
+#### 12. セキュリティ考慮事項
+
+**現状**:
+- 投稿API内からのみ呼ばれるため、権限チェックは不要
+- post_idは投稿時に生成されたUUID
+
+**将来の考慮事項**:
+- 他のエンドポイントからJudgePostServiceを呼ぶ場合、
+  投稿者本人であることを確認する必要あり
+- E11（再審査API）実装時に検討
+
 ### UI/UX設計
 
 N/A（API専用）

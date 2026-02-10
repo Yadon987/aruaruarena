@@ -22,19 +22,24 @@ RSpec.describe JudgePostService do
         # initialize内でPost.findが呼ばれることを確認
       end
 
-      it 'executeでWARNレベルのログを出力すること（スタブ）' do
+      it 'executeでNotImplementedErrorが発生すること（スタブ）' do
         service = JudgePostService.new(post.id)
-        expect(Rails.logger).to receive(:warn).with('[JudgePostService] Not implemented yet (E06-05)')
-
-        service.execute
+        expect {
+          service.execute
+        }.to raise_error(NotImplementedError, 'JudgePostService#execute is not implemented yet (E06-05)')
       end
     end
 
     context '異常系' do
-      it '存在しないpost_idで初期化するとエラーになること' do
-        expect {
-          JudgePostService.new('non-existent-id')
-        }.to raise_error(Dynamoid::Errors::RecordNotFound)
+      it '存在しないpost_idで初期化するとWARNログが出力され、@postがnilになること' do
+        expect(Rails.logger).to receive(:warn).with(/\[JudgePostService\] Post not found: non-existent-id/)
+        service = JudgePostService.new('non-existent-id')
+        expect(service.instance_variable_get(:@post)).to be_nil
+      end
+
+      it 'Postがnilの場合はexecuteしても何もしないこと' do
+        service = JudgePostService.new('non-existent-id')
+        expect { service.execute }.not_to raise_error
       end
     end
   end
