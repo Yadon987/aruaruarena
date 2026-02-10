@@ -40,13 +40,15 @@ class Post
   has_many :judgments, dependent: :destroy
 
   # バリデーション
-  validates :id,          presence: true
-  validates :nickname,    presence: true, length: { in: 1..20 }
-  validates :body,        presence: true
-  validates :status,      presence: true, inclusion: { in: %w[judging scored failed] }
-  validates :judges_count, presence: true,
+  validates :id,          presence: { message: 'を入力してください' }
+  validates :nickname,    presence: { message: 'を入力してください' },
+                          length: { in: 1..20, message: 'は20文字以内で入力してください' }
+  validates :body,        presence: { message: 'を入力してください' }
+  validates :status,      presence: true,
+                          inclusion: { in: %w[judging scored failed] }
+  validates :judges_count, presence: { message: 'を入力してください' },
                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 3 }
-  validates :created_at, presence: true # String型でUnixTimestampを保存
+  validates :created_at, presence: { message: 'を入力してください' } # String型でUnixTimestampを保存
 
   # 本文のgrapheme数をバリデーション
   validate :body_grapheme_length
@@ -56,6 +58,7 @@ class Post
 
   # Callbacks
   before_validation :set_created_at, on: :create
+  before_validation :sanitize_inputs
 
   # スコア付き投稿のscore_keyを生成
   # @return [String] score_key（例: "0127#1738041600#uuid"）
@@ -98,14 +101,22 @@ class Post
 
   private
 
+  # 入力のサニタイズ（前後の空白のみ除去）
+  def sanitize_inputs
+    self.nickname = nickname&.gsub(/\A[[:space:]]+|[[:space:]]+\z/, '')
+    self.body = body&.gsub(/\A[[:space:]]+|[[:space:]]+\z/, '')
+  end
+
   # 本文のgrapheme数バリデーション（3-30文字）
   def body_grapheme_length
     return if body.blank?
 
     length = body.grapheme_clusters.length
-    return unless length < 3 || length > 30
-
-    errors.add(:body, "は3〜30文字である必要があります（現在: #{length}文字）")
+    if length < 3
+      errors.add(:body, 'は3〜30文字で入力してください')
+    elsif length > 30
+      errors.add(:body, 'は3〜30文字で入力してください')
+    end
   end
 
   # 作成日時を設定（UnixTimestampを文字列として保存）
