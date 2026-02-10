@@ -11,7 +11,7 @@ test.describe('異常系テスト', () => {
     expect(response?.status()).toBe(404);
   });
 
-  test('テスト失敗時にスクリーンショットとトレースが保存される', async ({ page }, testInfo) => {
+  test('テスト失敗時にスクリーンショットとトレースが保存される', async ({ page: _page }, testInfo) => {
     // 検証: テスト失敗時にスクリーンショットとトレースが保存される（AC異常系1）
     // このテスト自体は設定の確認に近いが、実行結果のアーティファクトを確認するのはCIの役割でもある。
     // ここでは、設定ファイルで screenshot: 'only-on-failure' となっていることを
