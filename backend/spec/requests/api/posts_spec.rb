@@ -277,12 +277,18 @@ RSpec.describe 'API::Posts', type: :request do
 
       # 検証: Postが削除されている場合の挙動
       it 'Postが削除されている場合は審査をスキップすること' do
+        # コントローラーの非同期呼び出しをスタブ化して競合を回避
+        allow(JudgePostService).to receive(:call)
+
         # 投稿を作成
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
         post_id = response.parsed_body['id']
 
         # 投稿を削除
         Post.find(post_id).destroy
+
+        # スタブを解除
+        allow(JudgePostService).to receive(:call).and_call_original
 
         # JudgePostServiceが呼ばれてもRecordNotFoundでWARNログが出力されること
         expect(Rails.logger).to receive(:warn).with(/\[JudgePostService\] Post not found: #{post_id}/)
