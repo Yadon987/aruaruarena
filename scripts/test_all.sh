@@ -27,7 +27,7 @@ echo "🔍 Running Static Analysis..."
 # RuboCop（自動修正付き、違反があっても続行）
 echo "  - RuboCop..."
 set +e  # 一時的にset -eを解除
-bundle exec rubocop -a --format simple
+bundle exec rubocop -A --format simple
 rubocop_status=$?
 set -e  # set -eを再開
 

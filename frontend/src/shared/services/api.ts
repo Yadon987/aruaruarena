@@ -1,3 +1,4 @@
+import { HTTP_STATUS, API_TIMEOUT, API_ERROR_CODE, API_DEFAULTS } from '../constants/api'
 import {
   type ApiError,
   type CreatePostRequest,
@@ -5,12 +6,6 @@ import {
   type GetPostResponse,
   type GetRankingResponse,
 } from '../types/api'
-import {
-  HTTP_STATUS,
-  API_TIMEOUT,
-  API_ERROR_CODE,
-  API_DEFAULTS,
-} from '../constants/api'
 
 // 環境変数の取得（Vite）
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -43,20 +38,12 @@ export class ApiClientError extends Error {
 function handleNetworkError(error: unknown): never {
   // タイムアウトエラー
   if (error instanceof Error && error.name === 'AbortError') {
-    throw new ApiClientError(
-      'Request timeout',
-      API_ERROR_CODE.TIMEOUT,
-      HTTP_STATUS.REQUEST_TIMEOUT
-    )
+    throw new ApiClientError('Request timeout', API_ERROR_CODE.TIMEOUT, HTTP_STATUS.REQUEST_TIMEOUT)
   }
 
   // ネットワークエラー
   if (error instanceof TypeError) {
-    throw new ApiClientError(
-      'Network error',
-      API_ERROR_CODE.NETWORK_ERROR,
-      0
-    )
+    throw new ApiClientError('Network error', API_ERROR_CODE.NETWORK_ERROR, 0)
   }
 
   throw error
@@ -112,10 +99,7 @@ async function parseResponseBody<T>(response: Response): Promise<T> {
  * @returns パースされたレスポンスデータ
  * @throws ApiClientError - ネットワークエラー、HTTPエラー、タイムアウト時
  */
-async function request<T>(
-  path: string,
-  options?: RequestInit & { timeout?: number }
-): Promise<T> {
+async function request<T>(path: string, options?: RequestInit & { timeout?: number }): Promise<T> {
   const timeout = options?.timeout ?? API_TIMEOUT.DEFAULT
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeout)

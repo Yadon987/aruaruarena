@@ -14,6 +14,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.90.20",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -40,6 +41,8 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.20",
+    "framer-motion": "^11.18.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   }
