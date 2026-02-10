@@ -11,9 +11,14 @@
     "lint:fix": "eslint . --ext js,jsx,ts,tsx --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report"
   },
   "devDependencies": {
+    "@playwright/test": "^1.50.1",
     "@tanstack/react-query-devtools": "^5.90.20",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",
