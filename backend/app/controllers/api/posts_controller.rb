@@ -12,19 +12,13 @@ module Api
     FIELD_LABEL_BODY = '本文'
 
     def create
-      post = Post.new(post_params)
-      post.id = SecureRandom.uuid
+      post = Post.new(post_params.merge(id: SecureRandom.uuid))
 
-      unless post.valid?
-        render json: {
-          error: build_error_message(post),
-          code: ERROR_CODE_VALIDATION
-        }, status: :unprocessable_content
-        return
+      if post.save
+        render json: { id: post.id, status: post.status }, status: :created
+      else
+        render_validation_error(post)
       end
-
-      post.save!
-      render json: { id: post.id, status: post.status }, status: :created
     rescue ActionController::ParameterMissing, ActionDispatch::Http::Parameters::ParseError
       render_bad_request
     end
@@ -50,6 +44,16 @@ module Api
       else
         error_message
       end
+    end
+
+    # バリデーションエラーのレスポンスを返す
+    # @param post [Post] バリデーション失敗した投稿オブジェクト
+    # @return [void] JSONレスポンスをレンダリング
+    def render_validation_error(post)
+      render json: {
+        error: build_error_message(post),
+        code: ERROR_CODE_VALIDATION
+      }, status: :unprocessable_content
     end
 
     # 不正なリクエストのエラーレスポンスを返す

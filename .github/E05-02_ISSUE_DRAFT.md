@@ -24,7 +24,7 @@ assignees: ''
   - `body`: 入力値
   - `status`: 初期値 `"judging"`
   - `judges_count`: 初期値 `0`
-  - `created_at`: 現在のUnixタイムスタンプ（整数）
+  - `created_at`: 現在のUnixタイムスタンプ（文字列形式、例: "1738041600"）
   - `average_score`: 未設定（`nil`）
   - `score_key`: 未設定（`nil`）
 
@@ -50,7 +50,7 @@ assignees: ''
 | | `body` | String |
 | | `status` | String (Default: "judging") |
 | | `judges_count` | Integer (Default: 0) |
-| | `created_at` | Integer (Unix Timestamp) |
+| | `created_at` | String (Unix Timestampを文字列として保存) |
 | | `average_score` | Number (Nullable) |
 | | `score_key` | String (Nullable) |
 

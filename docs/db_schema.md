@@ -28,7 +28,7 @@ Table posts {
   score_key     string        [note: 'GSI Sort Key (status=scoredのみ設定, 他はNULL)']
 
   // Timestamps
-  created_at    number        [not null, note: 'UnixTimestamp (seconds/整数)']
+  created_at    string        [not null, note: 'UnixTimestamp（文字列形式、例: "1738041600"）']
 
   indexes {
     (status, score_key) [name: 'RankingIndex', note: 'status=scored でTOP20取得 (スパースインデックス)']
