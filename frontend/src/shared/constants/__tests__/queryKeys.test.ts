@@ -39,9 +39,10 @@ describe('queryKeys', () => {
   it('queryKeysの型が正しく推論される（readonly配列）', () => {
     // 検証内容: as const によるリテラル型の保持
     const postsKey = queryKeys.posts.all
+    const postsKey2 = queryKeys.posts.all // 別アクセスと比較
     // readonly ["posts"] 型であるべき
     expect(postsKey).toEqual(['posts'])
-    expect(postsKey).toBe(postsKey) // 同じ参照であることを確認
+    expect(postsKey).toBe(postsKey2) // 同じ参照であることを確認
   })
 
   it('queryKeys.posts.detailは異なるIDで異なるキーを返す', () => {

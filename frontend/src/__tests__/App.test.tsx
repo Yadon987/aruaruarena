@@ -10,14 +10,10 @@ vi.mock('@tanstack/react-query-devtools', () => ({
 
 describe('App Integration', () => {
   it('開発環境では ReactQueryDevtools がレンダリングされる', () => {
-    // import.meta.env.DEV が true 前提の環境（Vitestデフォルト）で
-    // App 内に ReactQueryDevtools があることを確認
-    // 現状の App.tsx には含まれていないため失敗する
-    const originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = 'development'
+    // Vitest runs in development mode by default (import.meta.env.DEV === true)
+    // so no environment manipulation is needed
     render(<App />)
     expect(screen.getByTestId('react-query-devtools')).toBeInTheDocument()
-    process.env.NODE_ENV = originalEnv
   })
 
   // TODO: QueryClient設定の検証（GREEN実装後に追加）
