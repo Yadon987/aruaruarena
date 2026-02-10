@@ -16,7 +16,7 @@ test.describe('設定検証', () => {
 
     const configContent = fs.readFileSync(configPath, 'utf-8');
     expect(configContent).toContain("command: 'npm run dev'");
-    expect(configContent).toContain("url: 'http://localhost:5173'");
+    expect(configContent).toContain('VITE_DEV_SERVER_URL');
   });
 
   test('CI環境とローカル環境で設定が適切に分岐されている', async () => {
@@ -27,10 +27,10 @@ test.describe('設定検証', () => {
     // 上のテストだけでなくここで落ちる可能性もあるが、REDテストとしては問題ない
     const configContent = fs.readFileSync(configPath, 'utf-8');
 
-    // 文字列として設定ロジックが含まれているか確認
-    expect(configContent).toContain("workers: process.env.CI ? 1 : undefined");
-    expect(configContent).toContain("retries: process.env.CI ? 2 : 0");
-    expect(configContent).toContain("reuseExistingServer: !process.env.CI");
+    // 定数を使用した設定ロジックが含まれているか確認
+    expect(configContent).toContain('CI_WORKER_COUNT');
+    expect(configContent).toContain('CI_RETRY_COUNT');
+    expect(configContent).toContain('reuseExistingServer: !process.env.CI');
   });
 
   test('npm scripts に test:e2e:ui が含まれている', async () => {

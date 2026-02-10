@@ -22,12 +22,20 @@ test.describe('異常系テスト', () => {
   });
 
   test('Vite dev server 起動不可時にタイムアウトエラーが発生する', async () => {
-    // 検証: Vite dev server 起動不可時のタイムアウトエラー（AC異常系2）
-    // これはwebServer設定の検証。
-    // 設定ファイルで webServer.timeout が設定されていることを確認する
-    // 実際の起動失敗をシミュレートするのは難しいため設定値確認で代用
-    // （Playwrightの設定オブジェクトにアクセスする必要があるが、testInfoからは完全には見えないかも）
-    // 代替として、タイムアウト設定が妥当であることを確認
-    // ※実装時には playwright.config.ts の値を読み込んでチェックする形になる想定
+    // 検証: 設定ファイルで webServer.timeout が適切に設定されている（AC異常系2）
+    const fs = await import('fs');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+
+    // ESモジュールで__dirnameを再現
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    const configPath = path.join(__dirname, '../playwright.config.ts');
+    const configContent = fs.readFileSync(configPath, 'utf-8');
+
+    // 120秒のタイムアウト設定が含まれていることを確認
+    expect(configContent).toContain('TIMEOUT_WEB_SERVER');
+    expect(configContent).toContain('120 * 1000');
   });
 });
