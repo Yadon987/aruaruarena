@@ -321,6 +321,71 @@ RSpec.describe OpenAiAdapter do
 
         expect(result[:scores][:empathy]).to eq(20)
       end
+
+      # 何を検証するか: スコアが小数点文字列（"12.5"）の場合に四捨五入して整数に変換できること
+      # 失敗理由: parse_responseメソッドがまだ実装されていないため
+      it 'スコアが小数点文字列（"12.5"）の場合に四捨五入して整数に変換できること' do
+        decimal_string_scores = base_scores.merge(empathy: "12.5", humor: "15.7", brevity: "8.2")
+        response_hash = {
+          choices: [
+            {
+              message: {
+                content: JSON.generate(decimal_string_scores.merge(comment: 'テスト'))
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores][:empathy]).to eq(13)  # 12.5 -> 13
+        expect(result[:scores][:humor]).to eq(16)    # 15.7 -> 16
+        expect(result[:scores][:brevity]).to eq(8)   # 8.2 -> 8
+      end
+
+      # 何を検証するか: スコアが小数点（Float）の場合に四捨五入して整数に変換できること
+      # 失敗理由: parse_responseメソッドがまだ実装されていないため
+      it 'スコアが小数点（Float）の場合に四捨五入して整数に変換できること' do
+        float_scores = base_scores.merge(empathy: 12.5, humor: 15.7, brevity: 8.2)
+        response_hash = {
+          choices: [
+            {
+              message: {
+                content: JSON.generate(float_scores.merge(comment: 'テスト'))
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores][:empathy]).to eq(13)  # 12.5 -> 13
+        expect(result[:scores][:humor]).to eq(16)    # 15.7 -> 16
+        expect(result[:scores][:brevity]).to eq(8)   # 8.2 -> 8
+      end
+
+      # 何を検証するか: スコアが境界値（0.5）の場合に正しく丸められること
+      # 失敗理由: parse_responseメソッドがまだ実装されていないため
+      it 'スコアが境界値（0.5）の場合に正しく丸められること' do
+        boundary_scores = base_scores.merge(empathy: 0.5, humor: 1.5)
+        response_hash = {
+          choices: [
+            {
+              message: {
+                content: JSON.generate(boundary_scores.merge(comment: 'テスト'))
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores][:empathy]).to eq(1)  # 0.5 -> 1（四捨五入）
+        expect(result[:scores][:humor]).to eq(2)    # 1.5 -> 2（四捨五入）
+      end
     end
 
     context 'コードブロックの扱い' do
@@ -376,6 +441,114 @@ RSpec.describe OpenAiAdapter do
         result = adapter.send(:parse_response, faraday_response)
 
         expect(result[:scores]).to be_present
+      end
+
+      # 何を検証するか: JSONが前後にテキストを含むコードブロックで囲まれている場合に正しく抽出できること
+      # 失敗理由: parse_responseメソッドがまだ実装されていないため
+      it 'JSONが前後にテキストを含むコードブロックで囲まれている場合に正しく抽出できること' do
+        json_with_surrounding_text = <<~TEXT
+          これは審査結果です:
+          ```json
+          {
+            "empathy": 15,
+            "humor": 15,
+            "brevity": 15,
+            "originality": 15,
+            "expression": 15,
+            "comment": "うん、いいねぇ"
+          }
+          ```
+          以上です。
+        TEXT
+
+        response_hash = {
+          choices: [
+            {
+              message: {
+                content: json_with_surrounding_text
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores]).to be_present
+        expect(result[:comment]).to eq('うん、いいねぇ')
+      end
+
+      # 何を検証するか: 複数のコードブロックが含まれる場合に最初のJSONを抽出できること
+      # 失敗理由: parse_responseメソッドがまだ実装されていないため
+      it '複数のコードブロックが含まれる場合に最初のJSONを抽出できること' do
+        multi_codeblock = <<~TEXT
+          参考:
+          ```ruby
+          def example
+            "hello"
+          end
+          ```
+          結果:
+          ```json
+          {
+            "empathy": 15,
+            "humor": 15,
+            "brevity": 15,
+            "originality": 15,
+            "expression": 15,
+            "comment": "テスト"
+          }
+          ```
+        TEXT
+
+        response_hash = {
+          choices: [
+            {
+              message: {
+                content: multi_codeblock
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores]).to be_present
+        expect(result[:comment]).to eq('テスト')
+      end
+
+      # 何を検証するか: ```jsonがないコードブロックを正しく抽出できること
+      # 失敗理由: parse_responseメソッドがまだ実装されていないため
+      it '```jsonがないコードブロックを正しく抽出できること' do
+        simple_codeblock = <<~TEXT
+          ```
+          {
+            "empathy": 15,
+            "humor": 15,
+            "brevity": 15,
+            "originality": 15,
+            "expression": 15,
+            "comment": "テスト"
+          }
+          ```
+        TEXT
+
+        response_hash = {
+          choices: [
+            {
+              message: {
+                content: simple_codeblock
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores]).to be_present
+        expect(result[:comment]).to eq('テスト')
       end
     end
 
