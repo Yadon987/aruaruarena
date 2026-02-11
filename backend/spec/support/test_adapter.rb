@@ -34,12 +34,20 @@ class TestAdapter < BaseAiAdapter
     }
   end
 
+  # テスト用リクエスト実行
+  #
+  # @param request [Hash] リクエストハッシュ
+  # @return [Hash] テスト用レスポンス
+  def execute_request(request)
+    request
+  end
+
   # テスト用レスポンス解析
   #
   # mock_response_procが設定されている場合はそれを使用し、
   # そうでない場合はmock_responseを返します。
   #
-  # @param response [Hash] リクエストハッシュ（使用しない）
+  # @param response [Hash] execute_requestの戻り値
   # @return [JudgmentResult, Hash] テスト用レスポンス
   def parse_response(response)
     @mutex.synchronize do

@@ -178,12 +178,13 @@ class BaseAiAdapter
   # @return [JudgmentResult] 審査結果
   def call_ai_api(post_content, persona)
     request = build_request(post_content, persona)
-    response = parse_response(request)
+    response = execute_request(request)
+    parse_result = parse_response(response)
 
-    return response if response.is_a?(JudgmentResult)
+    return parse_result if parse_result.is_a?(JudgmentResult)
 
     # スコアのバリデーション
-    scores = response['scores'] || response[:scores]
+    scores = parse_result['scores'] || parse_result[:scores]
 
     # 必須キーの完全性チェック
     if scores && !valid_score_keys?(scores)
@@ -196,7 +197,7 @@ class BaseAiAdapter
     end
 
     # コメントチェック
-    comment = response['comment'] || response[:comment]
+    comment = parse_result['comment'] || parse_result[:comment]
     unless valid_comment?(comment)
       return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
     end
@@ -304,6 +305,13 @@ class BaseAiAdapter
   # @return [Hash] APIリクエスト
   # @raise [NotImplementedError] サブクラスで実装されていない場合
   def build_request(post_content, persona)
+    raise NotImplementedError, 'must be implemented'
+  end
+
+  # @param request [Hash] APIリクエスト
+  # @return [Faraday::Response] APIレスポンス
+  # @raise [NotImplementedError] サブクラスで実装されていない場合
+  def execute_request(request)
     raise NotImplementedError, 'must be implemented'
   end
 

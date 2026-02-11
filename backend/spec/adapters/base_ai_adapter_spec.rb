@@ -13,6 +13,8 @@ RSpec.describe BaseAiAdapter do
   before do
     # 各テストの前にmock_response_procをクリア
     adapter.mock_response_proc = nil
+    # リトライ時のsleepをモック（テスト高速化）
+    allow(adapter).to receive(:retry_sleep)
   end
 
   describe '定数' do

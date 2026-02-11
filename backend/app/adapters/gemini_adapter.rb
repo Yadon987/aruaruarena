@@ -299,64 +299,25 @@ class GeminiAdapter < BaseAiAdapter
     key
   end
 
-  # パース結果をJudgmentResultに変換する
-  #
-  # @param parse_result [Hash] parse_responseの戻り値
-  # @return [JudgmentResult] 審査結果
-  def build_success_result(parse_result)
-    scores = parse_result[:scores] || parse_result['scores']
-    comment = parse_result[:comment] || parse_result['comment']
 
-    # 必須キーの完全性チェック
-    return invalid_response_error if scores && !valid_score_keys?(scores)
-
-    # スコア範囲チェック
-    return invalid_response_error if scores && !scores_within_range?(scores)
-
-    # コメントチェック
-    return invalid_response_error unless valid_comment?(comment)
-
-    JudgmentResult.new(
-      succeeded: true,
-      error_code: nil,
-      scores: scores.transform_keys(&:to_sym),
-      comment: comment
-    )
-  end
 
   # Gemini APIにHTTPリクエストを送信する
   #
-  # @param post_content [String] 投稿本文
-  # @param persona [String] 審査員ID
+  # @param request_body [Hash] APIリクエストボディ
   # @return [Faraday::Response] HTTPレスポンス
-  def send_api_request(post_content, persona)
-    request_body = build_request(post_content, persona)
+  def execute_request(request_body)
     endpoint = "#{API_VERSION}/models/#{MODEL_NAME}:generateContent"
 
-    client.post(endpoint) do |req|
+    response = client.post(endpoint) do |req|
       req.params[:key] = api_key
       req.headers['Content-Type'] = 'application/json'
       req.body = JSON.generate(request_body)
     end
-  end
 
-  # ステータスコードに応じてレスポンスを処理する
-  #
-  # @param response [Faraday::Response] HTTPレスポンス
-  # @return [JudgmentResult] 審査結果
-  # @raise [Faraday::ClientError] クライアントエラー時
-  # @raise [Faraday::ServerError] サーバーエラー時
-  def handle_response_status(response)
     case response.status
     when 200..299
       Rails.logger.info('Gemini API呼び出し成功')
-      parse_result = parse_response(response)
-
-      # JudgmentResultが返された場合はそのまま返す（エラー時）
-      return parse_result if parse_result.is_a?(JudgmentResult)
-
-      # Hashが返された場合はバリデーションを実行してJudgmentResultを構築
-      build_success_result(parse_result)
+      response
     when 429
       Rails.logger.warn("Gemini APIレート制限: #{response.body}")
       raise Faraday::ClientError.new('rate limit', faraday_response: response)
@@ -370,16 +331,6 @@ class GeminiAdapter < BaseAiAdapter
       Rails.logger.error("Gemini API未知のエラー: #{response.status} - #{response.body}")
       raise Faraday::ClientError.new("Unknown error: #{response.status}", faraday_response: response)
     end
-  end
-
-  # 親クラスのcall_ai_apiをオーバーライドしてHTTP通信を実装
-  #
-  # @param post_content [String] 投稿本文
-  # @param persona [String] 審査員ID
-  # @return [JudgmentResult] 審査結果
-  def call_ai_api(post_content, persona)
-    response = send_api_request(post_content, persona)
-    handle_response_status(response)
   rescue Faraday::TimeoutError => e
     Rails.logger.warn("Gemini APIタイムアウト: #{e.class}")
     raise
@@ -387,4 +338,14 @@ class GeminiAdapter < BaseAiAdapter
     Rails.logger.error("Gemini API接続エラー: #{e.class}")
     raise
   end
+
+  # ステータスコードに応じてレスポンスを処理する
+  #
+  # @param response [Faraday::Response] HTTPレスポンス
+  # @return [JudgmentResult] 審査結果
+  # @raise [Faraday::ClientError] クライアントエラー時
+  # @raise [Faraday::ServerError] サーバーエラー時
+
+
+
 end
