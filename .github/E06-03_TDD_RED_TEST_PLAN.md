@@ -112,103 +112,103 @@ Issue #33（E06-03: GLM Adapterの実装）の受け入れ基準をすべてカ�
 ```
 RSpec.describe GlmAdapter do
   describe '継承関係' do
-    // BaseAiAdapterを継承していること
+    # BaseAiAdapterを継承していること
   end
 
   describe '定数' do
-    // PROMPT_PATHの定義と値
+    # PROMPT_PATHの定義と値
   end
 
   describe '初期化' do
     context '正常系' do
-      // プロンプトファイルの読み込み
+      # プロンプトファイルの読み込み
     end
 
     context '異常系' do
-      // プロンプトファイルが存在しない場合
+      # プロンプトファイルが存在しない場合
     end
   end
 
   describe '#client' do
-    // Faradayクライアントの設定
-    // SSL検証
+    # Faradayクライアントの設定
+    # SSL検証
   end
 
   describe '#build_request' do
     context '正常系' do
-      // 正しいリクエスト形式
-      // modelの設定
-      // messages配列形式
-      // プロンプトの置換
-      // temperature/max_tokensの設定
+  # 正しいリクエスト形式
+  # modelの設定
+  # messages配列形式
+  # プロンプトの置換
+  # temperature/max_tokensの設定
     end
 
     context '境界値' do
-      // 特殊文字のエスケープ
-      // JSON制御文字の扱い
+  # 特殊文字のエスケープ
+  # JSON制御文字の扱い
     end
 
     context 'セキュリティ' do
-      // パストラバーサル攻撃の防止
+  # パストラバーサル攻撃の防止
     end
   end
 
   describe '#parse_response' do
     context '正常系' do
-      // JSONのパース（choices形式）
-      // JudgmentResultの生成
+  # JSONのパース（choices形式）
+  # JudgmentResultの生成
     end
 
     context '異常系' do
-      // 不正なJSON
-      // スコア欠落
-      // スコア範囲外
-      // 空のchoices
-      // choices[].messageの欠落
-      // choices[].message.contentの欠落
+  # 不正なJSON
+  # スコア欠落
+  # スコア範囲外
+  # 空のchoices
+  # choices[].messageの欠落
+  # choices[].message.contentの欠落
     end
 
     context '境界値' do
-      // コードブロックで囲まれたJSON
-      // スコアが文字列
-      // スコアが浮動小数点数
-      // スコアの境界値（0, 20）
-      // commentのtruncate
-      // commentが空文字列/nil
+  # コードブロックで囲まれたJSON
+  # スコアが文字列
+  # スコアが浮動小数点数
+  # スコアの境界値（0, 20）
+  # commentのtruncate
+  # commentが空文字列/nil
     end
   end
 
   describe '#api_key' do
     context '正常系' do
-      // 環境変数からの取得
+  # 環境変数からの取得
     end
 
     context '異常系' do
-      // APIキーがnil
-      // APIキーが空文字列
+  # APIキーがnil
+  # APIキーが空文字列
     end
   end
 
   describe '#judge (Integration)' do
     context '正常系' do
-      // VCR使用: 正常に審査結果を返す
-      // VCR使用: デヴィ婦人風のバイアスが適用される
+  # VCR使用: 正常に審査結果を返す
+  # VCR使用: デヴィ婦人風のバイアスが適用される
     end
 
     context '異常系' do
-      // VCR使用: タイムアウト
-      // VCR使用: レート制限
-      // VCR使用: 不正なJSON
+  # VCR使用: タイムアウト
+  # VCR使用: レート制限
+  # VCR使用: 不正なJSON
     end
   end
 
   describe '並行処理' do
-    // 複数スレッドから同時に呼び出された場合
-    // プロンプトファイルのキャッシュがスレッドセーフ
+  # 複数スレッドから同時に呼び出された場合
+  # プロンプトファイルのキャッシュがスレッドセーフ
   end
 
   describe 'ログ出力' do
-    // INFO/WARN/ERRORレベルのログ出力
+  # INFO/WARN/ERRORレベルのログ出力
   end
 end
 ```

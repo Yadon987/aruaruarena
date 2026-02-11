@@ -127,46 +127,46 @@ RSpec.describe GeminiAdapter do
     end
 
     context '境界値' do
-      // コードブロックで囲まれたJSON
-      // スコアが文字列
-      // スコアが浮動小数点数
-      // スコアの境界値（0, 20）
-      // commentのtruncate
-      // commentが空文字列/nil
+  # コードブロックで囲まれたJSON
+  # スコアが文字列
+  # スコアが浮動小数点数
+  # スコアの境界値（0, 20）
+  # commentのtruncate
+  # commentが空文字列/nil
     end
   end
 
   describe '#api_key' do
     context '正常系' do
-      // 環境変数からの取得
+  # 環境変数からの取得
     end
 
     context '異常系' do
-      // APIキーがnil
-      // APIキーが空文字列
+  # APIキーがnil
+  # APIキーが空文字列
     end
   end
 
   describe '#judge (Integration)' do
     context '正常系' do
-      // VCR使用: 正常に審査結果を返す
-      // VCR使用: ひろゆき風のバイアスが適用される
+  # VCR使用: 正常に審査結果を返す
+  # VCR使用: ひろゆき風のバイアスが適用される
     end
 
     context '異常系' do
-      // VCR使用: タイムアウト
-      // VCR使用: レート制限
-      // VCR使用: 不正なJSON
+  # VCR使用: タイムアウト
+  # VCR使用: レート制限
+  # VCR使用: 不正なJSON
     end
   end
 
   describe '並行処理' do
-    // 複数スレッドから同時に呼び出された場合
-    // プロンプトファイルのキャッシュがスレッドセーフ
+  # 複数スレッドから同時に呼び出された場合
+  # プロンプトファイルのキャッシュがスレッドセーフ
   end
 
   describe 'ログ出力' do
-    // INFO/WARN/ERRORレベルのログ出力
+  # INFO/WARN/ERRORレベルのログ出力
   end
 end
 ```
@@ -190,8 +190,8 @@ end
 | `string_scores.yml` | T18 | スコアが文字列 |
 | `float_scores.yml` | T17a | スコアが浮動小数点数 |
 | `long_comment.yml` | T19 | commentが30文字超 |
-| `empty_comment.yml` | T519 | commentが空文字列 |
-| `missing_comment.yml` | T520 | commentが欠落（nil） |
+| `empty_comment.yml` | T21 | commentが空文字列 |
+| `missing_comment.yml` | T22 | commentが欠落（nil） |
 | `json_injection.yml` | T20 | JSON制御文字を含む投稿 |
 | `path_traversal.yml` | S01 | パストラバーサル攻撃 |
 | `api_success_log.yml` | L01 | API成功時INFOログ |
