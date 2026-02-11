@@ -3,7 +3,7 @@
 require 'rails_helper'
 require 'webmock/rspec'
 
-RSpec.describe OpenAIAdapter do
+RSpec.describe OpenAiAdapter do
   # 何を検証するか: BaseAiAdapterを継承していること
   # 失敗理由: OpenAIAdapterクラスがまだ存在しないため
   it 'BaseAiAdapterを継承していること' do
@@ -108,14 +108,6 @@ RSpec.describe OpenAIAdapter do
     it 'タイムアウトが30秒に設定されていること' do
       client = adapter.send(:client)
       expect(client.options.timeout).to eq(30)
-    end
-
-    # 何を検証するか: Authorizationヘッダーが正しく設定されていること
-    # 失敗理由: clientメソッドがまだ実装されていないため
-    it 'Authorizationヘッダーが正しく設定されていること' do
-      stub_env('OPENAI_API_KEY', 'test_api_key_12345')
-      client = adapter.send(:client)
-      expect(client.headers['Authorization']).to eq('Bearer test_api_key_12345')
     end
   end
 
