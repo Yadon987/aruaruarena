@@ -96,11 +96,26 @@ RSpec.describe OpenAIAdapter do
       expect(client.url_prefix.to_s).to include('api.openai.com')
     end
 
+    # 何を検証するか: SSL証明書の検証が有効であること
+    # 失敗理由: clientメソッドがまだ実装されていないため
+    it 'SSL証明書の検証が有効であること' do
+      client = adapter.send(:client)
+      expect(client.ssl.verify).to be true
+    end
+
     # 何を検証するか: タイムアウトが30秒に設定されていること
     # 失敗理由: タイムアウト設定がまだ実装されていないため
     it 'タイムアウトが30秒に設定されていること' do
       client = adapter.send(:client)
       expect(client.options.timeout).to eq(30)
+    end
+
+    # 何を検証するか: Authorizationヘッダーが正しく設定されていること
+    # 失敗理由: clientメソッドがまだ実装されていないため
+    it 'Authorizationヘッダーが正しく設定されていること' do
+      stub_env('OPENAI_API_KEY', 'test_api_key_12345')
+      client = adapter.send(:client)
+      expect(client.headers['Authorization']).to eq('Bearer test_api_key_12345')
     end
   end
 
