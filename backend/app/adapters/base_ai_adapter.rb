@@ -176,11 +176,11 @@ class BaseAiAdapter
   # @param post_content [String] 投稿本文
   # @param persona [String] 審査員ID
   # @return [JudgmentResult] 審査結果
-  # @raise [NotImplementedError] サブクラスで実装する必要がある
   def call_ai_api(post_content, persona)
-    # サブクラス（GeminiAdapter等）でHTTP通信を実装する必要があります
-    raise NotImplementedError, 'Subclasses must implement call_ai_api to perform the actual API call'
-  end
+    request = build_request(post_content, persona)
+    response = parse_response(request)
+
+    return response if response.is_a?(JudgmentResult)
 
     # スコアのバリデーション
     scores = response['scores'] || response[:scores]
