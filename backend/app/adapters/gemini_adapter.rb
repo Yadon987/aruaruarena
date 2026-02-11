@@ -31,7 +31,9 @@ class GeminiAdapter < BaseAiAdapter
     #
     # @return [String, nil] キャッシュされたプロンプト
     def prompt_cache
-      @prompt_cache
+      @prompt_mutex.synchronize do
+        @prompt_cache
+      end
     end
 
     # キャッシュされたプロンプトを設定する

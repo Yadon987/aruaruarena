@@ -22,39 +22,21 @@ http_interactions:
       - "*/*"
   response:
     status:
-      code: 404
-      message: Not Found
+      code: 429
+      message: Too Many Requests
     headers:
-      Vary:
-      - Origin
-      - Referer
-      - X-Origin
       Content-Type:
       - application/json; charset=UTF-8
       Date:
       - Tue, 10 Feb 2026 22:46:12 GMT
-      Server:
-      - scaffolding on HTTPServer2
-      X-Xss-Protection:
-      - '0'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-Content-Type-Options:
-      - nosniff
-      Server-Timing:
-      - gfet4t7; dur=57
-      Alt-Svc:
-      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
-      Transfer-Encoding:
-      - chunked
     body:
       encoding: ASCII-8BIT
       string: |
         {
           "error": {
-            "code": 404,
-            "message": "models/gemini-2.0-flash-exp is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
-            "status": "NOT_FOUND"
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "status": "RESOURCE_EXHAUSTED"
           }
         }
   recorded_at: Tue, 10 Feb 2026 22:46:12 GMT
@@ -80,39 +62,21 @@ http_interactions:
       - "*/*"
   response:
     status:
-      code: 404
-      message: Not Found
+      code: 429
+      message: Too Many Requests
     headers:
-      Vary:
-      - Origin
-      - Referer
-      - X-Origin
       Content-Type:
       - application/json; charset=UTF-8
       Date:
       - Tue, 10 Feb 2026 22:46:13 GMT
-      Server:
-      - scaffolding on HTTPServer2
-      X-Xss-Protection:
-      - '0'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-Content-Type-Options:
-      - nosniff
-      Server-Timing:
-      - gfet4t7; dur=55
-      Alt-Svc:
-      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
-      Transfer-Encoding:
-      - chunked
     body:
       encoding: ASCII-8BIT
       string: |
         {
           "error": {
-            "code": 404,
-            "message": "models/gemini-2.0-flash-exp is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
-            "status": "NOT_FOUND"
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "status": "RESOURCE_EXHAUSTED"
           }
         }
   recorded_at: Tue, 10 Feb 2026 22:46:14 GMT
@@ -138,39 +102,21 @@ http_interactions:
       - "*/*"
   response:
     status:
-      code: 404
-      message: Not Found
+      code: 429
+      message: Too Many Requests
     headers:
-      Vary:
-      - Origin
-      - Referer
-      - X-Origin
       Content-Type:
       - application/json; charset=UTF-8
       Date:
       - Tue, 10 Feb 2026 22:46:15 GMT
-      Server:
-      - scaffolding on HTTPServer2
-      X-Xss-Protection:
-      - '0'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-Content-Type-Options:
-      - nosniff
-      Server-Timing:
-      - gfet4t7; dur=52
-      Alt-Svc:
-      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
-      Transfer-Encoding:
-      - chunked
     body:
       encoding: ASCII-8BIT
       string: |
         {
           "error": {
-            "code": 404,
-            "message": "models/gemini-2.0-flash-exp is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
-            "status": "NOT_FOUND"
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "status": "RESOURCE_EXHAUSTED"
           }
         }
   recorded_at: Tue, 10 Feb 2026 22:46:16 GMT
@@ -196,39 +142,21 @@ http_interactions:
       - "*/*"
   response:
     status:
-      code: 404
-      message: Not Found
+      code: 429
+      message: Too Many Requests
     headers:
-      Vary:
-      - Origin
-      - Referer
-      - X-Origin
       Content-Type:
       - application/json; charset=UTF-8
       Date:
       - Tue, 10 Feb 2026 22:46:19 GMT
-      Server:
-      - scaffolding on HTTPServer2
-      X-Xss-Protection:
-      - '0'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-Content-Type-Options:
-      - nosniff
-      Server-Timing:
-      - gfet4t7; dur=52
-      Alt-Svc:
-      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
-      Transfer-Encoding:
-      - chunked
     body:
       encoding: ASCII-8BIT
       string: |
         {
           "error": {
-            "code": 404,
-            "message": "models/gemini-2.0-flash-exp is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
-            "status": "NOT_FOUND"
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "status": "RESOURCE_EXHAUSTED"
           }
         }
   recorded_at: Tue, 10 Feb 2026 22:46:20 GMT

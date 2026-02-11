@@ -72,9 +72,12 @@ Issue #33（E06-03: GLM Adapterの実装）の受け入れ基準をすべてカ�
 | T16a | スコアが範囲外（0）の場合は有効と判定されること | AC12 |
 | T17 | スコアが範囲外（21）の場合はinvalid_responseエラーコードを返すこと | AC12 |
 | T17a | スコアが範囲外（20）の場合は有効と判定されること | AC12 |
+| T17b | スコアが浮動小数点数の場合に整数に変換できること | - |
 | T18 | スコアが文字列の場合に整数に変換できること | AC13 |
 | T19 | commentが30文字を超える場合はtruncateされること | AC14 |
 | T20 | post_contentにJSON制御文字が含まれる場合に正しくエスケープされること | AC15 |
+| T21 | commentが空文字列の場合はinvalid_responseエラーコードを返すこと | - |
+| T22 | commentが欠落（nil）している場合はinvalid_responseエラーコードを返すこと | - |
 
 ### ログ出力 (Log Output)
 
@@ -90,23 +93,15 @@ Issue #33（E06-03: GLM Adapterの実装）の受け入れ基準をすべてカ�
 |----|-------------|------|
 | S01 | パストラバーサル攻撃を防ぐこと | セキュリティ |
 
----
-
-## GLM API固有のテスト項目
-
-### Authorizationヘッダーのテスト
+### GLM API固有のテスト項目 (Unit Testのみ)
 
 | ID | テストケース | 目的 |
 |----|-------------|------|
-| G01 | AuthorizationヘッダーがBearerトークン形式であること | API認証 |
-| G02 | modelパラメータがglm-4-flashに設定されていること | API仕様 |
-
-### リクエスト形式のテスト
-
-| ID | テストケース | 目的 |
-|----|-------------|------|
-| G03 | リクエストがmessages配列形式であること | API仕様 |
-| G04 | messages[0].roleがuserであること | API仕様 |
+| G01 | modelがglm-4-flashに設定されていること | API仕様 |
+| G02 | messagesが配列形式であること | API仕様 |
+| G03 | messages[0].roleがuserであること | API仕様 |
+| G04 | temperatureが0.7に設定されていること | API仕様 |
+| G05 | max_tokensが1000に設定されていること | API仕様 |
 
 ---
 
@@ -117,16 +112,16 @@ Issue #33（E06-03: GLM Adapterの実装）の受け入れ基準をすべてカ�
 ```
 RSpec.describe GlmAdapter do
   describe '継承関係' do
-    # BaseAiAdapterを継承していること
+    // BaseAiAdapterを継承していること
   end
 
   describe '定数' do
-    # PROMPT_PATHの定義と値
+    // PROMPT_PATHの定義と値
   end
 
   describe '初期化' do
     context '正常系' do
-      # プロンプトファイルの読み込み
+      // プロンプトファイルの読み込み
     end
 
     context '異常系' do
@@ -136,6 +131,7 @@ RSpec.describe GlmAdapter do
 
   describe '#client' do
     // Faradayクライアントの設定
+    // SSL検証
   end
 
   describe '#build_request' do
@@ -168,6 +164,8 @@ RSpec.describe GlmAdapter do
       // スコア欠落
       // スコア範囲外
       // 空のchoices
+      // choices[].messageの欠落
+      // choices[].message.contentの欠落
     end
 
     context '境界値' do
@@ -232,13 +230,15 @@ end
 | `score_twenty_one.yml` | T17 | スコアが21 |
 | `score_twenty.yml` | T17a | スコアが20（有効） |
 | `string_scores.yml` | T18 | スコアが文字列 |
-| `float_scores.yml` | T17a | スコアが浮動小数点数 |
+| `float_scores.yml` | T17b | スコアが浮動小数点数 |
 | `long_comment.yml` | T19 | commentが30文字超 |
-| `empty_comment.yml` | T519 | commentが空文字列 |
-| `missing_comment.yml` | T520 | commentが欠落（nil） |
+| `empty_comment.yml` | T21 | commentが空文字列 |
+| `missing_comment.yml` | T22 | commentが欠落（nil） |
 | `json_injection.yml` | T20 | JSON制御文字を含む投稿 |
 | `path_traversal.yml` | S01 | パストラバーサル攻撃 |
 | `api_success_log.yml` | L01 | API成功時INFOログ |
+
+**注**: G01-G05はUnit Testで検証するため、VCRカセットは不要です。
 
 ---
 
@@ -252,7 +252,7 @@ end
 # 審査基準（各0-20点、合計100点満点）
 - 共感度: 多くの人が「あるある」と思えるか（感情的な共鳴を重視）
 - 面白さ: 笑いや驚きが誘われるか（華やかさを重視）
-- 簡潔さ: 無駄なく簡潔に表現されているか（洗練された美しさを重視）
+- 簡潔さ: 無駊なく簡潔に表現されているか（洗練された美しさを重視）
 - 独創性: 新規性や独自性があるか（個性的な切り口を重視）
 - 表現力: 言葉選びや表現技巧が優れているか（華麗な表現を重視）
 
@@ -672,6 +672,32 @@ RSpec.describe GlmAdapter do
         expect(result.error_code).to eq('invalid_response')
       end
 
+      it 'choices[].messageが欠落している場合はinvalid_responseエラーコードを返すこと' do
+        response = {
+          choices: [{}]
+        }
+
+        result = adapter.send(:parse_response, response)
+
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
+      end
+
+      it 'choices[].message.contentが欠落している場合はinvalid_responseエラーコードを返すこと' do
+        response = {
+          choices: [
+            {
+              message: {}
+            }
+          ]
+        }
+
+        result = adapter.send(:parse_response, response)
+
+        expect(result.succeeded).to be false
+        expect(result.error_code).to eq('invalid_response')
+      end
+
       it 'commentが空文字列の場合はinvalid_responseエラーコードを返すこと' do
         response = {
           choices: [
@@ -994,6 +1020,8 @@ ls -la spec/fixtures/vcr/glm_adapter/
 | `rate_limit.yml` | 429 Too Many Requests |
 | `invalid_json.yml` | 不正なJSON |
 | `empty_choices.yml` | choicesが空 |
+| `missing_message.yml` | choices[].messageが欠落 |
+| `missing_content.yml` | choices[].message.contentが欠落 |
 | `score_negative_one.yml` | スコアが-1 |
 | `score_zero.yml` | スコアが0（有効） |
 | `score_twenty_one.yml` | スコアが21 |
@@ -1026,7 +1054,7 @@ bundle exec rspec spec/adapters/glm_adapter_spec.rb --format progress
 .................................
 
 Finished in X seconds (files took X seconds to load)
-75 examples, 45 failures
+50 examples, 47 failures
 ```
 
 **注**: `GlmAdapter` クラスが未定義または未実装の状態でテストを実行すると、`NameError: uninitialized constant GlmAdapter` が発生します。これは正常なRed状態です。
@@ -1058,14 +1086,15 @@ Finished in X seconds (files took X seconds to load)
 test: E06-03 GlmAdapterのREDテストを作成 #33
 
 - BaseAiAdapterを継承したGlmAdapterのテストを作成
-- すべての受け入れ基準をカバー（45テストケース）
-- GLM API固有のテストを追加（Authorizationヘッダー、messages形式）
+- すべての受け入れ基準をカバー（50テストケース）
+- GLM API固有のテストを追加（model、messages配列形式、temperature/max_tokens）
 - 正常系、異常系、境界値、ログ出力、セキュリティのテストを実装
 - VCRカセットの作成手順をドキュメント化
 - デヴィ婦人風プロンプトファイルを作成
 - パストラバーサル攻撃のテストを追加
 - スコアの境界値（0, 20）テストを追加
 - 浮動小数点数スコアのテストを追加
+- choices[].message.contentの欠落に対する異常系テストを追加
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ```

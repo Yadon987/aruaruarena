@@ -88,8 +88,7 @@ RSpec.describe GeminiAdapter do
     it 'SSL証明書の検証が有効であること' do
       adapter = described_class.new
       client = adapter.send(:client)
-      # FaradayのSSL設定はssl.verifyメソッドで確認可能
-      expect { |b| client.ssl.verify(&b) }.not_to raise_error
+      expect(client.ssl.verify).to be true
     end
   end
 
@@ -418,7 +417,7 @@ RSpec.describe GeminiAdapter do
         expect(result.error_code).to eq('invalid_response')
       end
 
-      it 'commentが空文字列の場合はinvalid_responseエラーコードを返すこと' do
+      it 'commentが空文字列の場合にパースできること（親クラスでバリデーション）' do
         response_hash = {
           candidates: [
             {
@@ -438,7 +437,7 @@ RSpec.describe GeminiAdapter do
         expect(result[:comment]).to eq('')
       end
 
-      it 'commentが欠落（nil）している場合はinvalid_responseエラーコードを返すこと' do
+      it 'commentが欠落（nil）している場合にパースできること（親クラスでバリデーション）' do
         response_hash = {
           candidates: [
             {
@@ -460,7 +459,7 @@ RSpec.describe GeminiAdapter do
     end
 
     context '境界値' do
-      it 'スコアが-1の場合はinvalid_responseエラーコードを返すこと' do
+      it 'スコアが-1の場合にパースできること（親クラスでバリデーション）' do
         invalid_scores = base_scores.merge(empathy: -1)
         response_hash = {
           candidates: [
@@ -481,7 +480,7 @@ RSpec.describe GeminiAdapter do
         expect(result[:scores][:empathy]).to eq(-1)
       end
 
-      it 'スコアが21の場合はinvalid_responseエラーコードを返すこと' do
+      it 'スコアが21の場合にパースできること（親クラスでバリデーション）' do
         invalid_scores = base_scores.merge(empathy: 21)
         response_hash = {
           candidates: [
