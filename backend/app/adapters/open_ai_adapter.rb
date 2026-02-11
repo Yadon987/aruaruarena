@@ -265,11 +265,13 @@ class OpenAiAdapter < BaseAiAdapter
   def extract_json_from_codeblock(text)
     if text.include?('```')
       if text.match?(/```json/)
-        extracted = text.slice(/```json\s*\n(.*?)\n```/m, 1)
+        # \n? を追加してtrailing newlineをオプションに
+        extracted = text.slice(/```json\s*\n(.*?)\n?```/m, 1)
         return extracted.strip if extracted
       end
 
-      extracted = text.slice(/```\s*\n(.*?)\n```/m, 1)
+      # \n? を追加してtrailing newlineをオプションに
+      extracted = text.slice(/```\s*\n(.*?)\n?```/m, 1)
       return extracted.strip if extracted
     end
     text

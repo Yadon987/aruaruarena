@@ -256,21 +256,21 @@ class GeminiAdapter < BaseAiAdapter
     # コードブロックが含まれる場合のみ処理
     if text.include?('```')
       # 正規表現の解説:
-      # /```json\s*\n(.*?)\n```/m  -> ```json と ``` の間のテキストを抽出
+      # /```json\s*\n(.*?)\n?```/m  -> ```json と ``` の間のテキストを抽出
       #   - ```json\s*\n: ```json とそれに続く空白・改行にマッチ
       #   - (.*?): 非貪欲マッチでJSON部分をキャプチャ
-      #   - \n```: 改行と ``` にマッチ
+      #   - \n?```: 改行（オプション）と ``` にマッチ
       #   - /m: マルチラインモード（. が改行にもマッチ）
       #
       # 例: 'Note: ```json\n{"a":1}\n```\nDone' -> '{"a":1}'
       if text.match?(/```json/)
-        extracted = text.slice(/```json\s*\n(.*?)\n```/m, 1)
+        extracted = text.slice(/```json\s*\n(.*?)\n?```/m, 1)
         return extracted.strip if extracted
       end
 
       # ```json がない場合（単に ``` のみの場合）
       # 例: '```\n{"a":1}\n```' -> '{"a":1}'
-      extracted = text.slice(/```\s*\n(.*?)\n```/m, 1)
+      extracted = text.slice(/```\s*\n(.*?)\n?```/m, 1)
       return extracted.strip if extracted
     end
 
