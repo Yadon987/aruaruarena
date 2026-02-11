@@ -49,6 +49,7 @@ class GlmAdapter < BaseAiAdapter
 
   # GlmAdapterを初期化する
   def initialize
+    super
     @prompt = load_prompt
   end
 
@@ -78,8 +79,13 @@ class GlmAdapter < BaseAiAdapter
   end
 
   # GLM APIキーを返す
+  #
+  # @return [String] APIキー
+  # @raise [ArgumentError] APIキーが設定されていない場合
   def api_key
+    # rubocop:disable Style/FetchEnvVar
     key = ENV['GLM_API_KEY']
+    # rubocop:enable Style/FetchEnvVar
     raise ArgumentError, 'GLM_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
 
     key
@@ -154,7 +160,7 @@ class GlmAdapter < BaseAiAdapter
     end
 
     json_text = extract_json_from_codeblock(content)
-    
+
     begin
       data = JSON.parse(json_text, symbolize_names: true)
     rescue JSON::ParserError => e
@@ -207,9 +213,9 @@ class GlmAdapter < BaseAiAdapter
                         else
                           Float(value).round
                         end
-      rescue ArgumentError, FloatDomainError, RangeError, TypeError => e
-        raise ArgumentError, "Invalid score value for #{key}: #{value.inspect}"
-      end
+      rescue ArgumentError, FloatDomainError, RangeError, TypeError => e # rubocop:disable Lint/ShadowedException
+        raise ArgumentError, "Invalid score value for #{key}: #{value.inspect}", cause: e
+      end # rubocop:enable Lint/ShadowedException
       scores[key] = integer_value
     end
     scores
@@ -218,6 +224,7 @@ class GlmAdapter < BaseAiAdapter
   # コメント切り詰め
   def truncate_comment(comment)
     return nil if comment.nil?
+
     comment.to_s.strip[0...MAX_COMMENT_LENGTH]
   end
 end

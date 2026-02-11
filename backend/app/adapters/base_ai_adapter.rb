@@ -59,11 +59,11 @@ class BaseAiAdapter
 
   # 制御文字の正規表現パターン
   # Note: grapheme長制限があるため、ReDoSリスクは低い
-  CONTROL_CHAR_PATTERN = /[\x00-\x1F\x7F]/.freeze
+  CONTROL_CHAR_PATTERN = /[\x00-\x1F\x7F]/
 
   # Graphemeクラスタ（絵文字等）の正規表現パターン
   # Note: grapheme長制限があるため、ReDoSリスクは低い
-  GRAPHEME_CLUSTER_PATTERN = /\X/.freeze
+  GRAPHEME_CLUSTER_PATTERN = /\X/
 
   # 審査結果の構造体
   #
@@ -104,18 +104,14 @@ class BaseAiAdapter
   # @param post_content [String] 投稿本文
   # @raise [ArgumentError] バリデーションエラー時
   def validate_post_content!(post_content)
-    if post_content.nil? || post_content.to_s.strip.empty?
-      raise ArgumentError, 'post_contentは必須です'
-    end
+    raise ArgumentError, 'post_contentは必須です' if post_content.nil? || post_content.to_s.strip.empty?
 
-    if post_content.match?(CONTROL_CHAR_PATTERN)
-      raise ArgumentError, 'post_contentに制御文字は含められません'
-    end
+    raise ArgumentError, 'post_contentに制御文字は含められません' if post_content.match?(CONTROL_CHAR_PATTERN)
 
     grapheme_count = post_content.scan(GRAPHEME_CLUSTER_PATTERN).length
-    if grapheme_count < MIN_CONTENT_LENGTH || grapheme_count > MAX_CONTENT_LENGTH
-      raise ArgumentError, "post_contentは#{MIN_CONTENT_LENGTH}-#{MAX_CONTENT_LENGTH}文字である必要があります"
-    end
+    return unless grapheme_count < MIN_CONTENT_LENGTH || grapheme_count > MAX_CONTENT_LENGTH
+
+    raise ArgumentError, "post_contentは#{MIN_CONTENT_LENGTH}-#{MAX_CONTENT_LENGTH}文字である必要があります"
   end
 
   # personaのバリデーション
@@ -123,13 +119,11 @@ class BaseAiAdapter
   # @param persona [String] 審査員ID
   # @raise [ArgumentError] バリデーションエラー時
   def validate_persona!(persona)
-    if persona.nil? || persona.to_s.strip.empty?
-      raise ArgumentError, 'personaは必須です'
-    end
+    raise ArgumentError, 'personaは必須です' if persona.nil? || persona.to_s.strip.empty?
 
-    unless VALID_PERSONAS.include?(persona)
-      raise ArgumentError, "不正なpersonaです: #{persona}"
-    end
+    return if VALID_PERSONAS.include?(persona)
+
+    raise ArgumentError, "不正なpersonaです: #{persona}"
   end
 
   # リトライ処理付きでAI APIを呼び出す
@@ -159,7 +153,7 @@ class BaseAiAdapter
 
       if retries <= MAX_RETRIES
         Rails.logger.warn("リトライ #{retries}/#{MAX_RETRIES}: #{e.class}")
-        retry_sleep(RETRY_DELAY * (2 ** (retries - 1)))
+        retry_sleep(RETRY_DELAY * (2**(retries - 1)))
         retry
       end
 
@@ -218,7 +212,8 @@ class BaseAiAdapter
   # @return [Boolean] 有効範囲内の場合はtrue
   def valid_score?(score)
     return false unless score.is_a?(Integer)
-    score >= MIN_SCORE_VALUE && score <= MAX_SCORE_VALUE
+
+    score.between?(MIN_SCORE_VALUE, MAX_SCORE_VALUE)
   end
 
   # 全スコアが有効範囲内かチェックする
@@ -227,6 +222,7 @@ class BaseAiAdapter
   # @return [Boolean] 全スコアが有効範囲内の場合はtrue
   def scores_within_range?(scores)
     return true unless scores
+
     scores.values.all? { |v| valid_score?(v) }
   end
 
@@ -236,6 +232,7 @@ class BaseAiAdapter
   # @return [Boolean] 必須キーが全て含まれる場合はtrue
   def valid_score_keys?(scores)
     return true unless scores
+
     scores.keys.map(&:to_sym).sort == REQUIRED_SCORE_KEYS.sort
   end
 
@@ -254,7 +251,7 @@ class BaseAiAdapter
   # @return [JudgmentResult] バイアス適用後の審査結果
   def apply_persona_bias!(result, persona)
     return result unless result.succeeded
-    return result if result.scores.nil? || result.scores.empty?
+    return result if result.scores.blank?
 
     biased_scores = Judgment.apply_persona_bias(result.scores.dup, persona)
     JudgmentResult.new(
@@ -278,12 +275,12 @@ class BaseAiAdapter
   # @return [JudgmentResult] 失敗結果
   def handle_error(error)
     code = case error
-            when Timeout::Error, Faraday::TimeoutError then 'timeout'
-            when Faraday::ConnectionFailed then 'connection_failed'
-            when Faraday::ClientError, Faraday::ServerError then 'provider_error'
-            when JSON::ParserError then 'invalid_response'
-            else 'unknown_error'
-            end
+           when Timeout::Error, Faraday::TimeoutError then 'timeout'
+           when Faraday::ConnectionFailed then 'connection_failed'
+           when Faraday::ClientError, Faraday::ServerError then 'provider_error'
+           when JSON::ParserError then 'invalid_response'
+           else 'unknown_error'
+           end
 
     # 詳細なエラーログ（機密情報は含めない）
     Rails.logger.error("審査失敗: #{error.class} - #{error.message}")

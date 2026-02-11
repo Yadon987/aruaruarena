@@ -293,13 +293,11 @@ class GeminiAdapter < BaseAiAdapter
   # @return [String] APIキー
   # @raise [ArgumentError] APIキーが設定されていない場合
   def api_key
-    key = ENV['GEMINI_API_KEY']
+    key = ENV.fetch('GEMINI_API_KEY', nil)
     raise ArgumentError, 'GEMINI_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
 
     key
   end
-
-
 
   # Gemini APIにHTTPリクエストを送信する
   #
@@ -345,7 +343,4 @@ class GeminiAdapter < BaseAiAdapter
   # @return [JudgmentResult] 審査結果
   # @raise [Faraday::ClientError] クライアントエラー時
   # @raise [Faraday::ServerError] サーバーエラー時
-
-
-
 end
