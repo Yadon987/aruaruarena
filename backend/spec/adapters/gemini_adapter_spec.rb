@@ -50,9 +50,9 @@ RSpec.describe GeminiAdapter do
         # PROMPT_PATHのみモック
         allow(File).to receive(:exist?).with(described_class::PROMPT_PATH).and_return(false)
 
-        expect {
+        expect do
           described_class.new
-        }.to raise_error(ArgumentError, /プロンプトファイルが見つかりません/)
+        end.to raise_error(ArgumentError, /プロンプトファイルが見つかりません/)
       end
 
       it 'PROMPT_PATHにパストラバーサル攻撃が含まれる場合は例外を発生させること' do
@@ -252,6 +252,76 @@ RSpec.describe GeminiAdapter do
         expect(result[:scores][:empathy]).to be_a(Integer)
       end
 
+      # 何を検証するか: 小数点文字列のスコア変換（CodeRabbitレビュー対応）
+      context '小数点スコアの扱い' do
+        it 'スコアが小数点文字列（"12.5"）の場合に四捨五入して整数に変換できること' do
+          decimal_string_scores = base_scores.merge(empathy: '12.5', humor: '15.7', brevity: '8.2')
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: JSON.generate(decimal_string_scores.merge(comment: 'テスト')) }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          # 12.5 -> 13, 15.7 -> 16, 8.2 -> 8（四捨五入）
+          expect(result[:scores][:empathy]).to eq(13)
+          expect(result[:scores][:humor]).to eq(16)
+          expect(result[:scores][:brevity]).to eq(8)
+          expect(result[:scores][:empathy]).to be_a(Integer)
+        end
+
+        it 'スコアが小数点（Float）の場合に四捨五入して整数に変換できること' do
+          decimal_float_scores = base_scores.merge(empathy: 12.5, humor: 15.7, brevity: 8.2)
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: JSON.generate(decimal_float_scores.merge(comment: 'テスト')) }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          expect(result[:scores][:empathy]).to eq(13)
+          expect(result[:scores][:humor]).to eq(16)
+          expect(result[:scores][:brevity]).to eq(8)
+        end
+
+        it 'スコアが境界値（0.5）の場合に正しく丸められること' do
+          boundary_scores = base_scores.transform_values { |v| v == 15 ? 0.5 : v }
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: JSON.generate(boundary_scores.merge(comment: '境界値テスト')) }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          # 0.5 -> 1（四捨五入）
+          expect(result[:scores][:empathy]).to eq(1)
+        end
+      end
+
       it 'スコアが0の場合は有効と判定されること' do
         zero_scores = base_scores.transform_values { 0 }
         response_hash = {
@@ -345,6 +415,115 @@ RSpec.describe GeminiAdapter do
         result = adapter.send(:parse_response, faraday_response)
         expect(result[:scores]).to be_present
       end
+
+      # 何を検証するか: コードブロック外にテキストがある場合のJSON抽出（CodeRabbitレビュー対応）
+      context '周囲にテキストがある場合' do
+        it 'JSONが前後にテキストを含むコードブロックで囲まれている場合に正しく抽出できること' do
+          json_with_surrounding_text = <<~TEXT
+            これは審査結果です:
+            ```json
+            {
+              "empathy": 15,
+              "humor": 15,
+              "brevity": 15,
+              "originality": 15,
+              "expression": 15,
+              "comment": "それって本当？"
+            }
+            ```
+            以上です。
+          TEXT
+
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: json_with_surrounding_text }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          expect(result[:scores]).to be_present
+          expect(result[:comment]).to eq('それって本当？')
+        end
+
+        it '複数のコードブロックが含まれる場合に最初のJSONを抽出できること' do
+          json_with_multiple_blocks = <<~TEXT
+            ```json
+            {
+              "empathy": 15,
+              "humor": 15,
+              "brevity": 15,
+              "originality": 15,
+              "expression": 15,
+              "comment": "最初"
+            }
+            ```
+            余分なテキスト
+            ```
+            これは無視される
+            ```
+          TEXT
+
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: json_with_multiple_blocks }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          expect(result[:scores]).to be_present
+          expect(result[:comment]).to eq('最初')
+        end
+
+        it '```jsonがないコードブロックを正しく抽出できること' do
+          json_without_json_marker = <<~TEXT
+            結果:
+            ```
+            {
+              "empathy": 15,
+              "humor": 15,
+              "brevity": 15,
+              "originality": 15,
+              "expression": 15,
+              "comment": "それって本当？"
+            }
+            ```
+          TEXT
+
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: json_without_json_marker }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          expect(result[:scores]).to be_present
+          expect(result[:comment]).to eq('それって本当？')
+        end
+      end
     end
 
     context '異常系' do
@@ -370,7 +549,7 @@ RSpec.describe GeminiAdapter do
       end
 
       it 'スコアが欠落している場合はinvalid_responseエラーコードを返すこと' do
-        incomplete_scores = base_scores.reject { |k, _| k == :empathy }
+        incomplete_scores = base_scores.except(:empathy)
         response_hash = {
           candidates: [
             {
@@ -563,31 +742,31 @@ RSpec.describe GeminiAdapter do
       it 'APIキーがnilの場合は例外を発生させること' do
         stub_env('GEMINI_API_KEY', nil)
 
-        expect {
+        expect do
           adapter.send(:api_key)
-        }.to raise_error(ArgumentError, /GEMINI_API_KEYが設定されていません/)
+        end.to raise_error(ArgumentError, /GEMINI_API_KEYが設定されていません/)
       end
 
       it 'APIキーが空文字列の場合は例外を発生させること' do
         stub_env('GEMINI_API_KEY', '')
 
-        expect {
+        expect do
           adapter.send(:api_key)
-        }.to raise_error(ArgumentError, /GEMINI_API_KEYが設定されていません/)
+        end.to raise_error(ArgumentError, /GEMINI_API_KEYが設定されていません/)
       end
 
       it 'APIキーが空白のみの場合は例外を発生させること' do
         stub_env('GEMINI_API_KEY', '   ')
 
-        expect {
+        expect do
           adapter.send(:api_key)
-        }.to raise_error(ArgumentError, /GEMINI_API_KEYが設定されていません/)
+        end.to raise_error(ArgumentError, /GEMINI_API_KEYが設定されていません/)
       end
     end
   end
 
   # 何を検証するか: Integration Test（VCR使用）
-  describe '#judge (Integration)', :vcr => true do
+  describe '#judge (Integration)', vcr: true do
     let(:adapter) { described_class.new }
 
     # VCRカセットが作成されるまでスキップ
@@ -610,7 +789,7 @@ RSpec.describe GeminiAdapter do
         # 元のスコアが15の場合、バイアス適用後の値を検証
         # ひろゆき風: 独創性+3、共感度-2
         expect(result.scores[:originality]).to eq(18) # 15 + 3
-        expect(result.scores[:empathy]).to eq(13)   # 15 - 2
+        expect(result.scores[:empathy]).to eq(13) # 15 - 2
       end
 
       it 'バイアス適用後もスコアが0-20の範囲内に収まること', :vcr do
@@ -623,28 +802,28 @@ RSpec.describe GeminiAdapter do
     end
 
     context '異常系' do
-      it 'タイムアウト時にtimeoutエラーコードを返す', :vcr => 'timeout' do
+      it 'タイムアウト時にtimeoutエラーコードを返す', vcr: 'timeout' do
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
 
         expect(result.succeeded).to be false
         expect(result.error_code).to eq('timeout')
       end
 
-      it 'レート制限時にprovider_errorエラーコードを返す', :vcr => 'rate_limit' do
+      it 'レート制限時にprovider_errorエラーコードを返す', vcr: 'rate_limit' do
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
 
         expect(result.succeeded).to be false
         expect(result.error_code).to eq('provider_error')
       end
 
-      it '不正なJSONが返された場合はinvalid_responseエラーコードを返す', :vcr => 'invalid_json' do
+      it '不正なJSONが返された場合はinvalid_responseエラーコードを返す', vcr: 'invalid_json' do
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
 
         expect(result.succeeded).to be false
         expect(result.error_code).to eq('invalid_response')
       end
 
-      it 'candidatesが空の場合はinvalid_responseエラーコードを返す', :vcr => 'empty_candidates' do
+      it 'candidatesが空の場合はinvalid_responseエラーコードを返す', vcr: 'empty_candidates' do
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
 
         expect(result.succeeded).to be false
@@ -679,12 +858,12 @@ RSpec.describe GeminiAdapter do
       skip 'VCRカセットを作成する必要があります'
     end
 
-    it 'リトライ時にWARNレベルでログを出力すること', :vcr => 'timeout' do
+    it 'リトライ時にWARNレベルでログを出力すること', vcr: 'timeout' do
       # VCRカセットが作成されるまでスキップ
       skip 'VCRカセットを作成する必要があります'
     end
 
-    it 'APIエラー時にERRORレベルでログを出力すること', :vcr => 'rate_limit' do
+    it 'APIエラー時にERRORレベルでログを出力すること', vcr: 'rate_limit' do
       # VCRカセットが作成されるまでスキップ
       skip 'VCRカセットを作成する必要があります'
     end

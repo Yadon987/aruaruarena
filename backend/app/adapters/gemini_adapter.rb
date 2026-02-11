@@ -11,13 +11,13 @@ class GeminiAdapter < BaseAiAdapter
   PROMPT_PATH = 'app/prompts/hiroyuki.txt'
 
   # Gemini APIのベースURL
-  BASE_URL = 'https://generativelanguage.googleapis.com'.freeze
+  BASE_URL = 'https://generativelanguage.googleapis.com'
 
   # Gemini 2.0 Flash Experimentalモデル
-  MODEL_NAME = 'gemini-2.0-flash-exp'.freeze
+  MODEL_NAME = 'gemini-2.0-flash-exp'
 
   # APIバージョン
-  API_VERSION = 'v1beta'.freeze
+  API_VERSION = 'v1beta'
 
   # レスポンスの最大長（コメント用）
   MAX_COMMENT_LENGTH = 30
@@ -27,7 +27,7 @@ class GeminiAdapter < BaseAiAdapter
   MAX_OUTPUT_TOKENS = 1000
 
   # エラーコード
-  ERROR_CODE_INVALID_RESPONSE = 'invalid_response'.freeze
+  ERROR_CODE_INVALID_RESPONSE = 'invalid_response'
 
   # プロンプトのキャッシュ（スレッドセーフ）
   @prompt_cache = nil
@@ -92,13 +92,9 @@ class GeminiAdapter < BaseAiAdapter
     return cached if cached
 
     # パストラバーサルチェック
-    if PROMPT_PATH.include?('..') || PROMPT_PATH.start_with?('/')
-      raise ArgumentError, 'プロンプトファイルが見つかりません: パストラバーサル検出'
-    end
+    raise ArgumentError, 'プロンプトファイルが見つかりません: パストラバーサル検出' if PROMPT_PATH.include?('..') || PROMPT_PATH.start_with?('/')
 
-    unless File.exist?(PROMPT_PATH)
-      raise ArgumentError, "プロンプトファイルが見つかりません: #{PROMPT_PATH}"
-    end
+    raise ArgumentError, "プロンプトファイルが見つかりません: #{PROMPT_PATH}" unless File.exist?(PROMPT_PATH)
 
     prompt = File.read(PROMPT_PATH)
     self.class.prompt_cache = prompt
@@ -115,7 +111,7 @@ class GeminiAdapter < BaseAiAdapter
     @client ||= Faraday.new(url: BASE_URL) do |f|
       f.request :url_encoded
       f.options.timeout = BASE_TIMEOUT
-      f.ssl.verify = true  # SSL証明書検証を有効化
+      f.ssl.verify = true # SSL証明書検証を有効化
       f.adapter Faraday.default_adapter
     end
   end
@@ -129,7 +125,7 @@ class GeminiAdapter < BaseAiAdapter
   # @param post_content [String] 投稿本文
   # @param persona [String] 審査員ID（現状はhiroyukiのみ対応）
   # @return [Hash] APIリクエストボディ
-  def build_request(post_content, persona)
+  def build_request(post_content, _persona)
     # プロンプト内のプレースホルダーを置換
     prompt_text = @prompt.gsub('{post_content}', post_content)
 
@@ -142,8 +138,8 @@ class GeminiAdapter < BaseAiAdapter
         }
       ],
       generationConfig: {
-        temperature: TEMPERATURE,         # 創造性のバランス（0.0-1.0）
-        maxOutputTokens: MAX_OUTPUT_TOKENS  # 最大出力トークン数
+        temperature: TEMPERATURE, # 創造性のバランス（0.0-1.0）
+        maxOutputTokens: MAX_OUTPUT_TOKENS # 最大出力トークン数
       }
     }
   end
@@ -181,13 +177,19 @@ class GeminiAdapter < BaseAiAdapter
       value = data[key]
 
       # nilチェック
-      if value.nil?
-        raise ArgumentError, "Score value is nil for #{key}"
-      end
+      raise ArgumentError, "Score value is nil for #{key}" if value.nil?
 
       # 文字列や浮動小数点数を整数に変換
+      # 小数点文字列（例: "12.5"）をサポートするため、Float経由で変換
       begin
-        integer_value = value.is_a?(Integer) ? value : Integer(value)
+        # すでに整数の場合はそのまま使用
+        integer_value = if value.is_a?(Integer)
+                          value
+                        else
+                          # Floatに変換してから四捨五入で整数に
+                          # 例: "12.5" -> 12.5 -> 13, "15" -> 15.0 -> 15
+                          Float(value).round
+                        end
       rescue ArgumentError, FloatDomainError, RangeError, TypeError => e
         Rails.logger.error("スコア変換エラー: #{key}=#{value.inspect} - #{e.class}")
         raise ArgumentError, "Invalid score value for #{key}: #{value.inspect}"
@@ -243,22 +245,37 @@ class GeminiAdapter < BaseAiAdapter
   #
   # @example コードブロック付きのJSON
   #   extract_json_from_codeblock('```json\n{"a":1}\n```') #=> '{"a":1}'
+  # @example 周囲にテキストがある場合
+  #   extract_json_from_codeblock('Note:\n```json\n{"a":1}\n```\nDone') #=> '{"a":1}'
   # @example 生のJSON
   #   extract_json_from_codeblock('{"a":1}') #=> '{"a":1}'
   #
   # @param text [String] 生のテキスト
   # @return [String] 抽出されたJSON文字列
   def extract_json_from_codeblock(text)
-    # コードブロックを除去
+    # コードブロックが含まれる場合のみ処理
     if text.include?('```')
-      # ```json と ``` の間のテキストを抽出
       # 正規表現の解説:
-      # /```json\s*/  -> ```json とそれに続く空白をマッチ
-      # /```\s*/      -> ``` とそれに続く空白をマッチ
-      text.gsub(/```json\s*/, '').gsub(/```\s*/, '').strip
-    else
-      text
+      # /```json\s*\n(.*?)\n```/m  -> ```json と ``` の間のテキストを抽出
+      #   - ```json\s*\n: ```json とそれに続く空白・改行にマッチ
+      #   - (.*?): 非貪欲マッチでJSON部分をキャプチャ
+      #   - \n```: 改行と ``` にマッチ
+      #   - /m: マルチラインモード（. が改行にもマッチ）
+      #
+      # 例: 'Note: ```json\n{"a":1}\n```\nDone' -> '{"a":1}'
+      if text.match?(/```json/)
+        extracted = text.slice(/```json\s*\n(.*?)\n```/m, 1)
+        return extracted.strip if extracted
+      end
+
+      # ```json がない場合（単に ``` のみの場合）
+      # 例: '```\n{"a":1}\n```' -> '{"a":1}'
+      extracted = text.slice(/```\s*\n(.*?)\n```/m, 1)
+      return extracted.strip if extracted
     end
+
+    # コードブロックがない場合はそのまま返す
+    text
   end
 
   # コメントを最大長に切り詰める
@@ -267,6 +284,7 @@ class GeminiAdapter < BaseAiAdapter
   # @return [String, nil] 切り詰められたコメント
   def truncate_comment(comment)
     return nil if comment.nil?
+
     comment.to_s.strip[0...MAX_COMMENT_LENGTH]
   end
 
@@ -276,9 +294,8 @@ class GeminiAdapter < BaseAiAdapter
   # @raise [ArgumentError] APIキーが設定されていない場合
   def api_key
     key = ENV['GEMINI_API_KEY']
-    unless key && !key.to_s.strip.empty?
-      raise ArgumentError, 'GEMINI_API_KEYが設定されていません'
-    end
+    raise ArgumentError, 'GEMINI_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
+
     key
   end
 
