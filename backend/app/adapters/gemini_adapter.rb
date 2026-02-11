@@ -22,6 +22,13 @@ class GeminiAdapter < BaseAiAdapter
   # レスポンスの最大長（コメント用）
   MAX_COMMENT_LENGTH = 30
 
+  # 生成パラメータ
+  TEMPERATURE = 0.7
+  MAX_OUTPUT_TOKENS = 1000
+
+  # エラーコード
+  ERROR_CODE_INVALID_RESPONSE = 'invalid_response'.freeze
+
   # プロンプトのキャッシュ（スレッドセーフ）
   @prompt_cache = nil
   @prompt_mutex = Mutex.new
@@ -66,6 +73,13 @@ class GeminiAdapter < BaseAiAdapter
 
   private
 
+  # 無効なレスポンスエラーを返す
+  #
+  # @return [JudgmentResult] 失敗結果
+  def invalid_response_error
+    JudgmentResult.new(succeeded: false, error_code: ERROR_CODE_INVALID_RESPONSE, scores: nil, comment: nil)
+  end
+
   # プロンプトファイルを読み込む
   #
   # クラスレベルでキャッシュされ、全インスタンスで共有されます。
@@ -94,13 +108,14 @@ class GeminiAdapter < BaseAiAdapter
   # Faraday HTTPクライアントを返す
   #
   # SSL証明書検証が有効化されています。
+  # タイムアウトは親クラスのBASE_TIMEOUT（30秒）を使用します。
   #
   # @return [Faraday::Connection] HTTPクライアント
   def client
     @client ||= Faraday.new(url: BASE_URL) do |f|
       f.request :url_encoded
       f.options.timeout = BASE_TIMEOUT
-      f.ssl.verify = true
+      f.ssl.verify = true  # SSL証明書検証を有効化
       f.adapter Faraday.default_adapter
     end
   end
@@ -108,6 +123,8 @@ class GeminiAdapter < BaseAiAdapter
   # Gemini API用のリクエストを構築する
   #
   # プロンプト内の{post_content}プレースホルダーを実際の投稿内容で置換します。
+  # Gemini APIはgenerateContentエンドポイントを使用し、
+  # contents配列に会話のターンを含めます。
   #
   # @param post_content [String] 投稿本文
   # @param persona [String] 審査員ID（現状はhiroyukiのみ対応）
@@ -125,10 +142,59 @@ class GeminiAdapter < BaseAiAdapter
         }
       ],
       generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1000
+        temperature: TEMPERATURE,         # 創造性のバランス（0.0-1.0）
+        maxOutputTokens: MAX_OUTPUT_TOKENS  # 最大出力トークン数
       }
     }
+  end
+
+  # Gemini APIレスポンスからテキストを抽出する
+  #
+  # @param response [Faraday::Response] APIレスポンス
+  # @return [String] 抽出されたテキスト
+  # @raise [ArgumentError] candidates構造が無効な場合
+  # @raise [JSON::ParserError] APIレスポンスが有効なJSONでない場合
+  def extract_text_from_response(response)
+    body = response.body
+    parsed = JSON.parse(body, symbolize_names: true)
+
+    candidates = parsed[:candidates]
+    unless candidates&.first&.dig(:content, :parts)&.first&.dig(:text)
+      Rails.logger.error('Gemini APIレスポンスにcandidatesが含まれていません')
+      raise ArgumentError, 'Invalid candidates structure'
+    end
+
+    candidates.first[:content][:parts].first[:text]
+  rescue JSON::ParserError => e
+    Rails.logger.error("APIレスポンスのJSONパースエラー: #{e.message}")
+    raise
+  end
+
+  # スコアデータを整数に変換する
+  #
+  # @param data [Hash] パースされたJSONデータ
+  # @return [Hash] 整数に変換されたスコア {empathy: 15, ...}
+  # @raise [ArgumentError] 必須キーが欠落している場合、またはスコア値が無効な場合
+  def convert_scores_to_integers(data)
+    scores = {}
+    REQUIRED_SCORE_KEYS.each do |key|
+      value = data[key]
+
+      # nilチェック
+      if value.nil?
+        raise ArgumentError, "Score value is nil for #{key}"
+      end
+
+      # 文字列や浮動小数点数を整数に変換
+      begin
+        integer_value = value.is_a?(Integer) ? value : Integer(value)
+      rescue ArgumentError, FloatDomainError, RangeError, TypeError => e
+        Rails.logger.error("スコア変換エラー: #{key}=#{value.inspect} - #{e.class}")
+        raise ArgumentError, "Invalid score value for #{key}: #{value.inspect}"
+      end
+      scores[key] = integer_value
+    end
+    scores
   end
 
   # Gemini APIのレスポンスを解析してHash形式に変換する
@@ -137,51 +203,48 @@ class GeminiAdapter < BaseAiAdapter
   # コードブロックで囲まれたJSONも解析可能です。
   #
   # @param response [Faraday::Response] APIレスポンス
-  # @return [Hash] パース結果 {scores: Hash, comment: String}
+  # @return [Hash, JudgmentResult] パース結果 {scores: Hash, comment: String} または エラー結果
   def parse_response(response)
-    # Faraday::Responseからボディを取得
-    body = response.body
-    parsed = JSON.parse(body, symbolize_names: true)
-
-    # candidatesのチェック
-    candidates = parsed[:candidates]
-    unless candidates&.first&.dig(:content, :parts)&.first&.dig(:text)
-      Rails.logger.error('Gemini APIレスポンスにcandidatesが含まれていません')
-      return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
+    begin
+      text = extract_text_from_response(response)
+    rescue ArgumentError, JSON::ParserError => e
+      Rails.logger.error("テキスト抽出エラー: #{e.class} - #{e.message}")
+      return invalid_response_error
     end
 
-    text = candidates.first[:content][:parts].first[:text]
-
-    # コードブロックを除去
     json_text = extract_json_from_codeblock(text)
 
-    # JSONをパース
-    data = JSON.parse(json_text, symbolize_names: true)
-
-    # スコアを整数に変換
-    scores = {}
-    REQUIRED_SCORE_KEYS.each do |key|
-      value = data[key]
-      # 文字列や浮動小数点数を整数に変換
-      scores[key] = value.is_a?(Integer) ? value : Integer(value)
+    begin
+      data = JSON.parse(json_text, symbolize_names: true)
+    rescue JSON::ParserError => e
+      Rails.logger.error("JSONパースエラー: #{e.class} - #{e.message}")
+      return invalid_response_error
     end
 
-    # コメントを切り詰め
+    begin
+      scores = convert_scores_to_integers(data)
+    rescue ArgumentError => e
+      Rails.logger.error("スコア変換エラー: #{e.message}")
+      return invalid_response_error
+    end
+
     comment = truncate_comment(data[:comment])
 
     {
       scores: scores,
       comment: comment
     }
-  rescue JSON::ParserError, NoMethodError, ArgumentError, TypeError => e
-    Rails.logger.error("JSONパースエラー: #{e.class} - #{e.message}")
-    Rails.logger.error(e.backtrace.first(5).join("\n")) if Rails.env.development?
-    JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
   end
 
   # コードブロックからJSONを抽出する
   #
-  # markdownのコードブロック（```json ... ```）を除去します。
+  # AIモデルがmarkdown形式のコードブロック（```json ... ```）で
+  # JSONを返す場合に、コードブロック記号を除去して純粋なJSONを抽出します。
+  #
+  # @example コードブロック付きのJSON
+  #   extract_json_from_codeblock('```json\n{"a":1}\n```') #=> '{"a":1}'
+  # @example 生のJSON
+  #   extract_json_from_codeblock('{"a":1}') #=> '{"a":1}'
   #
   # @param text [String] 生のテキスト
   # @return [String] 抽出されたJSON文字列
@@ -189,6 +252,9 @@ class GeminiAdapter < BaseAiAdapter
     # コードブロックを除去
     if text.include?('```')
       # ```json と ``` の間のテキストを抽出
+      # 正規表現の解説:
+      # /```json\s*/  -> ```json とそれに続く空白をマッチ
+      # /```\s*/      -> ``` とそれに続く空白をマッチ
       text.gsub(/```json\s*/, '').gsub(/```\s*/, '').strip
     else
       text
@@ -216,62 +282,87 @@ class GeminiAdapter < BaseAiAdapter
     key
   end
 
+  # パース結果をJudgmentResultに変換する
+  #
+  # @param parse_result [Hash] parse_responseの戻り値
+  # @return [JudgmentResult] 審査結果
+  def build_success_result(parse_result)
+    scores = parse_result[:scores] || parse_result['scores']
+    comment = parse_result[:comment] || parse_result['comment']
+
+    # 必須キーの完全性チェック
+    return invalid_response_error if scores && !valid_score_keys?(scores)
+
+    # スコア範囲チェック
+    return invalid_response_error if scores && !scores_within_range?(scores)
+
+    # コメントチェック
+    return invalid_response_error unless valid_comment?(comment)
+
+    JudgmentResult.new(
+      succeeded: true,
+      error_code: nil,
+      scores: scores.transform_keys(&:to_sym),
+      comment: comment
+    )
+  end
+
+  # Gemini APIにHTTPリクエストを送信する
+  #
+  # @param post_content [String] 投稿本文
+  # @param persona [String] 審査員ID
+  # @return [Faraday::Response] HTTPレスポンス
+  def send_api_request(post_content, persona)
+    request_body = build_request(post_content, persona)
+    endpoint = "#{API_VERSION}/models/#{MODEL_NAME}:generateContent"
+
+    client.post(endpoint) do |req|
+      req.params[:key] = api_key
+      req.headers['Content-Type'] = 'application/json'
+      req.body = JSON.generate(request_body)
+    end
+  end
+
+  # ステータスコードに応じてレスポンスを処理する
+  #
+  # @param response [Faraday::Response] HTTPレスポンス
+  # @return [JudgmentResult] 審査結果
+  # @raise [Faraday::ClientError] クライアントエラー時
+  # @raise [Faraday::ServerError] サーバーエラー時
+  def handle_response_status(response)
+    case response.status
+    when 200..299
+      Rails.logger.info('Gemini API呼び出し成功')
+      parse_result = parse_response(response)
+
+      # JudgmentResultが返された場合はそのまま返す（エラー時）
+      return parse_result if parse_result.is_a?(JudgmentResult)
+
+      # Hashが返された場合はバリデーションを実行してJudgmentResultを構築
+      build_success_result(parse_result)
+    when 429
+      Rails.logger.warn("Gemini APIレート制限: #{response.body}")
+      raise Faraday::ClientError.new('rate limit', faraday_response: response)
+    when 400..499
+      Rails.logger.error("Gemini APIクライアントエラー: #{response.status} - #{response.body}")
+      raise Faraday::ClientError.new("Client error: #{response.status}", faraday_response: response)
+    when 500..599
+      Rails.logger.error("Gemini APIサーバーエラー: #{response.status} - #{response.body}")
+      raise Faraday::ServerError.new("Server error: #{response.status}", faraday_response: response)
+    else
+      Rails.logger.error("Gemini API未知のエラー: #{response.status} - #{response.body}")
+      raise Faraday::ClientError.new("Unknown error: #{response.status}", faraday_response: response)
+    end
+  end
+
   # 親クラスのcall_ai_apiをオーバーライドしてHTTP通信を実装
   #
   # @param post_content [String] 投稿本文
   # @param persona [String] 審査員ID
   # @return [JudgmentResult] 審査結果
   def call_ai_api(post_content, persona)
-    request_body = build_request(post_content, persona)
-    endpoint = "#{API_VERSION}/models/#{MODEL_NAME}:generateContent"
-
-    response = client.post(endpoint) do |req|
-      req.params[:key] = api_key
-      req.headers['Content-Type'] = 'application/json'
-      req.body = JSON.generate(request_body)
-    end
-
-    case response.status
-    when 200
-      Rails.logger.info('Gemini API呼び出し成功')
-      # parse_responseはHashまたはJudgmentResultを返す
-      parse_result = parse_response(response)
-
-      # JudgmentResultが返された場合はそのまま返す（エラー時）
-      return parse_result if parse_result.is_a?(JudgmentResult)
-
-      # Hashが返された場合は親クラスのバリデーションを実行
-      scores = parse_result[:scores] || parse_result['scores']
-      comment = parse_result[:comment] || parse_result['comment']
-
-      # 必須キーの完全性チェック
-      if scores && !valid_score_keys?(scores)
-        return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
-      end
-
-      # スコア範囲チェック
-      if scores && !scores_within_range?(scores)
-        return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
-      end
-
-      # コメントチェック
-      unless valid_comment?(comment)
-        return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
-      end
-
-      JudgmentResult.new(
-        succeeded: true,
-        error_code: nil,
-        scores: scores.transform_keys(&:to_sym),
-        comment: comment
-      )
-    when 429
-      Rails.logger.warn("Gemini APIレート制限: #{response.body}")
-      raise Faraday::ClientError.new('rate limit', faraday_response: response)
-    else
-      Rails.logger.error("Gemini APIエラー: #{response.status} - #{response.body}")
-      raise Faraday::ClientError.new("API error: #{response.status}", faraday_response: response)
-    end
+    response = send_api_request(post_content, persona)
+    handle_response_status(response)
   rescue Faraday::TimeoutError => e
     Rails.logger.warn("Gemini APIタイムアウト: #{e.class}")
     raise
