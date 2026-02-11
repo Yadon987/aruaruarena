@@ -35,7 +35,7 @@ RSpec.describe GlmAdapter do
 
     it 'Bearer Token認証ヘッダーが設定されること' do
       allow(ENV).to receive(:[]).with('GLM_API_KEY').and_return('test_key')
-      adapter = described_class.new
+      described_class.new
       # clientメソッド自体はヘッダーを設定しない（execute_requestで設定する）設計の場合は修正
       # GeminiAdapterはexecute_requestで設定していたので、こちらもそれに合わせる
     end
@@ -48,7 +48,7 @@ RSpec.describe GlmAdapter do
 
     it 'OpenAI互換のメッセージ形式でリクエストを構築すること' do
       request = adapter.send(:build_request, post_content, persona)
-      
+
       expect(request).to be_a(Hash)
       expect(request[:model]).to eq('glm-4-flash')
       expect(request[:messages]).to be_an(Array)
@@ -85,9 +85,9 @@ RSpec.describe GlmAdapter do
         ]
       }
       resp = build_faraday_response(response_body)
-      
+
       result = adapter.send(:parse_response, resp)
-      
+
       expect(result[:scores][:empathy]).to eq(15)
       expect(result[:comment]).to eq('テストコメント')
     end
@@ -95,9 +95,9 @@ RSpec.describe GlmAdapter do
     it '不正なJSONの場合はinvalid_responseエラーを返すこと' do
       response_body = { choices: [] }
       resp = build_faraday_response(response_body)
-      
+
       result = adapter.send(:parse_response, resp)
-      
+
       expect(result).to be_a(BaseAiAdapter::JudgmentResult)
       expect(result.succeeded).to be false
     end

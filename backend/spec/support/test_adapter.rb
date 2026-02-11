@@ -18,7 +18,7 @@ class TestAdapter < BaseAiAdapter
   # HTTPクライアントのモック
   # @return [nil] テスト用のためnilを返す
   def client
-    @mock_client ||= nil
+    @client ||= nil
   end
 
   # テスト用リクエスト構築
@@ -49,7 +49,7 @@ class TestAdapter < BaseAiAdapter
   #
   # @param response [Hash] execute_requestの戻り値
   # @return [JudgmentResult, Hash] テスト用レスポンス
-  def parse_response(response)
+  def parse_response(_response)
     @mutex.synchronize do
       @call_count += 1
     end
@@ -61,6 +61,7 @@ class TestAdapter < BaseAiAdapter
       return create_error_result('invalid_response') if invalid_scores?(result)
       return create_error_result('invalid_response') if invalid_score_keys?(result)
       return create_error_result('invalid_response') if empty_comment?(result)
+
       return result
     end
 
@@ -129,7 +130,7 @@ class TestAdapter < BaseAiAdapter
   # @param response [Hash] レスポンスハッシュ
   # @return [Boolean] 無効範囲の場合はtrue
   def invalid_scores?(response)
-    scores = response.dig('scores') || response.dig(:scores)
+    scores = response['scores'] || response[:scores]
     return false unless scores # nilと空ハッシュは有効として扱う
 
     scores.values.any? { |v| !valid_score_value?(v) }
@@ -140,7 +141,7 @@ class TestAdapter < BaseAiAdapter
   # @param response [Hash] レスポンスハッシュ
   # @return [Boolean] 不完整な場合はtrue
   def invalid_score_keys?(response)
-    scores = response.dig('scores') || response.dig(:scores)
+    scores = response['scores'] || response[:scores]
     return false unless scores # nilと空ハッシュは有効として扱う
 
     required_keys = %w[empathy humor brevity originality expression]
@@ -153,7 +154,8 @@ class TestAdapter < BaseAiAdapter
   # @return [Boolean] 有効な場合はtrue
   def valid_score_value?(value)
     return false unless value.is_a?(Integer)
-    value >= 0 && value <= 20
+
+    value.between?(0, 20)
   end
 
   # コメントが空かチェック
@@ -161,7 +163,7 @@ class TestAdapter < BaseAiAdapter
   # @param response [Hash] レスポンスハッシュ
   # @return [Boolean] 空の場合はtrue
   def empty_comment?(response)
-    comment = response.dig('comment') || response.dig(:comment)
+    comment = response['comment'] || response[:comment]
     comment.nil? || comment.to_s.strip.empty?
   end
 end

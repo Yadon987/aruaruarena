@@ -242,7 +242,7 @@ RSpec.describe 'API::Posts', type: :request do
       it '投稿成功時にJudgePostServiceが非同期で呼び出されること' do
         # JudgePostService.callが呼ばれることをモックで検証
         call_count = 0
-        allow(JudgePostService).to receive(:call) do |*args|
+        allow(JudgePostService).to receive(:call) do |*_args|
           call_count += 1
         end
 
@@ -250,7 +250,7 @@ RSpec.describe 'API::Posts', type: :request do
         thread = Thread.new do
           post '/api/posts', params: valid_params.to_json, headers: valid_headers
         end
-        thread.join  # リクエストの完了を待機
+        thread.join # リクエストの完了を待機
 
         # Thread内のJudgePostServiceは非同期なので、少し待つ
         sleep(0.1)
@@ -268,9 +268,9 @@ RSpec.describe 'API::Posts', type: :request do
         end
 
         # 例外が発生してもレスポンスは正常に返る
-        expect {
+        expect do
           post '/api/posts', params: valid_params.to_json, headers: valid_headers
-        }.not_to raise_error
+        end.not_to raise_error
 
         expect(response).to have_http_status(:created)
       end

@@ -57,27 +57,27 @@ RSpec.describe BaseAiAdapter do
   describe '#judge' do
     context '入力バリデーション' do
       it 'post_contentがnilの場合はArgumentErrorを発生させること' do
-        expect {
+        expect do
           adapter.judge(nil, persona: 'hiroyuki')
-        }.to raise_error(ArgumentError, /post_content/)
+        end.to raise_error(ArgumentError, /post_content/)
       end
 
       it 'post_contentが空文字の場合はArgumentErrorを発生させること' do
-        expect {
+        expect do
           adapter.judge('', persona: 'hiroyuki')
-        }.to raise_error(ArgumentError, /post_content/)
+        end.to raise_error(ArgumentError, /post_content/)
       end
 
       it 'post_contentが空白のみの場合はArgumentErrorを発生させること' do
-        expect {
+        expect do
           adapter.judge('   ', persona: 'hiroyuki')
-        }.to raise_error(ArgumentError, /post_content/)
+        end.to raise_error(ArgumentError, /post_content/)
       end
 
       it 'post_contentが2文字以下の場合はArgumentErrorを発生させること（境界値）' do
-        expect {
+        expect do
           adapter.judge('AB', persona: 'hiroyuki')
-        }.to raise_error(ArgumentError, /post_content/)
+        end.to raise_error(ArgumentError, /post_content/)
       end
 
       it 'post_contentが3文字の場合はバリデーションを通過すること（境界値）' do
@@ -87,9 +87,9 @@ RSpec.describe BaseAiAdapter do
           scores: base_scores,
           comment: 'OK'
         )
-        expect {
+        expect do
           adapter.judge('ABC', persona: 'hiroyuki')
-        }.not_to raise_error
+        end.not_to raise_error
       end
 
       it 'post_contentが30文字の場合はバリデーションを通過すること（境界値）' do
@@ -100,15 +100,15 @@ RSpec.describe BaseAiAdapter do
           comment: 'OK'
         )
         content = 'A' * 30
-        expect {
+        expect do
           adapter.judge(content, persona: 'hiroyuki')
-        }.not_to raise_error
+        end.not_to raise_error
       end
 
       it 'post_contentが31文字以上の場合はArgumentErrorを発生させること（境界値）' do
-        expect {
+        expect do
           adapter.judge('A' * 31, persona: 'hiroyuki')
-        }.to raise_error(ArgumentError, /post_content/)
+        end.to raise_error(ArgumentError, /post_content/)
       end
 
       it 'post_contentに絵文字を含む場合にgrapheme単位で正しくカウントすること' do
@@ -119,27 +119,27 @@ RSpec.describe BaseAiAdapter do
           comment: 'OK'
         )
         # '👨‍👩‍👧‍👦' は1つのgraphemeクラスタ
-        expect {
+        expect do
           adapter.judge('👨‍👩‍👧‍👦AB', persona: 'hiroyuki')
-        }.not_to raise_error
+        end.not_to raise_error
       end
 
       it 'post_contentに制御文字を含む場合はArgumentErrorを発生させること' do
-        expect {
+        expect do
           adapter.judge("ABC\x00", persona: 'hiroyuki')
-        }.to raise_error(ArgumentError, /post_content/)
+        end.to raise_error(ArgumentError, /post_content/)
       end
 
       it 'personaがnilの場合はArgumentErrorを発生させること' do
-        expect {
+        expect do
           adapter.judge('テスト投稿', persona: nil)
-        }.to raise_error(ArgumentError, /persona/)
+        end.to raise_error(ArgumentError, /persona/)
       end
 
       it 'personaが空文字の場合はArgumentErrorを発生させること' do
-        expect {
+        expect do
           adapter.judge('テスト投稿', persona: '')
-        }.to raise_error(ArgumentError, /persona/)
+        end.to raise_error(ArgumentError, /persona/)
       end
 
       it 'personaがhiroyukiの場合は有効であること' do
@@ -149,9 +149,9 @@ RSpec.describe BaseAiAdapter do
           scores: base_scores,
           comment: 'OK'
         )
-        expect {
+        expect do
           adapter.judge('テスト投稿', persona: 'hiroyuki')
-        }.not_to raise_error
+        end.not_to raise_error
       end
 
       it 'personaがdewiの場合は有効であること' do
@@ -161,9 +161,9 @@ RSpec.describe BaseAiAdapter do
           scores: base_scores,
           comment: 'OK'
         )
-        expect {
+        expect do
           adapter.judge('テスト投稿', persona: 'dewi')
-        }.not_to raise_error
+        end.not_to raise_error
       end
 
       it 'personaがnakaoの場合は有効であること' do
@@ -173,15 +173,15 @@ RSpec.describe BaseAiAdapter do
           scores: base_scores,
           comment: 'OK'
         )
-        expect {
+        expect do
           adapter.judge('テスト投稿', persona: 'nakao')
-        }.not_to raise_error
+        end.not_to raise_error
       end
 
       it '不正なpersonaの場合はArgumentErrorを発生させること' do
-        expect {
+        expect do
           adapter.judge('テスト投稿', persona: 'invalid')
-        }.to raise_error(ArgumentError, /persona/)
+        end.to raise_error(ArgumentError, /persona/)
       end
     end
 
@@ -196,9 +196,9 @@ RSpec.describe BaseAiAdapter do
       end
 
       it '有効な入力でjudgeを実行できること' do
-        expect {
+        expect do
           adapter.judge('テスト投稿', persona: 'hiroyuki')
-        }.not_to raise_error
+        end.not_to raise_error
       end
 
       it '成功時にJudgmentResultが返されること' do
@@ -222,15 +222,16 @@ RSpec.describe BaseAiAdapter do
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
         # base_scoresは全て15で、hiroyukiバイアス（独創性+3、共感度-2）が適用される
         expect(result.scores[:originality]).to eq(18) # 15 + 3
-        expect(result.scores[:empathy]).to eq(13)   # 15 - 2
+        expect(result.scores[:empathy]).to eq(13) # 15 - 2
       end
     end
 
     context 'リトライ処理' do
       it 'タイムアウト時に1回リトライすること' do
-        adapter.reset_call_count!  # 呼び出し回数をリセット
-        adapter.mock_response_proc = ->(attempt) {
+        adapter.reset_call_count! # 呼び出し回数をリセット
+        adapter.mock_response_proc = lambda { |attempt|
           raise Timeout::Error, 'API timeout' if attempt == 1
+
           described_class::JudgmentResult.new(
             succeeded: true,
             error_code: nil,
@@ -245,7 +246,7 @@ RSpec.describe BaseAiAdapter do
 
       it 'タイムアウト時にMAX_RETRIES回リトライすること' do
         adapter.reset_call_count!
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           raise Timeout::Error, 'API timeout'
         }
 
@@ -255,7 +256,7 @@ RSpec.describe BaseAiAdapter do
 
       it 'MAX_RETRIES超過で失敗すること' do
         adapter.reset_call_count!
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           raise Timeout::Error, 'API timeout'
         }
 
@@ -266,8 +267,9 @@ RSpec.describe BaseAiAdapter do
 
       it 'リトライ時に指数バックオフで遅延が増加すること（1秒→2秒→4秒）' do
         adapter.reset_call_count!
-        adapter.mock_response_proc = ->(attempt) {
+        adapter.mock_response_proc = lambda { |attempt|
           raise Timeout::Error, 'API timeout' if attempt <= 3
+
           described_class::JudgmentResult.new(
             succeeded: true,
             error_code: nil,
@@ -415,7 +417,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'スコアが範囲外の場合はinvalid_responseエラーコードを返すこと' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => { empathy: 25, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -425,7 +427,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'commentが空文字列の場合はinvalid_responseエラーコードを返すこと' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => base_scores, 'comment' => '' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -445,7 +447,7 @@ RSpec.describe BaseAiAdapter do
 
     context 'スコア範囲チェック' do
       it 'スコアが-1の場合はinvalid_responseエラーコードを返すこと（境界値）' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => { empathy: -1, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -454,7 +456,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'スコアが0の場合は有効であること（境界値）' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => { empathy: 0, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -462,7 +464,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'スコアが20の場合は有効であること（境界値）' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => { empathy: 20, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -470,7 +472,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'スコアが21の場合はinvalid_responseエラーコードを返すこと（境界値）' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => { empathy: 21, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -479,8 +481,9 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'スコアが浮動小数点数の場合はinvalid_responseエラーコードを返すこと' do
-        adapter.mock_response_proc = ->(_) {
-          { 'scores' => { empathy: 15.5, humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
+        adapter.mock_response_proc = lambda { |_|
+          { 'scores' => { empathy: 15.5, humor: 15, brevity: 15, originality: 15, expression: 15 },
+            'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
         expect(result.succeeded).to be false
@@ -488,8 +491,9 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'スコアが文字列の数字の場合はinvalid_responseエラーコードを返すこと' do
-        adapter.mock_response_proc = ->(_) {
-          { 'scores' => { empathy: "15", humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
+        adapter.mock_response_proc = lambda { |_|
+          { 'scores' => { empathy: '15', humor: 15, brevity: 15, originality: 15, expression: 15 },
+            'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
         expect(result.succeeded).to be false
@@ -499,7 +503,7 @@ RSpec.describe BaseAiAdapter do
 
     context 'レスポンス形式のバリデーション' do
       it 'scoresがnilの場合は有効であること（空スコア許容）' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => nil, 'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -507,7 +511,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'scoresが空ハッシュの場合はinvalid_responseエラーコードを返すこと（必須キー欠損）' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => {}, 'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -516,7 +520,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'commentがnilの場合はinvalid_responseエラーコードを返すこと' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => base_scores, 'comment' => nil }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -525,7 +529,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'commentが空白のみの場合はinvalid_responseエラーコードを返すこと' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => base_scores, 'comment' => '   ' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -534,7 +538,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'commentが全角スペースのみの場合は有効であること（stripは全角を削除しない）' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => base_scores, 'comment' => '　' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -542,7 +546,7 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'スコアフィールドが一部欠落している場合はinvalid_responseエラーコードを返すこと' do
-        adapter.mock_response_proc = ->(_) {
+        adapter.mock_response_proc = lambda { |_|
           { 'scores' => { humor: 15, brevity: 15, originality: 15, expression: 15 }, 'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -551,8 +555,9 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'スコアフィールドに余分なキーが含まれる場合はinvalid_responseエラーコードを返すこと' do
-        adapter.mock_response_proc = ->(_) {
-          { 'scores' => { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15, extra_score: 10 }, 'comment' => 'test' }
+        adapter.mock_response_proc = lambda { |_|
+          { 'scores' => { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15, extra_score: 10 },
+            'comment' => 'test' }
         }
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
         expect(result.succeeded).to be false
@@ -563,8 +568,9 @@ RSpec.describe BaseAiAdapter do
     context 'タイムアウト境界値' do
       it 'MAX_RETRIES回のリトライ後に成功すること' do
         adapter.reset_call_count!
-        adapter.mock_response_proc = ->(attempt) {
+        adapter.mock_response_proc = lambda { |attempt|
           raise Timeout::Error, 'API timeout' if attempt <= 3
+
           described_class::JudgmentResult.new(
             succeeded: true,
             error_code: nil,
@@ -580,8 +586,9 @@ RSpec.describe BaseAiAdapter do
 
       it 'MAX_RETRIES超過で失敗すること' do
         adapter.reset_call_count!
-        adapter.mock_response_proc = ->(attempt) {
+        adapter.mock_response_proc = lambda { |attempt|
           raise Timeout::Error, 'API timeout' if attempt <= 4 # 初回 + 4回リトライ
+
           described_class::JudgmentResult.new(
             succeeded: true,
             error_code: nil,
@@ -612,7 +619,7 @@ RSpec.describe BaseAiAdapter do
 
         results = threads.map(&:value)
         expect(results.size).to eq(10)
-        expect(results.all? { |r| r.succeeded }).to be true
+        expect(results.all?(&:succeeded)).to be true
       end
     end
 
@@ -632,8 +639,9 @@ RSpec.describe BaseAiAdapter do
       end
 
       it 'リトライ時にWARNレベルでログが出力されること' do
-        adapter.mock_response_proc = ->(attempt) {
+        adapter.mock_response_proc = lambda { |attempt|
           raise Timeout::Error, 'API timeout' if attempt == 1
+
           described_class::JudgmentResult.new(
             succeeded: true,
             error_code: nil,
@@ -658,30 +666,30 @@ RSpec.describe BaseAiAdapter do
   describe '抽象メソッド' do
     it 'clientメソッドがNotImplementedErrorを発生させること' do
       adapter = described_class.new
-      expect {
+      expect do
         adapter.send(:client)
-      }.to raise_error(NotImplementedError, /must be implemented/)
+      end.to raise_error(NotImplementedError, /must be implemented/)
     end
 
     it 'build_requestメソッドがNotImplementedErrorを発生させること' do
       adapter = described_class.new
-      expect {
+      expect do
         adapter.send(:build_request, 'test', 'hiroyuki')
-      }.to raise_error(NotImplementedError, /must be implemented/)
+      end.to raise_error(NotImplementedError, /must be implemented/)
     end
 
     it 'parse_responseメソッドがNotImplementedErrorを発生させること' do
       adapter = described_class.new
-      expect {
+      expect do
         adapter.send(:parse_response, {})
-      }.to raise_error(NotImplementedError, /must be implemented/)
+      end.to raise_error(NotImplementedError, /must be implemented/)
     end
 
     it 'api_keyメソッドがNotImplementedErrorを発生させること' do
       adapter = described_class.new
-      expect {
+      expect do
         adapter.send(:api_key)
-      }.to raise_error(NotImplementedError, /must be implemented/)
+      end.to raise_error(NotImplementedError, /must be implemented/)
     end
   end
 
@@ -704,7 +712,7 @@ RSpec.describe BaseAiAdapter do
 
       expect(results.size).to eq(10)
       expect(results.all? { |r| r.is_a?(described_class::JudgmentResult) }).to be true
-      expect(results.all? { |r| r.succeeded }).to be true
+      expect(results.all?(&:succeeded)).to be true
     end
 
     it '共有状態の変更が他のスレッドに影響しないこと' do
@@ -715,7 +723,7 @@ RSpec.describe BaseAiAdapter do
         comment: '成功'
       )
 
-      threads = 5.times.map do |i|
+      threads = 5.times.map do |_i|
         Thread.new do
           3.times do
             result = adapter.judge('テスト投稿', persona: 'hiroyuki')
