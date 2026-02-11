@@ -325,7 +325,7 @@ RSpec.describe OpenAiAdapter do
       # 何を検証するか: スコアが小数点文字列（"12.5"）の場合に四捨五入して整数に変換できること
       # 失敗理由: parse_responseメソッドがまだ実装されていないため
       it 'スコアが小数点文字列（"12.5"）の場合に四捨五入して整数に変換できること' do
-        decimal_string_scores = base_scores.merge(empathy: "12.5", humor: "15.7", brevity: "8.2")
+        decimal_string_scores = base_scores.merge(empathy: '12.5', humor: '15.7', brevity: '8.2')
         response_hash = {
           choices: [
             {

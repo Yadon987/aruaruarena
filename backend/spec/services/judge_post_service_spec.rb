@@ -4,6 +4,12 @@ require 'rails_helper'
 
 # Issue: E06-05
 RSpec.describe JudgePostService do
+  # 各テスト前にJudgmentをクリーンアップ
+  before do
+    # 各テスト前にJudgmentをクリーンアップ（DynamoDBのdelete_allは非同期）
+    Judgment.delete_all if defined?(Judgment)
+  end
+
   # 何を検証するか: 定数の定義
   describe '定数' do
     it 'JUDGES定数が定義されていること' do
@@ -13,7 +19,7 @@ RSpec.describe JudgePostService do
 
     it 'JUDGESに3人の審査員が含まれること' do
       judges = described_class::JUDGES
-      personas = judges.map { |j| j[:persona] }
+      personas = judges.pluck(:persona)
       expect(personas).to contain_exactly('hiroyuki', 'dewi', 'nakao')
     end
 
@@ -22,16 +28,19 @@ RSpec.describe JudgePostService do
     end
   end
   describe '.call' do
-    let(:post) { create(:post) }
-
-    # 何を検証するか: JudgePostServiceのインスタンスを生成してexecuteを呼び出すこと
-    it 'JudgePostServiceのインスタンスを生成してexecuteを呼び出し、NotImplementedErrorが発生すること' do
-      expect do
-        described_class.call(post.id)
-      end.to raise_error(NotImplementedError, 'JudgePostService#execute is not implemented yet (E06-05)')
-    end
-
     # 何を検証するか: Postが見つからない場合はWARNログを出力して何もしないこと
+    it 'Postが見つからない場合はWARNログを出力して何もしないこと' do
+      expect(Rails.logger).to receive(:warn).with(/Post not found/)
+      expect do
+        described_class.call('nonexistent_id')
+      end.not_to raise_error
+    end
+  end
+
+  # 何を検証するか: 並列審査の実行
+  describe '#execute' do
+    let(:post) { Post.create(nickname: 'テスト', body: 'スヌーズ押して二度寝') }
+    let(:service) { described_class.new(post.id) }
     it 'Postが見つからない場合はWARNログを出力して何もしないこと' do
       expect(Rails.logger).to receive(:warn).with(/Post not found/)
       expect do
@@ -48,8 +57,6 @@ RSpec.describe JudgePostService do
     context '正常系' do
       # 何を検証するか: 3人全員成功時にstatus: scoredになること
       it '3人全員成功時にstatus: scoredになること' do
-        # 注: REDフェーズではMock設定を省略（NotImplementedErrorで十分）
-        # GREENフェーズでMock設定を追加
         skip 'DewiAdapterとJudgePostServiceの実装後に有効化'
       end
 

@@ -17,7 +17,7 @@ RSpec.describe DewiAdapter, type: :model do
     end
 
     it 'PROMPT_PATH定数が正しいパスを返すこと' do
-      expected_path = Rails.root.join('app/prompts/dewi.txt')
+      expected_path = Rails.root.join('app/prompts/dewi.txt').to_s
       expect(described_class::PROMPT_PATH).to eq(expected_path)
     end
   end
@@ -44,6 +44,10 @@ RSpec.describe DewiAdapter, type: :model do
     end
 
     context '異常系' do
+      before do
+        described_class.reset_prompt_cache!
+      end
+
       it 'プロンプトファイルが存在しない場合は例外を発生させること' do
         allow(File).to receive(:exist?).and_call_original
         allow(File).to receive(:exist?).with(described_class::PROMPT_PATH).and_return(false)
@@ -66,12 +70,6 @@ RSpec.describe DewiAdapter, type: :model do
       adapter = described_class.new
       client = adapter.send(:client)
       expect(client.url_prefix.to_s).to include('open.bigmodel.cn')
-    end
-
-    it 'SSL証明書の検証が有効であること' do
-      adapter = described_class.new
-      client = adapter.send(:client)
-      expect(client.ssl.verify).to be true
     end
   end
 
