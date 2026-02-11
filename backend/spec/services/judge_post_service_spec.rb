@@ -18,15 +18,15 @@ RSpec.describe JudgePostService do
 
       it 'post_idからPostを取得すること' do
         expect(Post).to receive(:find).with(post.id).and_return(post)
-        service = JudgePostService.new(post.id)
+        JudgePostService.new(post.id)
         # initialize内でPost.findが呼ばれることを確認
       end
 
       it 'executeでNotImplementedErrorが発生すること（スタブ）' do
         service = JudgePostService.new(post.id)
-        expect {
+        expect do
           service.execute
-        }.to raise_error(NotImplementedError, 'JudgePostService#execute is not implemented yet (E06-05)')
+        end.to raise_error(NotImplementedError, 'JudgePostService#execute is not implemented yet (E06-05)')
       end
     end
 

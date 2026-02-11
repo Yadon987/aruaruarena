@@ -23,6 +23,25 @@ E06「AI審査システム」の2番目のストーリーとして、Gemini 2.5 
 - 抽象メソッド（`client`, `build_request`, `parse_response`, `api_key`）を実装
 - ひろゆき風の審査員（独創性+3、共感度-2のバイアス）として振る舞う
 
+**プロンプトキャッシュシステム**:
+- スレッドセーフなクラスレベルのキャッシュ
+- `prompt_cache`, `prompt_cache=`, `reset_prompt_cache!` メソッド
+
+**JSON抽出ロジック**:
+- マークダウンコードブロック（```json ... ```）対応
+- 周囲にテキストがある場合のJSON抽出
+- 生JSONフォーマット対応
+
+**小数点スコア対応**:
+- 文字列形式の小数点（"12.5"）を整数に変換（四捨五入）
+- Float形式の小数点（12.5）を整数に変換（四捨五入）
+- 境界値処理（0.5 → 1）
+
+**エラーハンドリング**:
+- ステータスコード別処理（200, 429, 400-499, 500-599）
+- JSONパースエラー処理
+- スコア変換エラー処理
+
 **プロンプトファイルの作成**:
 - `app/prompts/hiroyuki.txt` - ひろゆき風の審査プロンプト
 - JSON出力形式を指定
@@ -31,6 +50,9 @@ E06「AI審査システム」の2番目のストーリーとして、Gemini 2.5 
 **テストの実装**:
 - Unit Test（VCR使用）
 - Integration Test
+- 小数点スコア変換テスト
+- コードブロックJSON抽出テスト
+- 周囲テキスト付きJSON抽出テスト
 
 ### 非機能要件
 
@@ -38,6 +60,8 @@ E06「AI審査システム」の2番目のストーリーとして、Gemini 2.5 
 - タイムアウトは30秒（BaseAiAdapterのデフォルト）
 - リトライは最大3回（BaseAiAdapterで実装済み）
 - APIキーは環境変数から取得（`GEMINI_API_KEY`）
+- SSL証明書検証を有効化
+- スレッドセーフなプロンプトキャッシュ
 
 ### UI/UX設計
 
@@ -109,6 +133,7 @@ Gemini 2.5 Flash APIを使用
 - [x] `client`メソッド:
   - [ ] Faraday::Connectionインスタンスを返すこと
   - [ ] Gemini APIのベースURLが設定されていること
+  - [ ] SSL証明書検証が有効になっていること
 
 - [x] `build_request`メソッド:
   - [ ] 正しいリクエスト形式であること
@@ -121,15 +146,33 @@ Gemini 2.5 Flash APIを使用
   - [ ] JSONが不正な場合はエラーになること
   - [ ] スコアが欠落している場合はエラーになること
 
+- [x] `extract_json_from_codeblock`メソッド:
+  - [ ] ```json ... ``` で囲まれたJSONを抽出できること
+  - [ ] ``` ... ``` で囲まれたJSONを抽出できること
+  - [ ] 周囲にテキストがある場合にJSONを抽出できること
+  - [ ] コードブロックがない場合はそのまま返すこと
+
+- [x] `convert_scores_to_integers`メソッド:
+  - [ ] 文字列形式の小数点（"12.5"）を四捨五入して整数に変換できること
+  - [ ] Float形式の小数点（12.5）を四捨五入して整数に変換できること
+  - [ ] 境界値（0.5）が正しく丸められること
+  - [ ] 不正な値の場合に例外が発生すること
+
 - [x] `api_key`メソッド:
   - [ ] `ENV["GEMINI_API_KEY"]`を返すこと
   - [ ] APIキーが未設定の場合は例外を発生させること
+
+- [x] プロンプトキャッシュ:
+  - [ ] スレッドセーフであること
+  - [ ] `reset_prompt_cache!` でリセットできること
 
 ### Request Spec (API)
 
 - [ ] Integration Test（VCR使用）:
   - [ ] `#judge` - 正常に審査結果を返す
   - [ ] `#judge` - バイアスが適用されること
+  - [ ] `#judge` - 小数点スコアが正しく処理されること
+  - [ ] `#judge` - コードブロック付きJSONが正しく処理されること
 
 ### External Service (WebMock/VCR)
 
@@ -137,6 +180,9 @@ Gemini 2.5 Flash APIを使用
   - [ ] `success.yml` - 正常系
   - [ ] `timeout.yml` - タイムアウト
   - [ ] `error.yml` - APIエラー
+  - [ ] `rate_limit.yml` - レート制限
+  - [ ] `decimal_scores.yml` - 小数点スコア
+  - [ ] `codeblock_json.yml` - コードブロック付きJSON
 
 ---
 
@@ -156,6 +202,14 @@ Gemini 2.5 Flash APIを使用
       **When** `parse_response`メソッドが呼ばれる
       **Then** JSONが正しく解析され、JudgmentResultが生成される
 
+- [ ] **Given** APIレスポンスがコードブロックで囲まれたJSONを含む
+      **When** `extract_json_from_codeblock`メソッドが呼ばれる
+      **Then** JSONが正しく抽出される
+
+- [ ] **Given** APIレスポンスのスコアが小数点を含む
+      **When** `convert_scores_to_integers`メソッドが呼ばれる
+      **Then** スコアが四捨五入されて整数に変換される
+
 ### 異常系 (Error Path)
 
 - [ ] **Given** APIキーが環境変数に設定されていない
@@ -170,6 +224,10 @@ Gemini 2.5 Flash APIを使用
       **When** `judge`メソッドが呼ばれる
       **Then** リトライが行われ、最終的にエラーコード`timeout`が返される
 
+- [ ] **Given** Gemini APIが429ステータス（レート制限）を返す
+      **When** `handle_response_status`メソッドが呼ばれる
+      **Then** Faraday::ClientErrorが発生する
+
 ### 境界値 (Edge Case)
 
 - [ ] **Given** APIレスポンスにスコアが欠落している
@@ -179,6 +237,10 @@ Gemini 2.5 Flash APIを使用
 - [ ] **Given** APIレスポンスのスコアが範囲外（0-20以外）
       **When** `parse_response`メソッドが呼ばれる
       **Then** エラーコード`invalid_response`が返される
+
+- [ ] **Given** スコアが境界値（0.5）
+      **When** `convert_scores_to_integers`メソッドが呼ばれる
+      **Then** 正しく四捨五入されて1になる
 
 ---
 
@@ -206,12 +268,23 @@ Gemini 2.5 Flash APIを使用
 
 1. `GeminiAdapter` クラスを実装
 2. 以下のメソッドを実装：
-   - `client` - Faradayクライアントの初期化
+   - `client` - Faradayクライアントの初期化（SSL検証有効化）
    - `build_request` - Gemini APIリクエストの構築
    - `parse_response` - レスポンス解析とJudgmentResultの生成
    - `api_key` - 環境変数からのAPIキー取得
+   - `extract_json_from_codeblock` - コードブロックからJSON抽出
+   - `convert_scores_to_integers` - 小数点スコアを整数に変換
+   - `handle_response_status` - ステータスコード別エラー処理
+   - プロンプトキャッシュシステム（スレッドセーフ）
 
-### Phase 3: VCRカセットの作成
+### Phase 3: BaseAiAdapterの修正
+
+**ファイル**: `app/adapters/base_ai_adapter.rb`
+
+1. `call_ai_api`メソッドをオーバーライド可能に変更
+2. サブクラスでのHTTP通信実装を許可
+
+### Phase 4: VCRカセットの作成
 
 **ディレクトリ**: `spec/fixtures/vcr/gemini_adapter/`
 
@@ -220,20 +293,28 @@ Gemini 2.5 Flash APIを使用
    - `success.yml` - 正常系
    - `timeout.yml` - タイムアウト
    - `error.yml` - APIエラー
+   - `rate_limit.yml` - レート制限
+   - `decimal_scores.yml` - 小数点スコア
+   - `codeblock_json.yml` - コードブロック付きJSON
 
-### Phase 4: テストの実装
+### Phase 5: テストの実装
 
 **ファイル**: `spec/adapters/gemini_adapter_spec.rb`
 
 1. Unit Test（VCR使用）
-2. Integration Test（実際のAPI呼び出しをモック）
+2. JSON抽出テスト（コードブロック、周囲テキスト）
+3. 小数点スコア変換テスト
+4. エラーハンドリングテスト
+5. Integration Test（実際のAPI呼び出しをモック）
+6. スレッドセーフティテスト
 
-### Phase 5: テスト実行と検証
+### Phase 6: テスト実行と検証
 
 1. `bundle exec rspec spec/adapters/gemini_adapter_spec.rb` でテスト実行
 2. `COVERAGE=true bundle exec rspec` でカバレッジ確認（90%以上）
 3. `bundle exec rubocop app/adapters/gemini_adapter.rb` でLint確認
 4. `bundle exec brakeman -q` でセキュリティスキャン
+5. CodeRabbitレビューの実施
 
 ---
 
@@ -249,6 +330,9 @@ Gemini 2.5 Flash APIを使用
 | `spec/fixtures/vcr/gemini_adapter/success.yml` | VCRカセット（正常系） |
 | `spec/fixtures/vcr/gemini_adapter/timeout.yml` | VCRカセット（タイムアウト） |
 | `spec/fixtures/vcr/gemini_adapter/error.yml` | VCRカセット（エラー） |
+| `spec/fixtures/vcr/gemini_adapter/rate_limit.yml` | VCRカセット（レート制限） |
+| `spec/fixtures/vcr/gemini_adapter/decimal_scores.yml` | VCRカセット（小数点スコア） |
+| `spec/fixtures/vcr/gemini_adapter/codeblock_json.yml` | VCRカセット（コードブロックJSON） |
 
 ### 参照する既存ファイル
 
@@ -312,11 +396,44 @@ bundle exec brakeman -q
 3. **モデル名**: `gemini-2.0-flash-exp` を使用
 4. **温度設定**: `temperature: 0.7` で安定性を確保
 5. **最大トークン**: `maxOutputTokens: 1000` で十分
+6. **SSL検証**: HTTPS通信で証明書検証を有効化
+
+### JSON抽出ロジックの実装ポイント
+
+1. **コードブロック対応**: ```json ... ``` と ``` ... ``` の両方に対応
+2. **周囲テキスト対応**: コードブロックの前後にテキストがあっても抽出
+3. **正規表現**: `/```json\s*\n(.*?)\n```/m` を使用
+4. **フォールバック**: コードブロックがない場合はそのままJSONとして扱う
+
+### 小数点スコア変換の実装ポイント
+
+1. **文字列対応**: `"12.5"` → `Float("12.5")` → `13`（四捨五入）
+2. **Float対応**: `12.5` → `12.5.round` → `13`
+3. **境界値**: `0.5` → `1`（四捨五入）
+4. **エラーハンドリング**: 不正な値の場合に `ArgumentError` を発生
+
+### エラーハンドリングの実装ポイント
+
+1. **ステータスコード別処理**:
+   - 200-299: 成功、レスポンスを解析
+   - 429: レート制限、`Faraday::ClientError` を発生
+   - 400-499: クライアントエラー、`Faraday::ClientError` を発生
+   - 500-599: サーバーエラー、`Faraday::ServerError` を発生
+2. **JSONパースエラー**: `invalid_response` エラーコード
+3. **スコア変換エラー**: `invalid_response` エラーコード
+4. **ログ出力**: 適切なログレベルでエラー内容を記録
+
+### スレッドセーフティの実装ポイント
+
+1. **Mutex**: `@prompt_mutex` を使用した排他制御
+2. **クラス変数**: `@prompt_cache` のスレッドセーフなアクセス
+3. **テスト**: 並列実行でのキャッシュ競合を確認
 
 ### VCR使用時の注意点
 
 - APIキーがカセットに含まれないようフィルタリング設定を確認
 - `spec/support/vcr.rb` で敏感情報のマスキングを設定
+- 小数点スコアやコードブロックJSONのカセットを別途作成
 
 ---
 
@@ -337,13 +454,25 @@ E06-02で確立したパターンをE06-03、E06-04で再利用：
 # E06-03: GLM Adapter
 class GlmAdapter < BaseAiAdapter
   # 同様の構造で実装
+  # - JSON抽出ロジック
+  # - 小数点スコア対応
+  # - エラーハンドリング
 end
 
 # E06-04: OpenAI Adapter
 class OpenAIAdapter < BaseAiAdapter
   # 同様の構造で実装
+  # - JSON抽出ロジック
+  # - 小数点スコア対応
+  # - エラーハンドリング
 end
 ```
+
+**再利用可能な実装パターン**:
+1. コードブロックJSON抽出ロジック（`extract_json_from_codeblock`）
+2. 小数点スコア変換ロジック（`convert_scores_to_integers`）
+3. ステータスコード別エラーハンドリング（`handle_response_status`）
+4. スレッドセーフなプロンプトキャッシュ
 
 ---
 
@@ -353,3 +482,7 @@ end
 - [x] テスト計画は正常系/異常系/境界値を網羅しているか
 - [x] 受入条件はGiven-When-Then形式で記述されているか
 - [x] 既存機能や他の仕様と矛盾していないか
+- [x] JSON抽出ロジックの仕様が詳細に記述されているか
+- [x] 小数点スコア変換の仕様が明確か
+- [x] エラーハンドリングの仕様が網羅されているか
+- [x] スレッドセーフティの考慮がされているか
