@@ -1,0 +1,163 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=<GEMINI_API_KEY>
+    body:
+      encoding: UTF-8
+      string: '{"contents":[{"parts":[{"text":"あなたは「ひろゆき風」のAI審査員として、ユーザーの「あるある」投稿を採点します。\n\n#
+        審査基準（各0-20点、合計100点満点）\n- 共感度: 多くの人が「あるある」と思えるか（客観的・論理的に判断）\n- 面白さ: 笑いや驚きが誘われるか（意外性や斬新さを重視）\n-
+        簡潔さ: 無駊なく簡潔に表現されているか（無駄な装飾を嫌う）\n- 独創性: 新規性や独自性があるか（既存との差別化を重視）\n- 表現力: 言葉選びや表現技巧が優れているか（正確さを重視）\n\n#
+        出力形式（必ず守ること）\n以下のJSON形式のみで出力。その他の文章、説明、コードブロック記号は一切出力しないこと。\n\n{\n  \"empathy\":
+        15,\n  \"humor\": 15,\n  \"brevity\": 15,\n  \"originality\": 15,\n  \"expression\":
+        15,\n  \"comment\": \"短い審査コメント（30文字以内、口調は「それって本当？」のようなひろゆき風で）\"\n}\n\n# 投稿内容\nテスト投稿\n\n上記の投稿を審査し、JSONのみを出力してください。\n"}]}],"generationConfig":{"temperature":0.7,"maxOutputTokens":1000}}'
+    headers:
+      User-Agent:
+      - Faraday v2.14.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 429
+      message: Too Many Requests
+    headers:
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 10 Feb 2026 22:46:12 GMT
+    body:
+      encoding: ASCII-8BIT
+      string: |
+        {
+          "error": {
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "status": "RESOURCE_EXHAUSTED"
+          }
+        }
+  recorded_at: Tue, 10 Feb 2026 22:46:12 GMT
+- request:
+    method: post
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=<GEMINI_API_KEY>
+    body:
+      encoding: UTF-8
+      string: '{"contents":[{"parts":[{"text":"あなたは「ひろゆき風」のAI審査員として、ユーザーの「あるある」投稿を採点します。\n\n#
+        審査基準（各0-20点、合計100点満点）\n- 共感度: 多くの人が「あるある」と思えるか（客観的・論理的に判断）\n- 面白さ: 笑いや驚きが誘われるか（意外性や斬新さを重視）\n-
+        簡潔さ: 無駊なく簡潔に表現されているか（無駄な装飾を嫌う）\n- 独創性: 新規性や独自性があるか（既存との差別化を重視）\n- 表現力: 言葉選びや表現技巧が優れているか（正確さを重視）\n\n#
+        出力形式（必ず守ること）\n以下のJSON形式のみで出力。その他の文章、説明、コードブロック記号は一切出力しないこと。\n\n{\n  \"empathy\":
+        15,\n  \"humor\": 15,\n  \"brevity\": 15,\n  \"originality\": 15,\n  \"expression\":
+        15,\n  \"comment\": \"短い審査コメント（30文字以内、口調は「それって本当？」のようなひろゆき風で）\"\n}\n\n# 投稿内容\nテスト投稿\n\n上記の投稿を審査し、JSONのみを出力してください。\n"}]}],"generationConfig":{"temperature":0.7,"maxOutputTokens":1000}}'
+    headers:
+      User-Agent:
+      - Faraday v2.14.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 429
+      message: Too Many Requests
+    headers:
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 10 Feb 2026 22:46:13 GMT
+    body:
+      encoding: ASCII-8BIT
+      string: |
+        {
+          "error": {
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "status": "RESOURCE_EXHAUSTED"
+          }
+        }
+  recorded_at: Tue, 10 Feb 2026 22:46:14 GMT
+- request:
+    method: post
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=<GEMINI_API_KEY>
+    body:
+      encoding: UTF-8
+      string: '{"contents":[{"parts":[{"text":"あなたは「ひろゆき風」のAI審査員として、ユーザーの「あるある」投稿を採点します。\n\n#
+        審査基準（各0-20点、合計100点満点）\n- 共感度: 多くの人が「あるある」と思えるか（客観的・論理的に判断）\n- 面白さ: 笑いや驚きが誘われるか（意外性や斬新さを重視）\n-
+        簡潔さ: 無駊なく簡潔に表現されているか（無駄な装飾を嫌う）\n- 独創性: 新規性や独自性があるか（既存との差別化を重視）\n- 表現力: 言葉選びや表現技巧が優れているか（正確さを重視）\n\n#
+        出力形式（必ず守ること）\n以下のJSON形式のみで出力。その他の文章、説明、コードブロック記号は一切出力しないこと。\n\n{\n  \"empathy\":
+        15,\n  \"humor\": 15,\n  \"brevity\": 15,\n  \"originality\": 15,\n  \"expression\":
+        15,\n  \"comment\": \"短い審査コメント（30文字以内、口調は「それって本当？」のようなひろゆき風で）\"\n}\n\n# 投稿内容\nテスト投稿\n\n上記の投稿を審査し、JSONのみを出力してください。\n"}]}],"generationConfig":{"temperature":0.7,"maxOutputTokens":1000}}'
+    headers:
+      User-Agent:
+      - Faraday v2.14.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 429
+      message: Too Many Requests
+    headers:
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 10 Feb 2026 22:46:15 GMT
+    body:
+      encoding: ASCII-8BIT
+      string: |
+        {
+          "error": {
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "status": "RESOURCE_EXHAUSTED"
+          }
+        }
+  recorded_at: Tue, 10 Feb 2026 22:46:16 GMT
+- request:
+    method: post
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=<GEMINI_API_KEY>
+    body:
+      encoding: UTF-8
+      string: '{"contents":[{"parts":[{"text":"あなたは「ひろゆき風」のAI審査員として、ユーザーの「あるある」投稿を採点します。\n\n#
+        審査基準（各0-20点、合計100点満点）\n- 共感度: 多くの人が「あるある」と思えるか（客観的・論理的に判断）\n- 面白さ: 笑いや驚きが誘われるか（意外性や斬新さを重視）\n-
+        簡潔さ: 無駊なく簡潔に表現されているか（無駄な装飾を嫌う）\n- 独創性: 新規性や独自性があるか（既存との差別化を重視）\n- 表現力: 言葉選びや表現技巧が優れているか（正確さを重視）\n\n#
+        出力形式（必ず守ること）\n以下のJSON形式のみで出力。その他の文章、説明、コードブロック記号は一切出力しないこと。\n\n{\n  \"empathy\":
+        15,\n  \"humor\": 15,\n  \"brevity\": 15,\n  \"originality\": 15,\n  \"expression\":
+        15,\n  \"comment\": \"短い審査コメント（30文字以内、口調は「それって本当？」のようなひろゆき風で）\"\n}\n\n# 投稿内容\nテスト投稿\n\n上記の投稿を審査し、JSONのみを出力してください。\n"}]}],"generationConfig":{"temperature":0.7,"maxOutputTokens":1000}}'
+    headers:
+      User-Agent:
+      - Faraday v2.14.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 429
+      message: Too Many Requests
+    headers:
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 10 Feb 2026 22:46:19 GMT
+    body:
+      encoding: ASCII-8BIT
+      string: |
+        {
+          "error": {
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "status": "RESOURCE_EXHAUSTED"
+          }
+        }
+  recorded_at: Tue, 10 Feb 2026 22:46:20 GMT
+recorded_with: VCR 6.4.0
