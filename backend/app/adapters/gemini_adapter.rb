@@ -293,7 +293,9 @@ class GeminiAdapter < BaseAiAdapter
   # @return [String] APIキー
   # @raise [ArgumentError] APIキーが設定されていない場合
   def api_key
-    key = ENV.fetch('GEMINI_API_KEY', nil)
+    # rubocop:disable Style/FetchEnvVar
+    key = ENV['GEMINI_API_KEY']
+    # rubocop:enable Style/FetchEnvVar
     raise ArgumentError, 'GEMINI_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
 
     key
@@ -336,11 +338,4 @@ class GeminiAdapter < BaseAiAdapter
     Rails.logger.error("Gemini API接続エラー: #{e.class}")
     raise
   end
-
-  # ステータスコードに応じてレスポンスを処理する
-  #
-  # @param response [Faraday::Response] HTTPレスポンス
-  # @return [JudgmentResult] 審査結果
-  # @raise [Faraday::ClientError] クライアントエラー時
-  # @raise [Faraday::ServerError] サーバーエラー時
 end
