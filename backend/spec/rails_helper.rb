@@ -77,6 +77,18 @@ RSpec.configure do |config|
   # To enable this behaviour uncomment the line below.
   config.infer_spec_type_from_file_location!
 
+  # Adapter用共通モック設定
+  config.before(:each, :adapter) do
+    # AdapterTestHelpersモジュールのメソッドを使用して各Adapterをモック
+    adapter_test_helpers = Object.new
+    adapter_test_helpers.extend(AdapterTestHelpers)
+    adapter_test_helpers.mock_adapter_judge(GeminiAdapter)
+    adapter_test_helpers.mock_adapter_judge(GlmAdapter)
+    adapter_test_helpers.mock_adapter_judge(DewiAdapter)
+    adapter_test_helpers.mock_adapter_judge(OpenAiAdapter)
+  end
+  config.include AdapterTestHelpers, type: :model
+
   # Filter lines from Rails gems in backtraces.
   config.filter_rails_from_backtrace!
   # arbitrary gems may also be filtered via:

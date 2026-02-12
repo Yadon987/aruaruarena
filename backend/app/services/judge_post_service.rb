@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'concurrent'
+
 # JudgePostService - 投稿のAI審査を実行するサービス
 #
 # 3人のAI審査員（ひろゆき風/デヴィ婦人風/中尾彬風）による
@@ -13,7 +15,8 @@ class JudgePostService
   ].freeze
 
   # タイムアウト設定（Lambda環境を考慮）
-  JOIN_TIMEOUT = 120 # 全体のタイムアウト（秒）
+  PER_JUDGE_TIMEOUT = 90  # 各審査員のタイムアウト（秒）
+  JOIN_TIMEOUT = 120      # 全体のタイムアウト（秒）
 
   # 初期化
   #
@@ -31,12 +34,10 @@ class JudgePostService
   def execute
     return if @post.nil?
 
-    results = {}
-    results_mutex = Mutex.new
-
-    threads = JUDGES.map do |judge|
-      Thread.new(judge[:persona]) do |persona|
-        Thread.current[:persona] = persona
+    # Concurrent::Futureを使用して並列審査を実行
+    futures = JUDGES.map do |judge|
+      Concurrent::Future.execute(executor: executor) do
+        persona = judge[:persona]
         result = nil
 
         begin
@@ -59,24 +60,32 @@ class JudgePostService
             scores: nil,
             comment: nil
           )
-        ensure
-          # 結果をスレッドセーフに格納
-          results_mutex.synchronize do
-            results[persona] = { persona: persona, result: result }
-          end
         end
+
+        { persona: persona, result: result }
       end
     end
 
-    # タイムアウト付きでThreadを待機
-    threads.each do |thread|
-      next if thread.join(JOIN_TIMEOUT)
-
-      # タイムアウトしたスレッドは強制終了せず、自然終了を待つ
-      # 結果が未設定の場合はタイムアウトとして記録
-      persona = thread[:persona]
-      results_mutex.synchronize do
-        results[persona] ||= {
+    # タイムアウト付きでFutureを待機
+    results = futures.map do |future|
+      future.value(PER_JUDGE_TIMEOUT) || begin
+        # タイムアウトした場合
+        persona = JUDGES.find { |j| futures.index(future) == JUDGES.index(j) }&.dig(:persona)
+        Rails.logger.error("[JudgePostService] Thread timeout: persona=#{persona}")
+        {
+          persona: persona,
+          result: BaseAiAdapter::JudgmentResult.new(
+            succeeded: false,
+            error_code: 'timeout',
+            scores: nil,
+            comment: nil
+          )
+        }
+      rescue Concurrent::TimeoutError
+        # Futureがタイムアウトした場合
+        persona = JUDGES.find { |j| futures.index(future) == JUDGES.index(j) }&.dig(:persona)
+        Rails.logger.error("[JudgePostService] Thread timeout: persona=#{persona}")
+        {
           persona: persona,
           result: BaseAiAdapter::JudgmentResult.new(
             succeeded: false,
@@ -86,14 +95,14 @@ class JudgePostService
           )
         }
       end
-      Rails.logger.error("[JudgePostService] Thread timeout: persona=#{persona}")
     end
 
-    # 結果を配列に変換
-    results_array = results.values
-
-    save_judgments!(results_array)
+    save_judgments!(results)
     update_post_status!
+  ensure
+    # Executorをシャットダウン（リソースリーク防止）
+    @executor&.shutdown
+    @executor&.wait_for_termination(5)
   end
 
   class << self
@@ -107,6 +116,18 @@ class JudgePostService
   end
 
   private
+
+  # ThreadPool executorを取得（遅延初期化）
+  #
+  # @return [Concurrent::ThreadPoolExecutor] スレッドプール
+  def executor
+    @executor ||= Concurrent::ThreadPoolExecutor.new(
+      min_threads: 3,
+      max_threads: 3,
+      max_queue: 3,
+      fallback_policy: :abort
+    )
+  end
 
   # 審査結果を保存する
   def save_judgments!(results)

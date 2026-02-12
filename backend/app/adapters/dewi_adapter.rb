@@ -7,6 +7,8 @@
 #
 # @see https://open.bigmodel.cn/dev/api#glm-4
 class DewiAdapter < BaseAiAdapter
+  include JsonParserConcern
+
   # プロンプトファイルのパス
   PROMPT_PATH = Rails.root.join('app/prompts/dewi.txt').to_s
 
@@ -92,7 +94,12 @@ class DewiAdapter < BaseAiAdapter
 
   # 無効なレスポンスエラーを返す
   def invalid_response_error
-    JudgmentResult.new(succeeded: false, error_code: ERROR_CODE_INVALID_RESPONSE, scores: nil, comment: nil)
+    BaseAiAdapter::JudgmentResult.new(
+      succeeded: false,
+      error_code: ERROR_CODE_INVALID_RESPONSE,
+      scores: nil,
+      comment: nil
+    )
   end
 
   # GLM API用のリクエストを構築する
@@ -174,7 +181,7 @@ class DewiAdapter < BaseAiAdapter
       return invalid_response_error
     end
 
-    comment = truncate_comment(data[:comment])
+    comment = truncate_comment(data[:comment], max_length: MAX_COMMENT_LENGTH)
 
     {
       scores: scores,
@@ -183,47 +190,5 @@ class DewiAdapter < BaseAiAdapter
   rescue JSON::ParserError => e
     Rails.logger.error("APIレスポンスのJSONパースエラー: #{e.message}")
     invalid_response_error
-  end
-
-  # コードブロックからJSONを抽出
-  def extract_json_from_codeblock(text)
-    if text.include?('```')
-      if text.match?(/```json/)
-        extracted = text.slice(/```json\s*\n(.*?)\n?```/m, 1)
-        return extracted.strip if extracted
-      end
-
-      extracted = text.slice(/```\s*\n(.*?)\n?```/m, 1)
-      return extracted.strip if extracted
-    end
-    text
-  end
-
-  # スコア変換
-  def convert_scores_to_integers(data)
-    scores = {}
-    REQUIRED_SCORE_KEYS.each do |key|
-      value = data[key]
-      raise ArgumentError, "Score value is nil for #{key}" if value.nil?
-
-      begin
-        integer_value = if value.is_a?(Integer)
-                          value
-                        else
-                          Float(value).round
-                        end
-      rescue ArgumentError, FloatDomainError, RangeError, TypeError => e # rubocop:disable Lint/ShadowedException
-        raise ArgumentError, "Invalid score value for #{key}: #{value.inspect}", cause: e
-      end # rubocop:enable Lint/ShadowedException
-      scores[key] = integer_value
-    end
-    scores
-  end
-
-  # コメント切り詰め
-  def truncate_comment(comment)
-    return nil if comment.nil?
-
-    comment.to_s.strip[0...MAX_COMMENT_LENGTH]
   end
 end

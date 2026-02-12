@@ -7,6 +7,8 @@
 #
 # @see https://open.bigmodel.cn/dev/api#glm-4
 class GlmAdapter < BaseAiAdapter
+  include JsonParserConcern
+
   # プロンプトファイルのパス
   PROMPT_PATH = 'app/prompts/hiroyuki.txt'
 
@@ -126,7 +128,7 @@ class GlmAdapter < BaseAiAdapter
     raise
   end
 
-  # ステータスコードのチェック
+  # ステータスコードをチェックする
   def handle_response_status(response)
     case response.status
     when 200..299
@@ -175,7 +177,7 @@ class GlmAdapter < BaseAiAdapter
       return invalid_response_error
     end
 
-    comment = truncate_comment(data[:comment])
+    comment = truncate_comment(data[:comment], max_length: MAX_COMMENT_LENGTH)
 
     {
       scores: scores,
@@ -184,49 +186,5 @@ class GlmAdapter < BaseAiAdapter
   rescue JSON::ParserError => e
     Rails.logger.error("APIレスポンスのJSONパースエラー: #{e.message}")
     invalid_response_error
-  end
-
-  # コードブロックからJSONを抽出（GeminiAdapterと共通化すべきだが、一旦ここに実装）
-  def extract_json_from_codeblock(text)
-    if text.include?('```')
-      if text.match?(/```json/)
-        # \n? を追加してtrailing newlineをオプションに
-        extracted = text.slice(/```json\s*\n(.*?)\n?```/m, 1)
-        return extracted.strip if extracted
-      end
-
-      # \n? を追加してtrailing newlineをオプションに
-      extracted = text.slice(/```\s*\n(.*?)\n?```/m, 1)
-      return extracted.strip if extracted
-    end
-    text
-  end
-
-  # スコア変換（GeminiAdapterと共通化すべき）
-  def convert_scores_to_integers(data)
-    scores = {}
-    REQUIRED_SCORE_KEYS.each do |key|
-      value = data[key]
-      raise ArgumentError, "Score value is nil for #{key}" if value.nil?
-
-      begin
-        integer_value = if value.is_a?(Integer)
-                          value
-                        else
-                          Float(value).round
-                        end
-      rescue ArgumentError, FloatDomainError, RangeError, TypeError => e # rubocop:disable Lint/ShadowedException
-        raise ArgumentError, "Invalid score value for #{key}: #{value.inspect}", cause: e
-      end # rubocop:enable Lint/ShadowedException
-      scores[key] = integer_value
-    end
-    scores
-  end
-
-  # コメント切り詰め
-  def truncate_comment(comment)
-    return nil if comment.nil?
-
-    comment.to_s.strip[0...MAX_COMMENT_LENGTH]
   end
 end

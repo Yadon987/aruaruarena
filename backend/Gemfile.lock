@@ -265,6 +265,7 @@ DEPENDENCIES
   aws_lambda_ric
   bootsnap
   brakeman
+  concurrent-ruby (~> 1.0)
   debug
   dotenv-rails
   dynamoid (~> 3.11)
