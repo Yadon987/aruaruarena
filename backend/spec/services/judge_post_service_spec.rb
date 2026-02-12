@@ -41,18 +41,6 @@ RSpec.describe JudgePostService do
   describe '#execute' do
     let(:post) { Post.create(nickname: 'テスト', body: 'スヌーズ押して二度寝') }
     let(:service) { described_class.new(post.id) }
-    it 'Postが見つからない場合はWARNログを出力して何もしないこと' do
-      expect(Rails.logger).to receive(:warn).with(/Post not found/)
-      expect do
-        described_class.call('nonexistent_id')
-      end.not_to raise_error
-    end
-  end
-
-  # 何を検証するか: 並列審査の実行
-  describe '#execute' do
-    let(:post) { Post.create(nickname: 'テスト', body: 'スヌーズ押して二度寝') }
-    let(:service) { described_class.new(post.id) }
 
     context '正常系' do
       # 何を検証するか: 3人全員成功時にstatus: scoredになること

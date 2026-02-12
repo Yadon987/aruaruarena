@@ -5,6 +5,10 @@ require 'webmock/rspec'
 
 # Issue: E06-05
 RSpec.describe DewiAdapter, type: :model do
+  # 各テスト前にプロンプトキャッシュをリセット
+  before(:each) do
+    described_class.reset_prompt_cache! if defined?(described_class.reset_prompt_cache!)
+  end
   # 何を検証するか: BaseAiAdapterを継承していること
   it 'BaseAiAdapterを継承していること' do
     expect(described_class < BaseAiAdapter).to be true

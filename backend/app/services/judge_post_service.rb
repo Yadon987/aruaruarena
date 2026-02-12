@@ -35,8 +35,8 @@ class JudgePostService
     results_mutex = Mutex.new
 
     threads = JUDGES.map do |judge|
-      Thread.new do
-        persona = judge[:persona]
+      Thread.new(judge[:persona]) do |persona|
+        Thread.current[:persona] = persona
         result = nil
 
         begin
