@@ -139,16 +139,16 @@ class DewiAdapter < BaseAiAdapter
       Rails.logger.info('GLM API呼び出し成功')
       response
     when 429
-      Rails.logger.warn("GLM APIレート制限: #{response.body}")
+      Rails.logger.warn("GLM APIレート制限: status=#{response.status}")
       raise Faraday::ClientError.new('rate limit', faraday_response: response)
     when 400..499
-      Rails.logger.error("GLM APIクライアントエラー: #{response.status} - #{response.body}")
+      Rails.logger.error("GLM APIクライアントエラー: status=#{response.status}")
       raise Faraday::ClientError.new("Client error: #{response.status}", faraday_response: response)
     when 500..599
-      Rails.logger.error("GLM APIサーバーエラー: #{response.status} - #{response.body}")
+      Rails.logger.error("GLM APIサーバーエラー: status=#{response.status}")
       raise Faraday::ServerError.new("Server error: #{response.status}", faraday_response: response)
     else
-      Rails.logger.error("GLM API未知のエラー: #{response.status} - #{response.body}")
+      Rails.logger.error("GLM API未知のエラー: status=#{response.status}")
       raise Faraday::ClientError.new("Unknown error: #{response.status}", faraday_response: response)
     end
   end

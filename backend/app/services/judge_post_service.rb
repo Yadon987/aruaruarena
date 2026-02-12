@@ -67,10 +67,12 @@ class JudgePostService
     end
 
     # タイムアウト付きでFutureを待機
-    results = futures.map do |future|
-      future.value(PER_JUDGE_TIMEOUT) || begin
-        # タイムアウトした場合
-        persona = JUDGES.find { |j| futures.index(future) == JUDGES.index(j) }&.dig(:persona)
+    results = futures.each_with_index.map do |future, idx|
+      result = future.value(PER_JUDGE_TIMEOUT)
+
+      # タイムアウトした場合
+      if result.nil?
+        persona = JUDGES[idx][:persona]
         Rails.logger.error("[JudgePostService] Thread timeout: persona=#{persona}")
         {
           persona: persona,
@@ -81,19 +83,8 @@ class JudgePostService
             comment: nil
           )
         }
-      rescue Concurrent::TimeoutError
-        # Futureがタイムアウトした場合
-        persona = JUDGES.find { |j| futures.index(future) == JUDGES.index(j) }&.dig(:persona)
-        Rails.logger.error("[JudgePostService] Thread timeout: persona=#{persona}")
-        {
-          persona: persona,
-          result: BaseAiAdapter::JudgmentResult.new(
-            succeeded: false,
-            error_code: 'timeout',
-            scores: nil,
-            comment: nil
-          )
-        }
+      else
+        result
       end
     end
 
