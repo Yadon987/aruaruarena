@@ -25,7 +25,7 @@ class JudgeError < StandardError
   # @param persona [String] 審査員ID
   # @param error_code [String] エラーコード
   # @param original_error [StandardError, nil] 元の例外
-  def initialize(persona:, error_code:, original_error: nil)
+  def initialize(judge_persona:, error_code:, original_error: nil)
     @persona = persona
     @error_code = error_code
     @original_error = original_error
