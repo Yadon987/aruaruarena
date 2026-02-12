@@ -17,7 +17,7 @@ class JudgeError < StandardError
 
   # 元の例外
   #
-  # @return [StandardError] 元の例外
+  # @return [StandardError, nil] 元の例外
   attr_reader :original_error
 
   # 初期化
