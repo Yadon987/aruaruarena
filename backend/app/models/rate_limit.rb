@@ -63,6 +63,7 @@ class RateLimit
     record = find(identifier)
     record.expires_at = Time.now.to_i + seconds
     record.save!  # save!で例外を投げてRateLimitを返す
+    record
   rescue Dynamoid::Errors::RecordNotFound
     create!(
       identifier: identifier,
