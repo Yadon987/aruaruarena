@@ -162,16 +162,22 @@ RSpec.describe RateLimiterService, type: :service do
     end
 
     context '異常系' do
-      # Given: DynamoDB接続エラー
+      # Given: DynamoDB接続エラー（IP制限設定時）
       # When: set_limit!を呼び出す
-      # Then: 例外が発生する（set_limit!はフェイルオープンではない。投稿保存後に呼ばれるため）
-      # 注意: RateLimit.create!ではなく、実際のDynamoDB操作で発生する例外を使用
-      it 'DynamoDB接続エラー時、例外が発生すること' do
-        allow(RateLimit).to receive(:create!).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
-                                                                                                'Service unavailable'))
+      # Then: 例外をキャッチしてニックネーム制限を試行する（フェイルオープン）
+      it 'DynamoDB接続エラー時も、他方の制限設定を試行すること' do
+        allow(RateLimit).to receive(:set_limit).with(
+          instance_of(String), seconds: described_class::LIMIT_DURATION
+        ).and_call_original
+        # 1回目（IP）はエラー、2回目（ニックネーム）は成功
+        allow(RateLimit).to receive(:set_limit).with(
+          'ip_192.168.1.1', seconds: described_class::LIMIT_DURATION
+        ).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable'))
+        allow(Rails.logger).to receive(:error).with(/\[RateLimiterService\] Failed to set IP limit:/)
+
         expect do
-          described_class.set_limit!(ip: ip, nickname: nickname)
-        end.to raise_error(Aws::DynamoDB::Errors::ServiceError)
+          described_class.set_limit!(ip: '192.168.1.1', nickname: '太郎')
+        end.not_to raise_error
       end
     end
   end

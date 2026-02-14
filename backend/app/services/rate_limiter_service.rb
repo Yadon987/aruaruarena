@@ -46,7 +46,18 @@ class RateLimiterService
     ip_identifier = RateLimit.generate_ip_identifier(ip)
     nickname_identifier = RateLimit.generate_nickname_identifier(nickname)
 
-    RateLimit.set_limit(ip_identifier, seconds: LIMIT_DURATION)
-    RateLimit.set_limit(nickname_identifier, seconds: LIMIT_DURATION)
+    # IP制限設定（フェイルオープン）
+    begin
+      RateLimit.set_limit(ip_identifier, seconds: LIMIT_DURATION)
+    rescue StandardError => e
+      Rails.logger.error("[RateLimiterService] Failed to set IP limit: #{e.class} - #{e.message}")
+    end
+
+    # ニックネーム制限設定（フェイルオープン）
+    begin
+      RateLimit.set_limit(nickname_identifier, seconds: LIMIT_DURATION)
+    rescue StandardError => e
+      Rails.logger.error("[RateLimiterService] Failed to set nickname limit: #{e.class} - #{e.message}")
+    end
   end
 end

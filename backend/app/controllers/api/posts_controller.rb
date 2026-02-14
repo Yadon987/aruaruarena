@@ -7,10 +7,12 @@ module Api
     ERROR_CODE_BAD_REQUEST = 'BAD_REQUEST'
     ERROR_CODE_NOT_FOUND = 'NOT_FOUND'
     ERROR_CODE_RATE_LIMITED = 'RATE_LIMITED'
+    ERROR_CODE_DUPLICATE_CONTENT = 'DUPLICATE_CONTENT'
 
     # エラーメッセージ定数
     ERROR_MESSAGE_NOT_FOUND = '投稿が見つかりません'
     ERROR_MESSAGE_RATE_LIMITED = '投稿頻度を制限中'
+    ERROR_MESSAGE_DUPLICATE_CONTENT = '同じ内容の投稿があります'
 
     # エラーメッセージ定数
     ERROR_MESSAGE_INVALID_REQUEST = 'リクエスト形式が正しくありません'
@@ -40,6 +42,15 @@ module Api
         return
       end
 
+      # 重複チェック（レート制限チェックの後、バリデーションの前に実行）
+      if DuplicateCheckService.duplicate?(body: post_params[:body])
+        render json: {
+          error: ERROR_MESSAGE_DUPLICATE_CONTENT,
+          code: ERROR_CODE_DUPLICATE_CONTENT
+        }, status: :unprocessable_content
+        return
+      end
+
       post = Post.new(post_params.merge(id: SecureRandom.uuid))
 
       if post.save
@@ -50,6 +61,15 @@ module Api
           # set_limit!失敗時も投稿レスポンスを返す（フェイルオープン）
           Rails.logger.error("[PostsController#create] Rate limit set failed: #{e.class} - #{e.message}")
         end
+
+        # 投稿成功後に重複チェックレコードを登録
+        begin
+          DuplicateCheckService.register!(body: post_params[:body], post_id: post.id)
+        rescue StandardError => e
+          # register!失敗時も投稿レスポンスを返す（フェイルオープン）
+          Rails.logger.error("[PostsController#create] Duplicate check register failed: #{e.class} - #{e.message}")
+        end
+
         start_judgment_async(post)
         render json: { id: post.id, status: post.status }, status: :created
       else

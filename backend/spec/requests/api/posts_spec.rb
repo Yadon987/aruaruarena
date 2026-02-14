@@ -92,7 +92,7 @@ RSpec.describe 'API::Posts', type: :request do
         params = { post: { nickname: '', body: '本文テスト' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json = response.parsed_body
         expect(json['error']).to include('ニックネームを入力してください')
         expect(json['code']).to eq('VALIDATION_ERROR')
@@ -102,7 +102,7 @@ RSpec.describe 'API::Posts', type: :request do
       it 'ニックネーム21文字で422 VALIDATION_ERROR' do
         params = { post: { nickname: 'a' * 21, body: '本文テスト' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       # 検証: 本文必須
@@ -110,7 +110,7 @@ RSpec.describe 'API::Posts', type: :request do
         params = { post: { nickname: '太郎', body: '' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json = response.parsed_body
         expect(json['error']).to include('本文を入力してください')
       end
@@ -119,14 +119,14 @@ RSpec.describe 'API::Posts', type: :request do
       it '本文2文字で422 VALIDATION_ERROR' do
         params = { post: { nickname: '太郎', body: 'ab' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       # 検証: 本文文字数超過
       it '本文31文字で422 VALIDATION_ERROR' do
         params = { post: { nickname: '太郎', body: 'a' * 31 } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       # 検証: Strong Parameters (status無視)
@@ -193,28 +193,28 @@ RSpec.describe 'API::Posts', type: :request do
       it '半角空白のみのnicknameでバリデーションエラー' do
         params = { post: { nickname: '   ', body: '本文テスト' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       # 検証: 全角空白のみnickname
       it '全角空白のみのnicknameでバリデーションエラー' do
         params = { post: { nickname: '　　', body: '本文テスト' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       # 検証: 半角空白のみbody
       it '半角空白のみのbodyでバリデーションエラー' do
         params = { post: { nickname: '太郎', body: '   ' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       # 検証: 全角空白のみbody
       it '全角空白のみのbodyでバリデーションエラー' do
         params = { post: { nickname: '太郎', body: '　　' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       # 検証: マルチバイト混在
@@ -231,7 +231,7 @@ RSpec.describe 'API::Posts', type: :request do
         params = { post: { nickname: '', body: '' } }
         post '/api/posts', params: params.to_json, headers: valid_headers
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json = response.parsed_body
         expect(json['error']).to include('ニックネームを入力してください')
       end
@@ -516,9 +516,12 @@ RSpec.describe 'API::Posts', type: :request do
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
 
+        # レート制限をバイパス（重複チェックのテストのため）
+        allow(RateLimiterService).to receive(:limited?).and_return(false)
+
         # 2回目（同一内容）
         post '/api/posts', params: duplicate_params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json = response.parsed_body
         expect(json['error']).to eq('同じ内容の投稿があります')
         expect(json['code']).to eq('DUPLICATE_CONTENT')
@@ -536,9 +539,12 @@ RSpec.describe 'API::Posts', type: :request do
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
 
+        # レート制限をバイパス（重複チェックのテストのため）
+        allow(RateLimiterService).to receive(:limited?).and_return(false)
+
         # 2回目（同一内容）
         post '/api/posts', params: duplicate_params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
 
         json = response.parsed_body
         expect(json['error']).to eq('同じ内容の投稿があります')
@@ -556,7 +562,8 @@ RSpec.describe 'API::Posts', type: :request do
 
       # DynamoDB接続エラー時は投稿を阻害しない
       it 'DynamoDB接続エラー時は投稿を阻害しない' do
-        allow(DuplicateCheckService).to receive(:duplicate?).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable'))
+        allow(DuplicateCheck).to receive(:find).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
+                                                                                                  'Service unavailable'))
         allow(Rails.logger).to receive(:error)
 
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
@@ -567,7 +574,8 @@ RSpec.describe 'API::Posts', type: :request do
 
       # 重複チェック時のDynamoDBエラーは投稿を阻害しない
       it 'register!時のDynamoDBエラーは投稿を阻害しない' do
-        allow(DuplicateCheckService).to receive(:register!).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable'))
+        allow(DuplicateCheckService).to receive(:register!).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
+                                                                                                              'Service unavailable'))
         allow(Rails.logger).to receive(:error)
 
         post '/api/posts', params: valid_params.to_json, headers: valid_headers

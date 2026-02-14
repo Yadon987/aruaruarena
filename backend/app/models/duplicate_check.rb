@@ -16,7 +16,7 @@ class DuplicateCheck
 
   # Attributes
   field :post_id,    :string # 最初に投稿ID
-  field :expires_at, :string # TTL（24時間後 = 86400秒、UnixTimestampを文字列として保存）
+  field :expires_at, :integer # TTL（24時間後 = 86400秒、UnixTimestampを整数として保存）
 
   # TTL設定（DynamoDB側で設定されるため、モデル側では特別な設定不要）
   # expires_atフィールドはDynamoDBのTTL機能によって自動削除されます
@@ -41,24 +41,28 @@ class DuplicateCheck
   end
 
   # 重複チェック
-  # @param body [String] 本文
-  # @return [DuplicateCheck, nil] 既存のチェック、なければnil
-  def self.check(body)
-    hash = generate_body_hash(body)
-    where(body_hash: hash).first
+  # @param body_hash [String] 本文ハッシュ
+  # @return [Boolean] 重複ありならtrue、なければfalse
+  def self.check(body_hash)
+    record = find(body_hash)
+    record&.expires_at&.to_i&.> Time.now.to_i
+  rescue Dynamoid::Errors::RecordNotFound
+    false
+  rescue StandardError => e
+    # フェイルオープン: DB障害時は重複なしと判定
+    Rails.logger.error("[DuplicateCheck#check] DynamoDB error: #{e.class} - #{e.message}")
+    false
   end
 
   # 重複チェックを登録
-  # @param body [String] 本文
+  # @param body_hash [String] 本文ハッシュ
   # @param post_id [String] 投稿ID
-  # @param hours [Integer] 保持時間（デフォルト: 24時間）
   # @return [DuplicateCheck] 作成されたチェック
-  def self.register(body, post_id, hours: 24)
-    hash = generate_body_hash(body)
+  def self.register(body_hash:, post_id:)
     create!(
-      body_hash: hash,
+      body_hash: body_hash,
       post_id: post_id,
-      expires_at: (Time.now.to_i + (hours * 3600)).to_s
+      expires_at: Time.now.to_i + 86_400 # 24時間（86400秒）
     )
   end
 end
