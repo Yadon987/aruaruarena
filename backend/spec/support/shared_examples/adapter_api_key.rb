@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.shared_examples 'adapter api key validation' do |env_key, error_message_pattern = nil|
   error_message_pattern ||= /API_KEYが設定されていません/
 

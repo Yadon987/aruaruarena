@@ -5,6 +5,7 @@ require 'webmock/rspec'
 
 RSpec.describe GlmAdapter do
   include AdapterTestHelpers
+
   let(:adapter) { described_class.new }
 
   it 'BaseAiAdapterを継承していること' do

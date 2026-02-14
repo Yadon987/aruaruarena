@@ -57,8 +57,9 @@ class Post
                          range_key: :score_key
 
   # アソシエーション
-  # dependent: :destroyを削除（Judgment.delete_all時にPostが削除されるのを防ぐ）
-  has_many :judgments
+  # dependent: :restrict_with_error - Post削除時にJudgmentが存在する場合はエラー
+  # DynamoDBでは従来の依存削除オプションが期待通り動作しないため、削除禁止とする
+  has_many :judgments, dependent: :restrict_with_error
 
   # バリデーション
   validates :id,          presence: { message: 'を入力してください' }

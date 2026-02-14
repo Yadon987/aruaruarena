@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.shared_examples 'adapter build_request boundary' do |content_extractor|
   let(:adapter) { described_class.new }
   let(:persona) { 'test_persona' }
