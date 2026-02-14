@@ -244,4 +244,104 @@ RSpec.describe Post, type: :model do
       expect(post).to be_valid
     end
   end
+
+  # ============================================
+  # E08 ランキングAPI用テスト
+  # ============================================
+
+  describe '.top_rankings' do
+    before do
+      Post.delete_all
+    end
+
+    # テスト10: .top_rankings がscoredのみ取得
+    # 検証: status=scoredフィルタ
+    it 'scored状態の投稿のみを取得すること' do
+      create(:post, :scored, average_score: 90.0, created_at: '1000')
+      create(:post, :scored, average_score: 80.0, created_at: '1000')
+      create(:post, status: 'judging')
+      create(:post, :failed)
+
+      results = Post.top_rankings
+
+      expect(results.length).to eq(2)
+      expect(results.map(&:status)).to all(eq('scored'))
+    end
+
+    # テスト11: .top_rankings がスコア降順
+    # 検証: ORDER BY score_key
+    it 'スコア降順で取得すること' do
+      create(:post, :scored, average_score: 70.0, nickname: '3位')
+      create(:post, :scored, average_score: 90.0, nickname: '1位')
+      create(:post, :scored, average_score: 80.0, nickname: '2位')
+
+      results = Post.top_rankings
+
+      expect(results[0].nickname).to eq('1位')
+      expect(results[1].nickname).to eq('2位')
+      expect(results[2].nickname).to eq('3位')
+    end
+
+    # テスト12: .top_rankings が同点時はcreated_at昇順
+    # 検証: タイブレーク
+    it '同点の場合は作成日時の早い順で取得すること' do
+      create(:post, :scored, average_score: 90.0, created_at: '2000', nickname: '古い')
+      create(:post, :scored, average_score: 90.0, created_at: '1000', nickname: 'もっと古い')
+
+      results = Post.top_rankings
+
+      expect(results[0].nickname).to eq('もっと古い')
+      expect(results[1].nickname).to eq('古い')
+    end
+
+    # テスト13: .top_rankings が指定件数のみ取得
+    # 検証: LIMIT機能
+    it '指定した件数のみ取得すること' do
+      create_list(:post, 5, :scored)
+
+      results = Post.top_rankings(3)
+
+      expect(results.length).to eq(3)
+    end
+
+    # テスト14: .top_rankings が空配列返す（投稿なし）
+    # 検証: 空データ対応
+    it 'scored投稿がない場合は空配列を返すこと' do
+      results = Post.top_rankings
+
+      expect(results).to eq([])
+    end
+  end
+
+  describe '.total_scored_count' do
+    before do
+      Post.delete_all
+    end
+
+    # テスト16: .total_scored_count がscored投稿の総数を返す
+    # 検証: count機能
+    it 'scored投稿の総数を返すこと' do
+      create_list(:post, 3, :scored)
+      create(:post, status: 'judging')
+      create(:post, :failed)
+
+      expect(Post.total_scored_count).to eq(3)
+    end
+  end
+
+  describe '#to_ranking_json' do
+    # テスト15: #to_ranking_json が正しい形式
+    # 検証: フォーマット確認
+    it '正しいハッシュ形式を返すこと' do
+      post = build(:post, :scored, id: 'test-uuid', average_score: 95.5, nickname: '太郎', body: '本文')
+
+      json = post.to_ranking_json(1)
+
+      expect(json[:rank]).to eq(1)
+      expect(json[:id]).to eq('test-uuid')
+      expect(json[:nickname]).to eq('太郎')
+      expect(json[:body]).to eq('本文')
+      expect(json[:average_score]).to eq(95.5)
+    end
+  end
 end
