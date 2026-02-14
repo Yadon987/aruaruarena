@@ -57,6 +57,23 @@ module AdapterTestHelpers
     )
   end
 
+  # Faraday::Responseライクなモックを作成する共通ヘルパー
+  #
+  # @param body_hash [Hash] レスポンスボディのハッシュ
+  # @return [Double] bodyメソッドを持つモックオブジェクト（JSON文字列化されたbody）
+  def build_faraday_response(body_hash)
+    double('Faraday::Response', body: JSON.generate(body_hash))
+  end
+
+  # HTTPステータスコード付きのレスポンスモックを作成する共通ヘルパー
+  #
+  # @param status [Integer] HTTPステータスコード
+  # @param body [Hash] レスポンスボディ（デフォルトは空ハッシュ）
+  # @return [Double] statusとbodyメソッドを持つモックオブジェクト
+  def build_http_response(status, body = {})
+    double('Faraday::Response', status: status, body: body)
+  end
+
   # Adapterをモックするヘルパー
   #
   # @param adapter_class [Class] Adapterクラス
@@ -91,4 +108,5 @@ end
 
 RSpec.configure do |config|
   config.include AdapterTestHelpers, type: :model
+  config.include AdapterTestHelpers, type: :adapter
 end

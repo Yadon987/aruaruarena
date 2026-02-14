@@ -34,14 +34,9 @@ class BaseGlmAdapter < BaseAiAdapter
     end
 
     # キャッシュされたプロンプトを取得する
-    def prompt_cache
-      @prompt_cache
-    end
+    attr_accessor :prompt_cache
 
     # キャッシュされたプロンプトを設定する
-    def prompt_cache=(value)
-      @prompt_cache = value
-    end
 
     # プロンプトキャッシュをリセットする（テスト用）
     def reset_prompt_cache!

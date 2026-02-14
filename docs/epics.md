@@ -262,6 +262,9 @@
 - [ ] E07-03: ランキング順位の計算
 - [ ] E07-04: RSpecテスト（正常系・異常系）
 
+**推奨Issue分割**:
+- 分割不要（JudgePostService, Adapter, Specを1セットで実装）
+
 **受入基準**:
 - レスポンス形式:
   ```json
@@ -306,6 +309,9 @@
 - [ ] E08-03: レスポンスフォーマットの実装
 - [ ] E08-04: RSpecテスト（正常系・境界値）
 
+**推奨Issue分割**:
+- 分割不要（Controller, GSI Query, Specを1セットで実装）
+
 **受入基準**:
 - TOP20を取得（`status = scored` のみ）
 - スコア降順・同点時は作成日時昇順
@@ -329,6 +335,7 @@
 - `app/controllers/api/rankings_controller.rb`
 - `spec/requests/api/rankings_spec.rb`
 
+
 ---
 
 ### E09: レート制限・スパム対策
@@ -342,6 +349,10 @@
 - [ ] E09-04: DynamoDB duplicate_checks テーブルの実装
 - [ ] E09-05: TTLによる自動削除設定
 - [ ] E09-06: RSpecテスト（正常系・異常系）
+
+**推奨Issue分割**:
+- **Issue 1**: RateLimiterService (E09-01, E09-03, E09-05, E09-06の一部)
+- **Issue 2**: DuplicateCheckService (E09-02, E09-04, E09-05, E09-06の一部)
 
 **受入基準**:
 - IPごとに5分1回
@@ -371,6 +382,9 @@
 - [ ] E10-04: ウォームアップ処理（Thread.new）
 - [ ] E10-05: RSpecテスト（画像生成・キャッシュ）
 
+**推奨Issue分割**:
+- 分割不要（Service, Controller, Specを1セットで実装）
+
 **受入基準**:
 - 投稿内容・スコアを含む画像生成
 - CloudFrontで1週間キャッシュ
@@ -381,6 +395,7 @@
 - `app/controllers/api/ogp_controller.rb`
 - `app/services/ogp_generator_service.rb`
 - `spec/requests/api/ogp_spec.rb`
+
 
 ---
 
@@ -395,6 +410,9 @@
 - [ ] E11-02: 失敗した審査員の特定
 - [ ] E11-03: 審査結果の上書き保存
 - [ ] E11-04: RSpecテスト（正常系・異常系）
+
+**推奨Issue分割**:
+- 分割不要（Service, Controller, Specを1セットで実装）
 
 **受入基準**:
 - リクエスト形式: `{ "failed_personas": ["dewi"] }`
@@ -427,6 +445,11 @@
 - [ ] E12-06: 自分の投稿のハイライト表示
 - [ ] E12-07: Playwright E2Eテスト
 
+**推奨Issue分割**:
+- **Issue 1**: レイアウトと投稿フォーム (E12-01, E12-02, E12-07の一部)
+- **Issue 2**: ランキング表示とデータ取得 (E12-03, E12-04, E12-07の一部)
+- **Issue 3**: 自分の投稿管理 (E12-05, E12-06, E12-07の一部)
+
 **受入基準**:
 - 投稿成功時にIDをLocalStorageに保存
 - ランキングは3秒ごとに自動更新（ポーリング）
@@ -442,6 +465,7 @@
 - `frontend/src/components/PostForm.tsx`
 - `frontend/src/components/RankingList.tsx`
 - `frontend/src/hooks/useRankings.ts`
+
 
 ---
 
@@ -464,6 +488,10 @@
 - [ ] E13-06: タイムアウト処理
 - [ ] E13-07: Playwright E2Eテスト
 
+**推奨Issue分割**:
+- **Issue 1**: UIとアニメーション (E13-01, E13-02, E13-03, E13-04, E13-07の一部)
+- **Issue 2**: ポーリングとタイムアウトロジック (E13-05, E13-06, E13-07の一部)
+
 **受入基準**:
 - 投稿IDでポーリング（GET /api/posts/:id）
 - 審査完了時にトップ画面にフェード遷移
@@ -476,6 +504,7 @@
 - `frontend/src/components/JudgingScreen.tsx`
 - `frontend/src/components/JudgeCharacter.tsx`
 - `frontend/src/hooks/usePolling.ts`
+
 
 ---
 
@@ -498,6 +527,10 @@
 - [ ] E14-06: Framer Motionアニメーション
 - [ ] E14-07: Playwright E2Eテスト
 
+**推奨Issue分割**:
+- **Issue 1**: モーダルUIと結果表示 (E14-01, E14-02, E14-06, E14-07の一部)
+- **Issue 2**: アクションボタン機能（再審査・シェア） (E14-03, E14-04, E14-05, E14-07の一部)
+
 **受入基準**:
 - 成功時（TOP20入り）: 威風堂々（ワンショット）
 - 失敗時（圏外）: 運命 冒頭（ワンショット）
@@ -511,6 +544,7 @@
 - `frontend/src/components/ResultModal.tsx`
 - `frontend/src/components/JudgeDetail.tsx`
 
+
 ---
 
 ### E15: 自分の投稿一覧（フロントエンド）
@@ -523,12 +557,16 @@
 - [ ] E15-03: 投稿詳細への遷移
 - [ ] E15-04: Playwright E2Eテスト
 
+**推奨Issue分割**:
+- 分割不要（コンポーネント, フック, テストを1セットで実装）
+
 **受入基準**:
 - 投稿クリックで審査結果モーダルに切り替え
 - 空状態メッセージの表示
 
 **関連ファイル**:
 - `frontend/src/components/MyPostsModal.tsx`
+
 
 ---
 
@@ -541,12 +579,16 @@
 - [ ] E16-02: スクロール可能な実装
 - [ ] E16-03: Playwright E2Eテスト
 
+**推奨Issue分割**:
+- 分割不要（コンポーネント, テストを1セットで実装）
+
 **受入基準**:
 - スクロール可能
 - `Esc` キーで閉じる
 
 **関連ファイル**:
 - `frontend/src/components/PrivacyPolicyModal.tsx`
+
 
 ---
 
@@ -562,6 +604,9 @@
 - [ ] E17-05: ミュートトグル（LocalStorageに保存）
 - [ ] E17-06: Playwright E2Eテスト
 
+**推奨Issue分割**:
+- 分割不要（フック, コンポーネント修正, テストを1セットで実装）
+
 **受入基準**:
 - デフォルトはミュート（ユーザー操作でON）
 - ミュート状態をLocalStorageに保存
@@ -569,6 +614,7 @@
 
 **関連ファイル**:
 - `frontend/src/hooks/useSound.ts`
+
 
 ---
 

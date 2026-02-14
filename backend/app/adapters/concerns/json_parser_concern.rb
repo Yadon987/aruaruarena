@@ -6,6 +6,7 @@
 # JSONパース処理をモジュールとして抽出しました。
 module JsonParserConcern
   extend ActiveSupport::Concern
+
   # コードブロックからJSONを抽出する
   #
   # @param text [String] AIからのレスポンステキスト

@@ -103,10 +103,10 @@ RSpec.describe JudgeError do
 
       it '正しいハッシュを返すこと' do
         expect(error.to_h).to eq({
-          persona: 'hiroyuki',
-          error_code: 'timeout',
-          message: '審査エラーが発生しました'
-        })
+                                   persona: 'hiroyuki',
+                                   error_code: 'timeout',
+                                   message: '審査エラーが発生しました'
+                                 })
       end
     end
 
@@ -118,10 +118,10 @@ RSpec.describe JudgeError do
 
       it '正しいハッシュを返すこと' do
         expect(error.to_h).to eq({
-          persona: 'dewi',
-          error_code: 'provider_error',
-          message: 'Timeout::Error: 審査エラーが発生しました'
-        })
+                                   persona: 'dewi',
+                                   error_code: 'provider_error',
+                                   message: 'Timeout::Error: 審査エラーが発生しました'
+                                 })
       end
 
       it '元の例外のクラス名が含まれること' do

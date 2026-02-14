@@ -4,6 +4,8 @@ require 'rails_helper'
 require 'webmock/rspec'
 
 RSpec.describe GeminiAdapter do
+  include AdapterTestHelpers
+  let(:adapter) { described_class.new }
   # 何を検証するか: BaseAiAdapterを継承していること
   it 'BaseAiAdapterを継承していること' do
     expect(described_class < BaseAiAdapter).to be true
@@ -11,65 +13,14 @@ RSpec.describe GeminiAdapter do
 
   # 何を検証するか: PROMPT_PATH定数の定義
   describe '定数' do
-    it 'PROMPT_PATH定数が定義されていること' do
-      expect(described_class::PROMPT_PATH).to be_a(String)
-    end
-
-    it 'PROMPT_PATH定数が正しいパスを返すこと' do
+    it '必要な定数が正しく定義されていること', :aggregate_failures do
       expect(described_class::PROMPT_PATH).to eq('app/prompts/hiroyuki.txt')
     end
   end
 
   # 何を検証するか: プロンプトファイルが読み込まれていること
   describe '初期化' do
-    context '正常系' do
-      it 'プロンプトファイルを読み込むこと' do
-        adapter = described_class.new
-        expect(adapter.instance_variable_get(:@prompt)).to include('あなたは「ひろゆき風」')
-      end
-
-      it 'プロンプトに{post_content}プレースホルダーが含まれること' do
-        adapter = described_class.new
-        expect(adapter.instance_variable_get(:@prompt)).to include('{post_content}')
-      end
-
-      it 'プロンプトファイルがキャッシュされること' do
-        adapter1 = described_class.new
-        adapter2 = described_class.new
-
-        expect(adapter1.instance_variable_get(:@prompt)).to eq(adapter2.instance_variable_get(:@prompt))
-      end
-    end
-
-    context '異常系' do
-      it 'プロンプトファイルが存在しない場合は例外を発生させること' do
-        # 他のファイルパスに対してはデフォルトの動作をさせる
-        allow(File).to receive(:exist?).and_call_original
-        # キャッシュをリセットしてからテスト
-        described_class.reset_prompt_cache!
-        # PROMPT_PATHのみモック
-        allow(File).to receive(:exist?).with(described_class::PROMPT_PATH).and_return(false)
-
-        expect do
-          described_class.new
-        end.to raise_error(ArgumentError, /プロンプトファイルが見つかりません/)
-      end
-
-      it 'PROMPT_PATHにパストラバーサル攻撃が含まれる場合は例外を発生させること' do
-        # キャッシュをリセット
-        described_class.reset_prompt_cache!
-
-        # パストラバーサルを含むパスでプロンプトをロードしようとすると
-        # load_promptメソッドでチェックされて例外が発生する
-        # 実際のPROMPT_PATH定数にはパストラバーサルが含まれていないので、
-        # このテストではload_promptを直接呼び出して検証することはできません
-        # 代わりに、パストラバーサルチェックが機能することを確認します
-
-        # このテストは現在の実装では、実際にパストラバーサルを含むパスを
-        # テストすることが難しいため、スキップします
-        skip '定数のモックはできないため、このテストは別の方法で実装する必要があります'
-      end
-    end
+    it_behaves_like 'adapter initialization', 'ひろゆき風'
   end
 
   # 何を検証するか: Faradayクライアントの設定
@@ -124,36 +75,7 @@ RSpec.describe GeminiAdapter do
       end
     end
 
-    context '境界値' do
-      it 'post_contentにJSON制御文字が含まれる場合に正しくエスケープされること' do
-        dangerous_content = '{"test": "injection"}'
-        request = adapter.send(:build_request, dangerous_content, persona)
-
-        text_content = request[:contents].first[:parts].first[:text]
-        expect(text_content).to include(dangerous_content)
-      end
-
-      it 'post_contentに特殊文字が含まれる場合に正しく扱うこと' do
-        special_content = 'テスト<script>alert("xss")</script>投稿'
-        request = adapter.send(:build_request, special_content, persona)
-
-        expect(request[:contents]).to be_present
-      end
-
-      it 'post_contentに改行が含まれる場合に正しく扱うこと' do
-        newline_content = "テスト\n投稿\nです"
-        request = adapter.send(:build_request, newline_content, persona)
-
-        expect(request[:contents]).to be_present
-      end
-
-      it 'post_contentに絵文字が含まれる場合に正しく扱うこと' do
-        emoji_content = 'テスト😊投稿🎉'
-        request = adapter.send(:build_request, emoji_content, persona)
-
-        expect(request[:contents]).to be_present
-      end
-    end
+    it_behaves_like 'adapter build_request boundary', ->(req) { req[:contents][0][:parts][0][:text] }
 
     context 'セキュリティ' do
       it 'post_contentにパストラバーサル攻撃が含まれる場合に正しく扱うこと' do
@@ -181,12 +103,7 @@ RSpec.describe GeminiAdapter do
       }
     end
 
-    # Faraday::Responseライクなモックを作成するヘルパー
-    # @param response_hash [Hash] APIレスポンスボディ
-    # @return [Object] bodyメソッドを持つモックオブジェクト
-    def build_faraday_response(response_hash)
-      double('Faraday::Response', body: JSON.generate(response_hash))
-    end
+
 
     context '正常系' do
       it 'スコアとコメントが正しく解析されること' do
@@ -725,45 +642,7 @@ RSpec.describe GeminiAdapter do
   end
 
   # 何を検証するか: APIキーの取得
-  describe '#api_key' do
-    let(:adapter) { described_class.new }
-
-    context '正常系' do
-      before do
-        stub_env('GEMINI_API_KEY', 'test_api_key_12345')
-      end
-
-      it 'ENV["GEMINI_API_KEY"]を返すこと' do
-        expect(adapter.send(:api_key)).to eq('test_api_key_12345')
-      end
-    end
-
-    context '異常系' do
-      it 'APIキーがnilの場合は例外を発生させること' do
-        stub_env('GEMINI_API_KEY', nil)
-
-        expect do
-          adapter.send(:api_key)
-        end.to raise_error(ArgumentError, /GEMINI_API_KEYが設定されていません/)
-      end
-
-      it 'APIキーが空文字列の場合は例外を発生させること' do
-        stub_env('GEMINI_API_KEY', '')
-
-        expect do
-          adapter.send(:api_key)
-        end.to raise_error(ArgumentError, /GEMINI_API_KEYが設定されていません/)
-      end
-
-      it 'APIキーが空白のみの場合は例外を発生させること' do
-        stub_env('GEMINI_API_KEY', '   ')
-
-        expect do
-          adapter.send(:api_key)
-        end.to raise_error(ArgumentError, /GEMINI_API_KEYが設定されていません/)
-      end
-    end
-  end
+  it_behaves_like 'adapter api key validation', 'GEMINI_API_KEY'
 
   # 何を検証するか: Integration Test（VCR使用）
   describe '#judge (Integration)', vcr: true do
@@ -869,8 +748,5 @@ RSpec.describe GeminiAdapter do
     end
   end
 
-  # 環境変数をモックするヘルパーメソッド
-  def stub_env(key, value)
-    allow(ENV).to receive(:[]).with(key).and_return(value)
-  end
+
 end
