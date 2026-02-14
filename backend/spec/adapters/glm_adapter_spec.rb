@@ -4,6 +4,8 @@ require 'rails_helper'
 require 'webmock/rspec'
 
 RSpec.describe GlmAdapter do
+  include AdapterTestHelpers
+
   it 'BaseAiAdapterを継承していること' do
     expect(described_class < BaseAiAdapter).to be true
   end
@@ -104,16 +106,26 @@ RSpec.describe GlmAdapter do
   end
 
   describe '#api_key' do
-    it '環境変数GLM_API_KEYを使用すること' do
-      allow(ENV).to receive(:[]).with('GLM_API_KEY').and_return('test_glm_key')
-      adapter = described_class.new
-      expect(adapter.send(:api_key)).to eq('test_glm_key')
+    context '正常系' do
+      before do
+        stub_env('GLM_API_KEY', 'test_glm_key')
+      end
+
+      it '環境変数GLM_API_KEYを使用すること' do
+        adapter = described_class.new
+        expect(adapter.send(:api_key)).to eq('test_glm_key')
+      end
     end
 
-    it 'APIキーがない場合はエラーを発生させること' do
-      allow(ENV).to receive(:[]).with('GLM_API_KEY').and_return(nil)
-      adapter = described_class.new
-      expect { adapter.send(:api_key) }.to raise_error(ArgumentError)
+    context '異常系' do
+      before do
+        stub_env('GLM_API_KEY', nil)
+      end
+
+      it 'APIキーがない場合はエラーを発生させること' do
+        adapter = described_class.new
+        expect { adapter.send(:api_key) }.to raise_error(ArgumentError, 'GLM_API_KEYが設定されていません')
+      end
     end
   end
 

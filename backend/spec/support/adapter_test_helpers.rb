@@ -15,6 +15,7 @@ module AdapterTestHelpers
   #   stub_env('GLM_API_KEY', nil)
   def stub_env(key, value)
     allow(ENV).to receive(:[]).with(key).and_return(value)
+    allow(ENV).to receive(:fetch).with(key, anything).and_return(value)
   end
 
   # 共通の成功レスポンスモック
