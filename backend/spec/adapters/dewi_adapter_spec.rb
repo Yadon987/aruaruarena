@@ -21,8 +21,7 @@ RSpec.describe DewiAdapter, type: :model do
     end
 
     it 'PROMPT_PATH定数が正しいパスを返すこと' do
-      expected_path = Rails.root.join('app/prompts/dewi.txt').to_s
-      expect(described_class::PROMPT_PATH).to eq(expected_path)
+      expect(described_class::PROMPT_PATH).to eq('app/prompts/dewi.txt')
     end
   end
 

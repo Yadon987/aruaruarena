@@ -52,11 +52,16 @@ class JudgePostService
             Rails.logger.warn("[JudgePostService] 審査失敗: persona=#{persona}, error_code=#{result.error_code}")
           end
         rescue StandardError => e
-          # e.message にはAPIキー等の機密情報が含まれる可能性があるため、クラス名のみ記録
-          Rails.logger.error("[JudgePostService] 審査例外: persona=#{persona}, error_class=#{e.class}")
+          # JudgeErrorで例外情報をラップ
+          judge_error = JudgeError.new(
+            judge_persona: persona,
+            error_code: 'thread_exception',
+            original_error: e
+          )
+          Rails.logger.error("[JudgePostService] #{judge_error.message}")
           result = BaseAiAdapter::JudgmentResult.new(
             succeeded: false,
-            error_code: 'thread_exception',
+            error_code: judge_error.error_code,
             scores: nil,
             comment: nil
           )
@@ -73,12 +78,17 @@ class JudgePostService
       # タイムアウトした場合
       if result.nil?
         persona = JUDGES[idx][:persona]
-        Rails.logger.error("[JudgePostService] Thread timeout: persona=#{persona}")
+        judge_error = JudgeError.new(
+          judge_persona: persona,
+          error_code: 'timeout',
+          original_error: nil
+        )
+        Rails.logger.error("[JudgePostService] #{judge_error.message}")
         {
           persona: persona,
           result: BaseAiAdapter::JudgmentResult.new(
             succeeded: false,
-            error_code: 'timeout',
+            error_code: judge_error.error_code,
             scores: nil,
             comment: nil
           )
