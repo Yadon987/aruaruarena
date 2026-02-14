@@ -18,6 +18,9 @@ FactoryBot.define do
       after(:build) do |post|
         post.score_key = post.generate_score_key
       end
+      after(:create) do |post|
+        post.update_column(:score_key, post.generate_score_key) if post.score_key.blank?
+      end
     end
 
     trait :failed do

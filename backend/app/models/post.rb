@@ -160,6 +160,47 @@ class Post
     }
   end
 
+  # ランキングAPI用のJSON形式を返す
+  #
+  # @param rank [Integer] 順位
+  # @return [Hash] ランキングJSON形式
+  def to_ranking_json(rank)
+    {
+      rank: rank,
+      id: id,
+      nickname: nickname,
+      body: body,
+      average_score: average_score&.to_f
+    }
+  end
+
+  # TOPランキングを取得する
+  #
+  # GSI(RankingIndex)のstatus='scored'でクエリし、score_key昇順で取得
+  # score_key昇順 = スコア降順（inv_scoreが小さいほど高スコア）
+  # GSIクエリ結果からIDを取得し、テーブルから完全なレコードを取得
+  #
+  # @param limit [Integer] 取得件数（デフォルト: 20）
+  # @return [Array<Post>] ランキング順のPost配列
+  def self.top_rankings(limit = 20)
+    # GSIからscore_key昇順でIDを取得
+    gsi_results = where(status: STATUS_SCORED)
+                  .with_index(:ranking_index)
+                  .scan_index_forward(true)
+                  .record_limit(limit)
+                  .to_a
+
+    # IDのリストを取得（GSIクエリ結果の順序を維持）
+    ids = gsi_results.map(&:id)
+
+    # テーブルから完全なレコードを取得
+    return [] if ids.empty?
+
+    # IDの順序を維持して返す
+    posts = find(ids).index_by(&:id)
+    ids.filter_map { |id| posts[id] }
+  end
+
   # 全scored投稿数を取得する
   #
   # GSI(RankingIndex)のstatus='scored'でクエリし、該当する投稿数をカウント
