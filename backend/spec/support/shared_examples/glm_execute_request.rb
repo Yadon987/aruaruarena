@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.shared_examples 'GLM execute request error handling' do
   context 'エラーハンドリング' do
     it 'Faraday::TimeoutError発生時にログ出力して再送出すること' do

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.shared_examples 'openai style parse response' do
   # AdapterTestHelpersのbuild_faraday_responseを使用
 
@@ -28,8 +30,8 @@ RSpec.shared_examples 'openai style parse response' do
 
     it '文字列のスコアが整数に変換されること' do
       json_content = JSON.generate(
-        empathy: "15", humor: "10", brevity: "20",
-        originality: "5", expression: "12", comment: 'test'
+        empathy: '15', humor: '10', brevity: '20',
+        originality: '5', expression: '12', comment: 'test'
       )
       response_body = { choices: [{ message: { content: json_content } }] }
       resp = build_faraday_response(response_body)
@@ -123,7 +125,7 @@ RSpec.shared_examples 'openai style parse response' do
       resp = build_faraday_response(response_body)
 
       result = adapter.send(:parse_response, resp)
-      
+
       scores = result.respond_to?(:scores) ? result.scores : result[:scores]
       expect(scores[:empathy]).to eq(-1)
     end
@@ -136,7 +138,7 @@ RSpec.shared_examples 'openai style parse response' do
       resp = build_faraday_response(response_body)
 
       result = adapter.send(:parse_response, resp)
-      
+
       scores = result.respond_to?(:scores) ? result.scores : result[:scores]
       expect(scores[:empathy]).to eq(21)
     end

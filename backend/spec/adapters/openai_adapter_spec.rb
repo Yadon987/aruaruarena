@@ -5,6 +5,7 @@ require 'webmock/rspec'
 
 RSpec.describe OpenAiAdapter do
   include AdapterTestHelpers
+
   let(:adapter) { described_class.new }
   # 何を検証するか: BaseAiAdapterを継承していること
 
@@ -118,6 +119,4 @@ RSpec.describe OpenAiAdapter do
 
   # 何を検証するか: APIキーの取得
   it_behaves_like 'adapter api key validation', 'OPENAI_API_KEY'
-
-
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.shared_examples 'GLM response status handling' do
   # AdapterTestHelpersのbuild_http_responseを使用
 

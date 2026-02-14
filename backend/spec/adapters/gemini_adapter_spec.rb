@@ -5,6 +5,7 @@ require 'webmock/rspec'
 
 RSpec.describe GeminiAdapter do
   include AdapterTestHelpers
+
   let(:adapter) { described_class.new }
   # 何を検証するか: BaseAiAdapterを継承していること
   it 'BaseAiAdapterを継承していること' do
@@ -102,8 +103,6 @@ RSpec.describe GeminiAdapter do
         expression: 15
       }
     end
-
-
 
     context '正常系' do
       it 'スコアとコメントが正しく解析されること' do
@@ -747,6 +746,4 @@ RSpec.describe GeminiAdapter do
       skip 'VCRカセットを作成する必要があります'
     end
   end
-
-
 end

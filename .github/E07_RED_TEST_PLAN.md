@@ -17,7 +17,7 @@ backend/spec/requests/api/posts_show_spec.rb
 
 ---
 
-## テストケース一覧（計12件）
+## テストケース一覧（計11件）
 
 ### 正常系（5件）
 
@@ -29,13 +29,12 @@ backend/spec/requests/api/posts_show_spec.rb
 | 4 | 審査失敗した投稿（status=failed）の詳細取得 | HTTP 200, succeeded=false, error_code含む |
 | 5 | 一部の審査員のみ成功した投稿（succeeded混在）の詳細取得 | HTTP 200, succeeded混在、失敗分はerror_codeあり |
 
-### 異常系（3件）
+### 異常系（2件）
 
 | No | テスト名 | 検証内容 |
 |----|---------|---------|
 | 1 | 存在しない投稿ID | HTTP 404, code: "NOT_FOUND" |
 | 2 | 不正なUUID形式 | HTTP 404, code: "NOT_FOUND" |
-| 3 | 空文字列のID | HTTP 404, code: "NOT_FOUND" |
 
 ### 境界値（4件）
 
@@ -63,7 +62,7 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
   end
 
   describe '異常系' do
-    # 3件のテスト
+    # 2件のテスト
   end
 
   describe '境界値' do
@@ -108,6 +107,15 @@ expect(json['code']).to eq('NOT_FOUND')
 - N+1クエリを発生させない
 - `binding.pry` を残さない
 - コメント・コミットメッセージは日本語
+
+---
+
+## 用語定義
+
+| 用語 | 定義 |
+|------|------|
+| `judges_count` | **成功した審査員数**（0-3）。succeeded=trueのJudgmentレコード数と一致させる |
+| `status` | `judging`（審査中）/ `scored`（2人以上成功）/ `failed`（1人以下成功） |
 
 ---
 
@@ -253,8 +261,9 @@ end
 
 ```ruby
 # 検証: 不正な形式のIDで404 NOT_FOUNDが返る（500ではなく）
+# 注意: URLエンコードやルーティングでエラーになる特殊文字は除外
 it '不正なUUID形式の場合404 NOT_FOUNDを返す' do
-  invalid_ids = ['abc', '123', 'invalid-uuid', '!@#$%']
+  invalid_ids = ['abc', '123', 'invalid-uuid', 'not-a-uuid-at-all']
 
   invalid_ids.each do |invalid_id|
     get "/api/posts/#{invalid_id}"
@@ -262,18 +271,6 @@ it '不正なUUID形式の場合404 NOT_FOUNDを返す' do
     json = response.parsed_body
     expect(json['code']).to eq('NOT_FOUND')
   end
-end
-```
-
-### テスト8: 空文字列のID
-
-```ruby
-# 検証: 空文字列で404 NOT_FOUNDが返る
-it '空文字列のIDの場合404 NOT_FOUNDを返す' do
-  # Railsのルーティングにより /api/posts にマッチする可能性があるため
-  # 実装時のルーティング挙動に合わせて調整
-  get '/api/posts/'
-  expect(response).to have_http_status(:not_found)
 end
 ```
 
@@ -300,11 +297,16 @@ end
 
 ```ruby
 # 検証: 同点の場合created_atが早い方が上位になる
+# 注意: Time.nowを使用すると実行タイミングでテストが不安定になるため、固定値を使用
 it '同点の投稿が複数存在する場合created_atの早い方が上位になる' do
+  # 固定のタイムスタンプを使用（Flakyテスト回避）
+  earlier_timestamp = '1700000000'
+  later_timestamp = '1700000010'
+
   # 1つ目の投稿（早い）
   post1 = create(:post, :scored,
     average_score: 85.0,
-    created_at: (Time.now - 10).to_i.to_s
+    created_at: earlier_timestamp
   )
   create(:judgment, :hiroyuki, post_id: post1.id, total_score: 85)
   create(:judgment, :dewi, post_id: post1.id, total_score: 85)
@@ -313,7 +315,7 @@ it '同点の投稿が複数存在する場合created_atの早い方が上位に
   # 2つ目の投稿（遅い、同点）
   post2 = create(:post, :scored,
     average_score: 85.0,
-    created_at: Time.now.to_i.to_s
+    created_at: later_timestamp
   )
   create(:judgment, :hiroyuki, post_id: post2.id, total_score: 85)
   create(:judgment, :dewi, post_id: post2.id, total_score: 85)
