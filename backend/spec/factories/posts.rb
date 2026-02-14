@@ -19,7 +19,11 @@ FactoryBot.define do
         post.score_key = post.generate_score_key
       end
       after(:create) do |post|
-        post.update_column(:score_key, post.generate_score_key) if post.score_key.blank?
+        # DynamoidはActiveRecordのupdate_columnを持たないため、直接更新して保存
+        if post.score_key.blank?
+          post.score_key = post.generate_score_key
+          post.save(validate: false)
+        end
       end
     end
 
