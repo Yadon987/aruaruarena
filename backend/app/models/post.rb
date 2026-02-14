@@ -109,25 +109,66 @@ class Post
     save!
   end
 
-  # ランキング順位を計算
+  # ランキング順位を計算する
+  #
+  # GSI(RankingIndex)に対してクエリを実行し、自分より上位のscore_keyを持つ投稿数をカウント
+  # score_key = "inv_score#created_at#id" のため、辞書順で小さい方がスコアが高い
   #
   # @note 効率上の注意: GSIに対してクエリを実行するため、投稿数が増えると遅延が発生する可能性があります
   #       ランキングAPIなど高頻度で呼ばれる場合は、順位情報のキャッシュを検討してください
   #
-  # @return [Integer] 順位（1位スタート）
+  # @return [Integer, nil] 順位（1位スタート）。scored以外のステータスはnilを返す
   def calculate_rank
     return nil unless status == STATUS_SCORED
-    return nil if score_key.blank? # score_keyが設定されていない場合はnilを返す
+    return nil if score_key.blank?
 
-    # GSIに対してクエリを実行して、自分より上位の投稿数をカウント
-    # Dynamoid 3.xではEnumeratorを返すため、to_aで配列に変換
-    higher_posts = Post.where(status: STATUS_SCORED)
+    # GSIクエリで自分より上位（score_keyが小さい）の投稿数を取得
+    higher_count = Post.where(status: STATUS_SCORED)
                        .where('score_key.lt': score_key)
-                       .to_a
+                       .count
 
-    higher_score_count = higher_posts.count
+    higher_count + 1
+  end
 
-    higher_score_count + 1 # 1位スタート
+  # 投稿詳細のAPI レスポンス用JSON形式で返す
+  #
+  # 以下のフィールドを含む:
+  # - id, nickname, body: 投稿の基本情報
+  # - average_score: 成功した審査員のtotal_scoreの平均値（DynamoDBから取得した値をFloat変換）
+  # - status: 審査状態（judging/scored/failed）
+  # - judges_count: 成功した審査員数（0-3）
+  # - rank: ランキング順位（scored以外はnil）
+  # - total_count: 全scored投稿数
+  # - judgments: 審査結果の配列（Judgment#to_judgment_jsonで変換）
+  #
+  # @param judgments [Array<Judgment>] 審査結果の配列
+  # @param rank [Integer, nil] ランキング順位
+  # @param total_count [Integer] 全scored投稿数
+  # @return [Hash] JSON形式の投稿詳細
+  def to_detail_json(judgments, rank, total_count)
+    {
+      id: id,
+      nickname: nickname,
+      body: body,
+      average_score: average_score&.to_f,
+      status: status,
+      judges_count: judges_count,
+      rank: rank,
+      total_count: total_count,
+      judgments: judgments.map(&:to_judgment_json)
+    }
+  end
+
+  # 全scored投稿数を取得する
+  #
+  # GSI(RankingIndex)のstatus='scored'でクエリし、該当する投稿数をカウント
+  #
+  # @note パフォーマンス注意: DynamoDBではScanベースのcountになる可能性あり。
+  #       投稿数が増大した場合はキャッシュの導入を検討すること。
+  #
+  # @return [Integer] scored状態の投稿数
+  def self.total_scored_count
+    where(status: STATUS_SCORED).count
   end
 
   private

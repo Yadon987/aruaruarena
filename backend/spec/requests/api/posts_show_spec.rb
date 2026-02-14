@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe 'GET /api/posts/:id', type: :request do
@@ -149,18 +151,16 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
 
       # 1つ目の投稿（早い）
       post1 = create(:post, :scored,
-        average_score: 85.0,
-        created_at: earlier_timestamp
-      )
+                     average_score: 85.0,
+                     created_at: earlier_timestamp)
       create(:judgment, :hiroyuki, post_id: post1.id, total_score: 85)
       create(:judgment, :dewi, post_id: post1.id, total_score: 85)
       create(:judgment, :nakao, post_id: post1.id, total_score: 85)
 
       # 2つ目の投稿（遅い、同点）
       post2 = create(:post, :scored,
-        average_score: 85.0,
-        created_at: later_timestamp
-      )
+                     average_score: 85.0,
+                     created_at: later_timestamp)
       create(:judgment, :hiroyuki, post_id: post2.id, total_score: 85)
       create(:judgment, :dewi, post_id: post2.id, total_score: 85)
       create(:judgment, :nakao, post_id: post2.id, total_score: 85)
@@ -202,6 +202,58 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
       json = response.parsed_body
       expect(json['average_score']).to eq(100.0)
       expect(json['rank']).to eq(1) # 最高点なので1位
+    end
+  end
+
+  describe 'レスポンス構造' do
+    it 'レスポンスJSONのキー名・型が仕様通りであること' do
+      post = create(:post, :scored, average_score: 85.3, judges_count: 3)
+      create(:judgment, :hiroyuki, post_id: post.id)
+      create(:judgment, :dewi, post_id: post.id)
+      create(:judgment, :nakao, post_id: post.id)
+
+      get "/api/posts/#{post.id}"
+      json = response.parsed_body
+
+      # トップレベルフィールドの存在チェック
+      expect(json).to include(
+        'id', 'nickname', 'body', 'average_score',
+        'status', 'judges_count', 'rank', 'total_count', 'judgments'
+      )
+
+      # 型チェック
+      expect(json['id']).to be_a(String)
+      expect(json['nickname']).to be_a(String)
+      expect(json['body']).to be_a(String)
+      expect(json['average_score']).to be_a(Float)
+      expect(json['status']).to be_a(String)
+      expect(json['judges_count']).to be_an(Integer)
+      expect(json['rank']).to be_an(Integer)
+      expect(json['total_count']).to be_an(Integer)
+      expect(json['judgments']).to be_an(Array)
+
+      # Judgmentフィールドの存在チェック
+      judgment = json['judgments'].first
+      expect(judgment).to include(
+        'persona', 'succeeded', 'empathy', 'humor',
+        'brevity', 'originality', 'expression', 'total_score',
+        'comment', 'error_code'
+      )
+    end
+
+    it 'succeeded=trueの審査結果にerror_codeがnilであること' do
+      post = create(:post, :scored, judges_count: 3)
+      create(:judgment, :hiroyuki, post_id: post.id, succeeded: true)
+      create(:judgment, :dewi, post_id: post.id, succeeded: true)
+      create(:judgment, :nakao, post_id: post.id, succeeded: true)
+
+      get "/api/posts/#{post.id}"
+      json = response.parsed_body
+
+      json['judgments'].each do |j|
+        expect(j['succeeded']).to be true
+        expect(j['error_code']).to be_nil
+      end
     end
   end
 end

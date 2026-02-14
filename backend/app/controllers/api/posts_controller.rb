@@ -5,11 +5,27 @@ module Api
     # エラーコード定数
     ERROR_CODE_VALIDATION = 'VALIDATION_ERROR'
     ERROR_CODE_BAD_REQUEST = 'BAD_REQUEST'
+    ERROR_CODE_NOT_FOUND = 'NOT_FOUND'
+
+    # エラーメッセージ定数
+    ERROR_MESSAGE_NOT_FOUND = '投稿が見つかりません'
 
     # エラーメッセージ定数
     ERROR_MESSAGE_INVALID_REQUEST = 'リクエスト形式が正しくありません'
     FIELD_LABEL_NICKNAME = 'ニックネーム'
     FIELD_LABEL_BODY = '本文'
+
+    def show
+      post = Post.find(params[:id])
+      judgments = Judgment.where(post_id: post.id).to_a
+      rank = post.calculate_rank
+      total_count = Post.total_scored_count
+      render json: post.to_detail_json(judgments, rank, total_count)
+    rescue Dynamoid::Errors::RecordNotFound => e
+      # 非機能要件: エラー発生時にERRORレベルでログ出力（投稿ID・エラー内容を含む）
+      Rails.logger.error("[PostsController#show] Not found: id=#{params[:id]} error=#{e.class} - #{e.message}")
+      render_not_found
+    end
 
     def create
       post = Post.new(post_params.merge(id: SecureRandom.uuid))
@@ -64,6 +80,15 @@ module Api
         error: ERROR_MESSAGE_INVALID_REQUEST,
         code: ERROR_CODE_BAD_REQUEST
       }, status: :bad_request
+    end
+
+    # 投稿が見つからない場合のエラーレスポンスを返す
+    # @return [void] JSONレスポンスをレンダリング
+    def render_not_found
+      render json: {
+        error: ERROR_MESSAGE_NOT_FOUND,
+        code: ERROR_CODE_NOT_FOUND
+      }, status: :not_found
     end
 
     # 非同期で審査を開始する

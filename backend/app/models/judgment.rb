@@ -18,6 +18,15 @@
 class Judgment
   include Dynamoid::Document
 
+  # 採点項目フィールド名（5項目×20点 = 100点満点）
+  SCORE_FIELDS = %i[empathy humor brevity originality expression].freeze
+
+  # 各項目の最大スコア
+  MAX_SCORE_PER_ITEM = 20
+
+  # 合計点の最大値
+  MAX_TOTAL_SCORE = 100
+
   # テーブル設定
   table name: 'aruaruarena-judgments',
         key: :post_id
@@ -117,6 +126,18 @@ class Judgment
   # @return [Integer] 合計点（0-100）
   def self.calculate_total_score(scores)
     scores.values.sum
+  end
+
+  # 審査結果をAPI レスポンス用のJSON形式で返す
+  #
+  # succeeded=trueの場合: スコア・コメントを含む
+  # succeeded=falseの場合: error_codeを含み、スコア・コメントはnull
+  #
+  # @return [Hash] JSON形式の審査結果
+  def to_judgment_json
+    base = { persona: persona, succeeded: succeeded }
+    scores = SCORE_FIELDS.index_with { |field| send(field) }
+    base.merge(scores).merge(total_score: total_score, comment: comment, error_code: error_code)
   end
 
   private
