@@ -8,6 +8,16 @@ RSpec.describe DuplicateCheckService, type: :service do
     it 'DUPLICATE_DURATION_HOURS定数が24時間であること' do
       expect(described_class::DUPLICATE_DURATION_HOURS).to eq(24)
     end
+
+    # HASH_LOG_START_INDEX定数が0であること
+    it 'HASH_LOG_START_INDEX定数が0であること' do
+      expect(described_class::HASH_LOG_START_INDEX).to eq(0)
+    end
+
+    # HASH_LOG_END_INDEX定数が15であること
+    it 'HASH_LOG_END_INDEX定数が15であること' do
+      expect(described_class::HASH_LOG_END_INDEX).to eq(15)
+    end
   end
 
   describe '.duplicate?' do
@@ -64,6 +74,30 @@ RSpec.describe DuplicateCheckService, type: :service do
       end
     end
 
+    context 'エッジケース' do
+      # 絵文字を含む本文の正規化
+      it '絵文字を含む本文の正規化が正しく動作すること' do
+        # 絵文字は正規化で変換されない
+        hash1 = DuplicateCheck.generate_body_hash('😀😀😀')
+        hash2 = DuplicateCheck.generate_body_hash('😀😀😀')
+        expect(hash1).to eq(hash2)
+
+        # 重複チェックも正しく動作
+        create(:duplicate_check, body_hash: hash1, post_id: 'test_id', expires_at: Time.now.to_i + 1000)
+        expect(described_class.duplicate?(body: '😀😀😀')).to be true
+      end
+
+      # 非常に長い本文でも正しくハッシュ化されること
+      it '非常に長い本文でも正しくハッシュ化されること' do
+        long_body = 'あ' * 10_000
+        expect(described_class.duplicate?(body: long_body)).to be false
+
+        # register!も正常に動作すること
+        described_class.register!(body: long_body, post_id: 'test_long')
+        expect(described_class.duplicate?(body: long_body)).to be true
+      end
+    end
+
     context 'フェイルオープン (Resilience)' do
       # DynamoDB接続エラー時、falseを返す（投稿を許可）
       it 'DynamoDB接続エラー時、falseを返すこと' do
@@ -106,12 +140,11 @@ RSpec.describe DuplicateCheckService, type: :service do
         described_class.register!(body: 'テスト投稿', post_id: 'test_id')
 
         duplicate_check = DuplicateCheck.find(DuplicateCheck.generate_body_hash('テスト投稿'))
-        expect(duplicate_check.expires_at).to be_within(1).of(current_time + 86_400)
+        expect(duplicate_check.expires_at).to be_within(1).of(current_time + DuplicateCheck::DUPLICATE_DURATION_SECONDS)
       end
 
       # Integer型で保存されること
       it 'Integer型で保存されること' do
-        allow(DuplicateCheck).to receive(:register).and_call_original
         described_class.register!(body: 'テスト投稿', post_id: 'test_id')
 
         duplicate_check = DuplicateCheck.find(DuplicateCheck.generate_body_hash('テスト投稿'))
@@ -131,13 +164,16 @@ RSpec.describe DuplicateCheckService, type: :service do
   end
 
   describe '統合テスト' do
-    # register!後にduplicate?がtrueを返す
+    # register!後にduplicate?がtrueを返す（モックなし）
     it 'register!後にduplicate?がtrueを返すこと' do
-      allow(DuplicateCheck).to receive(:register).and_call_original
-      allow(DuplicateCheck).to receive(:find).and_return(double('duplicate_check', expires_at: Time.now.to_i + 1000))
-
       described_class.register!(body: 'テスト投稿', post_id: 'test_id')
       expect(described_class.duplicate?(body: 'テスト投稿')).to be true
+    end
+
+    # 異なるテキストは重複しないこと
+    it '異なるテキストは重複しないこと' do
+      described_class.register!(body: 'テスト投稿A', post_id: 'test_id_a')
+      expect(described_class.duplicate?(body: 'テスト投稿B')).to be false
     end
   end
 end

@@ -8,6 +8,10 @@ class DuplicateCheckService
   DUPLICATE_DURATION_HOURS = 24
   DUPLICATE_DURATION_SECONDS = DUPLICATE_DURATION_HOURS * 3600 # 86400秒
 
+  # ログ出力用のハッシュインデックス（現在の振る舞いを維持: hash[0..15]）
+  HASH_LOG_START_INDEX = 0   # ハッシュの開始位置（ログ出力用）
+  HASH_LOG_END_INDEX = 15    # ハッシュの終了位置（ログ出力用）
+
   # 同一テキストが24時間以内に投稿されているかチェック
   # @param body [String] 投稿本文（生値。内部で正規化 + ハッシュ化する）
   # @return [Boolean] trueなら重複あり（投稿不可）
@@ -15,7 +19,7 @@ class DuplicateCheckService
     hash = DuplicateCheck.generate_body_hash(body)
 
     if DuplicateCheck.check(hash)
-      body_hash_short = hash[0..15]
+      body_hash_short = hash[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
       Rails.logger.warn("[DuplicateCheckService] Duplicate detected: body_hash=#{body_hash_short}")
       return true
     end

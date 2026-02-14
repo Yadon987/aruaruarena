@@ -8,6 +8,10 @@
 class DuplicateCheck
   include Dynamoid::Document
 
+  # 定数
+  DUPLICATE_DURATION_HOURS = 24
+  DUPLICATE_DURATION_SECONDS = DUPLICATE_DURATION_HOURS * 3600 # 86400秒
+
   # テーブル設定
   table name: 'aruaruarena-duplicate-checks', key: :body_hash
 
@@ -62,7 +66,7 @@ class DuplicateCheck
     create!(
       body_hash: body_hash,
       post_id: post_id,
-      expires_at: Time.now.to_i + 86_400 # 24時間（86400秒）
+      expires_at: Time.now.to_i + DUPLICATE_DURATION_SECONDS # 24時間（86400秒）
     )
   end
 end
