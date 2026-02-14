@@ -54,7 +54,12 @@ module DynamoDBTestHelpers
   end
 
   # テーブル内の全アイテムを削除（テスト前処理用）
+  #
   # Timeout.timeoutのスレッド割り込み問題を回避するため、カウントベースのループを使用
+  # 最大10秒（100回 * 0.1秒）待機し、タイムアウトした場合はエラーを発生させる
+  #
+  # @raise [RuntimeError] タイムアウトした場合
+  # @return [void]
   def cleanup_judgments_table
     Judgment.delete_all
     # 削除が完了するまで待機（ポーリング）
@@ -64,5 +69,10 @@ module DynamoDBTestHelpers
       sleep(0.1)
       attempt += 1
     end
+
+    # タイムアウト時にエラーを明示的に発生させる
+    return if Judgment.count.zero? # rubocop:disable Style/CollectionQuerying
+
+    raise "cleanup_judgments_table: タイムアウトしました（#{max_attempts}回試行後も#{Judgment.count}件のレコードが残存）"
   end
 end

@@ -57,9 +57,7 @@ class Post
                          range_key: :score_key
 
   # アソシエーション
-  # dependent: :restrict_with_error - Post削除時にJudgmentが存在する場合はエラー
-  # DynamoDBでは従来の依存削除オプションが期待通り動作しないため、削除禁止とする
-  has_many :judgments, dependent: :restrict_with_error
+  has_many :judgments
 
   # バリデーション
   validates :id,          presence: { message: 'を入力してください' }
@@ -90,6 +88,7 @@ class Post
   # Callbacks
   before_validation :set_created_at, on: :create
   before_validation :sanitize_inputs
+  before_destroy :check_judgments_presence
 
   # スコア付き投稿のscore_keyを生成
   # @return [String] score_key（例: "0127#1738041600#uuid"）
@@ -123,8 +122,10 @@ class Post
     return nil if score_key.blank?
 
     # GSIクエリで自分より上位（score_keyが小さい）の投稿数を取得
+    # with_indexでranking_indexを明示的に指定してQuery操作を使用
     higher_count = Post.where(status: STATUS_SCORED)
                        .where('score_key.lt': score_key)
+                       .with_index(:ranking_index)
                        .count
 
     higher_count + 1
@@ -168,7 +169,9 @@ class Post
   #
   # @return [Integer] scored状態の投稿数
   def self.total_scored_count
-    where(status: STATUS_SCORED).count
+    where(status: STATUS_SCORED)
+      .with_index(:ranking_index)
+      .count
   end
 
   private
@@ -210,6 +213,11 @@ class Post
   end
 
   # 作成日時を設定（UnixTimestampを文字列として保存）
+  #
+  # 作成時にcreated_atが未設定の場合、現在時刻をUnixTimestampとして設定
+  # DynamoDBには日時型がないため、文字列型で保存
+  #
+  # @return [void]
   def set_created_at
     self.created_at ||= current_timestamp
   end
@@ -218,5 +226,18 @@ class Post
   # @return [String] UnixTimestamp（例: "1738041600"）
   def current_timestamp
     Time.now.to_i.to_s
+  end
+
+  # Judgmentが存在する場合は削除を防止
+  #
+  # Dynamoidではdependent: :restrict_with_errorがサポートされていないため、
+  # before_destroyコールバックで手動実装
+  #
+  # @return [Boolean] 削除許可ならtrue、禁止ならabort
+  def check_judgments_presence
+    return true if judgments.empty?
+
+    errors.add(:base, '審査結果が存在する投稿は削除できません')
+    throw(:abort)
   end
 end

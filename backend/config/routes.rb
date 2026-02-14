@@ -8,6 +8,6 @@ Rails.application.routes.draw do
   namespace :api do
     # ヘルスチェックエンドポイント（クライアント/フロントエンド用）
     get :health, to: 'health_check#index'
-    resources :posts, only: [:create, :show]
+    resources :posts, only: %i[create show]
   end
 end

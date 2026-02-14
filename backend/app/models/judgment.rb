@@ -63,17 +63,17 @@ class Judgment
   # スコア範囲のバリデーション（成功時のみ必須）
   with_options if: :succeeded? do
     validates :empathy,     presence: true,
-                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_SCORE_PER_ITEM }
     validates :humor,       presence: true,
-                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_SCORE_PER_ITEM }
     validates :brevity,     presence: true,
-                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_SCORE_PER_ITEM }
     validates :originality, presence: true,
-                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_SCORE_PER_ITEM }
     validates :expression,  presence: true,
-                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_SCORE_PER_ITEM }
     validates :total_score, presence: true,
-                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
+                            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_TOTAL_SCORE }
     validates :comment,     presence: true
   end
 
@@ -103,22 +103,43 @@ class Judgment
     end
   end
 
-  # ひろゆき風: 独創性(+3)、共感度(-2)
+  # ひろゆき風ペルソナのバイアスを適用
+  #
+  # 特徴:
+  # - 独創性を高く評価 (+3)
+  # - 共感度を低く評価 (-2)
+  #
+  # @param scores [Hash] スコア（破壊的変更）
+  # @return [void]
   def self.apply_hiroyuki_bias(scores)
-    scores[:originality] = [scores[:originality] + 3, 20].min
+    scores[:originality] = [scores[:originality] + 3, MAX_SCORE_PER_ITEM].min
     scores[:empathy]     = [scores[:empathy] - 2, 0].max
   end
 
-  # デヴィ婦人風: 表現力(+3)、面白さ(+2)
+  # デヴィ婦人風ペルソナのバイアスを適用
+  #
+  # 特徴:
+  # - 表現力を高く評価 (+3)
+  # - 面白さを高く評価 (+2)
+  #
+  # @param scores [Hash] スコア（破壊的変更）
+  # @return [void]
   def self.apply_dewi_bias(scores)
-    scores[:expression] = [scores[:expression] + 3, 20].min
-    scores[:humor]      = [scores[:humor] + 2, 20].min
+    scores[:expression] = [scores[:expression] + 3, MAX_SCORE_PER_ITEM].min
+    scores[:humor]      = [scores[:humor] + 2, MAX_SCORE_PER_ITEM].min
   end
 
-  # 中尾彬風: 面白さ(+3)、共感度(+2)
+  # 中尾彬風ペルソナのバイアスを適用
+  #
+  # 特徴:
+  # - 面白さを高く評価 (+3)
+  # - 共感度を高く評価 (+2)
+  #
+  # @param scores [Hash] スコア（破壊的変更）
+  # @return [void]
   def self.apply_nakao_bias(scores)
-    scores[:humor]   = [scores[:humor] + 3, 20].min
-    scores[:empathy] = [scores[:empathy] + 2, 20].min
+    scores[:humor]   = [scores[:humor] + 3, MAX_SCORE_PER_ITEM].min
+    scores[:empathy] = [scores[:empathy] + 2, MAX_SCORE_PER_ITEM].min
   end
 
   # 合計点を計算
@@ -143,6 +164,11 @@ class Judgment
   private
 
   # 審査日時を設定（UnixTimestampを文字列として保存）
+  #
+  # 作成時にjudged_atが未設定の場合、現在時刻をUnixTimestampとして設定
+  # DynamoDBには日時型がないため、文字列型で保存
+  #
+  # @return [void]
   def set_judged_at
     self.judged_at ||= Time.now.to_i.to_s
   end
