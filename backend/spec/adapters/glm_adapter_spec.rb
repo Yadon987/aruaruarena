@@ -116,4 +116,110 @@ RSpec.describe GlmAdapter do
       expect { adapter.send(:api_key) }.to raise_error(ArgumentError)
     end
   end
+
+  describe '.reset_prompt_cache!' do
+    it 'プロンプトキャッシュをリセットすること' do
+      # キャッシュを作成
+      described_class.new
+      # キャッシュをリセット
+      described_class.reset_prompt_cache!
+      expect(described_class.prompt_cache).to be_nil
+    end
+  end
+
+  describe '#execute_request' do
+    let(:adapter) { described_class.new }
+    let(:request_body) { { model: 'glm-4-flash', messages: [] } }
+
+    context 'エラーハンドリング' do
+      it 'Faraday::TimeoutError発生時にログ出力して再送出すること' do
+        allow(Rails.logger).to receive(:warn)
+        allow(adapter.send(:client)).to receive(:post).and_raise(Faraday::TimeoutError.new('timeout'))
+
+        expect { adapter.send(:execute_request, request_body) }.to raise_error(Faraday::TimeoutError)
+        expect(Rails.logger).to have_received(:warn).with(/GLM APIタイムアウト/)
+      end
+
+      it 'Faraday::ConnectionFailed発生時にログ出力して再送出すること' do
+        allow(Rails.logger).to receive(:error)
+        allow(adapter.send(:client)).to receive(:post).and_raise(Faraday::ConnectionFailed.new('connection failed'))
+
+        expect { adapter.send(:execute_request, request_body) }.to raise_error(Faraday::ConnectionFailed)
+        expect(Rails.logger).to have_received(:error).with(/GLM API接続エラー/)
+      end
+    end
+  end
+
+  describe '#handle_response_status' do
+    let(:adapter) { described_class.new }
+
+    def build_response(status, body = {})
+      double('Faraday::Response', status: status, body: body)
+    end
+
+    context 'HTTPステータス別処理' do
+      it '200番台でレスポンスを返すこと' do
+        allow(Rails.logger).to receive(:info)
+        response = build_response(200, { result: 'ok' })
+
+        result = adapter.send(:handle_response_status, response)
+        expect(result).to eq(response)
+        expect(Rails.logger).to have_received(:info).with('GLM API呼び出し成功')
+      end
+
+      it '201でレスポンスを返すこと' do
+        allow(Rails.logger).to receive(:info)
+        response = build_response(201)
+
+        result = adapter.send(:handle_response_status, response)
+        expect(result).to eq(response)
+      end
+
+      it '429でFaraday::ClientErrorを発生させること' do
+        allow(Rails.logger).to receive(:warn)
+        response = build_response(429, { error: 'rate limit' })
+
+        expect { adapter.send(:handle_response_status, response) }.to raise_error(Faraday::ClientError)
+        expect(Rails.logger).to have_received(:warn).with(/GLM APIレート制限/)
+      end
+
+      it '400でFaraday::ClientErrorを発生させること' do
+        allow(Rails.logger).to receive(:error)
+        response = build_response(400, { error: 'bad request' })
+
+        expect { adapter.send(:handle_response_status, response) }.to raise_error(Faraday::ClientError)
+        expect(Rails.logger).to have_received(:error).with(/GLM APIクライアントエラー/)
+      end
+
+      it '404でFaraday::ClientErrorを発生させること' do
+        allow(Rails.logger).to receive(:error)
+        response = build_response(404, { error: 'not found' })
+
+        expect { adapter.send(:handle_response_status, response) }.to raise_error(Faraday::ClientError)
+      end
+
+      it '500でFaraday::ServerErrorを発生させること' do
+        allow(Rails.logger).to receive(:error)
+        response = build_response(500, { error: 'internal error' })
+
+        expect { adapter.send(:handle_response_status, response) }.to raise_error(Faraday::ServerError)
+        expect(Rails.logger).to have_received(:error).with(/GLM APIサーバーエラー/)
+      end
+
+      it '503でFaraday::ServerErrorを発生させること' do
+        allow(Rails.logger).to receive(:error)
+        response = build_response(503, { error: 'service unavailable' })
+
+        expect { adapter.send(:handle_response_status, response) }.to raise_error(Faraday::ServerError)
+      end
+
+      it 'その他のステータス（例: 301）でFaraday::ClientErrorを発生させること' do
+        allow(Rails.logger).to receive(:error)
+        response = build_response(301, { error: 'redirect' })
+
+        expect { adapter.send(:handle_response_status, response) }.to raise_error(Faraday::ClientError)
+        expect(Rails.logger).to have_received(:error).with(/GLM API未知のエラー/)
+      end
+    end
+  end
 end

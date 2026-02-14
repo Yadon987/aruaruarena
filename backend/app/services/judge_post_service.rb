@@ -23,7 +23,7 @@ class JudgePostService
   # @param post_id [String] 投稿ID
   def initialize(post_id)
     @post = Post.find(post_id)
-  rescue Dynamoid::Errors::RecordNotFound
+  rescue Dynamoid::Errors::RecordNotFound, Dynamoid::Errors::MissingHashKey
     Rails.logger.warn("[JudgePostService] Post not found: #{post_id}")
     @post = nil
   end
@@ -92,8 +92,12 @@ class JudgePostService
     update_post_status!
   ensure
     # Executorをシャットダウン（リソースリーク防止）
-    @executor&.shutdown
-    @executor&.wait_for_termination(5)
+    begin
+      @executor&.shutdown
+      @executor&.wait_for_termination(5)
+    rescue StandardError => e
+      Rails.logger.error("[JudgePostService] Executor shutdown error: #{e.class}")
+    end
   end
 
   class << self
@@ -115,12 +119,13 @@ class JudgePostService
     @executor ||= Concurrent::ThreadPoolExecutor.new(
       min_threads: 3,
       max_threads: 3,
-      max_queue: 3,
-      fallback_policy: :abort
+      max_queue: 0,
+      fallback_policy: :caller_runs
     )
   end
 
   # 審査結果を保存する
+  # DynamoDB Localの整合性問題を回避するため、条件なし書き込みを使用
   def save_judgments!(results)
     @successful_judgments = []
 
@@ -130,17 +135,16 @@ class JudgePostService
       persona = data[:persona]
       result = data[:result]
 
-      judgment = Judgment.new(
-        post_id: @post.id,
-        persona: persona,
+      # 属性を構築
+      attrs = {
         id: SecureRandom.uuid,
         succeeded: result.succeeded,
         error_code: result.error_code,
         judged_at: Time.now.to_i.to_s
-      )
+      }
 
       if result.succeeded
-        judgment.assign_attributes(
+        attrs.merge!(
           empathy: result.scores[:empathy],
           humor: result.scores[:humor],
           brevity: result.scores[:brevity],
@@ -149,11 +153,47 @@ class JudgePostService
           total_score: Judgment.calculate_total_score(result.scores),
           comment: result.comment
         )
-        @successful_judgments << judgment
       end
 
-      judgment.save!
+      # 条件なし書き込みを実行（DynamoDB Localの整合性問題を回避）
+      put_item_without_condition(@post.id, persona, attrs)
+
+      # successful_judgmentsに追加（保存したデータから直接構築）
+      next unless result.succeeded
+
+      judgment = Judgment.new(
+        post_id: @post.id,
+        persona: persona,
+        **attrs.symbolize_keys
+      )
+      # total_scoreを設定（already included in attrs, but ensure it's set）
+      judgment.total_score ||= Judgment.calculate_total_score(result.scores)
+      @successful_judgments << judgment
     end
+  end
+
+  # DynamoDBに条件なしでアイテムを書き込む
+  # @param post_id [String] パーティションキー
+  # @param persona [String] ソートキー
+  # @param attrs [Hash] 属性ハッシュ
+  def put_item_without_condition(post_id, persona, attrs)
+    client = Dynamoid.adapter.client
+    table_name = Judgment.table_name
+
+    # 現在時刻を取得
+    now = Time.now.to_f
+
+    item = {
+      post_id: post_id,
+      persona: persona,
+      created_at: now,
+      updated_at: now
+    }.merge(attrs)
+
+    client.put_item(
+      table_name: table_name,
+      item: item
+    )
   end
 
   # ステータスを更新する

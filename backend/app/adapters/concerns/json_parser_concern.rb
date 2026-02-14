@@ -5,6 +5,7 @@
 # 複数のAI Adapter（Gemini, GLM, OpenAI）で共通する
 # JSONパース処理をモジュールとして抽出しました。
 module JsonParserConcern
+  extend ActiveSupport::Concern
   # コードブロックからJSONを抽出する
   #
   # @param text [String] AIからのレスポンステキスト
@@ -35,10 +36,10 @@ module JsonParserConcern
 
       begin
         integer_value = if value.is_a?(Integer)
-                        value
-                      else
-                        Float(value).round
-                      end
+                          value
+                        else
+                          Float(value).round
+                        end
       rescue ArgumentError, FloatDomainError, RangeError, TypeError => e # rubocop:disable Lint/ShadowedException
         raise ArgumentError, "Invalid score value for #{key}: #{value.inspect}", cause: e
       end # rubocop:enable Lint/ShadowedException
