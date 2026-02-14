@@ -237,6 +237,171 @@ RSpec.describe 'API::Posts', type: :request do
       end
     end
 
+    context 'レート制限 (E09-01)' do
+      # rails_helper.rbで各テスト前にPost.delete_all, RateLimit.delete_allが実行されるため
+      # ここでのdelete_allは不要
+
+      let(:valid_headers) do
+        { 'Content-Type' => 'application/json', 'REMOTE_ADDR' => '192.168.1.1' }
+      end
+      let(:valid_params) do
+        {
+          post: {
+            nickname: '太郎',
+            body: 'スヌーズ押して二度寝'
+          }
+        }
+      end
+      let(:same_ip_params) do
+        {
+          post: {
+            nickname: '次郎',
+            body: '同じIPの投稿です'
+          }
+        }
+      end
+      let(:same_nickname_params) do
+        {
+          post: {
+            nickname: '太郎',
+            body: '同じニックネームの投稿'
+          }
+        }
+      end
+
+      # Given: 初回投稿（IP・ニックネームともに制限なし）
+      # When: 投稿リクエスト
+      # Then: 投稿成功（201 Created）
+      it '初回投稿は正常に投稿できる（201 Created）' do
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+        json = response.parsed_body
+        expect(json['id']).to be_present
+        expect(json['status']).to eq('judging')
+      end
+
+      # Given: 同一IPで初回投稿成功
+      # When: 5分以内に2回目の投稿
+      # Then: 429 Too Many Requests + error message
+      it '同一IPで5分以内に2回目の投稿は429エラーを返す' do
+        # 初回投稿
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+
+        # 2回目（同一IP）
+        post '/api/posts', params: same_ip_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:too_many_requests)
+
+        json = response.parsed_body
+        expect(json['error']).to eq('投稿頻度を制限中')
+        expect(json['code']).to eq('RATE_LIMITED')
+      end
+
+      # Given: 同一ニックネームで初回投稿成功（異なるIP）
+      # When: 5分以内に2回目の投稿
+      # Then: 429 Too Many Requests
+      it '同一ニックネームで5分以内に2回目の投稿は429エラーを返す' do
+        # 初回投稿（IP: 192.168.1.1）
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+
+        # 2回目（同一ニックネーム、異なるIP）
+        different_ip_headers = valid_headers.merge('REMOTE_ADDR' => '192.168.1.2')
+        post '/api/posts', params: same_nickname_params.to_json, headers: different_ip_headers
+        expect(response).to have_http_status(:too_many_requests)
+
+        json = response.parsed_body
+        expect(json['error']).to eq('投稿頻度を制限中')
+        expect(json['code']).to eq('RATE_LIMITED')
+      end
+
+      # Given: 異なるIPかつ異なるニックネーム
+      # When: 連続投稿リクエスト
+      # Then: 両方とも投稿成功（201 Created）
+      it '異なるIPかつ異なるニックネームの場合は連続投稿可能' do
+        # 初回投稿
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+
+        # 異なるIP・異なるニックネーム
+        different_params = {
+          post: {
+            nickname: '次郎',
+            body: '異なるIPの投稿です'
+          }
+        }
+        different_headers = valid_headers.merge('REMOTE_ADDR' => '192.168.1.2')
+        post '/api/posts', params: different_params.to_json, headers: different_headers
+        expect(response).to have_http_status(:created)
+      end
+
+      # Given: 初回投稿成功
+      # When: 5分以内に2回目の投稿（同じIP・ニックネーム）
+      # Then: 429 Too Many Requests + 正しいエラーレスポンス
+      it 'レート制限エラーの場合、レスポンスボディが正しいこと' do
+        # 初回投稿
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+
+        # 2回目
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:too_many_requests)
+
+        json = response.parsed_body
+        expect(json['error']).to eq('投稿頻度を制限中')
+        expect(json['code']).to eq('RATE_LIMITED')
+      end
+
+      # Given: 同一IPで5分以内に2回目の投稿（ニックネームが空）
+      # When: 投稿リクエスト
+      # Then: レート制限が先に返される（429）
+      it 'バリデーションエラーとレート制限が同時に発生する場合、レート制限が先に返される' do
+        # 初回投稿
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+
+        # 2回目（ニックネーム空 - バリデーションエラーだがレート制限が先）
+        invalid_params = {
+          post: {
+            nickname: '',
+            body: '本文テスト'
+          }
+        }
+        post '/api/posts', params: invalid_params.to_json, headers: valid_headers
+
+        # レート制限（429）がバリデーションエラー（422）より優先
+        expect(response).to have_http_status(:too_many_requests)
+
+        json = response.parsed_body
+        expect(json['error']).to eq('投稿頻度を制限中')
+        expect(json['code']).to eq('RATE_LIMITED')
+      end
+
+      # Given: DynamoDB接続エラー（RateLimiterService内部でrescue）
+      # When: 投稿リクエスト
+      # Then: 投稿成功（フェイルオープン）
+      # 注意: limited?メソッド内部でrescueするため、コントローラーではなくサービス内部をモックする必要がある。
+      #       RateLimiterService.limited? 自体にand_raiseすると、サービス内のrescueをテストできない。
+      #       ここではRateLimit.findをモックして、サービス内のrescue動作を統合テストする。
+      it 'レート制限チェック時のDynamoDBエラーは投稿を阻害しない' do
+        # DynamoDBエラーをモック（サービス内部のfind呼び出しに対して）
+        allow(RateLimit).to receive(:find).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
+                                                                                             'Service unavailable'))
+        allow(Rails.logger).to receive(:error)
+
+        # 投稿リクエスト
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+
+        # 投稿成功（フェイルオープン）
+        expect(response).to have_http_status(:created)
+        json = response.parsed_body
+        expect(json['id']).to be_present
+      end
+
+      # TODO: RateLimiterService.set_limit! を実装し、投稿フロー（posts_controller / JudgePostService）に組み込んだ後、
+      #       set_limit! 時の DynamoDB エラーに対するフェイルオープン動作をテストする
+    end
+
     context '非同期審査トリガー (E05-06)' do
       # 検証: JudgePostServiceが非同期で呼び出される
       it '投稿成功時にJudgePostServiceが非同期で呼び出されること' do
