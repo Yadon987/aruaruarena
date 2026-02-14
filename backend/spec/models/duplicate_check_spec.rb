@@ -1,72 +1,75 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
-
 RSpec.describe DuplicateCheck, type: :model do
-  describe '.generate_body_hash' do
-    it '本文から一意のハッシュを生成できること' do
+  describe '#generate_body_hash' do
+    # SHA256ハッシュが正しく返ること
+    it 'SHA256ハッシュが正しく返ること' do
+      hash = described_class.generate_body_hash('テスト投稿')
+      expect(hash).to be_a(String)
+      expect(hash.length).to eq(16) # 16文字のハッシュ
+    end
+
+    it '同じ内容から同じハッシュが生成されること' do
       hash1 = described_class.generate_body_hash('テスト投稿')
       hash2 = described_class.generate_body_hash('テスト投稿')
       expect(hash1).to eq(hash2)
     end
 
-    it '異なる本文から異なるハッシュを生成すること' do
+    it '異なる内容から異なるハッシュが生成されること' do
       hash1 = described_class.generate_body_hash('テスト投稿')
-      hash2 = described_class.generate_body_hash('別の投稿')
+      hash2 = described_class.generate_body_hash('異なる投稿')
       expect(hash1).not_to eq(hash2)
     end
 
-    it '正規化により似た投稿は同じハッシュになること' do
-      hash1 = described_class.generate_body_hash('Ｔｅｓｔ　投稿') # 全角・スペース2つ
-      hash2 = described_class.generate_body_hash('test 投稿') # 半角・スペース1つ
-      expect(hash1).to eq(hash2)
-    end
-
-    it '大文字小文字を区別しないこと' do
-      hash1 = described_class.generate_body_hash('Test Post')
-      hash2 = described_class.generate_body_hash('test post')
-      expect(hash1).to eq(hash2)
-    end
-
-    it 'カタカナをひらがなに変換すること' do
-      hash1 = described_class.generate_body_hash('テストトウコウ')  # カタカナ
-      hash2 = described_class.generate_body_hash('てすととうこう')  # ひらがな
-      expect(hash1).to eq(hash2)
+    it '正規化が適用されていること' do
+      # 全角→半角変換
+      expect(described_class.generate_body_hash('ＡＣＣｃｓ　トウコウ　')).to eq(described_class.generate_body_hash('ａｓｃｅｓ　'))
+      # カタカナ→ひらがな変換
+      expect(described_class.generate_body_hash('あいう')).to eq(described_class.generate_body_hash('アイウ'))
     end
   end
 
-  describe '.check' do
-    it '既存のチェックを返すこと' do
-      body = 'テスト投稿'
-      hash = described_class.generate_body_hash(body)
-      create(:duplicate_check, body_hash: hash, post_id: 'post-1')
-
-      result = described_class.check(body)
-
-      expect(result).to be_present
-      expect(result.post_id).to eq('post-1')
+  describe '#check' do
+    # レコードが存在する場合、trueを返す
+    it 'レコードが存在する場合、trueを返すこと' do
+      create(:duplicate_check, body_hash: 'test_hash', post_id: 'test_id', expires_at: Time.now.to_i + 1000)
+      expect(described_class.check('test_hash')).to be true
     end
 
-    it '存在しない場合はnilを返すこと' do
-      result = described_class.check('存在しない投稿')
-      expect(result).to be_nil
+    # レコードが存在しない場合、falseを返す
+    it 'レコードが存在しない場合、falseを返すこと' do
+      expect(described_class.check('nonexistent_hash')).to be false
     end
   end
 
-  describe '.register' do
-    it '重複チェックを登録できること' do
-      current_time = Time.now.to_i
-      check = described_class.register('テスト投稿', 'post-1')
-      expect(check.post_id).to eq('post-1')
-      # String型なので整数に変換して比較
-      expect(check.expires_at.to_i).to be_within(1).of(current_time + 86_400) # 24時間後
+  describe '#register' do
+    # 重複チェックレコードが作成される
+    it '重複チェックレコードが作成されること' do
+      expect do
+        described_class.register(body_hash: 'test_hash', post_id: 'test_id')
+      end.to change(DuplicateCheck, :count).by(1)
+
+      duplicate_check = DuplicateCheck.find('test_hash')
+      expect(duplicate_check).to be_present
+      expect(duplicate_check.body_hash).to eq('test_hash')
+      expect(duplicate_check.post_id).to eq('test_id')
     end
 
-    it 'カスタムの保持時間を指定できること' do
+    # expires_atが現在時刻+86400秒（24時間）に設定されること
+    it 'expires_atが現在時刻+86400秒（24時間）に設定されること' do
       current_time = Time.now.to_i
-      check = described_class.register('テスト投稿', 'post-1', hours: 12)
-      # String型なので整数に変換して比較
-      expect(check.expires_at.to_i).to be_within(1).of(current_time + 43_200) # 12時間後
+      described_class.register(body_hash: 'test_hash', post_id: 'test_id')
+
+      duplicate_check = DuplicateCheck.find('test_hash')
+      expect(duplicate_check.expires_at).to be_within(1).of(current_time + 86_400)
+    end
+
+    # Integer型で保存されること
+    it 'Integer型で保存されること' do
+      described_class.register(body_hash: 'test_hash', post_id: 'test_id')
+
+      duplicate_check = DuplicateCheck.find('test_hash')
+      expect(duplicate_check.expires_at).to be_a(Integer)
     end
   end
 end

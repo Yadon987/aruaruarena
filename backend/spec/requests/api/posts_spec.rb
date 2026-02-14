@@ -468,5 +468,113 @@ RSpec.describe 'API::Posts', type: :request do
         expect(thread.value).to be_nil
       end
     end
+
+    context '重複チェック (E09-02)' do
+      let(:valid_headers) do
+        { 'Content-Type' => 'application/json', 'REMOTE_ADDR' => '192.168.1.1' }
+      end
+      let(:valid_params) do
+        {
+          post: {
+            nickname: '太郎',
+            body: 'スヌーズ押して二度寝'
+          }
+        }
+      end
+      let(:duplicate_params) do
+        {
+          post: {
+            nickname: '次郎',
+            body: 'スヌーズ押して二度寝'
+          }
+        }
+      end
+      let(:different_ip_params) do
+        {
+          post: {
+            nickname: '三郎',
+            body: 'スヌーズ押して二度寝'
+          }
+        }
+      end
+      let(:different_ip_headers) do
+        valid_headers.merge('REMOTE_ADDR' => '192.168.1.2')
+      end
+
+      # 初回投稿は正常に投稿できる（201 Created）
+      it '初回投稿は正常に投稿できる（201 Created）' do
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+        json = response.parsed_body
+        expect(json['id']).to be_present
+        expect(json['status']).to eq('judging')
+      end
+
+      # 同一内容の投稿は422エラーを返す
+      it '同一内容の投稿は422エラーを返す' do
+        # 初回投稿
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+
+        # 2回目（同一内容）
+        post '/api/posts', params: duplicate_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:unprocessable_entity)
+        json = response.parsed_body
+        expect(json['error']).to eq('同じ内容の投稿があります')
+        expect(json['code']).to eq('DUPLICATE_CONTENT')
+      end
+
+      # 異なるIP・異なるニックネームの場合は投稿可能
+      it '異なるIP・異なるニックネームの場合は投稿可能' do
+        post '/api/posts', params: different_ip_params.to_json, headers: different_ip_headers
+        expect(response).to have_http_status(:created)
+      end
+
+      # 重複エラーの場合、レスポンスボディが正しいこと
+      it '重複エラーの場合、レスポンスボディが正しいこと' do
+        # 初回投稿
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+
+        # 2回目（同一内容）
+        post '/api/posts', params: duplicate_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:unprocessable_entity)
+
+        json = response.parsed_body
+        expect(json['error']).to eq('同じ内容の投稿があります')
+        expect(json['code']).to eq('DUPLICATE_CONTENT')
+      end
+
+      # 24時間経過後は投稿可能
+      it '24時間経過後は投稿可能' do
+        # 初回投稿（expires_at = 現在時刻）
+        create(:duplicate_check, body_hash: 'test_hash', post_id: 'test_id', expires_at: Time.now.to_i)
+
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+      end
+
+      # DynamoDB接続エラー時は投稿を阻害しない
+      it 'DynamoDB接続エラー時は投稿を阻害しない' do
+        allow(DuplicateCheckService).to receive(:duplicate?).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable'))
+        allow(Rails.logger).to receive(:error)
+
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+        json = response.parsed_body
+        expect(json['id']).to be_present
+      end
+
+      # 重複チェック時のDynamoDBエラーは投稿を阻害しない
+      it 'register!時のDynamoDBエラーは投稿を阻害しない' do
+        allow(DuplicateCheckService).to receive(:register!).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable'))
+        allow(Rails.logger).to receive(:error)
+
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
+        json = response.parsed_body
+        expect(json['id']).to be_present
+      end
+    end
   end
 end
