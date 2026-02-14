@@ -6,9 +6,11 @@ module Api
     ERROR_CODE_VALIDATION = 'VALIDATION_ERROR'
     ERROR_CODE_BAD_REQUEST = 'BAD_REQUEST'
     ERROR_CODE_NOT_FOUND = 'NOT_FOUND'
+    ERROR_CODE_RATE_LIMITED = 'RATE_LIMITED'
 
     # エラーメッセージ定数
     ERROR_MESSAGE_NOT_FOUND = '投稿が見つかりません'
+    ERROR_MESSAGE_RATE_LIMITED = '投稿頻度を制限中'
 
     # エラーメッセージ定数
     ERROR_MESSAGE_INVALID_REQUEST = 'リクエスト形式が正しくありません'
@@ -28,9 +30,25 @@ module Api
     end
 
     def create
+      # レート制限チェック（投稿バリデーション前に実行）
+      if RateLimiterService.limited?(ip: request.remote_ip, nickname: post_params[:nickname])
+        render json: {
+          error: ERROR_MESSAGE_RATE_LIMITED,
+          code: ERROR_CODE_RATE_LIMITED
+        }, status: :too_many_requests
+        return
+      end
+
       post = Post.new(post_params.merge(id: SecureRandom.uuid))
 
       if post.save
+        # 投稿成功後にレート制限を設定
+        begin
+          RateLimiterService.set_limit!(ip: request.remote_ip, nickname: post_params[:nickname])
+        rescue StandardError => e
+          # set_limit!失敗時も投稿レスポンスを返す（フェイルオープン）
+          Rails.logger.error("[PostsController#create] Rate limit set failed: #{e.class} - #{e.message}")
+        end
         start_judgment_async(post)
         render json: { id: post.id, status: post.status }, status: :created
       else
