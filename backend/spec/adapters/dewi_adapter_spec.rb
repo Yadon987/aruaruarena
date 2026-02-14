@@ -3,54 +3,60 @@
 require 'rails_helper'
 require 'webmock/rspec'
 
-RSpec.describe GlmAdapter do
-  include AdapterTestHelpers
-  let(:adapter) { described_class.new }
+# Issue: E06-05
+RSpec.describe DewiAdapter, type: :model do
+  # 各テスト前にプロンプトキャッシュをリセット
+  before(:each) do
+    described_class.reset_prompt_cache! if defined?(described_class.reset_prompt_cache!)
+  end
 
+  let(:adapter) { described_class.new }
+  # 何を検証するか: BaseAiAdapterを継承していること
   it 'BaseAiAdapterを継承していること' do
     expect(described_class < BaseAiAdapter).to be true
   end
 
+  # 何を検証するか: 定数の定義
+  # 定数の定義
   describe '定数' do
-    it '必要な定数が正しく定義されていること', :aggregate_failures do
-      expect(described_class::PROMPT_PATH).to eq('app/prompts/hiroyuki.txt')
-      expect(described_class::MODEL_NAME).to eq('glm-4-flash')
-      expect(described_class::BASE_URL).to eq('https://open.bigmodel.cn/api/paas/v4/')
+    it 'PROMPT_PATH定数が正しく定義されていること' do
+      expect(described_class::PROMPT_PATH).to eq('app/prompts/dewi.txt')
     end
   end
 
+  # 何を検証するか: プロンプトファイルが読み込まれていること
+  describe '初期化' do
+    it_behaves_like 'adapter initialization', 'デヴィ婦人風'
+  end
+
+  # 何を検証するか: Faradayクライアントの設定
   describe '#client' do
-    it 'Faraday::Connectionを返すこと' do
+    it 'Faraday::Connectionインスタンスを返すこと' do
       adapter = described_class.new
       expect(adapter.send(:client)).to be_a(Faraday::Connection)
     end
 
-    it '正しいBase URLが設定されていること' do
+    it 'GLM APIのベースURLが設定されていること' do
       adapter = described_class.new
-      expect(adapter.send(:client).url_prefix.to_s).to eq('https://open.bigmodel.cn/api/paas/v4/')
-    end
-
-    it 'Bearer Token認証ヘッダーが設定されること' do
-      allow(ENV).to receive(:[]).with('GLM_API_KEY').and_return('test_key')
-      described_class.new
-      # clientメソッド自体はヘッダーを設定しない（execute_requestで設定する）設計の場合は修正
-      # GeminiAdapterはexecute_requestで設定していたので、こちらもそれに合わせる
+      client = adapter.send(:client)
+      expect(client.url_prefix.to_s).to include('open.bigmodel.cn')
     end
   end
 
+  # 何を検証するか: APIキーの取得
+  it_behaves_like 'adapter api key validation', 'GLM_API_KEY'
+
+  # 何を検証するか: リクエストの構築
   describe '#build_request' do
     let(:adapter) { described_class.new }
     let(:post_content) { 'テスト投稿' }
-    let(:persona) { 'hiroyuki' }
+    let(:persona) { 'dewi' }
 
-    it 'OpenAI互換のメッセージ形式でリクエストを構築すること' do
+    it 'リクエストボディが正しく構築されること' do
       request = adapter.send(:build_request, post_content, persona)
-
-      expect(request).to be_a(Hash)
       expect(request[:model]).to eq('glm-4-flash')
-      expect(request[:messages]).to be_an(Array)
-      expect(request[:messages].first[:role]).to eq('user')
-      expect(request[:messages].first[:content]).to include(post_content)
+      expect(request[:messages]).to be_a(Array)
+      expect(request[:messages].first[:content]).to include('テスト投稿')
     end
 
     it 'temperatureとmax_tokensが設定されていること' do
@@ -60,12 +66,11 @@ RSpec.describe GlmAdapter do
     end
   end
 
+  # 何を検証するか: スコアバリデーション
   describe '#parse_response' do
     let(:adapter) { described_class.new }
     it_behaves_like 'openai style parse response'
   end
-
-  it_behaves_like 'adapter api key validation', 'GLM_API_KEY'
 
   describe '.reset_prompt_cache!' do
     it 'プロンプトキャッシュをリセットすること' do

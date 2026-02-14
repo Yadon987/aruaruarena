@@ -796,4 +796,3 @@ MIT License
 - **Format**: `.mp3` (汎用性重視)
 - **Transition**: シーン切り替え時は **クロスフェード (0.5s)** 推奨
 - **Persist**: ミュート状態を `localStorage` に保存・復元
-

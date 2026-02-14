@@ -45,13 +45,12 @@ RSpec.configure do |config|
 
   # 各テスト前にテーブルをクリーンアップ
   config.before(:each) do
-    # Dynamoid.adapter.list_tablesでテーブルの存在を確認
-    existing_tables = Dynamoid.adapter.list_tables
-
-    Post.delete_all if defined?(Post) && existing_tables.include?(Post.table_name)
-    Judgment.delete_all if defined?(Judgment) && existing_tables.include?(Judgment.table_name)
-    RateLimit.delete_all if defined?(RateLimit) && existing_tables.include?(RateLimit.table_name)
-    DuplicateCheck.delete_all if defined?(DuplicateCheck) && existing_tables.include?(DuplicateCheck.table_name)
+    # DynamoDB Localの整合性問題を回避するため、各テスト前にクリーンアップ
+    # delete_allは非同期ですが、テスト環境では十分に高速です
+    Post.delete_all if defined?(Post)
+    Judgment.delete_all if defined?(Judgment)
+    RateLimit.delete_all if defined?(RateLimit)
+    DuplicateCheck.delete_all if defined?(DuplicateCheck)
   end
 
   # Shoulda Matchers configuration
@@ -76,6 +75,19 @@ RSpec.configure do |config|
   #
   # To enable this behaviour uncomment the line below.
   config.infer_spec_type_from_file_location!
+
+  # Adapter用共通モック設定
+  config.before(:each, :adapter) do
+    # AdapterTestHelpersモジュールのメソッドを使用して各Adapterをモック
+    adapter_test_helpers = Object.new
+    adapter_test_helpers.extend(AdapterTestHelpers)
+    adapter_test_helpers.mock_adapter_judge(GeminiAdapter)
+    adapter_test_helpers.mock_adapter_judge(GlmAdapter)
+    adapter_test_helpers.mock_adapter_judge(DewiAdapter)
+    adapter_test_helpers.mock_adapter_judge(OpenAiAdapter)
+  end
+  config.include AdapterTestHelpers, type: :model
+  config.include AdapterTestHelpers, type: :service
 
   # Filter lines from Rails gems in backtraces.
   config.filter_rails_from_backtrace!

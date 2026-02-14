@@ -57,7 +57,8 @@ class Post
                          range_key: :score_key
 
   # アソシエーション
-  has_many :judgments, dependent: :destroy
+  # dependent: :destroyを削除（Judgment.delete_all時にPostが削除されるのを防ぐ）
+  has_many :judgments
 
   # バリデーション
   validates :id,          presence: { message: 'を入力してください' }

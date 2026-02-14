@@ -20,12 +20,10 @@ class Judgment
 
   # テーブル設定
   table name: 'aruaruarena-judgments',
-        key: :post_id,
-        range_key: :persona
+        key: :post_id
 
-  # Primary Key（自動的にString型として扱われるため、field定義は不要）
-  # field :post_idはDynamoidによって自動的に管理されます
-  # field :personaはDynamoidによって自動的に管理されます
+  # Range Key（Dynamoidのrangeメソッドを使用）
+  range :persona, :string
 
   # Attributes
   field :id,            :string # UUID
@@ -43,9 +41,6 @@ class Judgment
 
   # Timestamp（UnixTimestampを文字列として保存）
   field :judged_at,     :string
-
-  # DynamoidのRange Key用アクセサ（明示的に追加）
-  attr_accessor :persona
 
   # アソシエーション
   belongs_to :post
