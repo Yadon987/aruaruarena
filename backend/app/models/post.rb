@@ -33,6 +33,9 @@ class Post
   SCORE_MULTIPLIER = 10
   SCORE_BASE = 1000
 
+  # ランキング取得件数のデフォルト値
+  DEFAULT_RANKING_LIMIT = 20
+
   # テーブル設定
   table name: 'aruaruarena-posts', key: :id
   # 読み書きのキャパシティ（オンデマンドモードでは無効）
@@ -158,6 +161,49 @@ class Post
       total_count: total_count,
       judgments: judgments.map(&:to_judgment_json)
     }
+  end
+
+  # ランキングAPI用のJSON形式を返す
+  #
+  # @param rank [Integer] 順位
+  # @return [Hash] ランキングJSON形式
+  def to_ranking_json(rank)
+    {
+      rank: rank,
+      id: id,
+      nickname: nickname,
+      body: body,
+      average_score: average_score&.to_f
+    }
+  end
+
+  # TOPランキングを取得する
+  #
+  # GSI(RankingIndex)のstatus='scored'でクエリし、score_key昇順で取得
+  # score_key昇順 = スコア降順（inv_scoreが小さいほど高スコア）
+  #
+  # DynamoDBのGSIは投影属性が限られているため、GSIクエリでIDを取得した後、
+  # テーブルから完全なレコードを取得する2段階のクエリを実行している
+  #
+  # @param limit [Integer] 取得件数（デフォルト: DEFAULT_RANKING_LIMIT）
+  # @return [Array<Post>] ランキング順のPost配列
+  def self.top_rankings(limit = DEFAULT_RANKING_LIMIT)
+    # GSIからscore_key昇順でIDを取得
+    gsi_results = where(status: STATUS_SCORED)
+                  .with_index(:ranking_index)
+                  .scan_index_forward(true)
+                  .record_limit(limit)
+                  .to_a
+
+    # IDのリストを取得（GSIクエリ結果の順序を維持）
+    ids = gsi_results.map(&:id)
+
+    # テーブルから完全なレコードを取得
+    return [] if ids.empty?
+
+    # IDの順序を維持して返す
+    posts = find(ids).index_by(&:id)
+    ids.filter_map { |id| posts[id] }
   end
 
   # 全scored投稿数を取得する
