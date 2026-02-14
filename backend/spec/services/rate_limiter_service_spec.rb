@@ -86,7 +86,8 @@ RSpec.describe RateLimiterService, type: :service do
       # Then: 例外をrescueしてfalseを返す（投稿を許可）
       # 注意: DynamoDB接続エラーはAWS SDK側の例外として発生する
       it 'DynamoDB接続エラー時、falseを返すこと' do
-        allow(RateLimit).to receive(:find).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable'))
+        allow(RateLimit).to receive(:find).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
+                                                                                             'Service unavailable'))
         expect(Rails.logger).to receive(:error).with(/RateLimiterService.*DynamoDB error/)
         expect(described_class.limited?(ip: ip, nickname: nickname)).to be false
       end
@@ -166,7 +167,8 @@ RSpec.describe RateLimiterService, type: :service do
       # Then: 例外が発生する（set_limit!はフェイルオープンではない。投稿保存後に呼ばれるため）
       # 注意: RateLimit.create!ではなく、実際のDynamoDB操作で発生する例外を使用
       it 'DynamoDB接続エラー時、例外が発生すること' do
-        allow(RateLimit).to receive(:create!).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable'))
+        allow(RateLimit).to receive(:create!).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
+                                                                                                'Service unavailable'))
         expect do
           described_class.set_limit!(ip: ip, nickname: nickname)
         end.to raise_error(Aws::DynamoDB::Errors::ServiceError)

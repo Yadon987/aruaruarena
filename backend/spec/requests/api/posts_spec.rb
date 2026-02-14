@@ -385,7 +385,8 @@ RSpec.describe 'API::Posts', type: :request do
       #       ここではRateLimit.findをモックして、サービス内のrescue動作を統合テストする。
       it 'レート制限チェック時のDynamoDBエラーは投稿を阻害しない' do
         # DynamoDBエラーをモック（サービス内部のfind呼び出しに対して）
-        allow(RateLimit).to receive(:find).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable'))
+        allow(RateLimit).to receive(:find).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
+                                                                                             'Service unavailable'))
         allow(Rails.logger).to receive(:error)
 
         # 投稿リクエスト

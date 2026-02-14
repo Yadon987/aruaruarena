@@ -4,7 +4,12 @@
 #
 # IPアドレスとニックネームの両方に対して5分間の投稿制限を設ける
 class RateLimiterService
+  # 定数
   LIMIT_DURATION = 300
+
+  # ログ出力用のハッシュインデックス
+  HASH_LOG_START_INDEX = 3  # ハッシュの開始位置（ログ出力用）
+  HASH_LOG_END_INDEX = 19   # ハッシュの終了位置（ログ出力用）
 
   # IPアドレスまたはニックネームが制限中かチェック
   # @param ip [String] IPアドレス（生値。内部でハッシュ化する）
@@ -15,12 +20,13 @@ class RateLimiterService
     nickname_identifier = RateLimit.generate_nickname_identifier(nickname)
 
     # IPとニックネームの両方をチェック（OR条件）
+    # いずれか一方が制限中であれば投稿を拒否する
     ip_limited = RateLimit.limited?(ip_identifier)
     nickname_limited = RateLimit.limited?(nickname_identifier)
 
     if ip_limited || nickname_limited
-      ip_hash = RateLimit.generate_ip_identifier(ip)[3..18]
-      nickname_hash = RateLimit.generate_nickname_identifier(nickname)[5..20]
+      ip_hash = RateLimit.generate_ip_identifier(ip)[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
+      nickname_hash = RateLimit.generate_nickname_identifier(nickname)[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
       Rails.logger.error("[RateLimiterService] Limited: ip=#{ip_hash}, nickname=#{nickname_hash}")
       return true
     end

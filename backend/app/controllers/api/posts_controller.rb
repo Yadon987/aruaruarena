@@ -31,6 +31,7 @@ module Api
 
     def create
       # レート制限チェック（投稿バリデーション前に実行）
+      # バリデーションより先にチェックして、不要なDB操作を回避
       if RateLimiterService.limited?(ip: request.remote_ip, nickname: post_params[:nickname])
         render json: {
           error: ERROR_MESSAGE_RATE_LIMITED,
