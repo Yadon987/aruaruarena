@@ -73,6 +73,19 @@ module AdapterTestHelpers
       ) : create_timeout_response
     )
   end
+
+  # adapter_classを文字列キーとして使用してモックを取得する
+  def get_adapter_mock(adapter_class)
+    adapter_name = adapter_class.to_s.split('::').last.downcase
+    instance_variable_get(:@adapter_mocks, nil)&.dig(adapter_name.to_sym)
+  end
+
+  # adapter_classを文字列キーとして使用してモックを設定する
+  def set_adapter_mock(adapter_class, mock)
+    adapter_name = adapter_class.to_s.split('::').last.downcase
+    mocks = instance_variable_get(:@adapter_mocks, nil) || {}
+    instance_variable_set(:@adapter_mocks, mocks.merge(adapter_name.to_sym => mock))
+  end
 end
 
 RSpec.configure do |config|

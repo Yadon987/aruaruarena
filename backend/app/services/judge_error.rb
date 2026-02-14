@@ -26,11 +26,10 @@ class JudgeError < StandardError
   # @param error_code [String] エラーコード
   # @param original_error [StandardError, nil] 元の例外
   def initialize(judge_persona:, error_code:, original_error: nil)
-    @persona = persona
+    @persona = judge_persona
     @error_code = error_code
     @original_error = original_error
-    super("[JudgeError] persona=#{persona}, error_code=#{error_code}")
-  end
+    super("[JudgeError] persona=#{judge_persona}, error_code=#{error_code}")
   end
 
   # ハッシュ形式に変換する（ログ出力用）
