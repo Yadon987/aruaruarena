@@ -18,7 +18,8 @@ module Api
       end
       render json: { rankings: rankings, total_count: total_count }
     rescue StandardError => e
-      Rails.logger.error("[RankingsController#index] Error: #{e.class} - #{e.message}")
+      # 非機能要件: エラー発生時にERRORレベルでログ出力
+      Rails.logger.error("[RankingsController#index] Error: error=#{e.class} - #{e.message}")
       render json: { error: ERROR_MESSAGE_INTERNAL_ERROR, code: ERROR_CODE_INTERNAL_ERROR },
              status: :internal_server_error
     end

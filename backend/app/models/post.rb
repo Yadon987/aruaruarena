@@ -33,6 +33,9 @@ class Post
   SCORE_MULTIPLIER = 10
   SCORE_BASE = 1000
 
+  # ランキング取得件数のデフォルト値
+  DEFAULT_RANKING_LIMIT = 20
+
   # テーブル設定
   table name: 'aruaruarena-posts', key: :id
   # 読み書きのキャパシティ（オンデマンドモードでは無効）
@@ -178,11 +181,13 @@ class Post
   #
   # GSI(RankingIndex)のstatus='scored'でクエリし、score_key昇順で取得
   # score_key昇順 = スコア降順（inv_scoreが小さいほど高スコア）
-  # GSIクエリ結果からIDを取得し、テーブルから完全なレコードを取得
   #
-  # @param limit [Integer] 取得件数（デフォルト: 20）
+  # DynamoDBのGSIは投影属性が限られているため、GSIクエリでIDを取得した後、
+  # テーブルから完全なレコードを取得する2段階のクエリを実行している
+  #
+  # @param limit [Integer] 取得件数（デフォルト: DEFAULT_RANKING_LIMIT）
   # @return [Array<Post>] ランキング順のPost配列
-  def self.top_rankings(limit = 20)
+  def self.top_rankings(limit = DEFAULT_RANKING_LIMIT)
     # GSIからscore_key昇順でIDを取得
     gsi_results = where(status: STATUS_SCORED)
                   .with_index(:ranking_index)
