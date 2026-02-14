@@ -553,8 +553,9 @@ RSpec.describe 'API::Posts', type: :request do
 
       # 24時間経過後は投稿可能
       it '24時間経過後は投稿可能' do
-        # 初回投稿（expires_at = 現在時刻）
-        create(:duplicate_check, body_hash: 'test_hash', post_id: 'test_id', expires_at: Time.now.to_i)
+        # 初回投稿（expires_at = 現在時刻、期限切れ）
+        body_hash = DuplicateCheck.generate_body_hash('スヌーズ押して二度寝')
+        create(:duplicate_check, body_hash: body_hash, post_id: 'test_id', expires_at: Time.now.to_i)
 
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
