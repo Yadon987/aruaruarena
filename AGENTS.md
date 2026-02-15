@@ -11,7 +11,7 @@ Ruby on Rails 8 API + DynamoDB で構築された「あるあるアリーナ」�
 | Backend | Ruby 3.2+, Rails 8.0+ (API mode) |
 | Database | DynamoDB (NoSQL) |
 | Serverless | AWS Lambda |
-| Testing | RSpec 3.13+, FactoryBot |
+| Testing | RSpec 8.0+, FactoryBot |
 | Frontend | React 18 + TypeScript (別リポジトリ) |
 | AI APIs | Gemini 2.5 Flash, GLM-4.7-FlashX, GPT-4o-mini |
 
@@ -59,7 +59,10 @@ Ruby on Rails 8 API + DynamoDB で構築された「あるあるアリーナ」�
 
 **機能ブランチはmainから直接分岐してください**
 ```bash
-# ✅ 良い例　git checkout main　git pull origin main　git checkout -b feature/new-feature
+# ✅ 良い例
+git checkout main
+git pull origin main
+git checkout -b feature/new-feature
 # ❌ 悪い例　git checkout -b intermediate-branch
 ```
 

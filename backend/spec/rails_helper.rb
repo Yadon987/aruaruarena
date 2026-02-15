@@ -42,23 +42,23 @@ RSpec.configure do |config|
         # 必要なテーブルが作成されているか確認
         existing_tables = Dynamoid.adapter.list_tables
         puts "[Before Suite] Existing tables: #{existing_tables.inspect}" if ENV['DEBUG']
-        
+
         # モデルに関連するテーブルを作成
         [Post, Judgment, RateLimit].each do |model|
-           if defined?(model) && !existing_tables.include?(model.table_name)
-             puts "Creating table for #{model}..."
-             model.create_table
-           end
+          if defined?(model) && existing_tables.exclude?(model.table_name)
+            puts "Creating table for #{model}..."
+            model.create_table
+          end
         end
 
         # DuplicateCheckはカスタムキーを使用しているため、明示的に作成
-        if defined?(DuplicateCheck) && !existing_tables.include?(DuplicateCheck.table_name)
-          puts "Creating table for DuplicateCheck..."
+        if defined?(DuplicateCheck) && existing_tables.exclude?(DuplicateCheck.table_name)
+          puts 'Creating table for DuplicateCheck...'
           # create_table(table_name, key, options = {})
           # keyは :id ではなく :body_hash
           Dynamoid.adapter.create_table(DuplicateCheck.table_name, :body_hash, {})
         end
-      rescue => e
+      rescue StandardError => e
         puts "Failed to setup DynamoDB tables: #{e.message}"
       end
     end
@@ -71,9 +71,7 @@ RSpec.configure do |config|
     if defined?(Dynamoid)
       existing_tables = Dynamoid.adapter.list_tables
       [Post, Judgment, RateLimit, DuplicateCheck].each do |model|
-        if defined?(model) && existing_tables.include?(model.table_name)
-          model.delete_all
-        end
+        model.delete_all if existing_tables.include?(model.table_name)
       end
     end
   end
