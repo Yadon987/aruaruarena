@@ -162,7 +162,7 @@ RSpec.describe DuplicateCheckService, type: :service do
     context 'フェイルオープン (Resilience)' do
       # DynamoDB接続エラー時、falseを返す（投稿を許可）
       it 'DynamoDB接続エラー時、falseを返すこと' do
-        allow(DuplicateCheck).to receive(:check).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
+        allow(DuplicateCheck).to receive(:exists_with_hash?).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
                                                                                                    'Service unavailable'))
         allow(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be false
@@ -175,7 +175,7 @@ RSpec.describe DuplicateCheckService, type: :service do
 
       # 予期しないエラー（StandardError）が発生した場合、falseを返す
       it '予期しないエラー時もfalseを返すこと' do
-        allow(DuplicateCheck).to receive(:check).and_raise(StandardError, 'Unexpected error')
+        allow(DuplicateCheck).to receive(:exists_with_hash?).and_raise(StandardError, 'Unexpected error')
         allow(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be false
       end
@@ -184,7 +184,7 @@ RSpec.describe DuplicateCheckService, type: :service do
     context 'DynamoDBスロットリング' do
       # ProvisionedThroughputExceededException時にfalseを返すこと（フェイルオープン）
       it 'ProvisionedThroughputExceededException時にfalseを返すこと（フェイルオープン）' do
-        allow(DuplicateCheck).to receive(:check)
+        allow(DuplicateCheck).to receive(:exists_with_hash?)
           .and_raise(Aws::DynamoDB::Errors::ProvisionedThroughputExceededException.new(nil, 'Throughput exceeded'))
         expect(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be false
@@ -192,7 +192,7 @@ RSpec.describe DuplicateCheckService, type: :service do
 
       # RequestLimitExceeded時にfalseを返すこと（フェイルオープン）
       it 'RequestLimitExceeded時にfalseを返すこと（フェイルオープン）' do
-        allow(DuplicateCheck).to receive(:check)
+        allow(DuplicateCheck).to receive(:exists_with_hash?)
           .and_raise(Aws::DynamoDB::Errors::RequestLimitExceeded.new(nil, 'Request limit exceeded'))
         expect(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be false
@@ -200,7 +200,7 @@ RSpec.describe DuplicateCheckService, type: :service do
 
       # ResourceNotFoundException時にfalseを返すこと（フェイルオープン）
       it 'ResourceNotFoundException時にfalseを返すこと（フェイルオープン）' do
-        allow(DuplicateCheck).to receive(:check)
+        allow(DuplicateCheck).to receive(:exists_with_hash?)
           .and_raise(Aws::DynamoDB::Errors::ResourceNotFoundException.new(nil, 'Resource not found'))
         expect(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be false

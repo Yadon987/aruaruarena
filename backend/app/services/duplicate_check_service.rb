@@ -12,9 +12,10 @@ class DuplicateCheckService
   # @param body [String] 投稿本文（生値。内部で正規化 + ハッシュ化する）
   # @return [Boolean] trueなら重複あり（投稿不可）
   def self.duplicate?(body:)
+    # ログ出力用にハッシュを生成（DBアクセス前に行う）
     hash = DuplicateCheck.generate_body_hash(body)
 
-    if DuplicateCheck.check(hash)
+    if DuplicateCheck.exists_with_hash?(hash)
       body_hash_short = hash[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
       Rails.logger.warn("[DuplicateCheckService] Duplicate detected: body_hash=#{body_hash_short}")
       return true
@@ -32,8 +33,7 @@ class DuplicateCheckService
   # @param post_id [String] 投稿ID
   # @return [DuplicateCheck, nil] 作成されたレコード（失敗時はnil）
   def self.register!(body:, post_id:)
-    hash = DuplicateCheck.generate_body_hash(body)
-    DuplicateCheck.register(body_hash: hash, post_id: post_id)
+    DuplicateCheck.register(body: body, post_id: post_id)
   rescue StandardError => e
     # 登録失敗時はログ出力のみ（投稿自体は成功させる）
     Rails.logger.error("[DuplicateCheckService] register! failed: #{e.class} - #{e.message}")

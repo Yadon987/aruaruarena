@@ -44,27 +44,36 @@ class DuplicateCheck
     Digest::SHA256.hexdigest(normalized)
   end
 
-  # 重複チェック
+  # 重複チェック（本文からハッシュ生成してチェック）
+  # @param body [String] 本文（生値）
+  # @return [Boolean] 重複ありならtrue、なければfalse
+  def self.check(body)
+    hash = generate_body_hash(body)
+    exists_with_hash?(hash)
+  end
+
+  # ハッシュ値での重複チェック（内部用またはハッシュが既にある場合）
   # @param body_hash [String] 本文ハッシュ
   # @return [Boolean] 重複ありならtrue、なければfalse
-  def self.check(body_hash)
+  def self.exists_with_hash?(body_hash)
     record = find(body_hash)
     record&.expires_at&.to_i&.> Time.now.to_i
   rescue Dynamoid::Errors::RecordNotFound
     false
   rescue StandardError => e
     # フェイルオープン: DB障害時は重複なしと判定
-    Rails.logger.error("[DuplicateCheck#check] DynamoDB error: #{e.class} - #{e.message}")
+    Rails.logger.error("[DuplicateCheck#exists_with_hash?] DynamoDB error: #{e.class} - #{e.message}")
     false
   end
 
   # 重複チェックを登録
-  # @param body_hash [String] 本文ハッシュ
+  # @param body [String] 本文（生値）
   # @param post_id [String] 投稿ID
   # @return [DuplicateCheck] 作成されたチェック
-  def self.register(body_hash:, post_id:)
+  def self.register(body:, post_id:)
+    hash = generate_body_hash(body)
     create!(
-      body_hash: body_hash,
+      body_hash: hash,
       post_id: post_id,
       expires_at: Time.now.to_i + DUPLICATE_DURATION_SECONDS # 24時間（86400秒）
     )
