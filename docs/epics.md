@@ -381,7 +381,7 @@
 - [ ] E10-03: CloudFrontキャッシュ戦略の実装
 - [ ] E10-04: ウォームアップ処理（Thread.new）
 - [ ] E10-05: RSpecテスト（画像生成・キャッシュ）
-- [ ] E10-06: OGPメタタグ用HTMLテンプレートの作成（静的HTML or ERB）
+- [ ] E10-06: OGPメタタグ用HTMLテンプレートの作成（Lambda@Edge実行時はNode.js前提。静的HTML + JSプレースホルダー置換 / Nodeテンプレートエンジン / ERB事前コンパイル済みHTMLのいずれか）
 - [ ] E10-07: Lambda@Edgeによるクローラー判定・OGP HTML配信
 
 **推奨Issue分割**:

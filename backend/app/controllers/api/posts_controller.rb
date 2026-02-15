@@ -22,7 +22,7 @@ module Api
     ERROR_MESSAGE_INVALID_REQUEST = 'リクエスト形式が正しくありません'
     FIELD_LABEL_NICKNAME = 'ニックネーム'
     FIELD_LABEL_BODY = '本文'
-    # rubocop:disable Metrics/ClassLength, Metrics/MethodLength
+    # rubocop:disable Metrics/MethodLength
     def show
       user_agent = request.headers['User-Agent']
 
@@ -91,10 +91,7 @@ module Api
       post = Post.find(params[:id])
 
       unless post.status == Post::STATUS_FAILED
-        render json: {
-          error: ERROR_MESSAGE_INVALID_STATUS,
-          code: ERROR_CODE_INVALID_STATUS
-        }, status: :unprocessable_content
+        render_invalid_status
         return
       end
 
@@ -105,10 +102,7 @@ module Api
     rescue Dynamoid::Errors::RecordNotFound
       render_not_found
     rescue ArgumentError
-      render json: {
-        error: ERROR_MESSAGE_INVALID_PERSONA,
-        code: ERROR_CODE_INVALID_PERSONA
-      }, status: :unprocessable_content
+      render_invalid_persona
     rescue ActionController::ParameterMissing, ActionDispatch::Http::Parameters::ParseError
       render_bad_request
     end
@@ -120,7 +114,9 @@ module Api
     end
 
     def rejudge_params
-      params.expect(failed_personas: [])
+      raise ActionController::ParameterMissing, :failed_personas unless params.key?(:failed_personas)
+
+      params[:failed_personas]
     end
 
     # エラーメッセージにフィールド名を追加する
@@ -166,6 +162,24 @@ module Api
         error: ERROR_MESSAGE_NOT_FOUND,
         code: ERROR_CODE_NOT_FOUND
       }, status: :not_found
+    end
+
+    # 再審査不可ステータスのエラーレスポンスを返す
+    # @return [void] JSONレスポンスをレンダリング
+    def render_invalid_status
+      render json: {
+        error: ERROR_MESSAGE_INVALID_STATUS,
+        code: ERROR_CODE_INVALID_STATUS
+      }, status: :unprocessable_content
+    end
+
+    # 不正な審査員指定のエラーレスポンスを返す
+    # @return [void] JSONレスポンスをレンダリング
+    def render_invalid_persona
+      render json: {
+        error: ERROR_MESSAGE_INVALID_PERSONA,
+        code: ERROR_CODE_INVALID_PERSONA
+      }, status: :unprocessable_content
     end
 
     # 非同期で審査を開始する
@@ -217,6 +231,6 @@ module Api
       total_count = Post.total_scored_count
       render json: post.to_detail_json(judgments, rank, total_count)
     end
-    # rubocop:enable Metrics/ClassLength, Metrics/MethodLength
+    # rubocop:enable Metrics/MethodLength
   end
 end

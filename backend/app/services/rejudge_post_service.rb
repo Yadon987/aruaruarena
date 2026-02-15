@@ -2,6 +2,12 @@
 
 # RejudgePostService - failed投稿の指定審査員のみ再審査するサービス
 class RejudgePostService
+  # 成功審査員が2人以上ならscored
+  SCORING_THRESHOLD = 2
+  # average_scoreは小数第1位で丸める
+  ROUND_PRECISION = 1
+  ERROR_CODE_THREAD_EXCEPTION = 'thread_exception'
+
   VALID_PERSONAS = %w[hiroyuki dewi nakao].freeze
 
   ADAPTERS = {
@@ -22,17 +28,11 @@ class RejudgePostService
   def execute
     return if @post.nil?
 
-    judgments_snapshot = {}
-    post_snapshot = snapshot_post
-    existing_judgments = Judgment.where(post_id: @post.id).to_a.index_by(&:persona)
-    judgments_snapshot = @failed_personas.index_with { |persona| snapshot_judgment(existing_judgments[persona]) }
-
-    @failed_personas.each do |persona|
-      rejudge_persona!(persona, existing_judgments[persona])
-    end
-
+    post_snapshot, judgments_snapshot, existing_judgments = prepare_snapshots
+    run_rejudge_for_targets(existing_judgments)
     update_post_status!
   rescue StandardError
+    # Judgment更新後にPost更新が失敗した場合でも、実行前の整合状態に戻す
     rollback_rejudge!(judgments_snapshot:, post_snapshot:)
     raise
   end
@@ -48,7 +48,21 @@ class RejudgePostService
   def validate_personas!(failed_personas)
     raise ArgumentError, 'failed_personas must be an array' unless failed_personas.is_a?(Array)
     raise ArgumentError, 'failed_personas must not be empty' if failed_personas.empty?
+    raise ArgumentError, 'failed_personas must be unique' if failed_personas.uniq.size != failed_personas.size
     raise ArgumentError, 'invalid persona included' unless (failed_personas - VALID_PERSONAS).empty?
+  end
+
+  def prepare_snapshots
+    post_snapshot = snapshot_post
+    existing_judgments = Judgment.where(post_id: @post.id).to_a.index_by(&:persona)
+    judgments_snapshot = @failed_personas.index_with { |persona| snapshot_judgment(existing_judgments[persona]) }
+    [post_snapshot, judgments_snapshot, existing_judgments]
+  end
+
+  def run_rejudge_for_targets(existing_judgments)
+    @failed_personas.each do |persona|
+      rejudge_persona!(persona, existing_judgments[persona])
+    end
   end
 
   def rejudge_persona!(persona, existing_judgment = nil)
@@ -58,7 +72,7 @@ class RejudgePostService
     save_judgment!(persona, attrs, existing_judgment)
   rescue StandardError => e
     Rails.logger.error("[RejudgePostService] Rejudge failed: persona=#{persona} error=#{e.class} - #{e.message}")
-    save_judgment!(persona, base_attrs(failed_result('thread_exception')), existing_judgment)
+    save_judgment!(persona, base_attrs(failed_result(ERROR_CODE_THREAD_EXCEPTION)), existing_judgment)
   end
 
   def failed_result(error_code)
@@ -166,9 +180,9 @@ class RejudgePostService
 
     @post.judges_count = succeeded_count
 
-    if succeeded_count >= 2
+    if succeeded_count >= SCORING_THRESHOLD
       total = successful_judgments.sum(&:total_score)
-      @post.average_score = (total.to_f / succeeded_count).round(1)
+      @post.average_score = (total.to_f / succeeded_count).round(ROUND_PRECISION)
       @post.update_status!(Post::STATUS_SCORED)
     else
       @post.average_score = nil

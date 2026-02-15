@@ -67,7 +67,7 @@ class OgpMetaTagService
   def self.generate_description(body:, average_score:)
     description = body.to_s
     score_text = if average_score.nil?
-                   ' (スコア: 点)'
+                   ' (スコア: 未評価)'
                  else
                    # 小数点以下が0の場合は整数表示、それ以外は小数第1位まで表示
                    # 例: 100.0 -> 100, 85.5 -> 85.5
@@ -92,6 +92,7 @@ class OgpMetaTagService
   # @return [String] エスケープ後の文字列
   def self.escape_html(text)
     return '' if text.nil?
+
     # 標準ライブラリを使用して安全かつ簡潔に実装
     ERB::Util.html_escape(text)
   end
@@ -109,9 +110,7 @@ class OgpMetaTagService
 
     # 省略記号より短い制限の場合はそのまま切り詰める（エッジケース対策）
     ellipsis_length = ELLIPSIS.length
-    if max_length <= ellipsis_length
-      return text_str[0...max_length]
-    end
+    return text_str[0...max_length] if max_length <= ellipsis_length
 
     truncated = text_str[0...(max_length - ellipsis_length)]
     "#{truncated}#{ELLIPSIS}"

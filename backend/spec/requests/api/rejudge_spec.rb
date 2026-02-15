@@ -99,5 +99,79 @@ RSpec.describe 'POST /api/posts/:id/rejudge', type: :request do
       json = response.parsed_body
       expect(json['code']).to eq('BAD_REQUEST')
     end
+
+    # 何を検証するか: failed_personasが空配列のときINVALID_PERSONAを返すこと
+    it 'failed_personasが空配列で422 INVALID_PERSONAを返す' do
+      post_record = create(:post, :failed, judges_count: 1)
+      params = { failed_personas: [] }
+
+      post "/api/posts/#{post_record.id}/rejudge", params: params.to_json, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body['code']).to eq('INVALID_PERSONA')
+    end
+
+    # 何を検証するか: failed_personasが配列以外のときINVALID_PERSONAを返すこと
+    it 'failed_personasが配列以外で422 INVALID_PERSONAを返す' do
+      post_record = create(:post, :failed, judges_count: 1)
+      params = { failed_personas: 'dewi' }
+
+      post "/api/posts/#{post_record.id}/rejudge", params: params.to_json, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body['code']).to eq('INVALID_PERSONA')
+    end
+
+    # 何を検証するか: failed_personasがnullのときINVALID_PERSONAを返すこと
+    it 'failed_personasがnullで422 INVALID_PERSONAを返す' do
+      post_record = create(:post, :failed, judges_count: 1)
+      params = { failed_personas: nil }
+
+      post "/api/posts/#{post_record.id}/rejudge", params: params.to_json, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body['code']).to eq('INVALID_PERSONA')
+    end
+
+    # 何を検証するか: failed_personas未指定のときBAD_REQUESTを返すこと
+    it 'failed_personas未指定で400 BAD_REQUESTを返す' do
+      post_record = create(:post, :failed, judges_count: 1)
+      params = {}
+
+      post "/api/posts/#{post_record.id}/rejudge", params: params.to_json, headers: headers
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.parsed_body['code']).to eq('BAD_REQUEST')
+    end
+
+    # 何を検証するか: failed_personas重複指定をINVALID_PERSONAとして拒否すること
+    it 'failed_personas重複で422 INVALID_PERSONAを返す' do
+      post_record = create(:post, :failed, judges_count: 1)
+      params = { failed_personas: %w[dewi dewi] }
+
+      post "/api/posts/#{post_record.id}/rejudge", params: params.to_json, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body['code']).to eq('INVALID_PERSONA')
+    end
+  end
+
+  describe '境界値 (Edge Case)' do
+    # 何を検証するか: 3人全員を再審査対象に指定して正常にscoredへ遷移すること
+    it 'failed_personasに3人全員を指定すると200とscoredを返す' do
+      post_record = create(:post, :failed, judges_count: 0)
+      create(:judgment, :hiroyuki, :failed, post_id: post_record.id, error_code: 'timeout')
+      create(:judgment, :dewi, :failed, post_id: post_record.id, error_code: 'timeout')
+      create(:judgment, :nakao, :failed, post_id: post_record.id, error_code: 'timeout')
+      allow_any_instance_of(GeminiAdapter).to receive(:judge).and_return(success_result)
+      allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(success_result)
+      allow_any_instance_of(OpenAiAdapter).to receive(:judge).and_return(success_result)
+
+      params = { failed_personas: %w[hiroyuki dewi nakao] }
+      post "/api/posts/#{post_record.id}/rejudge", params: params.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['status']).to eq('scored')
+    end
   end
 end

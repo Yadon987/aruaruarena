@@ -31,6 +31,15 @@ RSpec.describe 'RejudgePostService', type: :service do
         service_class.call(post_record.id, failed_personas: ['invalid'])
       end.to raise_error(ArgumentError)
     end
+
+    # 何を検証するか: 重複したpersona指定を入力エラーとして拒否すること
+    it '重複したpersonaを含むとArgumentErrorを送出する' do
+      post_record = create(:post, :failed, judges_count: 1)
+
+      expect do
+        service_class.call(post_record.id, failed_personas: %w[dewi dewi])
+      end.to raise_error(ArgumentError)
+    end
   end
 
   describe '#execute' do
@@ -101,6 +110,55 @@ RSpec.describe 'RejudgePostService', type: :service do
 
         post_record.reload
         expect(post_record.status).to eq('failed')
+      end
+
+      # 何を検証するか: Post更新失敗時にJudgmentとPostが実行前状態へ復元されること
+      it 'update_post_status!で例外発生時にロールバックされる' do
+        post_record = create(:post, :failed, judges_count: 1, average_score: nil)
+        create(:judgment, :hiroyuki, post_id: post_record.id, succeeded: true, total_score: 78)
+        create(:judgment, :dewi, :failed, post_id: post_record.id, error_code: 'timeout')
+        dewi_before = find_judgment_by_aws(post_record.id, 'dewi')
+        before_post_status = post_record.status
+        before_judges_count = post_record.judges_count
+
+        allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(
+          create_success_response(
+            scores: { empathy: 16, humor: 15, brevity: 14, originality: 15, expression: 16 },
+            comment: '再審査成功'
+          )
+        )
+
+        service = service_class.new(post_record.id, failed_personas: ['dewi'])
+        allow(service).to receive(:update_post_status!).and_raise(StandardError.new('forced_error'))
+
+        expect { service.execute }.to raise_error(StandardError, 'forced_error')
+
+        post_record.reload
+        dewi_after = find_judgment_by_aws(post_record.id, 'dewi')
+        expect(post_record.status).to eq(before_post_status)
+        expect(post_record.judges_count).to eq(before_judges_count)
+        expect(dewi_after.succeeded).to eq(dewi_before.succeeded)
+        expect(dewi_after.error_code).to eq(dewi_before.error_code)
+      end
+    end
+
+    context '境界値' do
+      # 何を検証するか: 既存Judgmentがないpersonaでも再審査で新規作成されること
+      it '対象personaのJudgmentが未作成でも新規作成される' do
+        post_record = create(:post, :failed, judges_count: 1)
+        create(:judgment, :hiroyuki, post_id: post_record.id, succeeded: true, total_score: 80)
+        allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(
+          create_success_response(
+            scores: { empathy: 15, humor: 16, brevity: 14, originality: 15, expression: 16 },
+            comment: '再審査成功'
+          )
+        )
+
+        service_class.new(post_record.id, failed_personas: ['dewi']).execute
+
+        dewi = find_judgment_by_aws(post_record.id, 'dewi')
+        expect(dewi).to be_present
+        expect(dewi.succeeded).to be true
       end
     end
   end

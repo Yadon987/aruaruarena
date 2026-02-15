@@ -202,7 +202,7 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
         # バリデーションを回避するためにbuild_stubbedを使用
         long_body = 'あ' * 201
         long_post = build_stubbed(:post, id: SecureRandom.uuid, status: 'scored', nickname: '太郎',
-                                      body: long_body, average_score: 50.0)
+                                         body: long_body, average_score: 50.0)
 
         # build_stubbedはDBに保存されないため、モックでPost.findを置き換え
         allow(Post).to receive(:find).with(long_post.id).and_return(long_post)
@@ -258,7 +258,7 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
         # 何を検証するか: XSS攻撃を防ぐためにHTMLエスケープが行われること
         # バリデーションを回避するためにbuild_stubbedを使用
         xss_post = build_stubbed(:post, id: SecureRandom.uuid, status: 'scored',
-                                      nickname: '<script>alert("XSS")</script>', body: 'テスト', average_score: 50.0)
+                                        nickname: '<script>alert("XSS")</script>', body: 'テスト', average_score: 50.0)
 
         # build_stubbedはDBに保存されないため、モックでPost.findを置き換え
         allow(Post).to receive(:find).with(xss_post.id).and_return(xss_post)
@@ -274,7 +274,7 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
         # 何を検証するか: XSS攻撃を防ぐためにHTMLエスケープが行われること
         # バリデーションを回避するためにbuild_stubbedを使用
         xss_post = build_stubbed(:post, id: SecureRandom.uuid, status: 'scored',
-                                      nickname: '太郎" onmouseover="alert(1)', body: 'テスト', average_score: 50.0)
+                                        nickname: '太郎" onmouseover="alert(1)', body: 'テスト', average_score: 50.0)
 
         # build_stubbedはDBに保存されないため、モックでPost.findを置き換え
         allow(Post).to receive(:find).with(xss_post.id).and_return(xss_post)

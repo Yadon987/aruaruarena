@@ -241,7 +241,7 @@ RSpec.describe OgpMetaTagService, type: :service do
         # 何を検証するか: XSS攻撃を防ぐためにHTMLエスケープが行われること
         # バリデーションを回避するためにbuild_stubbedを使用
         malicious_post = build_stubbed(:post, id: SecureRandom.uuid, nickname: '<script>alert("XSS")</script>',
-                                            body: 'テスト', average_score: 50.0)
+                                              body: 'テスト', average_score: 50.0)
         html = described_class.generate_html(post: malicious_post, base_url:)
 
         expect(html).to include('&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;')
@@ -252,7 +252,7 @@ RSpec.describe OgpMetaTagService, type: :service do
         # 何を検証するか: XSS攻撃を防ぐためにHTMLエスケープが行われること
         # バリデーションを回避するためにbuild_stubbedを使用
         malicious_post = build_stubbed(:post, id: SecureRandom.uuid, nickname: '太郎',
-                                            body: '<img src=x onerror=alert(1)>', average_score: 50.0)
+                                              body: '<img src=x onerror=alert(1)>', average_score: 50.0)
         html = described_class.generate_html(post: malicious_post, base_url:)
 
         expect(html).to include('&lt;img src=x onerror=alert(1)&gt;')
@@ -263,7 +263,7 @@ RSpec.describe OgpMetaTagService, type: :service do
         # 何を検証するか: XSS攻撃を防ぐためにHTMLエスケープが行われること
         # バリデーションを回避するためにbuild_stubbedを使用
         malicious_post = build_stubbed(:post, id: SecureRandom.uuid, nickname: '太郎" onmouseover="alert(1)',
-                                            body: 'テスト', average_score: 50.0)
+                                              body: 'テスト', average_score: 50.0)
         html = described_class.generate_html(post: malicious_post, base_url:)
 
         expect(html).to include('太郎&quot; onmouseover=&quot;alert(1)さんのあるある投稿')
@@ -278,7 +278,7 @@ RSpec.describe OgpMetaTagService, type: :service do
         # バリデーションを回避するためにbuild_stubbedを使用
         long_body = 'あ' * 189
         long_post = build_stubbed(:post, id: SecureRandom.uuid, nickname: '太郎',
-                                      body: long_body, average_score: 50.0)
+                                         body: long_body, average_score: 50.0)
         html = described_class.generate_html(post: long_post, base_url:)
 
         expect(html).to include('property="og:description" content="')
@@ -294,7 +294,7 @@ RSpec.describe OgpMetaTagService, type: :service do
         # バリデーションを回避するためにbuild_stubbedを使用
         long_body = 'あ' * 190
         long_post = build_stubbed(:post, id: SecureRandom.uuid, nickname: '太郎',
-                                      body: long_body, average_score: 50.0)
+                                         body: long_body, average_score: 50.0)
         html = described_class.generate_html(post: long_post, base_url:)
 
         description_match = html.match(/property="og:description" content="([^"]+)"/)
@@ -308,7 +308,7 @@ RSpec.describe OgpMetaTagService, type: :service do
         # 何を検証するか: 空文字のニックネームでも正常にHTMLが生成されること
         # バリデーションを回避するためにbuild_stubbedを使用
         post_with_empty_nickname = build_stubbed(:post, id: SecureRandom.uuid, nickname: '',
-                                                   body: 'テスト', average_score: 50.0)
+                                                        body: 'テスト', average_score: 50.0)
         html = described_class.generate_html(post: post_with_empty_nickname, base_url:)
 
         expect(html).to include('さんのあるある投稿 | あるあるアリーナ')
@@ -319,7 +319,7 @@ RSpec.describe OgpMetaTagService, type: :service do
         post_with_nil_score = create(:post, :scored, nickname: '太郎', body: 'テスト', average_score: nil)
         html = described_class.generate_html(post: post_with_nil_score, base_url:)
 
-        expect(html).to include(' (スコア: 点)')
+        expect(html).to include(' (スコア: 未評価)')
       end
 
       it '0点でもHTMLが生成されること' do
@@ -431,7 +431,7 @@ RSpec.describe OgpMetaTagService, type: :service do
         # 何を検証するか: nilスコアでも正常に処理されること
         description = described_class.generate_description(body: 'テスト', average_score: nil)
 
-        expect(description).to eq('テスト (スコア: 点)')
+        expect(description).to eq('テスト (スコア: 未評価)')
       end
 
       it '平均スコアが0.0の場合、0点と表示されること' do
