@@ -7,6 +7,7 @@ import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
 const MIN_BODY_LENGTH = 3
+const MAX_STORED_POST_IDS = 20
 const RATE_LIMIT_STATUS = 429
 const SERVER_ERROR_STATUSES = [500, 502, 503, 504]
 const MESSAGE_NICKNAME_REQUIRED = 'ニックネームを入力してください'
@@ -34,7 +35,9 @@ function readPostIds(): string[] {
 
 function savePostId(id: string) {
   const current = readPostIds()
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([id, ...current]))
+  const deduplicated = current.filter((existingId) => existingId !== id)
+  const limited = [id, ...deduplicated].slice(0, MAX_STORED_POST_IDS)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(limited))
 }
 
 function validateForm(nickname: string, body: string): ValidationErrors {

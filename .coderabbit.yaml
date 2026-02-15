@@ -3,7 +3,7 @@ language: "ja-JP"
 early_access: false
 
 reviews:
-  profile: "balanced"
+  profile: "assertive"
   request_changes_workflow: false
   high_level_summary: true
   poem: false
@@ -22,23 +22,22 @@ reviews:
 
   # パスフィルタ：レビュー対象を明確化し、誤検知を削減
   path_filters:
-    include:
-      - "app/**/*"
-      - "lib/**/*"
-      - "spec/**/*"
-      - "config/**/*"
-      - "db/**/*"
-      - "test/**/*"
-    exclude:
-      - "vendor/**/*"
-      - "db/schema.rb"
-      - "node_modules/**/*"
-      - "public/**/*"
-      - "**/*.md"
-      - "**/README*"
-      - "**/CHANGELOG*"
-      - ".git/**/*"
-      - "*.log"
+    - ".coderabbit.yaml"
+    - "app/**/*"
+    - "lib/**/*"
+    - "spec/**/*"
+    - "config/**/*"
+    - "db/**/*"
+    - "test/**/*"
+    - "!vendor/**/*"
+    - "!db/schema.rb"
+    - "!node_modules/**/*"
+    - "!public/**/*"
+    - "!**/*.md"
+    - "!**/README*"
+    - "!**/CHANGELOG*"
+    - "!.git/**/*"
+    - "!*.log"
 
   # 知識ベース：プロジェクト固有のドキュメントを参照
   knowledge_base:
