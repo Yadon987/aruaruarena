@@ -29,15 +29,16 @@ reviews:
     - "config/**/*"
     - "db/**/*"
     - "test/**/*"
+    - "docs/**/*.md"
+    - "README.md"
     - "!vendor/**/*"
     - "!db/schema.rb"
     - "!node_modules/**/*"
     - "!public/**/*"
-    - "!**/*.md"
-    - "!**/README*"
     - "!**/CHANGELOG*"
     - "!.git/**/*"
     - "!*.log"
+    - "AGENTS.md"
 
   # 知識ベース：プロジェクト固有のドキュメントを参照
   knowledge_base:
