@@ -4,11 +4,6 @@ require 'rails_helper'
 
 RSpec.describe DuplicateCheckService, type: :service do
   describe '定数' do
-    # DUPLICATE_DURATION_HOURS定数が24時間で定義されていること
-    it 'DUPLICATE_DURATION_HOURS定数が24時間であること' do
-      expect(described_class::DUPLICATE_DURATION_HOURS).to eq(24)
-    end
-
     # HASH_LOG_START_INDEX定数が0であること
     it 'HASH_LOG_START_INDEX定数が0であること' do
       expect(described_class::HASH_LOG_START_INDEX).to eq(0)

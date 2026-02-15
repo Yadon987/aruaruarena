@@ -4,10 +4,6 @@
 #
 # 本文の正規化とSHA256ハッシュ化により、24時間以内の同一内容の投稿を検出する
 class DuplicateCheckService
-  # 定数
-  DUPLICATE_DURATION_HOURS = 24
-  DUPLICATE_DURATION_SECONDS = DUPLICATE_DURATION_HOURS * 3600 # 86400秒
-
   # ログ出力用のハッシュインデックス（現在の振る舞いを維持: hash[0..15]）
   HASH_LOG_START_INDEX = 0   # ハッシュの開始位置（ログ出力用）
   HASH_LOG_END_INDEX = 15    # ハッシュの終了位置（ログ出力用）

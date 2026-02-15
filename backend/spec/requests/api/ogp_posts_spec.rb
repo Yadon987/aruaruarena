@@ -248,10 +248,8 @@ RSpec.describe 'API::OGP Posts', type: :request do
 
         posts.each do |post|
           create(:judgment, :hiroyuki, post_id: post.id, succeeded: true)
-        end
 
-        # 各投稿に対して2回ずつリクエストを送信
-        posts.each do |post|
+          # 各投稿に対して2回ずつリクエストを送信
           2.times do
             get "/ogp/posts/#{post.id}.png"
             expect(response).to have_http_status(:ok)

@@ -11,4 +11,8 @@ Rails.application.routes.draw do
     resources :posts, only: %i[create show]
     resources :rankings, only: %i[index] # E08 追加
   end
+
+  # OGP画像用ルート
+  # format: false を使用して、.pngをparams[:id]に含める
+  get '/ogp/posts/:id.png', to: 'ogp#show', format: false
 end

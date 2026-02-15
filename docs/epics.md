@@ -368,9 +368,9 @@
 
 ---
 
-### E10: OGP画像生成
+### E10: OGP画像生成・メタタグ配信
 
-**概要**: SNSシェア用のOGP画像を動的生成
+**概要**: SNSシェア用のOGP画像を動的生成し、CloudFront経由でクローラーにメタタグを配信
 
 **エンドポイント**: `GET /ogp/posts/:id.png`
 
@@ -381,20 +381,26 @@
 - [ ] E10-03: CloudFrontキャッシュ戦略の実装
 - [ ] E10-04: ウォームアップ処理（Thread.new）
 - [ ] E10-05: RSpecテスト（画像生成・キャッシュ）
+- [ ] E10-06: OGPメタタグ用HTMLテンプレートの作成（静的HTML or ERB）
+- [ ] E10-07: Lambda@Edgeによるクローラー判定・OGP HTML配信
 
 **推奨Issue分割**:
-- 分割不要（Service, Controller, Specを1セットで実装）
+- **Issue 1**: OGP画像生成 (E10-00〜E10-05)
+- **Issue 2**: クローラー向けメタタグ配信 (E10-06, E10-07)
 
 **受入基準**:
 - 投稿内容・スコアを含む画像生成
 - CloudFrontで1週間キャッシュ
 - 審査完了時にウォームアップ実行
 - 最大0.5秒でThread完了待機
+- クローラー（Twitterbot, facebookexternalhit等）にog:title, og:image等を含むHTMLを返却
+- 通常ユーザーにはSPA（React）を返却
 
 **関連ファイル**:
 - `app/controllers/api/ogp_controller.rb`
 - `app/services/ogp_generator_service.rb`
 - `spec/requests/api/ogp_spec.rb`
+- `backend/infrastructure/lambda_edge/ogp_handler.js`（クローラー判定）
 
 
 ---
