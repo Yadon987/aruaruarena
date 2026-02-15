@@ -25,8 +25,8 @@ class RateLimiterService
     nickname_limited = RateLimit.limited?(nickname_identifier)
 
     if ip_limited || nickname_limited
-      ip_hash = RateLimit.generate_ip_identifier(ip)[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
-      nickname_hash = RateLimit.generate_nickname_identifier(nickname)[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
+      ip_hash = ip_identifier[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
+      nickname_hash = nickname_identifier[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
       Rails.logger.error("[RateLimiterService] Limited: ip=#{ip_hash}, nickname=#{nickname_hash}")
       return true
     end
@@ -46,7 +46,18 @@ class RateLimiterService
     ip_identifier = RateLimit.generate_ip_identifier(ip)
     nickname_identifier = RateLimit.generate_nickname_identifier(nickname)
 
-    RateLimit.set_limit(ip_identifier, seconds: LIMIT_DURATION)
-    RateLimit.set_limit(nickname_identifier, seconds: LIMIT_DURATION)
+    # IP制限設定（フェイルオープン）
+    begin
+      RateLimit.set_limit(ip_identifier, seconds: LIMIT_DURATION)
+    rescue StandardError => e
+      Rails.logger.error("[RateLimiterService] Failed to set IP limit: #{e.class} - #{e.message}")
+    end
+
+    # ニックネーム制限設定（フェイルオープン）
+    begin
+      RateLimit.set_limit(nickname_identifier, seconds: LIMIT_DURATION)
+    rescue StandardError => e
+      Rails.logger.error("[RateLimiterService] Failed to set nickname limit: #{e.class} - #{e.message}")
+    end
   end
 end

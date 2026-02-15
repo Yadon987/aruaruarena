@@ -2,8 +2,8 @@
 
 FactoryBot.define do
   factory :duplicate_check do
-    sequence(:body_hash) { |n| DuplicateCheck.generate_body_hash("test post #{n}") }
+    sequence(:body_hash) { |n| "hash_#{n}" }
     post_id { SecureRandom.uuid }
-    expires_at { (Time.now.to_i + 86_400).to_s } # String型に変更
+    expires_at { Time.now.to_i + 86_400 } # 24時間後（秒単位）
   end
 end

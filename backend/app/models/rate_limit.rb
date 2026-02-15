@@ -62,7 +62,8 @@ class RateLimit
     # upsert: レコードが存在する場合は更新、存在しない場合は作成
     record = find(identifier)
     record.expires_at = Time.now.to_i + seconds
-    record.save!  # save!で例外を投げてRateLimitを返す
+    record.save! # save!で例外を投げてRateLimitを返す
+    record
   rescue Dynamoid::Errors::RecordNotFound
     create!(
       identifier: identifier,
