@@ -98,11 +98,77 @@ RSpec.describe DuplicateCheckService, type: :service do
       end
     end
 
+    context '空白のみ入力の正規化' do
+      # 半角空白のみの入力が空文字に正規化されること
+      it '半角空白のみの入力が空文字に正規化されること' do
+        hash = DuplicateCheck.generate_body_hash('   ')
+        expect(hash).to be_a(String)
+        expect(hash.length).to eq(64) # SHA256ハッシュ長
+      end
+
+      # 全角空白のみの入力が空文字に正規化されること
+      it '全角空白のみの入力が空文字に正規化されること' do
+        hash = DuplicateCheck.generate_body_hash('　　　')
+        expect(hash).to be_a(String)
+        expect(hash.length).to eq(64)
+      end
+
+      # 混合空白のみの入力が空文字に正規化されること
+      it '混合空白のみの入力が空文字に正規化されること' do
+        hash = DuplicateCheck.generate_body_hash(' 　  ')
+        expect(hash).to be_a(String)
+        expect(hash.length).to eq(64)
+      end
+
+      # 連続する半角空白が単一の半角空白に統一されること
+      it '連続する半角空白が単一の半角空白に統一されること' do
+        hash1 = DuplicateCheck.generate_body_hash('テスト  テスト')
+        hash2 = DuplicateCheck.generate_body_hash('テスト テスト')
+        expect(hash1).to eq(hash2)
+      end
+
+      # 連続する全角空白が単一の半角空白に統一されること
+      it '連続する全角空白が単一の半角空白に統一されること' do
+        hash1 = DuplicateCheck.generate_body_hash('テスト　　テスト')
+        hash2 = DuplicateCheck.generate_body_hash('テスト テスト')
+        expect(hash1).to eq(hash2)
+      end
+
+      # 前後の半角空白が除去されること
+      it '前後の半角空白が除去されること' do
+        hash1 = DuplicateCheck.generate_body_hash('  テスト  ')
+        hash2 = DuplicateCheck.generate_body_hash('テスト')
+        expect(hash1).to eq(hash2)
+      end
+
+      # 前後の全角空白が除去されること
+      it '前後の全角空白が除去されること' do
+        hash1 = DuplicateCheck.generate_body_hash('　テスト　')
+        hash2 = DuplicateCheck.generate_body_hash('テスト')
+        expect(hash1).to eq(hash2)
+      end
+
+      # 空白のみの入力でも重複チェックが正常に動作すること（統合テスト）
+      it '空白のみの入力でも重複チェックが正常に動作すること（統合テスト）' do
+        # 初回投稿
+        expect(described_class.duplicate?(body: '   ')).to be false
+
+        # 重複チェック登録
+        described_class.register!(body: '   ', post_id: 'test_id')
+
+        # 重複検出
+        expect(described_class.duplicate?(body: '   ')).to be true
+
+        # 別の空白パターンでも重複と判定されること
+        expect(described_class.duplicate?(body: '　　')).to be true
+      end
+    end
+
     context 'フェイルオープン (Resilience)' do
       # DynamoDB接続エラー時、falseを返す（投稿を許可）
       it 'DynamoDB接続エラー時、falseを返すこと' do
         allow(DuplicateCheck).to receive(:check).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
-                                                                                                 'Service unavailable'))
+                                                                                                   'Service unavailable'))
         allow(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be false
       end
@@ -116,6 +182,32 @@ RSpec.describe DuplicateCheckService, type: :service do
       it '予期しないエラー時もfalseを返すこと' do
         allow(DuplicateCheck).to receive(:check).and_raise(StandardError, 'Unexpected error')
         allow(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
+        expect(described_class.duplicate?(body: 'テスト投稿')).to be false
+      end
+    end
+
+    context 'DynamoDBスロットリング' do
+      # ProvisionedThroughputExceededException時にfalseを返すこと（フェイルオープン）
+      it 'ProvisionedThroughputExceededException時にfalseを返すこと（フェイルオープン）' do
+        allow(DuplicateCheck).to receive(:check)
+          .and_raise(Aws::DynamoDB::Errors::ProvisionedThroughputExceededException.new(nil, 'Throughput exceeded'))
+        expect(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
+        expect(described_class.duplicate?(body: 'テスト投稿')).to be false
+      end
+
+      # RequestLimitExceeded時にfalseを返すこと（フェイルオープン）
+      it 'RequestLimitExceeded時にfalseを返すこと（フェイルオープン）' do
+        allow(DuplicateCheck).to receive(:check)
+          .and_raise(Aws::DynamoDB::Errors::RequestLimitExceeded.new(nil, 'Request limit exceeded'))
+        expect(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
+        expect(described_class.duplicate?(body: 'テスト投稿')).to be false
+      end
+
+      # ResourceNotFoundException時にfalseを返すこと（フェイルオープン）
+      it 'ResourceNotFoundException時にfalseを返すこと（フェイルオープン）' do
+        allow(DuplicateCheck).to receive(:check)
+          .and_raise(Aws::DynamoDB::Errors::ResourceNotFoundException.new(nil, 'Resource not found'))
+        expect(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be false
       end
     end
@@ -158,6 +250,24 @@ RSpec.describe DuplicateCheckService, type: :service do
         allow(DuplicateCheck).to receive(:register).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
                                                                                                       'Service unavailable'))
         allow(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] register! failed:/)
+        expect(described_class.register!(body: 'テスト投稿', post_id: 'test_id')).to be_nil
+      end
+    end
+
+    context 'DynamoDBスロットリング' do
+      # ProvisionedThroughputExceededException時にnilを返すこと（フェイルオープン）
+      it 'ProvisionedThroughputExceededException時にnilを返すこと（フェイルオープン）' do
+        allow(DuplicateCheck).to receive(:register)
+          .and_raise(Aws::DynamoDB::Errors::ProvisionedThroughputExceededException.new(nil, 'Throughput exceeded'))
+        expect(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] register! failed:/)
+        expect(described_class.register!(body: 'テスト投稿', post_id: 'test_id')).to be_nil
+      end
+
+      # RequestLimitExceeded時にnilを返すこと（フェイルオープン）
+      it 'RequestLimitExceeded時にnilを返すこと（フェイルオープン）' do
+        allow(DuplicateCheck).to receive(:register)
+          .and_raise(Aws::DynamoDB::Errors::RequestLimitExceeded.new(nil, 'Request limit exceeded'))
+        expect(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] register! failed:/)
         expect(described_class.register!(body: 'テスト投稿', post_id: 'test_id')).to be_nil
       end
     end

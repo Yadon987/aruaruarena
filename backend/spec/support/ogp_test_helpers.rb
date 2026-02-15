@@ -53,18 +53,57 @@ module OgpTestHelpers
   # 何を検証するか: ファイル存在チェックのモックを設定する
   # rubocop:disable Metrics/AbcSize
   def setup_file_exist_mocks
+    # まずデフォルト動作を設定
     allow(File).to receive(:exist?).and_call_original
-    allow(File).to receive(:exist?).with(OgpGeneratorService::BASE_IMAGE_PATH).and_return(true)
-    allow(File).to receive(:exist?).with(/NotoSansJP.*\.otf$/).and_return(true)
+
+    # 既知のパスに対して個別にモックをオーバーライド
+    allow(File).to receive(:exist?).with(OgpGeneratorService::BASE_IMAGE_PATH.to_s).and_return(true)
+    allow(File).to receive(:exist?).with(OgpGeneratorService::FONT_PATH.to_s).and_return(true)
+    allow(File).to receive(:exist?).with(OgpGeneratorService::FONT_BOLD_PATH.to_s).and_return(true)
     OgpGeneratorService::JUDGE_ICON_PATHS.each_value do |path|
-      allow(File).to receive(:exist?).with(path).and_return(true)
+      allow(File).to receive(:exist?).with(path.to_s).and_return(true)
     end
+  end
+
+  # フォントファイルが存在しないモックを設定する
+  def setup_font_file_not_exist_mock
+    setup_file_exist_mocks
+    allow(File).to receive(:exist?).with(OgpGeneratorService::FONT_PATH.to_s).and_return(false)
+  end
+
+  # 審査員アイコンファイルが存在しないモックを設定する
+  def setup_judge_icon_file_not_exist_mock
+    setup_file_exist_mocks
+    # hiroyukiのアイコンパスのみをfalseに設定（他のパスはtrue）
+    allow(File).to receive(:exist?).with(OgpGeneratorService::JUDGE_ICON_PATHS['hiroyuki'].to_s).and_return(false)
   end
   # rubocop:enable Metrics/AbcSize
 
   # 何を検証するか: ランキング計算のモックを設定する
   def setup_rank_mock(rank = 1)
     allow_any_instance_of(Post).to receive(:calculate_rank).and_return(rank)
+  end
+
+  # DynamoDBスロットリングエラーのモックを設定する
+  def setup_dynamodb_throttling_mock(error_class = Aws::DynamoDB::Errors::ProvisionedThroughputExceededException)
+    allow(DuplicateCheck).to receive(:check).and_raise(error_class.new(nil, 'Throttling error'))
+    allow(DuplicateCheck).to receive(:register).and_raise(error_class.new(nil, 'Throttling error'))
+  end
+
+  # Post#calculate_rankの例外を設定する
+  def setup_calculate_rank_error(error_class = Aws::DynamoDB::Errors::ServiceError)
+    allow_any_instance_of(Post).to receive(:calculate_rank).and_raise(error_class.new(nil, 'DB error'))
+  end
+
+  # 同時リクエストテスト用ヘルパー
+  def execute_concurrent_requests(count:, url:)
+    threads = count.times.map do
+      Thread.new do
+        get url
+        [response.status, response.body]
+      end
+    end
+    threads.map(&:value)
   end
 end
 

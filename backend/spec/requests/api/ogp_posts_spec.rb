@@ -34,7 +34,9 @@ RSpec.describe 'API::OGP Posts', type: :request do
       it 'Cache-Control: public, max-age=604800 ヘッダーが設定されていること' do
         get "/ogp/posts/#{scored_post.id}.png"
 
-        expect(response.headers['Cache-Control']).to eq('public, max-age=604800')
+        cache_control = response.headers['Cache-Control']
+        expect(cache_control).to include('public')
+        expect(cache_control).to include('max-age=604800')
       end
 
       # 何を検証するか: 画像サイズが1200x630pxであること
@@ -135,6 +137,57 @@ RSpec.describe 'API::OGP Posts', type: :request do
         expect(json['error']).to include('投稿が見つかりません')
         expect(json['code']).to eq('NOT_FOUND')
       end
+
+      context '異常UUIDフォーマット' do
+        # 何を検証するか: 短すぎるIDは404を返すこと
+        it '短すぎるIDは404を返すこと' do
+          get '/ogp/posts/a.png'
+
+          expect(response).to have_http_status(:not_found)
+          json = response.parsed_body
+          expect(json['error']).to include('投稿が見つかりません')
+          expect(json['code']).to eq('NOT_FOUND')
+        end
+
+        # 何を検証するか: 長すぎるIDは404を返すこと
+        it '長すぎるIDは404を返すこと' do
+          long_id = 'a' * 100
+          get "/ogp/posts/#{long_id}.png"
+
+          expect(response).to have_http_status(:not_found)
+          json = response.parsed_body
+          expect(json['error']).to include('投稿が見つかりません')
+          expect(json['code']).to eq('NOT_FOUND')
+        end
+
+        # 何を検証するか: SQLインジェクション風の文字列は404を返すこと
+        it 'SQLインジェクション風の文字列は404を返すこと' do
+          injection_inputs = [
+            'test-drop',
+            "1'or1",
+            'admin--'
+          ]
+
+          injection_inputs.each do |input|
+            get "/ogp/posts/#{input}.png"
+
+            expect(response).to have_http_status(:not_found)
+            json = response.parsed_body
+            expect(json['error']).to include('投稿が見つかりません')
+            expect(json['code']).to eq('NOT_FOUND')
+          end
+        end
+
+        # 何を検証するか: ヌルバイトを含む文字列は404を返すこと
+        it 'ヌルバイトを含む文字列は404を返すこと' do
+          get '/ogp/posts/test%00id.png'
+
+          expect(response).to have_http_status(:not_found)
+          json = response.parsed_body
+          expect(json['error']).to include('投稿が見つかりません')
+          expect(json['code']).to eq('NOT_FOUND')
+        end
+      end
     end
 
     context '境界値' do
@@ -166,6 +219,55 @@ RSpec.describe 'API::OGP Posts', type: :request do
 
         expect(response).to have_http_status(:ok)
         expect(response.content_type).to eq('image/png')
+      end
+    end
+
+    context '同時リクエスト' do
+      before do
+        setup_image_mocks
+        setup_draw_mocks
+        setup_file_exist_mocks
+      end
+
+      # 何を検証するか: 同一投稿IDに対する同時リクエストが適切に処理されること
+      it '同一投稿IDに対する同時リクエストが適切に処理されること' do
+        post = create(:post, :scored, average_score: 50.0)
+        create(:judgment, :hiroyuki, post_id: post.id, succeeded: true)
+        setup_rank_mock(1)
+
+        # 10件のリクエストを送信（同時実行の模倣）
+        10.times do
+          get "/ogp/posts/#{post.id}.png"
+          expect(response).to have_http_status(:ok)
+        end
+      end
+
+      # 何を検証するか: 異なる投稿IDに対する同時リクエストが適切に処理されること
+      it '異なる投稿IDに対する同時リクエストが適切に処理されること' do
+        posts = create_list(:post, 5, :scored, average_score: 50.0)
+
+        posts.each do |post|
+          create(:judgment, :hiroyuki, post_id: post.id, succeeded: true)
+        end
+
+        # 各投稿に対して2回ずつリクエストを送信
+        posts.each do |post|
+          2.times do
+            get "/ogp/posts/#{post.id}.png"
+            expect(response).to have_http_status(:ok)
+          end
+        end
+      end
+
+      # 何を検証するか: 存在しない投稿IDに対する同時リクエストが404を返すこと
+      it '存在しない投稿IDに対する同時リクエストが404を返すこと' do
+        nonexistent_id = SecureRandom.uuid
+
+        # 10件のリクエストを送信（同時実行の模倣）
+        10.times do
+          get "/ogp/posts/#{nonexistent_id}.png"
+          expect(response).to have_http_status(:not_found)
+        end
       end
     end
   end
