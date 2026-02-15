@@ -24,7 +24,7 @@ OGP画像生成機能の総合テストを実装する。
    - OgpGeneratorServiceの全機能を検証
 
 2. **統合テスト（Request）**
-   - `spec/requests/api/ogp_spec.rb`
+   - `backend/spec/requests/api/ogp_posts_spec.rb`
    - OGPエンドポイントの動作を検証
 
 3. **ウォームアップテスト（Service）**

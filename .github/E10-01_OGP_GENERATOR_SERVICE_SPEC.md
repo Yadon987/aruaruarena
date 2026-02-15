@@ -149,9 +149,9 @@ RSpec.describe OgpGeneratorService do
     context '正常系 (Happy Path)' do
       it 'scored状態の投稿のOGP画像を生成できること' do
         create_list(:judgment, 3, post_id: post.id)
-        image = described_class.call(post.id)
-        expect(image).not_to be_nil
-        expect(image.format).to eq('PNG')
+        image_data = described_class.call(post.id)
+        expect(image_data).not_to be_nil
+        expect(image_data).to start_with("\x89PNG") # PNGヘッダーチェック
       end
 
       it '投稿内容が画像に反映されていること' do

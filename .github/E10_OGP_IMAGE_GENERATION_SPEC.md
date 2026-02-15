@@ -61,13 +61,17 @@ ImageMagickを使用して投稿内容やスコアを画像に合成し、CloudF
 - 画像データ自体はオンザフライ生成で返却（CloudFrontキャッシュ）
 
 ### API設計
+
+
 | 項目 | 値 |
 |------|-----|
+
 | Method | `GET` |
 | Path | `/ogp/posts/:id.png` |
 | Request Body | なし |
 | Response (成功) | 画像バイナリ (`Content-Type: image/png`) |
 | Response (失敗) | JSONエラーレスポンス (`404 Not Found`) |
+
 
 エラーレスポンス形式:
 ```json

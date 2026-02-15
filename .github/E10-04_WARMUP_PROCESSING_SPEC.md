@@ -90,9 +90,10 @@ end
 
 ### Thread処理の仕組み
 
-```
+```text
 メインスレッド
   ├─ 審査処理（JudgePostService.execute）
+
   ├─ 審査結果保存（save_judgments!）
   ├─ ステータス更新（update_post_status!）
   ├─ ウォームアップ開始（warmup_ogp_image）

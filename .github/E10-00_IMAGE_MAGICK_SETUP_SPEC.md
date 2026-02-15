@@ -44,7 +44,8 @@ RUN apt-get update -qq && \
 RSpec.describe OgpGeneratorService do
   describe 'ImageMagickが使用可能であること' do
     it 'ImageMagickがインストールされていること' do
-      expect(OgpGeneratorService::MAGICK_AVAILABLE).to be true
+      # 実際の実装ではシステムコマンドなどで確認するか、MiniMagickが動くことを確認
+      expect(system('convert -version')).to be true
     end
   end
 end
