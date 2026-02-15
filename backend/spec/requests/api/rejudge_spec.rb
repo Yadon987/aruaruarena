@@ -9,6 +9,14 @@ RSpec.describe 'POST /api/posts/:id/rejudge', type: :request do
   end
 
   let(:headers) { { 'Content-Type' => 'application/json' } }
+  let(:success_result) do
+    BaseAiAdapter::JudgmentResult.new(
+      succeeded: true,
+      error_code: nil,
+      scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
+      comment: '再審査成功'
+    )
+  end
 
   describe '正常系 (Happy Path)' do
     # 何を検証するか: dewiのみ再審査成功でstatusがscoredになること
@@ -16,6 +24,7 @@ RSpec.describe 'POST /api/posts/:id/rejudge', type: :request do
       post_record = create(:post, :failed, judges_count: 1)
       create(:judgment, :hiroyuki, post_id: post_record.id, succeeded: true, total_score: 80)
       create(:judgment, :dewi, :failed, post_id: post_record.id, error_code: 'timeout')
+      allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(success_result)
 
       params = { failed_personas: ['dewi'] }
       post "/api/posts/#{post_record.id}/rejudge", params: params.to_json, headers: headers
@@ -32,6 +41,8 @@ RSpec.describe 'POST /api/posts/:id/rejudge', type: :request do
       create(:judgment, :hiroyuki, post_id: post_record.id, succeeded: true, total_score: 78)
       create(:judgment, :dewi, :failed, post_id: post_record.id, error_code: 'timeout')
       create(:judgment, :nakao, :failed, post_id: post_record.id, error_code: 'provider_error')
+      allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(success_result)
+      allow_any_instance_of(OpenAiAdapter).to receive(:judge).and_return(success_result)
 
       params = { failed_personas: %w[dewi nakao] }
       post "/api/posts/#{post_record.id}/rejudge", params: params.to_json, headers: headers

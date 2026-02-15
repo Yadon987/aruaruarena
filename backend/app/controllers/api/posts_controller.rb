@@ -8,11 +8,15 @@ module Api
     ERROR_CODE_NOT_FOUND = 'NOT_FOUND'
     ERROR_CODE_RATE_LIMITED = 'RATE_LIMITED'
     ERROR_CODE_DUPLICATE_CONTENT = 'DUPLICATE_CONTENT'
+    ERROR_CODE_INVALID_STATUS = 'INVALID_STATUS'
+    ERROR_CODE_INVALID_PERSONA = 'INVALID_PERSONA'
 
     # エラーメッセージ定数
     ERROR_MESSAGE_NOT_FOUND = '投稿が見つかりません'
     ERROR_MESSAGE_RATE_LIMITED = '投稿頻度を制限中'
     ERROR_MESSAGE_DUPLICATE_CONTENT = '同じ内容の投稿があります'
+    ERROR_MESSAGE_INVALID_STATUS = '再審査できないステータスです'
+    ERROR_MESSAGE_INVALID_PERSONA = '無効な審査員IDです'
 
     # エラーメッセージ定数
     ERROR_MESSAGE_INVALID_REQUEST = 'リクエスト形式が正しくありません'
@@ -83,10 +87,40 @@ module Api
       render_bad_request
     end
 
+    def rejudge
+      post = Post.find(params[:id])
+
+      unless post.status == Post::STATUS_FAILED
+        render json: {
+          error: ERROR_MESSAGE_INVALID_STATUS,
+          code: ERROR_CODE_INVALID_STATUS
+        }, status: :unprocessable_content
+        return
+      end
+
+      RejudgePostService.call(post.id, failed_personas: rejudge_params)
+      post.reload
+
+      render json: { id: post.id, status: post.status }, status: :ok
+    rescue Dynamoid::Errors::RecordNotFound
+      render_not_found
+    rescue ArgumentError
+      render json: {
+        error: ERROR_MESSAGE_INVALID_PERSONA,
+        code: ERROR_CODE_INVALID_PERSONA
+      }, status: :unprocessable_content
+    rescue ActionController::ParameterMissing, ActionDispatch::Http::Parameters::ParseError
+      render_bad_request
+    end
+
     private
 
     def post_params
       params.expect(post: %i[nickname body])
+    end
+
+    def rejudge_params
+      params.expect(failed_personas: [])
     end
 
     # エラーメッセージにフィールド名を追加する
