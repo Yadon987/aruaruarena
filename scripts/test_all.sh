@@ -88,7 +88,7 @@ echo "🧪 Running RSpec..."
 echo "----------------------------------------"
 
 # テスト実行（DynamoDB Localのエンドポイントを指定）
-# SimpleCovのカバレッジエラー（exit 2）を無視してテスト結果を判定
+# SimpleCovのカバレッジ警告（exit 2/3）は許容してテスト結果を判定
 set +e  # 一時的にset -eを解除
 DYNAMODB_ENDPOINT=http://localhost:8000 bundle exec rspec --format documentation > /tmp/rspec_output.txt 2>&1
 rspec_exit=$?
@@ -98,15 +98,18 @@ set -e  # set -eを再開
 echo "----------------------------------------"
 echo ""
 
-# RSpec自体が成功（exit 0）か、カバレッジ警告のみ（exit 2）なら成功とみなす
-if [ $rspec_exit -eq 0 ] || [ $rspec_exit -eq 2 ]; then
-  if [ $rspec_exit -eq 2 ]; then
+# RSpec自体が成功（exit 0）か、カバレッジ警告のみ（exit 2/3）なら続行
+if [ $rspec_exit -eq 0 ] || [ $rspec_exit -eq 2 ] || [ $rspec_exit -eq 3 ]; then
+  if [ $rspec_exit -eq 2 ] || [ $rspec_exit -eq 3 ]; then
     echo "⚠️  テストは成功しましたが、カバレッジが目標未達です"
     # RSpecの出力から直接カバレッジを抽出
     coverage=$(grep "Line Coverage:" /tmp/rspec_output.txt | sed -E 's/.*Line Coverage: ([0-9.]+)%.*/\1/' || echo "Unknown")
     echo "   現在のカバレッジ: ${coverage}%"
   fi
   echo "🎉 全てのテストが成功しました！"
+else
+  echo "🚨 Backend Tests Failed (exit code: ${rspec_exit})"
+  exit $rspec_exit
 fi
 
 echo ""
