@@ -552,7 +552,7 @@ RSpec.describe OgpGeneratorService do
 
       # 何を検証するか: バックスラッシュを含むテキストで画像生成が試行されること
       it 'バックスラッシュを含むテキストで画像生成が試行されること' do
-        input = "テスト\\テスト"
+        input = 'テスト\\テスト'
         escaped = service.send(:escape_single_quotes, input)
         # エスケープ処理が呼び出されることを検証
         expect(escaped).to be_a(String)
@@ -595,7 +595,7 @@ RSpec.describe OgpGeneratorService do
 
       # 何を検証するか: MVGコマンド風の文字列でもテキストとして描画されること
       it 'MVGコマンド風の文字列でもテキストとして描画されること' do
-        post = create(:post, :scored, body: "push graphic-context", average_score: 50.0)
+        post = create(:post, :scored, body: 'push graphic-context', average_score: 50.0)
         service = described_class.new(post.id)
         setup_image_mocks
         setup_draw_mocks
