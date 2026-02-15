@@ -731,19 +731,77 @@ RSpec.describe GeminiAdapter do
   describe 'ログ出力' do
     let(:adapter) { described_class.new }
 
-    it 'API呼び出し成功時にINFOレベルでログを出力すること', :vcr do
-      # VCRカセットが作成されるまでスキップ
-      skip 'VCRカセットを作成する必要があります'
+    it 'API呼び出し成功時にINFOレベルでログを出力すること' do
+      # モックの設定
+      adapter = described_class.new
+      allow(adapter).to receive(:build_request).and_return({})
+      
+      response = instance_double(Faraday::Response, status: 200, body: '{}')
+      allow(adapter).to receive(:execute_request).and_return(response)
+      
+      # valid_score_keys? を通過するために有効なスコアを返す
+      valid_scores = {
+        empathy: 15,
+        humor: 15,
+        brevity: 15,
+        originality: 15,
+        expression: 15
+      }
+      allow(adapter).to receive(:parse_response).and_return({ scores: valid_scores, comment: 'test' })
+      # apply_persona_bias! は成功結果を受け取るので、そのまま返す
+      allow(adapter).to receive(:apply_persona_bias!) { |result, _| result }
+
+      expect(Rails.logger).to receive(:info).with(/審査成功/)
+      adapter.judge('テスト投稿', persona: 'hiroyuki')
     end
 
-    it 'リトライ時にWARNレベルでログを出力すること', vcr: 'timeout' do
-      # VCRカセットが作成されるまでスキップ
-      skip 'VCRカセットを作成する必要があります'
+    it 'リトライ時にWARNレベルでログを出力すること' do
+      adapter = described_class.new
+      allow(adapter).to receive(:build_request).and_return({})
+      
+      # 初回はエラー、2回目は成功
+      allow(adapter).to receive(:execute_request).and_raise(Faraday::TimeoutError)
+      allow(adapter).to receive(:retry_sleep) # sleepをスキップ
+
+      # リトライログの確認
+      expect(Rails.logger).to receive(:warn).with(/リトライ 1\/3: Faraday::TimeoutError/)
+      
+      # loop/retryのテスト用モック
+      call_count = 0
+      allow(adapter).to receive(:execute_request) do
+        call_count += 1
+        if call_count == 1
+          raise Faraday::TimeoutError
+        else
+          instance_double(Faraday::Response, status: 200, body: '{}')
+        end
+      end
+      
+      valid_scores = {
+        empathy: 15,
+        humor: 15,
+        brevity: 15,
+        originality: 15,
+        expression: 15
+      }
+      allow(adapter).to receive(:parse_response).and_return({ scores: valid_scores, comment: 'test' })
+      allow(adapter).to receive(:apply_persona_bias!) { |result, _| result }
+
+      adapter.judge('テスト投稿', persona: 'hiroyuki')
     end
 
-    it 'APIエラー時にERRORレベルでログを出力すること', vcr: 'rate_limit' do
-      # VCRカセットが作成されるまでスキップ
-      skip 'VCRカセットを作成する必要があります'
+    it 'APIエラー時にERRORレベルでログを出力すること' do
+      adapter = described_class.new
+      allow(adapter).to receive(:build_request).and_return({})
+      
+      # レート制限エラー
+      allow(adapter).to receive(:execute_request).and_raise(Faraday::ClientError.new('rate limit', response: { status: 429 }))
+      allow(adapter).to receive(:retry_sleep)
+
+      # ERRORログの確認（with_retryとhandle_errorで2回出力される可能性があるため、at_least(:once)）
+      expect(Rails.logger).to receive(:error).with(/審査失敗: Faraday::ClientError/).at_least(:once)
+      
+      adapter.judge('テスト投稿', persona: 'hiroyuki')
     end
   end
 end
