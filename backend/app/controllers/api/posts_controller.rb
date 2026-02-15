@@ -31,7 +31,7 @@ module Api
       end
     rescue Dynamoid::Errors::RecordNotFound => e
       # 非機能要件: エラー発生時にERRORレベルでログ出力（投稿ID・エラー内容を含む）
-      Rails.logger.error("[PostsController#show] Not found: id=\#{params[:id]} error=\#{e.class} - \#{e.message}")
+      Rails.logger.error("[PostsController#show] Not found: id=#{params[:id]} error=#{e.class} - #{e.message}")
       render_not_found
     end
 
@@ -63,7 +63,7 @@ module Api
           RateLimiterService.set_limit!(ip: request.remote_ip, nickname: post_params[:nickname])
         rescue StandardError => e
           # set_limit!失敗時も投稿レスポンスを返す（フェイルオープン）
-          Rails.logger.error("[PostsController#create] Rate limit set failed: \#{e.class} - \#{e.message}")
+          Rails.logger.error("[PostsController#create] Rate limit set failed: #{e.class} - #{e.message}")
         end
 
         # 投稿成功後に重複チェックレコードを登録
@@ -71,7 +71,7 @@ module Api
           DuplicateCheckService.register!(body: post_params[:body], post_id: post.id)
         rescue StandardError => e
           # register!失敗時も投稿レスポンスを返す（フェイルオープン）
-          Rails.logger.error("[PostsController#create] Duplicate check register failed: \#{e.class} - \#{e.message}")
+          Rails.logger.error("[PostsController#create] Duplicate check register failed: #{e.class} - #{e.message}")
         end
 
         start_judgment_async(post)
@@ -98,9 +98,9 @@ module Api
                       post.errors.full_messages.first
 
       if post.errors[:nickname].first
-        "\#{FIELD_LABEL_NICKNAME}\#{error_message}"
+        "#{FIELD_LABEL_NICKNAME}#{error_message}"
       elsif post.errors[:body].first
-        "\#{FIELD_LABEL_BODY}\#{error_message}"
+        "#{FIELD_LABEL_BODY}#{error_message}"
       else
         error_message
       end
@@ -157,7 +157,7 @@ module Api
     # @param error [Exception] 発生した例外
     # @param _post_id [String] 投稿ID（将来のログ出力用に確保）
     def handle_judgment_error(error, _post_id)
-      Rails.logger.error("[JudgePostService] Failed: \#{error.class} - \#{error.message}")
+      Rails.logger.error("[JudgePostService] Failed: #{error.class} - #{error.message}")
       Rails.logger.error(error.backtrace.join("\n")) if Rails.env.development?
     end
 
