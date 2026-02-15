@@ -6,6 +6,20 @@ import { ApiClientError, api } from './shared/services/api'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
+const MIN_BODY_LENGTH = 3
+const RATE_LIMIT_STATUS = 429
+const SERVER_ERROR_STATUSES = [500, 502, 503, 504]
+const MESSAGE_NICKNAME_REQUIRED = 'ニックネームを入力してください'
+const MESSAGE_BODY_REQUIRED = '本文は3文字以上で入力してください'
+const MESSAGE_SUCCESS = '投稿を受け付けました'
+const MESSAGE_RATE_LIMITED = '5分後に再投稿してください'
+const MESSAGE_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
+const MESSAGE_DEFAULT_ERROR = 'エラーが発生しました。再試行してください'
+
+type ValidationErrors = {
+  nicknameError: string
+  bodyError: string
+}
 
 function readPostIds(): string[] {
   const rawValue = localStorage.getItem(STORAGE_KEY)
@@ -23,6 +37,36 @@ function savePostId(id: string) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify([id, ...current]))
 }
 
+function validateForm(nickname: string, body: string): ValidationErrors {
+  const trimmedNickname = nickname.trim()
+  const trimmedBody = body.trim()
+  return {
+    nicknameError: trimmedNickname ? '' : MESSAGE_NICKNAME_REQUIRED,
+    bodyError: trimmedBody.length >= MIN_BODY_LENGTH ? '' : MESSAGE_BODY_REQUIRED,
+  }
+}
+
+// APIクライアントの例外種別をUI文言へ変換する
+function resolveSubmitErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError && error.status === RATE_LIMIT_STATUS) {
+    return MESSAGE_RATE_LIMITED
+  }
+  if (error instanceof ApiClientError && SERVER_ERROR_STATUSES.includes(error.status)) {
+    return MESSAGE_SERVER_ERROR
+  }
+  if (
+    error instanceof ApiClientError &&
+    ['NETWORK_ERROR', 'TIMEOUT', 'HTTP_ERROR'].includes(error.code)
+  ) {
+    return MESSAGE_DEFAULT_ERROR
+  }
+  // APIが返した具体的な文言があれば優先し、未知エラー時のみ汎用文言を使う
+  if (error instanceof ApiClientError && error.message && !error.message.startsWith('HTTP ')) {
+    return error.message
+  }
+  return MESSAGE_DEFAULT_ERROR
+}
+
 function App() {
   const [nickname, setNickname] = useState('')
   const [body, setBody] = useState('')
@@ -38,8 +82,10 @@ function App() {
 
     const trimmedNickname = nickname.trim()
     const trimmedBody = body.trim()
-    const nextNicknameError = trimmedNickname ? '' : 'ニックネームを入力してください'
-    const nextBodyError = trimmedBody.length >= 3 ? '' : '本文は3文字以上で入力してください'
+    const { nicknameError: nextNicknameError, bodyError: nextBodyError } = validateForm(
+      trimmedNickname,
+      trimmedBody
+    )
 
     setNicknameError(nextNicknameError)
     setBodyError(nextBodyError)
@@ -56,18 +102,9 @@ function App() {
       savePostId(response.id)
       setNickname('')
       setBody('')
-      setSuccessMessage('投稿を受け付けました')
+      setSuccessMessage(MESSAGE_SUCCESS)
     } catch (error) {
-      if (error instanceof ApiClientError && error.status === 429) {
-        setSubmitError('5分後に再投稿してください')
-      } else if (
-        error instanceof ApiClientError &&
-        [500, 502, 503, 504].includes(error.status)
-      ) {
-        setSubmitError('一時的なエラーです。時間をおいて再試行してください')
-      } else {
-        setSubmitError('入力内容を確認してください')
-      }
+      setSubmitError(resolveSubmitErrorMessage(error))
     } finally {
       setIsSubmitting(false)
     }
