@@ -151,7 +151,7 @@ bundle exec rails console
 | DB設計 | `docs/db_schema.md` |
 | Gem一覧 | `Gemfile` |
 | APIエンドポイント | `README.md` または `docs/api_spec.md` |
-| デザインシステム | `.docs/DESIGN_SYSTEM_*.md` |
+| デザインシステム | `.docs/DESIGN_SYSTEM_*.md` または `docs/screen_design.md` |
 
 ---
 
