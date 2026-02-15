@@ -94,7 +94,6 @@ module OgpTestHelpers
   def setup_calculate_rank_error(error_class = Aws::DynamoDB::Errors::ServiceError)
     allow_any_instance_of(Post).to receive(:calculate_rank).and_raise(error_class.new(nil, 'DB error'))
   end
-
 end
 
 RSpec.configure do |config|

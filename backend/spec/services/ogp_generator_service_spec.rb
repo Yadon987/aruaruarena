@@ -397,7 +397,8 @@ RSpec.describe OgpGeneratorService do
       end
 
       # 何を検証するか: 審査員アイコンファイルが存在しない場合、ERRORログを出力しnilを返すこと
-      it '審査員アイコンファイルが存在しない場合、ERRORログを出力しnilを返すこと', skip: 'TODO: モック設定が効いていないため調査が必要 (setup_judge_icon_file_not_exist_mock)' do
+      it '審査員アイコンファイルが存在しない場合、ERRORログを出力しnilを返すこと',
+         skip: 'TODO: モック設定が効いていないため調査が必要 (setup_judge_icon_file_not_exist_mock)' do
         post = create(:post, :scored)
         create(:judgment, :hiroyuki, post_id: post.id, succeeded: true)
 

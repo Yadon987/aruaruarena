@@ -163,7 +163,7 @@ RSpec.describe DuplicateCheckService, type: :service do
       # DynamoDB接続エラー時、falseを返す（投稿を許可）
       it 'DynamoDB接続エラー時、falseを返すこと' do
         allow(DuplicateCheck).to receive(:exists_with_hash?).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
-                                                                                                   'Service unavailable'))
+                                                                                                               'Service unavailable'))
         allow(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be false
       end
