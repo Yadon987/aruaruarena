@@ -74,8 +74,8 @@ module OgpTestHelpers
   # 審査員アイコンファイルが存在しないモックを設定する
   def setup_judge_icon_file_not_exist_mock
     setup_file_exist_mocks
-    # hiroyukiのアイコンパスのみをfalseに設定（他のパスはtrue）
-    allow(File).to receive(:exist?).with(OgpGeneratorService::JUDGE_ICON_PATHS['hiroyuki'].to_s).and_return(false)
+    # hiroyukiのアイコンパスのみをfalseに設定（部分一致）
+    allow(File).to receive(:exist?).with(include('judge_hiroyuki.png')).and_return(false)
   end
   # rubocop:enable Metrics/AbcSize
 
@@ -95,16 +95,6 @@ module OgpTestHelpers
     allow_any_instance_of(Post).to receive(:calculate_rank).and_raise(error_class.new(nil, 'DB error'))
   end
 
-  # 同時リクエストテスト用ヘルパー
-  def execute_concurrent_requests(count:, url:)
-    threads = count.times.map do
-      Thread.new do
-        get url
-        [response.status, response.body]
-      end
-    end
-    threads.map(&:value)
-  end
 end
 
 RSpec.configure do |config|

@@ -401,6 +401,8 @@
 - `app/services/ogp_generator_service.rb`
 - `spec/requests/api/ogp_spec.rb`
 - `backend/infrastructure/lambda_edge/ogp_handler.js`（クローラー判定）
+- `backend/terraform/cloudfront.tf`
+- `backend/terraform/lambda_edge.tf`
 
 
 ---
