@@ -18,13 +18,17 @@ module Api
     ERROR_MESSAGE_INVALID_REQUEST = 'リクエスト形式が正しくありません'
     FIELD_LABEL_NICKNAME = 'ニックネーム'
     FIELD_LABEL_BODY = '本文'
-
+    # rubocop:disable Metrics/ClassLength, Metrics/MethodLength
     def show
-      post = Post.find(params[:id])
-      judgments = Judgment.where(post_id: post.id).to_a
-      rank = post.calculate_rank
-      total_count = Post.total_scored_count
-      render json: post.to_detail_json(judgments, rank, total_count)
+      user_agent = request.headers['User-Agent']
+
+      if OgpMetaTagService.crawler?(user_agent:)
+        # クローラーの場合はHTMLを返す
+        render_ogp_html
+      else
+        # 通常ユーザーの場合はJSONを返す
+        render_json_response
+      end
     rescue Dynamoid::Errors::RecordNotFound => e
       # 非機能要件: エラー発生時にERRORレベルでログ出力（投稿ID・エラー内容を含む）
       Rails.logger.error("[PostsController#show] Not found: id=#{params[:id]} error=#{e.class} - #{e.message}")
@@ -156,5 +160,29 @@ module Api
       Rails.logger.error("[JudgePostService] Failed: #{error.class} - #{error.message}")
       Rails.logger.error(error.backtrace.join("\n")) if Rails.env.development?
     end
+
+    # クローラー向けOGPタグ付きHTMLをレンダリング
+    # @return [void] HTMLレスポンスをレンダリング
+    def render_ogp_html
+      post = Post.find(params[:id])
+      # スコア状態（scored）以外は404を返す
+      return render_not_found unless post.status == 'scored'
+
+      base_url = ENV.fetch('BASE_URL', 'https://example.com')
+      html = OgpMetaTagService.generate_html(post:, base_url:)
+
+      render html: html.html_safe, content_type: 'text/html', status: :ok
+    end
+
+    # 通常ユーザー向けJSONをレンダリング
+    # @return [void] JSONレスポンスをレンダリング
+    def render_json_response
+      post = Post.find(params[:id])
+      judgments = Judgment.where(post_id: post.id).to_a
+      rank = post.calculate_rank
+      total_count = Post.total_scored_count
+      render json: post.to_detail_json(judgments, rank, total_count)
+    end
+    # rubocop:enable Metrics/ClassLength, Metrics/MethodLength
   end
 end
