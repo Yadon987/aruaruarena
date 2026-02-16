@@ -27,6 +27,12 @@ const MESSAGE_SUCCESS = '投稿を受け付けました'
 const MESSAGE_RATE_LIMITED = '5分後に再投稿してください'
 const MESSAGE_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_DEFAULT_ERROR = 'エラーが発生しました。再試行してください'
+const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
+const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
+const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
+const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
+const DIALOG_CLOSE_KEY = 'Escape'
+const OPEN_KEYS = ['Enter', ' '] as const
 
 const RANKING_ERROR_MESSAGES = {
   rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
@@ -83,21 +89,24 @@ function removePostId(id: string) {
   writePostIds(removed)
 }
 
+function getErrorStatus(error: unknown): number | undefined {
+  return error instanceof ApiClientError ? error.status : (error as { status?: number })?.status
+}
+
 function resolvePostDetailErrorMessage(error: unknown): string {
-  const errorStatus =
-    error instanceof ApiClientError ? error.status : (error as { status?: number })?.status
+  const errorStatus = getErrorStatus(error)
 
   if (errorStatus === HTTP_STATUS.NOT_FOUND) {
-    return '投稿が見つかりませんでした'
+    return MESSAGE_POST_NOT_FOUND
   }
   if (errorStatus === HTTP_STATUS.TOO_MANY_REQUESTS) {
-    return 'アクセスが集中しています。時間をおいて再度お試しください'
+    return MESSAGE_POST_DETAIL_RATE_LIMITED
   }
   if (errorStatus && SERVER_ERROR_STATUSES.includes(errorStatus)) {
-    return '一時的なエラーです。時間をおいて再試行してください'
+    return MESSAGE_POST_DETAIL_SERVER_ERROR
   }
 
-  return 'ネットワーク接続を確認してください'
+  return MESSAGE_POST_DETAIL_NETWORK_ERROR
 }
 
 function validateForm(nickname: string, body: string): ValidationErrors {
@@ -164,6 +173,7 @@ function RankingSection({ myPostIds }: { myPostIds: string[] }) {
     polling: true,
   })
   const displayRankings = buildDisplayRankings(data?.rankings)
+  const myPostIdSet = new Set(myPostIds)
 
   return (
     <section role="region" aria-label="ランキング表示エリア" className="mb-4 rounded border p-4">
@@ -179,18 +189,21 @@ function RankingSection({ myPostIds }: { myPostIds: string[] }) {
 
       {!isLoading && !isError && displayRankings.length > 0 && (
         <ol className="space-y-2">
-          {displayRankings.map((item) => (
-            <li
-              key={item.id}
-              data-testid="ranking-item"
-              className={`rounded border p-3 ${myPostIds.includes(item.id) ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
-            >
-              <p className="font-semibold">{item.rank}位 {item.nickname}</p>
-              <p>{item.body}</p>
-              <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
-              {myPostIds.includes(item.id) && <p className="text-sm font-bold">あなたの投稿</p>}
-            </li>
-          ))}
+          {displayRankings.map((item) => {
+            const isMyPost = myPostIdSet.has(item.id)
+            return (
+              <li
+                key={item.id}
+                data-testid="ranking-item"
+                className={`rounded border p-3 ${isMyPost ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
+              >
+                <p className="font-semibold">{item.rank}位 {item.nickname}</p>
+                <p>{item.body}</p>
+                <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
+                {isMyPost && <p className="text-sm font-bold">あなたの投稿</p>}
+              </li>
+            )
+          })}
         </ol>
       )}
     </section>
@@ -209,6 +222,7 @@ function App() {
   const [isMyPostsOpen, setIsMyPostsOpen] = useState(false)
   const [myPostsError, setMyPostsError] = useState('')
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
+  const syncMyPostIds = () => setMyPostIds(readPostIds())
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -234,7 +248,7 @@ function App() {
     try {
       const response = await api.posts.create({ nickname: trimmedNickname, body: trimmedBody })
       savePostId(response.id)
-      setMyPostIds(readPostIds())
+      syncMyPostIds()
       setNickname('')
       setBody('')
       setSuccessMessage(MESSAGE_SUCCESS)
@@ -246,7 +260,7 @@ function App() {
   }
 
   const openMyPosts = () => {
-    setMyPostIds(readPostIds())
+    syncMyPostIds()
     setIsMyPostsOpen(true)
   }
 
@@ -255,7 +269,7 @@ function App() {
   }
 
   const handleMyPostsTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (OPEN_KEYS.includes(event.key as (typeof OPEN_KEYS)[number])) {
       event.preventDefault()
       openMyPosts()
     }
@@ -269,20 +283,21 @@ function App() {
     inFlightPostIdsRef.current.add(postId)
     setMyPostsError('')
     const previousPostIds = readPostIds()
+
+    // 404ケースの即時反映を維持するため、クリック時点で対象IDを一旦除外する。
+    // 404以外の結果では直前状態を復元し、既存仕様の振る舞いを維持する。
     removePostId(postId)
-    setMyPostIds(readPostIds())
+    syncMyPostIds()
     try {
       await api.posts.get(postId)
       writePostIds(previousPostIds)
-      setMyPostIds(readPostIds())
+      syncMyPostIds()
     } catch (error) {
       const message = resolvePostDetailErrorMessage(error)
       setMyPostsError(message)
-      const status =
-        error instanceof ApiClientError ? error.status : (error as { status?: number })?.status
-      if (status !== HTTP_STATUS.NOT_FOUND) {
+      if (getErrorStatus(error) !== HTTP_STATUS.NOT_FOUND) {
         writePostIds(previousPostIds)
-        setMyPostIds(readPostIds())
+        syncMyPostIds()
       }
     } finally {
       inFlightPostIdsRef.current.delete(postId)
@@ -342,7 +357,7 @@ function App() {
             aria-label="自分の投稿"
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
             onKeyDown={(event) => {
-              if (event.key === 'Escape') closeMyPosts()
+              if (event.key === DIALOG_CLOSE_KEY) closeMyPosts()
             }}
           >
             <div className="w-full max-w-md rounded bg-white p-4">
