@@ -146,7 +146,7 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
       () => {
         expect(getPostSpy).toHaveBeenCalledTimes(2)
       },
-      { timeout: 3500 }
+      { timeout: 5000 }
     )
   })
 

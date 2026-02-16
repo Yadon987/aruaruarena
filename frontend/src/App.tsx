@@ -35,6 +35,8 @@ const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認し�
 const MESSAGE_JUDGING_FETCH_FAILED = '投稿情報の取得に失敗しました。トップへ戻って再度お試しください。'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
+const ROOT_PATH = '/'
+const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
 
@@ -53,6 +55,11 @@ type ViewMode = 'top' | 'judging' | 'result'
 
 function isUuidLike(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+}
+
+function readJudgingRoutePostId(pathname: string): string | null {
+  const matched = pathname.match(/^\/judging\/(.+)$/)
+  return matched?.[1] ?? null
 }
 
 function parsePostIds(rawValue: string | null): string[] {
@@ -240,6 +247,29 @@ function App() {
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
   const syncMyPostIds = () => setMyPostIds(readPostIds())
+  const syncTopPath = () => window.history.replaceState({}, '', ROOT_PATH)
+  const syncJudgingPath = (postId: string) => {
+    window.history.pushState({}, '', `${JUDGING_PATH_PREFIX}${postId}`)
+  }
+
+  const enterJudgingMode = (postId: string) => {
+    setJudgingPostId(postId)
+    setJudgingErrorMessage('')
+    setViewMode('judging')
+  }
+
+  const exitJudgingWithResult = () => {
+    clearJudgingPolling()
+    setViewMode('result')
+    syncTopPath()
+  }
+
+  const exitJudgingWithError = () => {
+    clearJudgingPolling()
+    setViewMode('top')
+    setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
+    syncTopPath()
+  }
 
   const clearJudgingPolling = () => {
     if (pollingTimerRef.current) {
@@ -250,20 +280,16 @@ function App() {
   }
 
   useEffect(() => {
-    const matched = window.location.pathname.match(/^\/judging\/(.+)$/)
-    if (!matched) return
-
-    const routePostId = matched[1]
+    const routePostId = readJudgingRoutePostId(window.location.pathname)
+    if (!routePostId) return
     if (!isUuidLike(routePostId)) {
       setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
       setViewMode('top')
-      window.history.replaceState({}, '', '/')
+      syncTopPath()
       return
     }
 
-    setJudgingPostId(routePostId)
-    setJudgingErrorMessage('')
-    setViewMode('judging')
+    enterJudgingMode(routePostId)
   }, [])
 
   useEffect(() => {
@@ -273,14 +299,12 @@ function App() {
 
     const handleJudgingFetchFailed = () => {
       if (isDisposed) return
-      clearJudgingPolling()
-      setViewMode('top')
-      setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
-      window.history.replaceState({}, '', '/')
+      exitJudgingWithError()
     }
 
     const fetchPost = async () => {
       const elapsed = Date.now() - pollingStartedAtRef.current
+      // 監視上限60秒を超えた場合はAPIを呼ばずに終端する。
       if (elapsed >= JUDGING_POLLING_TIMEOUT_MS) {
         handleJudgingFetchFailed()
         return
@@ -290,18 +314,18 @@ function App() {
         const response = await api.posts.get(judgingPostId)
         if (isDisposed) return
         if (response.status === 'scored' || response.status === 'failed') {
-          clearJudgingPolling()
-          setViewMode('result')
-          window.history.replaceState({}, '', '/')
+          exitJudgingWithResult()
         }
       } catch (error) {
         if (isDisposed) return
+        // 404は対象投稿が消失しているため即時終了とする。
         if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
           handleJudgingFetchFailed()
           return
         }
 
         const retryElapsed = Date.now() - pollingStartedAtRef.current
+        // 500系/通信系は60秒枠内で再試行し、超過時のみ終了する。
         if (retryElapsed >= JUDGING_POLLING_TIMEOUT_MS) {
           handleJudgingFetchFailed()
         }
@@ -350,9 +374,8 @@ function App() {
       setNickname('')
       setBody('')
       setSuccessMessage(MESSAGE_SUCCESS)
-      setJudgingPostId(response.id)
-      setViewMode('judging')
-      window.history.pushState({}, '', `/judging/${response.id}`)
+      enterJudgingMode(response.id)
+      syncJudgingPath(response.id)
     } catch (error) {
       setSubmitError(resolveSubmitErrorMessage(error))
     } finally {
@@ -477,7 +500,9 @@ function App() {
         {viewMode === 'top' && isMyPostsOpen && (
           <div
             role="dialog"
+            aria-modal="true"
             aria-label="自分の投稿"
+            tabIndex={-1}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
             onKeyDown={(event) => {
               if (event.key === DIALOG_CLOSE_KEY) closeMyPosts()
