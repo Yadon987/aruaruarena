@@ -2,20 +2,36 @@ import { FormEvent, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
+import { HTTP_STATUS } from './shared/constants/api'
+import {
+  DEFAULT_RANKING_LIMIT,
+  MAX_RANKING_LIMIT,
+} from './shared/constants/query'
+import { useRankings } from './shared/hooks/useRankings'
 import { ApiClientError, api } from './shared/services/api'
+import type { RankingItem } from './shared/types/domain'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
 const MIN_BODY_LENGTH = 3
 const MAX_STORED_POST_IDS = 20
-const RATE_LIMIT_STATUS = 429
-const SERVER_ERROR_STATUSES = [500, 502, 503, 504]
+const SERVER_ERROR_STATUSES = [
+  HTTP_STATUS.INTERNAL_SERVER_ERROR,
+  HTTP_STATUS.BAD_GATEWAY,
+  HTTP_STATUS.SERVICE_UNAVAILABLE,
+]
 const MESSAGE_NICKNAME_REQUIRED = 'ニックネームを入力してください'
 const MESSAGE_BODY_REQUIRED = '本文は3文字以上で入力してください'
 const MESSAGE_SUCCESS = '投稿を受け付けました'
 const MESSAGE_RATE_LIMITED = '5分後に再投稿してください'
 const MESSAGE_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_DEFAULT_ERROR = 'エラーが発生しました。再試行してください'
+
+const RANKING_ERROR_MESSAGES = {
+  rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
+  failed: '取得に失敗しました。時間をおいて再度お試しください。',
+  network: '通信状況を確認して再度お試しください。',
+} as const
 
 type ValidationErrors = {
   nicknameError: string
@@ -51,7 +67,7 @@ function validateForm(nickname: string, body: string): ValidationErrors {
 
 // APIクライアントの例外種別をUI文言へ変換する
 function resolveSubmitErrorMessage(error: unknown): string {
-  if (error instanceof ApiClientError && error.status === RATE_LIMIT_STATUS) {
+  if (error instanceof ApiClientError && error.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
     return MESSAGE_RATE_LIMITED
   }
   if (error instanceof ApiClientError && SERVER_ERROR_STATUSES.includes(error.status)) {
@@ -68,6 +84,68 @@ function resolveSubmitErrorMessage(error: unknown): string {
     return error.message
   }
   return MESSAGE_DEFAULT_ERROR
+}
+
+/**
+ * 表示件数は仕様上TOP20固定。
+ * APIが多く返しても描画は20件までに制限する。
+ */
+function buildDisplayRankings(rankings: RankingItem[] | undefined): RankingItem[] {
+  if (!Array.isArray(rankings)) {
+    return []
+  }
+
+  return rankings.slice(0, MAX_RANKING_LIMIT)
+}
+
+/**
+ * ユーザー向け文言のみ返し、内部エラー詳細は画面に出さない。
+ */
+function resolveRankingErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    if (error.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
+      return RANKING_ERROR_MESSAGES.rateLimited
+    }
+
+    if (error.status === 0) {
+      return RANKING_ERROR_MESSAGES.network
+    }
+  }
+
+  return RANKING_ERROR_MESSAGES.failed
+}
+
+function RankingSection() {
+  const { data, isLoading, isError, error } = useRankings(DEFAULT_RANKING_LIMIT, {
+    polling: true,
+  })
+  const displayRankings = buildDisplayRankings(data?.rankings)
+
+  return (
+    <section role="region" aria-label="ランキング表示エリア" className="mb-4 rounded border p-4">
+      <h2 className="mb-4 text-lg font-semibold">ランキング</h2>
+
+      {isLoading && <p>ランキングを読み込み中です...</p>}
+
+      {isError && <p>{resolveRankingErrorMessage(error)}</p>}
+
+      {!isLoading && !isError && displayRankings.length === 0 && (
+        <p>ランキングはまだありません</p>
+      )}
+
+      {!isLoading && !isError && displayRankings.length > 0 && (
+        <ol className="space-y-2">
+          {displayRankings.map((item) => (
+            <li key={item.id} data-testid="ranking-item" className="rounded border p-3">
+              <p className="font-semibold">{item.rank}位 {item.nickname}</p>
+              <p>{item.body}</p>
+              <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  )
 }
 
 function App() {
@@ -149,10 +227,7 @@ function App() {
           {successMessage && <p>{successMessage}</p>}
         </form>
 
-        <section role="region" aria-label="ランキング表示エリア" className="mb-4">
-          <h2 className="text-lg font-semibold">ランキング</h2>
-          <p>ランキングは準備中です</p>
-        </section>
+        <RankingSection />
 
         <footer role="contentinfo">
           <p>フッター</p>
