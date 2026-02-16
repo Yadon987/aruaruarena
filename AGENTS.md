@@ -12,7 +12,7 @@ Ruby on Rails 8 API + DynamoDB で構築された「あるあるアリーナ」�
 | Database | DynamoDB (NoSQL) |
 | Serverless | AWS Lambda |
 | Testing | RSpec 8.0+, FactoryBot |
-| Frontend | React 18 + TypeScript (別リポジトリ) |
+| Frontend | React 18 + TypeScript（`frontend/`） |
 | AI APIs | Gemini 2.5 Flash, GLM-4.7-FlashX, GPT-4o-mini |
 
 ---
@@ -149,9 +149,9 @@ bundle exec rails console
 |---------|--------|
 | 画面設計・UI/UX | `docs/screen_design.md` |
 | DB設計 | `docs/db_schema.md` |
-| Gem一覧 | `Gemfile` |
-| APIエンドポイント | `README.md` または `docs/api_spec.md` |
-| デザインシステム | `.docs/DESIGN_SYSTEM_*.md` または `docs/screen_design.md` |
+| Gem一覧 | `backend/Gemfile` または `docs/Gemfile.md` |
+| APIエンドポイント | `README.md` |
+| デザインシステム | `docs/screen_design.md` |
 
 ---
 
@@ -175,7 +175,7 @@ COVERAGE=true bundle exec rspec
 
 ## 🔌 利用可能なスキル
 
-- `.agent/skills/coderabbit-review/SKILL.md`: CodeRabbit風コードレビュー
+- 現在このリポジトリ内で参照可能なプロジェクト固有スキル定義は未配置
 
 ---
 

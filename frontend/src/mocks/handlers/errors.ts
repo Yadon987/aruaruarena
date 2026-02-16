@@ -50,6 +50,42 @@ export const errorHandlers = {
   }),
 
   /**
+   * GET /api/rankings
+   *
+   * 429 Rate Limited エラーを返します。
+   */
+  rankingsRateLimited: http.get('/api/rankings', () => {
+    return HttpResponse.json(
+      {
+        error: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
+        code: API_ERROR_CODE.RATE_LIMITED,
+      },
+      { status: HTTP_STATUS.TOO_MANY_REQUESTS }
+    )
+  }),
+
+  /**
+   * GET /api/rankings
+   *
+   * 500 Internal Server Error を返します。
+   */
+  rankingsServerError: http.get('/api/rankings', () => {
+    return HttpResponse.json(
+      { error: 'サーバーエラー', code: API_ERROR_CODE.HTTP_ERROR },
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
+    )
+  }),
+
+  /**
+   * GET /api/rankings
+   *
+   * ネットワークエラーをシミュレートします。
+   */
+  rankingsNetworkError: http.get('/api/rankings', () => {
+    return HttpResponse.error()
+  }),
+
+  /**
    * GET /api/posts/network-error
    *
    * ネットワークエラーをシミュレートします。

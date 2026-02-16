@@ -1,92 +1,90 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
-import reactLogo from './assets/react.svg'
+import {
+  DEFAULT_RANKING_LIMIT,
+  MAX_RANKING_LIMIT,
+} from './shared/constants/query'
+import { HTTP_STATUS } from './shared/constants/api'
+import { useRankings } from './shared/hooks/useRankings'
+import { ApiClientError } from './shared/services/api'
+import type { RankingItem } from './shared/types/domain'
 import './App.css'
+
+const ERROR_MESSAGES = {
+  rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
+  failed: '取得に失敗しました。時間をおいて再度お試しください。',
+  network: '通信状況を確認して再度お試しください。',
+} as const
+
+/**
+ * 表示件数は仕様上TOP20固定。
+ * APIが多く返しても描画は20件までに制限する。
+ */
+function buildDisplayRankings(rankings: RankingItem[] | undefined): RankingItem[] {
+  if (!Array.isArray(rankings)) {
+    return []
+  }
+
+  return rankings.slice(0, MAX_RANKING_LIMIT)
+}
+
+/**
+ * ユーザー向け文言のみ返し、内部エラー詳細は画面に出さない。
+ */
+function resolveErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    if (error.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
+      return ERROR_MESSAGES.rateLimited
+    }
+
+    if (error.status === 0) {
+      return ERROR_MESSAGES.network
+    }
+  }
+
+  return ERROR_MESSAGES.failed
+}
+
+function RankingSection() {
+  const { data, isLoading, isError, error } = useRankings(DEFAULT_RANKING_LIMIT, {
+    polling: true,
+  })
+  const displayRankings = buildDisplayRankings(data?.rankings)
+
+  return (
+    <section aria-label="ランキング表示エリア" className="mb-8 rounded border p-4">
+      <h2 className="mb-4 text-xl font-bold text-gray-800">あるあるランキング</h2>
+
+      {isLoading && <p>ランキングを読み込み中です...</p>}
+
+      {isError && <p>{resolveErrorMessage(error)}</p>}
+
+      {!isLoading && !isError && displayRankings.length === 0 && (
+        <p>ランキングはまだありません</p>
+      )}
+
+      {!isLoading && !isError && displayRankings.length > 0 && (
+        <ol className="space-y-2">
+          {displayRankings.map((item) => (
+            <li key={item.id} data-testid="ranking-item" className="rounded border p-3">
+              <p className="font-semibold">{item.rank}位 {item.nickname}</p>
+              <p>{item.body}</p>
+              <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  )
+}
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Tailwind CSS 動作確認</h2>
-
-        {/* 1. 基本クラス */}
-        <div className="mb-6 p-4 border rounded shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2 border-b pb-1">
-            1. 基本クラス
-          </h3>
-          <div className="space-y-2">
-            <p className="text-gray-600">
-              比較用：これは標準の太さのテキストです (font-normal)
-            </p>
-            <p className="text-blue-500 font-bold">
-              検証用：これは青い太字テキストです (text-blue-500 font-bold)
-            </p>
-          </div>
-        </div>
-
-        {/* 2. カスタムカラー */}
-        <div className="mb-6 p-4 border rounded shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2 border-b pb-1">
-            2. カスタムカラー
-          </h3>
-          <div className="flex gap-4">
-            <span className="px-4 py-2 bg-primary-500 text-white rounded">Primary</span>
-            <span className="px-4 py-2 bg-secondary-500 text-white rounded">Secondary</span>
-            <span className="px-4 py-2 bg-error-500 text-white rounded">Error</span>
-          </div>
-        </div>
-
-        {/* 3. レスポンシブ */}
-        <div className="mb-6 p-4 border rounded shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2 border-b pb-1">
-            3. レスポンシブ
-          </h3>
-          <p className="text-sm md:text-lg bg-gray-100 p-2 rounded">
-            画面幅でサイズ変 (text-sm &rarr; md:text-lg) <br />
-            <span className="text-xs text-gray-500">※ウィンドウ幅を変えて確認してください</span>
-          </p>
-        </div>
-
-        {/* 4. インタラクティブ */}
-        <div className="mb-6 p-4 border rounded shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2 border-b pb-1">
-            4. インタラクティブ
-          </h3>
-          <button className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded transition-colors duration-200">
-            ホバーしてみてください
-          </button>
-        </div>
-
-        {/* 5. スペース・パディング */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            5. スペース・パディング (検証用ボックス)
-          </h3>
-          <p className="text-sm text-gray-600 mb-2">※外枠の点線と、内側のボックスの間に隙間(マージン)があれば成功です</p>
-          <div className="border-2 border-dashed border-gray-300 bg-yellow-50 inline-block">
-             <div className="p-4 m-2 bg-white rounded border-2 border-primary-300 text-center shadow-sm">
-               p-4 m-2
-             </div>
-          </div>
-        </div>
-
-        {/* 6. アニメーション (追加リクエスト) */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            6. アニメーション動作確認
-          </h3>
-          <div className="flex items-center justify-center p-6 bg-gray-50 border rounded">
-            <a href="https://react.dev" target="_blank" rel="noreferrer">
-              <img src={reactLogo} className="logo react" alt="React logo" />
-            </a>
-          </div>
-          <p className="text-center text-sm text-gray-500 mt-2">
-            ロゴが回転していれば成功です (animation: logo-spin)
-          </p>
-        </div>
-
-      </div>
+      <main className="p-6">
+        <RankingSection />
+      </main>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )
