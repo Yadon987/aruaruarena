@@ -36,6 +36,7 @@ const MESSAGE_JUDGING_FETCH_FAILED = '投稿情報の取得に失敗しました
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
 const JUDGING_POLLING_INTERVAL_MS = 3000
+const JUDGING_POLLING_TIMEOUT_MS = 60000
 
 const RANKING_ERROR_MESSAGES = {
   rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
@@ -237,6 +238,7 @@ function App() {
   const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollingStartedAtRef = useRef<number>(0)
   const syncMyPostIds = () => setMyPostIds(readPostIds())
 
   const clearJudgingPolling = () => {
@@ -244,6 +246,7 @@ function App() {
       clearInterval(pollingTimerRef.current)
       pollingTimerRef.current = null
     }
+    pollingStartedAtRef.current = 0
   }
 
   useEffect(() => {
@@ -254,6 +257,7 @@ function App() {
     if (!isUuidLike(routePostId)) {
       setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
       setViewMode('top')
+      window.history.replaceState({}, '', '/')
       return
     }
 
@@ -266,25 +270,46 @@ function App() {
     if (viewMode !== 'judging' || !judgingPostId) return
 
     let isDisposed = false
+
+    const handleJudgingFetchFailed = () => {
+      if (isDisposed) return
+      clearJudgingPolling()
+      setViewMode('top')
+      setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
+      window.history.replaceState({}, '', '/')
+    }
+
     const fetchPost = async () => {
+      const elapsed = Date.now() - pollingStartedAtRef.current
+      if (elapsed >= JUDGING_POLLING_TIMEOUT_MS) {
+        handleJudgingFetchFailed()
+        return
+      }
+
       try {
         const response = await api.posts.get(judgingPostId)
         if (isDisposed) return
         if (response.status === 'scored' || response.status === 'failed') {
           clearJudgingPolling()
           setViewMode('result')
+          window.history.replaceState({}, '', '/')
         }
       } catch (error) {
         if (isDisposed) return
         if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
-          clearJudgingPolling()
-          setViewMode('top')
-          setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
+          handleJudgingFetchFailed()
+          return
+        }
+
+        const retryElapsed = Date.now() - pollingStartedAtRef.current
+        if (retryElapsed >= JUDGING_POLLING_TIMEOUT_MS) {
+          handleJudgingFetchFailed()
         }
       }
     }
 
     clearJudgingPolling()
+    pollingStartedAtRef.current = Date.now()
     void fetchPost()
     pollingTimerRef.current = setInterval(() => {
       void fetchPost()
@@ -327,6 +352,7 @@ function App() {
       setSuccessMessage(MESSAGE_SUCCESS)
       setJudgingPostId(response.id)
       setViewMode('judging')
+      window.history.pushState({}, '', `/judging/${response.id}`)
     } catch (error) {
       setSubmitError(resolveSubmitErrorMessage(error))
     } finally {

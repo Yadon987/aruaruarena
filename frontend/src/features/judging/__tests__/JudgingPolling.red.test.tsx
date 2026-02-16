@@ -14,6 +14,7 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     mswServer.resetHandlers()
     localStorage.clear()
     getPostSpy.mockClear()
+    window.history.replaceState({}, '', '/')
   })
 
   afterAll(() => {
@@ -22,6 +23,7 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
   })
 
   beforeEach(() => {
+    window.history.replaceState({}, '', '/')
     mswServer.use(
       http.post('/api/posts', () => {
         return HttpResponse.json({ id: 'polling-test', status: 'judging' })
@@ -49,8 +51,8 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     )
   })
 
-  it('status=scored を受信したらポーリング停止してトップへ遷移する', async () => {
-    // 何を検証するか: scored受信時に審査中を終了しトップ画面へ戻ること
+  it('status=scored を受信したらポーリング停止して審査結果画面へ遷移する', async () => {
+    // 何を検証するか: scored受信時に審査中を終了し審査結果画面へ遷移すること
     mswServer.use(
       http.get('/api/posts/:id', () => {
         return HttpResponse.json({
@@ -74,8 +76,8 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     })
   })
 
-  it('status=failed を受信したらポーリング停止してトップへ遷移する', async () => {
-    // 何を検証するか: failed受信時に審査中を終了しトップ画面へ戻ること
+  it('status=failed を受信したらポーリング停止して審査結果画面へ遷移する', async () => {
+    // 何を検証するか: failed受信時に審査中を終了し審査結果画面へ遷移すること
     mswServer.use(
       http.get('/api/posts/:id', () => {
         return HttpResponse.json({
