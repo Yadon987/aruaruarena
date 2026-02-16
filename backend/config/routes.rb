@@ -8,7 +8,13 @@ Rails.application.routes.draw do
   namespace :api do
     # ヘルスチェックエンドポイント（クライアント/フロントエンド用）
     get :health, to: 'health_check#index'
-    resources :posts, only: %i[create show]
+    resources :posts, only: %i[create show] do
+      post :rejudge, on: :member
+    end
     resources :rankings, only: %i[index] # E08 追加
   end
+
+  # OGP画像用ルート
+  # format: false を使用して、.pngをparams[:id]に含める
+  get '/ogp/posts/:id.png', to: 'ogp#show', format: false
 end

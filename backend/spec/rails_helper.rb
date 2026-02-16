@@ -36,21 +36,44 @@ RSpec.configure do |config|
 
   # Dynamoid テーブルのクリーンアップとセットアップ
   config.before(:suite) do
-    # テーブルを確認（デバッグ用）
+    # テーブルを確認し、存在しない場合は作成（CI環境対策）
     if defined?(Dynamoid)
-      tables = Dynamoid.adapter.list_tables
-      puts "[Before Suite] Existing tables: #{tables.inspect}" if ENV['DEBUG']
+      begin
+        # 必要なテーブルが作成されているか確認
+        existing_tables = Dynamoid.adapter.list_tables
+        puts "[Before Suite] Existing tables: #{existing_tables.inspect}" if ENV['DEBUG']
+
+        # モデルに関連するテーブルを作成
+        [Post, Judgment, RateLimit].each do |model|
+          if defined?(model) && existing_tables.exclude?(model.table_name)
+            puts "Creating table for #{model}..."
+            model.create_table
+          end
+        end
+
+        # DuplicateCheckはカスタムキーを使用しているため、明示的に作成
+        if defined?(DuplicateCheck) && existing_tables.exclude?(DuplicateCheck.table_name)
+          puts 'Creating table for DuplicateCheck...'
+          # create_table(table_name, key, options = {})
+          # keyは :id ではなく :body_hash
+          Dynamoid.adapter.create_table(DuplicateCheck.table_name, :body_hash, {})
+        end
+      rescue StandardError => e
+        puts "Failed to setup DynamoDB tables: #{e.message}"
+      end
     end
   end
 
   # 各テスト前にテーブルをクリーンアップ
   config.before(:each) do
     # DynamoDB Localの整合性問題を回避するため、各テスト前にクリーンアップ
-    # delete_allは非同期ですが、テスト環境では十分に高速です
-    Post.delete_all if defined?(Post)
-    Judgment.delete_all if defined?(Judgment)
-    RateLimit.delete_all if defined?(RateLimit)
-    DuplicateCheck.delete_all if defined?(DuplicateCheck)
+    # truncate_tableはバージョンによって利用できない場合があるため、delete_allを使用
+    if defined?(Dynamoid)
+      existing_tables = Dynamoid.adapter.list_tables
+      [Post, Judgment, RateLimit, DuplicateCheck].each do |model|
+        model.delete_all if existing_tables.include?(model.table_name)
+      end
+    end
   end
 
   # Shoulda Matchers configuration
