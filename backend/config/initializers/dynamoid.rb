@@ -6,7 +6,7 @@
 if Rails.env.test?
   Dynamoid.configure do |config|
     config.namespace = 'aruaruarena_test'
-    config.endpoint = ENV['DYNAMODB_ENDPOINT'] || 'http://localhost:8000'
+    config.endpoint = ENV['DYNAMODB_ENDPOINT'] || 'http://127.0.0.1:8000'
     config.region = ENV['AWS_REGION'] || 'us-east-1'
     config.access_key = ENV['AWS_ACCESS_KEY_ID'] || 'test'
     config.secret_key = ENV['AWS_SECRET_ACCESS_KEY'] || 'test'

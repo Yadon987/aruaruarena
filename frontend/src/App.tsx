@@ -9,7 +9,8 @@ import {
 } from './shared/constants/query'
 import { useRankings } from './shared/hooks/useRankings'
 import { ApiClientError, api } from './shared/services/api'
-import type { RankingItem } from './shared/types/domain'
+import type { Post, RankingItem } from './shared/types/domain'
+import { MyPostDetail } from './features/top/components/MyPostDetail'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
@@ -221,6 +222,8 @@ function App() {
   const [myPostIds, setMyPostIds] = useState<string[]>(() => readPostIds())
   const [isMyPostsOpen, setIsMyPostsOpen] = useState(false)
   const [myPostsError, setMyPostsError] = useState('')
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
   const syncMyPostIds = () => setMyPostIds(readPostIds())
 
@@ -266,6 +269,8 @@ function App() {
 
   const closeMyPosts = () => {
     setIsMyPostsOpen(false)
+    setSelectedPost(null)
+    setIsLoadingPostDetail(false)
   }
 
   const handleMyPostsTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -281,6 +286,7 @@ function App() {
     }
 
     inFlightPostIdsRef.current.add(postId)
+    setIsLoadingPostDetail(true)
     setMyPostsError('')
     const previousPostIds = readPostIds()
 
@@ -289,7 +295,8 @@ function App() {
     removePostId(postId)
     syncMyPostIds()
     try {
-      await api.posts.get(postId)
+      const response = await api.posts.get(postId)
+      setSelectedPost(response)
       writePostIds(previousPostIds)
       syncMyPostIds()
     } catch (error) {
@@ -300,6 +307,7 @@ function App() {
         syncMyPostIds()
       }
     } finally {
+      setIsLoadingPostDetail(false)
       inFlightPostIdsRef.current.delete(postId)
     }
   }
@@ -361,24 +369,35 @@ function App() {
             }}
           >
             <div className="w-full max-w-md rounded bg-white p-4">
-              <h2 className="mb-3 text-lg font-semibold">自分の投稿</h2>
-              {myPostsError && <p className="mb-3">{myPostsError}</p>}
-              {displayMyPostIds.length === 0 ? (
-                <p>投稿するとここに表示されます</p>
+              {selectedPost ? (
+                <MyPostDetail
+                  post={selectedPost}
+                  onBack={() => setSelectedPost(null)}
+                  onClose={closeMyPosts}
+                />
               ) : (
-                <ul className="space-y-2">
-                  {displayMyPostIds.map((postId) => (
-                    <li key={postId} data-testid="my-post-id-item">
-                      <button type="button" onClick={() => handleMyPostClick(postId)}>
-                        {postId}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <h2 className="mb-3 text-lg font-semibold">自分の投稿</h2>
+                  {myPostsError && <p className="mb-3">{myPostsError}</p>}
+                  {isLoadingPostDetail && <p className="mb-3">投稿詳細を読み込み中です...</p>}
+                  {displayMyPostIds.length === 0 ? (
+                    <p>投稿するとここに表示されます</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {displayMyPostIds.map((postId) => (
+                        <li key={postId} data-testid="my-post-id-item">
+                          <button type="button" onClick={() => handleMyPostClick(postId)}>
+                            {postId}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <button type="button" onClick={closeMyPosts} className="mt-4">
+                    閉じる
+                  </button>
+                </>
               )}
-              <button type="button" onClick={closeMyPosts} className="mt-4">
-                閉じる
-              </button>
             </div>
           </div>
         )}
