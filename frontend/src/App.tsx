@@ -32,8 +32,14 @@ const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
 const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
 const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
+const MESSAGE_JUDGING_LOADING = 'AI審査員が採点中...'
+const MESSAGE_JUDGING_BODY_FALLBACK = '投稿内容を読み込み中です'
+const MESSAGE_JUDGING_NICKNAME_FALLBACK = '名無し'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
+const JUDGE_NAMES = ['ひろゆき風', 'デヴィ婦人風', '中尾彬風'] as const
+const HIROYUKI_INDEX = 0
+const HIROYUKI_CATCHPHRASE = 'それってあなたの感想ですよね'
 
 const RANKING_ERROR_MESSAGES = {
   rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
@@ -221,11 +227,32 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [myPostIds, setMyPostIds] = useState<string[]>(() => readPostIds())
   const [isMyPostsOpen, setIsMyPostsOpen] = useState(false)
+  const [isJudgingScreen, setIsJudgingScreen] = useState(false)
+  const [judgingNickname, setJudgingNickname] = useState(MESSAGE_JUDGING_NICKNAME_FALLBACK)
+  const [judgingBody, setJudgingBody] = useState(MESSAGE_JUDGING_BODY_FALLBACK)
   const [myPostsError, setMyPostsError] = useState('')
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
   const syncMyPostIds = () => setMyPostIds(readPostIds())
+
+  // 投稿完了直後に審査中画面を先に表示し、UX上の待機時間を体感しづらくする。
+  const startJudgingScreen = (submittedNickname: string) => {
+    setIsJudgingScreen(true)
+    setJudgingNickname(submittedNickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
+    setJudgingBody(MESSAGE_JUDGING_BODY_FALLBACK)
+  }
+
+  // 投稿詳細取得に失敗しても審査中画面は維持し、既定文言で継続表示する。
+  const fetchJudgingPostDetail = async (postId: string) => {
+    try {
+      const postDetail = await api.posts.get(postId)
+      setJudgingNickname(postDetail.nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
+      setJudgingBody(postDetail.body || MESSAGE_JUDGING_BODY_FALLBACK)
+    } catch {
+      setJudgingBody(MESSAGE_JUDGING_BODY_FALLBACK)
+    }
+  }
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -252,6 +279,8 @@ function App() {
       const response = await api.posts.create({ nickname: trimmedNickname, body: trimmedBody })
       savePostId(response.id)
       syncMyPostIds()
+      startJudgingScreen(trimmedNickname)
+      void fetchJudgingPostDetail(response.id)
       setNickname('')
       setBody('')
       setSuccessMessage(MESSAGE_SUCCESS)
@@ -350,6 +379,30 @@ function App() {
           {successMessage && <p>{successMessage}</p>}
         </form>
 
+        {isJudgingScreen && (
+          <section
+            data-testid="judging-screen"
+            role="region"
+            aria-label="審査中"
+            aria-live="polite"
+            className="mb-4 rounded border p-4"
+          >
+            <h2 className="mb-2 text-lg font-semibold">審査中</h2>
+            <p className="mb-2">{judgingNickname}</p>
+            <p className="mb-4">{judgingBody}</p>
+            <ul className="mb-4 space-y-1">
+              {JUDGE_NAMES.map((judgeName, index) => (
+                <li key={judgeName}>
+                  <p>{judgeName}</p>
+                  {index === HIROYUKI_INDEX && (
+                    <p data-testid="catchphrase-hiroyuki">{HIROYUKI_CATCHPHRASE}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p>{MESSAGE_JUDGING_LOADING}</p>
+          </section>
+        )}
         <RankingSection myPostIds={myPostIds} />
 
         <footer role="contentinfo">
