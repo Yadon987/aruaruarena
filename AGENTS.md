@@ -12,7 +12,7 @@ Ruby on Rails 8 API + DynamoDB で構築された「あるあるアリーナ」�
 | Database | DynamoDB (NoSQL) |
 | Serverless | AWS Lambda |
 | Testing | RSpec 8.0+, FactoryBot |
-| Frontend | React 18 + TypeScript（`frontend/`） |
+| Frontend | React 19 + TypeScript（`frontend/`） |
 | AI APIs | Gemini 2.5 Flash, GLM-4.7-FlashX, GPT-4o-mini |
 
 ---

@@ -70,4 +70,16 @@ describe('useRankings RED', () => {
     expect(api.rankings.list).toHaveBeenCalledWith(1)
     expect(api.rankings.list).toHaveBeenCalledWith(20)
   })
+
+  it('limitがNaN/Infinityでもデフォルト値でAPIを呼ぶ', async () => {
+    // 何を検証するか: 非数・無限大入力でも安全なデフォルト件数で取得すること
+    // @ts-ignore
+    api.rankings.list.mockResolvedValue({ rankings: [], total_count: 0 })
+
+    renderHook(() => useRankings(Number.NaN), { wrapper })
+    renderHook(() => useRankings(Number.POSITIVE_INFINITY), { wrapper })
+
+    await waitFor(() => expect(api.rankings.list).toHaveBeenCalled())
+    expect(api.rankings.list).toHaveBeenCalledWith(20)
+  })
 })

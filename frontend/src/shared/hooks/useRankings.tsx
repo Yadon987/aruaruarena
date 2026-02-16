@@ -17,6 +17,10 @@ interface UseRankingsOptions {
  * limitを安全な範囲に丸める
  */
 function normalizeRankingLimit(limit: number): number {
+  if (!Number.isFinite(limit)) {
+    return DEFAULT_RANKING_LIMIT
+  }
+
   return Math.min(Math.max(limit, MIN_RANKING_LIMIT), MAX_RANKING_LIMIT)
 }
 
