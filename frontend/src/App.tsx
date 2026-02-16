@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, KeyboardEvent, useRef, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
@@ -13,6 +13,7 @@ import type { RankingItem } from './shared/types/domain'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
+const LEGACY_STORAGE_KEY = 'aruaruarena_my_posts'
 const MIN_BODY_LENGTH = 3
 const MAX_STORED_POST_IDS = 20
 const SERVER_ERROR_STATUSES = [
@@ -38,22 +39,65 @@ type ValidationErrors = {
   bodyError: string
 }
 
-function readPostIds(): string[] {
-  const rawValue = localStorage.getItem(STORAGE_KEY)
+function parsePostIds(rawValue: string | null): string[] {
   if (!rawValue) return []
   try {
     const parsed = JSON.parse(rawValue)
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((id) => typeof id === 'string').slice(0, MAX_STORED_POST_IDS)
   } catch {
     return []
   }
+}
+
+function readPostIds(): string[] {
+  const rawValue = localStorage.getItem(STORAGE_KEY)
+  if (rawValue) {
+    return parsePostIds(rawValue)
+  }
+
+  const legacyValue = localStorage.getItem(LEGACY_STORAGE_KEY)
+  const migrated = parsePostIds(legacyValue)
+  if (legacyValue) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
+  }
+
+  return migrated
+}
+
+function writePostIds(postIds: string[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(postIds.slice(0, MAX_STORED_POST_IDS)))
 }
 
 function savePostId(id: string) {
   const current = readPostIds()
   const deduplicated = current.filter((existingId) => existingId !== id)
   const limited = [id, ...deduplicated].slice(0, MAX_STORED_POST_IDS)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(limited))
+  writePostIds(limited)
+}
+
+function removePostId(id: string) {
+  const current = readPostIds()
+  const removed = current.filter((existingId) => existingId !== id)
+  writePostIds(removed)
+}
+
+function resolvePostDetailErrorMessage(error: unknown): string {
+  const errorStatus =
+    error instanceof ApiClientError ? error.status : (error as { status?: number })?.status
+
+  if (errorStatus === HTTP_STATUS.NOT_FOUND) {
+    return '投稿が見つかりませんでした'
+  }
+  if (errorStatus === HTTP_STATUS.TOO_MANY_REQUESTS) {
+    return 'アクセスが集中しています。時間をおいて再度お試しください'
+  }
+  if (errorStatus && SERVER_ERROR_STATUSES.includes(errorStatus)) {
+    return '一時的なエラーです。時間をおいて再試行してください'
+  }
+
+  return 'ネットワーク接続を確認してください'
 }
 
 function validateForm(nickname: string, body: string): ValidationErrors {
@@ -115,7 +159,7 @@ function resolveRankingErrorMessage(error: unknown): string {
   return RANKING_ERROR_MESSAGES.failed
 }
 
-function RankingSection() {
+function RankingSection({ myPostIds }: { myPostIds: string[] }) {
   const { data, isLoading, isError, error } = useRankings(DEFAULT_RANKING_LIMIT, {
     polling: true,
   })
@@ -136,10 +180,15 @@ function RankingSection() {
       {!isLoading && !isError && displayRankings.length > 0 && (
         <ol className="space-y-2">
           {displayRankings.map((item) => (
-            <li key={item.id} data-testid="ranking-item" className="rounded border p-3">
+            <li
+              key={item.id}
+              data-testid="ranking-item"
+              className={`rounded border p-3 ${myPostIds.includes(item.id) ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
+            >
               <p className="font-semibold">{item.rank}位 {item.nickname}</p>
               <p>{item.body}</p>
               <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
+              {myPostIds.includes(item.id) && <p className="text-sm font-bold">あなたの投稿</p>}
             </li>
           ))}
         </ol>
@@ -156,6 +205,10 @@ function App() {
   const [submitError, setSubmitError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [myPostIds, setMyPostIds] = useState<string[]>(() => readPostIds())
+  const [isMyPostsOpen, setIsMyPostsOpen] = useState(false)
+  const [myPostsError, setMyPostsError] = useState('')
+  const inFlightPostIdsRef = useRef<Set<string>>(new Set())
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -181,6 +234,7 @@ function App() {
     try {
       const response = await api.posts.create({ nickname: trimmedNickname, body: trimmedBody })
       savePostId(response.id)
+      setMyPostIds(readPostIds())
       setNickname('')
       setBody('')
       setSuccessMessage(MESSAGE_SUCCESS)
@@ -190,6 +244,52 @@ function App() {
       setIsSubmitting(false)
     }
   }
+
+  const openMyPosts = () => {
+    setMyPostIds(readPostIds())
+    setIsMyPostsOpen(true)
+  }
+
+  const closeMyPosts = () => {
+    setIsMyPostsOpen(false)
+  }
+
+  const handleMyPostsTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      openMyPosts()
+    }
+  }
+
+  const handleMyPostClick = async (postId: string) => {
+    if (inFlightPostIdsRef.current.has(postId)) {
+      return
+    }
+
+    inFlightPostIdsRef.current.add(postId)
+    setMyPostsError('')
+    const previousPostIds = readPostIds()
+    removePostId(postId)
+    setMyPostIds(readPostIds())
+    try {
+      await api.posts.get(postId)
+      writePostIds(previousPostIds)
+      setMyPostIds(readPostIds())
+    } catch (error) {
+      const message = resolvePostDetailErrorMessage(error)
+      setMyPostsError(message)
+      const status =
+        error instanceof ApiClientError ? error.status : (error as { status?: number })?.status
+      if (status !== HTTP_STATUS.NOT_FOUND) {
+        writePostIds(previousPostIds)
+        setMyPostIds(readPostIds())
+      }
+    } finally {
+      inFlightPostIdsRef.current.delete(postId)
+    }
+  }
+
+  const displayMyPostIds = Array.from(new Set(myPostIds)).slice(0, MAX_STORED_POST_IDS)
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -227,11 +327,46 @@ function App() {
           {successMessage && <p>{successMessage}</p>}
         </form>
 
-        <RankingSection />
+        <RankingSection myPostIds={myPostIds} />
 
         <footer role="contentinfo">
+          <button type="button" onClick={openMyPosts} onKeyDown={handleMyPostsTriggerKeyDown}>
+            自分の投稿一覧
+          </button>
           <p>フッター</p>
         </footer>
+
+        {isMyPostsOpen && (
+          <div
+            role="dialog"
+            aria-label="自分の投稿"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') closeMyPosts()
+            }}
+          >
+            <div className="w-full max-w-md rounded bg-white p-4">
+              <h2 className="mb-3 text-lg font-semibold">自分の投稿</h2>
+              {myPostsError && <p className="mb-3">{myPostsError}</p>}
+              {displayMyPostIds.length === 0 ? (
+                <p>投稿するとここに表示されます</p>
+              ) : (
+                <ul className="space-y-2">
+                  {displayMyPostIds.map((postId) => (
+                    <li key={postId} data-testid="my-post-id-item">
+                      <button type="button" onClick={() => handleMyPostClick(postId)}>
+                        {postId}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button type="button" onClick={closeMyPosts} className="mt-4">
+                閉じる
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
