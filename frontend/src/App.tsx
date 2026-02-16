@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useRef, useState } from 'react'
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
@@ -32,8 +32,10 @@ const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
 const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
 const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
+const MESSAGE_JUDGING_FETCH_FAILED = '投稿情報の取得に失敗しました。トップへ戻って再度お試しください。'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
+const JUDGING_POLLING_INTERVAL_MS = 3000
 
 const RANKING_ERROR_MESSAGES = {
   rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
@@ -44,6 +46,12 @@ const RANKING_ERROR_MESSAGES = {
 type ValidationErrors = {
   nicknameError: string
   bodyError: string
+}
+
+type ViewMode = 'top' | 'judging' | 'result'
+
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 }
 
 function parsePostIds(rawValue: string | null): string[] {
@@ -224,8 +232,69 @@ function App() {
   const [myPostsError, setMyPostsError] = useState('')
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('top')
+  const [judgingPostId, setJudgingPostId] = useState('')
+  const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
+  const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const syncMyPostIds = () => setMyPostIds(readPostIds())
+
+  const clearJudgingPolling = () => {
+    if (pollingTimerRef.current) {
+      clearInterval(pollingTimerRef.current)
+      pollingTimerRef.current = null
+    }
+  }
+
+  useEffect(() => {
+    const matched = window.location.pathname.match(/^\/judging\/(.+)$/)
+    if (!matched) return
+
+    const routePostId = matched[1]
+    if (!isUuidLike(routePostId)) {
+      setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
+      setViewMode('top')
+      return
+    }
+
+    setJudgingPostId(routePostId)
+    setJudgingErrorMessage('')
+    setViewMode('judging')
+  }, [])
+
+  useEffect(() => {
+    if (viewMode !== 'judging' || !judgingPostId) return
+
+    let isDisposed = false
+    const fetchPost = async () => {
+      try {
+        const response = await api.posts.get(judgingPostId)
+        if (isDisposed) return
+        if (response.status === 'scored' || response.status === 'failed') {
+          clearJudgingPolling()
+          setViewMode('result')
+        }
+      } catch (error) {
+        if (isDisposed) return
+        if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
+          clearJudgingPolling()
+          setViewMode('top')
+          setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
+        }
+      }
+    }
+
+    clearJudgingPolling()
+    void fetchPost()
+    pollingTimerRef.current = setInterval(() => {
+      void fetchPost()
+    }, JUDGING_POLLING_INTERVAL_MS)
+
+    return () => {
+      isDisposed = true
+      clearJudgingPolling()
+    }
+  }, [viewMode, judgingPostId])
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -242,6 +311,7 @@ function App() {
     setBodyError(nextBodyError)
     setSubmitError('')
     setSuccessMessage('')
+    setJudgingErrorMessage('')
 
     if (nextNicknameError || nextBodyError) {
       return
@@ -255,6 +325,8 @@ function App() {
       setNickname('')
       setBody('')
       setSuccessMessage(MESSAGE_SUCCESS)
+      setJudgingPostId(response.id)
+      setViewMode('judging')
     } catch (error) {
       setSubmitError(resolveSubmitErrorMessage(error))
     } finally {
@@ -321,45 +393,62 @@ function App() {
           <h1 className="text-2xl font-bold">あるあるアリーナ</h1>
         </header>
 
-        <form aria-label="投稿フォーム" onSubmit={onSubmit} className="mb-4 space-y-2">
-          <div>
-            <label htmlFor="nickname">ニックネーム</label>
-            <input
-              id="nickname"
-              type="text"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              className="block w-full border rounded p-2"
-            />
-            {nicknameError && <p>{nicknameError}</p>}
-          </div>
-          <div>
-            <label htmlFor="body">あるある本文</label>
-            <textarea
-              id="body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              className="block w-full border rounded p-2"
-            />
-            {bodyError && <p>{bodyError}</p>}
-          </div>
-          <button type="submit" disabled={isSubmitting} className="px-4 py-2 border rounded">
-            投稿する
-          </button>
-          {submitError && <p>{submitError}</p>}
-          {successMessage && <p>{successMessage}</p>}
-        </form>
+        {viewMode === 'judging' && (
+          <section data-testid="judging-screen">
+            <h2>審査中</h2>
+          </section>
+        )}
 
-        <RankingSection myPostIds={myPostIds} />
+        {viewMode === 'result' && (
+          <section data-testid="judging-result">
+            <h2>審査結果</h2>
+          </section>
+        )}
 
-        <footer role="contentinfo">
-          <button type="button" onClick={openMyPosts} onKeyDown={handleMyPostsTriggerKeyDown}>
-            自分の投稿一覧
-          </button>
-          <p>フッター</p>
-        </footer>
+        {viewMode === 'top' && (
+          <>
+            <form aria-label="投稿フォーム" onSubmit={onSubmit} className="mb-4 space-y-2">
+              <div>
+                <label htmlFor="nickname">ニックネーム</label>
+                <input
+                  id="nickname"
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  className="block w-full border rounded p-2"
+                />
+                {nicknameError && <p>{nicknameError}</p>}
+              </div>
+              <div>
+                <label htmlFor="body">あるある本文</label>
+                <textarea
+                  id="body"
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  className="block w-full border rounded p-2"
+                />
+                {bodyError && <p>{bodyError}</p>}
+              </div>
+              <button type="submit" disabled={isSubmitting} className="px-4 py-2 border rounded">
+                投稿する
+              </button>
+              {submitError && <p>{submitError}</p>}
+              {successMessage && <p>{successMessage}</p>}
+              {judgingErrorMessage && <p>{judgingErrorMessage}</p>}
+            </form>
 
-        {isMyPostsOpen && (
+            <RankingSection myPostIds={myPostIds} />
+
+            <footer role="contentinfo">
+              <button type="button" onClick={openMyPosts} onKeyDown={handleMyPostsTriggerKeyDown}>
+                自分の投稿一覧
+              </button>
+              <p>フッター</p>
+            </footer>
+          </>
+        )}
+
+        {viewMode === 'top' && isMyPostsOpen && (
           <div
             role="dialog"
             aria-label="自分の投稿"
