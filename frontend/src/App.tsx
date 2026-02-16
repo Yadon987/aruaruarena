@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, KeyboardEvent, useRef, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
@@ -9,10 +9,12 @@ import {
 } from './shared/constants/query'
 import { useRankings } from './shared/hooks/useRankings'
 import { ApiClientError, api } from './shared/services/api'
-import type { RankingItem } from './shared/types/domain'
+import type { Post, RankingItem } from './shared/types/domain'
+import { MyPostDetail } from './features/top/components/MyPostDetail'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
+const LEGACY_STORAGE_KEY = 'aruaruarena_my_posts'
 const MIN_BODY_LENGTH = 3
 const MAX_STORED_POST_IDS = 20
 const SERVER_ERROR_STATUSES = [
@@ -26,6 +28,12 @@ const MESSAGE_SUCCESS = '投稿を受け付けました'
 const MESSAGE_RATE_LIMITED = '5分後に再投稿してください'
 const MESSAGE_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_DEFAULT_ERROR = 'エラーが発生しました。再試行してください'
+const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
+const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
+const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
+const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
+const DIALOG_CLOSE_KEY = 'Escape'
+const OPEN_KEYS = ['Enter', ' '] as const
 
 const RANKING_ERROR_MESSAGES = {
   rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
@@ -38,22 +46,68 @@ type ValidationErrors = {
   bodyError: string
 }
 
-function readPostIds(): string[] {
-  const rawValue = localStorage.getItem(STORAGE_KEY)
+function parsePostIds(rawValue: string | null): string[] {
   if (!rawValue) return []
   try {
     const parsed = JSON.parse(rawValue)
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((id) => typeof id === 'string').slice(0, MAX_STORED_POST_IDS)
   } catch {
     return []
   }
+}
+
+function readPostIds(): string[] {
+  const rawValue = localStorage.getItem(STORAGE_KEY)
+  if (rawValue) {
+    return parsePostIds(rawValue)
+  }
+
+  const legacyValue = localStorage.getItem(LEGACY_STORAGE_KEY)
+  const migrated = parsePostIds(legacyValue)
+  if (legacyValue) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
+  }
+
+  return migrated
+}
+
+function writePostIds(postIds: string[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(postIds.slice(0, MAX_STORED_POST_IDS)))
 }
 
 function savePostId(id: string) {
   const current = readPostIds()
   const deduplicated = current.filter((existingId) => existingId !== id)
   const limited = [id, ...deduplicated].slice(0, MAX_STORED_POST_IDS)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(limited))
+  writePostIds(limited)
+}
+
+function removePostId(id: string) {
+  const current = readPostIds()
+  const removed = current.filter((existingId) => existingId !== id)
+  writePostIds(removed)
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  return error instanceof ApiClientError ? error.status : (error as { status?: number })?.status
+}
+
+function resolvePostDetailErrorMessage(error: unknown): string {
+  const errorStatus = getErrorStatus(error)
+
+  if (errorStatus === HTTP_STATUS.NOT_FOUND) {
+    return MESSAGE_POST_NOT_FOUND
+  }
+  if (errorStatus === HTTP_STATUS.TOO_MANY_REQUESTS) {
+    return MESSAGE_POST_DETAIL_RATE_LIMITED
+  }
+  if (errorStatus && SERVER_ERROR_STATUSES.includes(errorStatus)) {
+    return MESSAGE_POST_DETAIL_SERVER_ERROR
+  }
+
+  return MESSAGE_POST_DETAIL_NETWORK_ERROR
 }
 
 function validateForm(nickname: string, body: string): ValidationErrors {
@@ -115,11 +169,12 @@ function resolveRankingErrorMessage(error: unknown): string {
   return RANKING_ERROR_MESSAGES.failed
 }
 
-function RankingSection() {
+function RankingSection({ myPostIds }: { myPostIds: string[] }) {
   const { data, isLoading, isError, error } = useRankings(DEFAULT_RANKING_LIMIT, {
     polling: true,
   })
   const displayRankings = buildDisplayRankings(data?.rankings)
+  const myPostIdSet = new Set(myPostIds)
 
   return (
     <section role="region" aria-label="ランキング表示エリア" className="mb-4 rounded border p-4">
@@ -135,13 +190,21 @@ function RankingSection() {
 
       {!isLoading && !isError && displayRankings.length > 0 && (
         <ol className="space-y-2">
-          {displayRankings.map((item) => (
-            <li key={item.id} data-testid="ranking-item" className="rounded border p-3">
-              <p className="font-semibold">{item.rank}位 {item.nickname}</p>
-              <p>{item.body}</p>
-              <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
-            </li>
-          ))}
+          {displayRankings.map((item) => {
+            const isMyPost = myPostIdSet.has(item.id)
+            return (
+              <li
+                key={item.id}
+                data-testid="ranking-item"
+                className={`rounded border p-3 ${isMyPost ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
+              >
+                <p className="font-semibold">{item.rank}位 {item.nickname}</p>
+                <p>{item.body}</p>
+                <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
+                {isMyPost && <p className="text-sm font-bold">あなたの投稿</p>}
+              </li>
+            )
+          })}
         </ol>
       )}
     </section>
@@ -156,6 +219,13 @@ function App() {
   const [submitError, setSubmitError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [myPostIds, setMyPostIds] = useState<string[]>(() => readPostIds())
+  const [isMyPostsOpen, setIsMyPostsOpen] = useState(false)
+  const [myPostsError, setMyPostsError] = useState('')
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
+  const inFlightPostIdsRef = useRef<Set<string>>(new Set())
+  const syncMyPostIds = () => setMyPostIds(readPostIds())
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -181,6 +251,7 @@ function App() {
     try {
       const response = await api.posts.create({ nickname: trimmedNickname, body: trimmedBody })
       savePostId(response.id)
+      syncMyPostIds()
       setNickname('')
       setBody('')
       setSuccessMessage(MESSAGE_SUCCESS)
@@ -190,6 +261,58 @@ function App() {
       setIsSubmitting(false)
     }
   }
+
+  const openMyPosts = () => {
+    syncMyPostIds()
+    setIsMyPostsOpen(true)
+  }
+
+  const closeMyPosts = () => {
+    setIsMyPostsOpen(false)
+    setSelectedPost(null)
+    setIsLoadingPostDetail(false)
+  }
+
+  const handleMyPostsTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (OPEN_KEYS.includes(event.key as (typeof OPEN_KEYS)[number])) {
+      event.preventDefault()
+      openMyPosts()
+    }
+  }
+
+  const handleMyPostClick = async (postId: string) => {
+    if (inFlightPostIdsRef.current.has(postId)) {
+      return
+    }
+
+    inFlightPostIdsRef.current.add(postId)
+    setIsLoadingPostDetail(true)
+    setMyPostsError('')
+    const previousPostIds = readPostIds()
+
+    // 404ケースの即時反映を維持するため、クリック時点で対象IDを一旦除外する。
+    // 404以外の結果では直前状態を復元し、既存仕様の振る舞いを維持する。
+    removePostId(postId)
+    syncMyPostIds()
+    try {
+      const response = await api.posts.get(postId)
+      setSelectedPost(response)
+      writePostIds(previousPostIds)
+      syncMyPostIds()
+    } catch (error) {
+      const message = resolvePostDetailErrorMessage(error)
+      setMyPostsError(message)
+      if (getErrorStatus(error) !== HTTP_STATUS.NOT_FOUND) {
+        writePostIds(previousPostIds)
+        syncMyPostIds()
+      }
+    } finally {
+      setIsLoadingPostDetail(false)
+      inFlightPostIdsRef.current.delete(postId)
+    }
+  }
+
+  const displayMyPostIds = Array.from(new Set(myPostIds)).slice(0, MAX_STORED_POST_IDS)
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -227,11 +350,57 @@ function App() {
           {successMessage && <p>{successMessage}</p>}
         </form>
 
-        <RankingSection />
+        <RankingSection myPostIds={myPostIds} />
 
         <footer role="contentinfo">
+          <button type="button" onClick={openMyPosts} onKeyDown={handleMyPostsTriggerKeyDown}>
+            自分の投稿一覧
+          </button>
           <p>フッター</p>
         </footer>
+
+        {isMyPostsOpen && (
+          <div
+            role="dialog"
+            aria-label="自分の投稿"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onKeyDown={(event) => {
+              if (event.key === DIALOG_CLOSE_KEY) closeMyPosts()
+            }}
+          >
+            <div className="w-full max-w-md rounded bg-white p-4">
+              {selectedPost ? (
+                <MyPostDetail
+                  post={selectedPost}
+                  onBack={() => setSelectedPost(null)}
+                  onClose={closeMyPosts}
+                />
+              ) : (
+                <>
+                  <h2 className="mb-3 text-lg font-semibold">自分の投稿</h2>
+                  {myPostsError && <p className="mb-3">{myPostsError}</p>}
+                  {isLoadingPostDetail && <p className="mb-3">投稿詳細を読み込み中です...</p>}
+                  {displayMyPostIds.length === 0 ? (
+                    <p>投稿するとここに表示されます</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {displayMyPostIds.map((postId) => (
+                        <li key={postId} data-testid="my-post-id-item">
+                          <button type="button" onClick={() => handleMyPostClick(postId)}>
+                            {postId}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <button type="button" onClick={closeMyPosts} className="mt-4">
+                    閉じる
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>

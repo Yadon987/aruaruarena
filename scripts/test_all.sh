@@ -5,7 +5,8 @@ set -e
 # 全テスト実行スクリプト (aruaruarena)
 # ==========================================
 
-DYNAMODB_CONTAINER_NAME="aruaruarena-dynamodb-local"
+DYNAMODB_CONTAINER_NAME="aruaruarena-dynamodb"
+DYNAMODB_ENDPOINT="http://127.0.0.1:8000"
 
 # プロジェクトルートに移動
 cd "$(dirname "$0")/.."
@@ -54,22 +55,27 @@ echo ""
 
 # 2. DynamoDB Localの起動確認
 echo "🔍 DynamoDB Localの状態確認..."
-if ! curl -s http://localhost:8000 > /dev/null 2>&1; then
+if ! curl -s "${DYNAMODB_ENDPOINT}" > /dev/null 2>&1; then
   echo "⚠️  DynamoDB Local (port 8000) が応答しません。"
   echo "   Dockerコンテナを起動します..."
 
-  # Dockerコンテナが存在する場合は起動
-  if docker ps -a | grep -q "${DYNAMODB_CONTAINER_NAME}"; then
-    docker start "${DYNAMODB_CONTAINER_NAME}"
+  # まず compose サービス起動を試す（通常の起動経路）
+  if docker compose up -d dynamodb-local > /dev/null 2>&1; then
+    echo "   docker compose で dynamodb-local を起動しました"
   else
-    docker run -d --name "${DYNAMODB_CONTAINER_NAME}" -p 8000:8000 amazon/dynamodb-local:latest -jar DynamoDBLocal.jar -inMemory -sharedDb
+    # compose が使えない場合のみ既存コンテナ再利用/単体起動を試す
+    if docker ps -a --format '{{.Names}}' | grep -q "^${DYNAMODB_CONTAINER_NAME}$"; then
+      docker start "${DYNAMODB_CONTAINER_NAME}"
+    else
+      docker run -d --name "${DYNAMODB_CONTAINER_NAME}" -p 8000:8000 amazon/dynamodb-local:latest -jar DynamoDBLocal.jar -inMemory -sharedDb
+    fi
   fi
 
   echo "⏳ DynamoDB Localの起動を待機中..."
   sleep 3
 
   count=0
-  until curl -s http://localhost:8000 > /dev/null 2>&1; do
+  until curl -s "${DYNAMODB_ENDPOINT}" > /dev/null 2>&1; do
     echo "   ...waiting for DynamoDB Local ($count/5)"
     sleep 1
     count=$((count+1))
@@ -90,7 +96,7 @@ echo "----------------------------------------"
 # テスト実行（DynamoDB Localのエンドポイントを指定）
 # SimpleCovのカバレッジ警告（exit 2/3）は許容してテスト結果を判定
 set +e  # 一時的にset -eを解除
-DYNAMODB_ENDPOINT=http://localhost:8000 bundle exec rspec --format documentation > /tmp/rspec_output.txt 2>&1
+DYNAMODB_ENDPOINT="${DYNAMODB_ENDPOINT}" bundle exec rspec --format documentation > /tmp/rspec_output.txt 2>&1
 rspec_exit=$?
 cat /tmp/rspec_output.txt
 set -e  # set -eを再開
