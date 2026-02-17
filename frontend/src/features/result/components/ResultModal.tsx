@@ -1,4 +1,4 @@
-import { KeyboardEvent, useEffect, useMemo, useRef } from 'react'
+import { KeyboardEvent, useEffect, useRef } from 'react'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 import type { Post } from '../../../shared/types/domain'
 import { JudgeResultCard } from './JudgeResultCard'
@@ -49,8 +49,6 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
   const shouldShowFailedRank = post?.status === 'failed'
   const hasJudgments = hasJudgeResults(post)
 
-  const focusableSelector = useMemo(() => MODAL_FOCUSABLE_SELECTOR, [])
-
   useEffect(() => {
     if (!isOpen) return
     closeButtonRef.current?.focus()
@@ -66,7 +64,7 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
 
     if (event.key !== KEY_TAB) return
     const focusableElements = Array.from(
-      modalRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? []
+      modalRef.current?.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR) ?? []
     )
     if (focusableElements.length === 0) return
 
