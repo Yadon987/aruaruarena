@@ -33,8 +33,14 @@ const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています�
 const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
 const MESSAGE_JUDGING_FETCH_FAILED = '投稿情報の取得に失敗しました。トップへ戻って再度お試しください。'
+const MESSAGE_JUDGING_LOADING = 'AI審査員が採点中...'
+const MESSAGE_JUDGING_BODY_FALLBACK = '投稿内容を読み込み中です'
+const MESSAGE_JUDGING_NICKNAME_FALLBACK = '名無し'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
+const JUDGE_NAMES = ['ひろゆき風', 'デヴィ婦人風', '中尾彬風'] as const
+const HIROYUKI_INDEX = 0
+const HIROYUKI_CATCHPHRASE = 'それってあなたの感想ですよね'
 const ROOT_PATH = '/'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_POLLING_INTERVAL_MS = 3000
@@ -237,6 +243,8 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [myPostIds, setMyPostIds] = useState<string[]>(() => readPostIds())
   const [isMyPostsOpen, setIsMyPostsOpen] = useState(false)
+  const [judgingNickname, setJudgingNickname] = useState(MESSAGE_JUDGING_NICKNAME_FALLBACK)
+  const [judgingBody, setJudgingBody] = useState(MESSAGE_JUDGING_BODY_FALLBACK)
   const [myPostsError, setMyPostsError] = useState('')
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
@@ -253,8 +261,10 @@ function App() {
     window.history.pushState({}, '', `${JUDGING_PATH_PREFIX}${postId}`)
   }
 
-  const enterJudgingMode = (postId: string) => {
+  const enterJudgingMode = (postId: string, nickname?: string) => {
     setJudgingPostId(postId)
+    setJudgingNickname(nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
+    setJudgingBody(MESSAGE_JUDGING_BODY_FALLBACK)
     setJudgingErrorMessage('')
     setViewMode('judging')
   }
@@ -327,7 +337,10 @@ function App() {
         if (isDisposed) return
         if (response.status === 'scored' || response.status === 'failed') {
           exitJudgingWithResult()
+          return
         }
+        setJudgingNickname(response.nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
+        setJudgingBody(response.body || MESSAGE_JUDGING_BODY_FALLBACK)
       } catch (error) {
         if (isDisposed) return
         if (error instanceof ApiClientError && error.code === API_ERROR_CODE.ABORTED) return
@@ -387,7 +400,7 @@ function App() {
       setNickname('')
       setBody('')
       setSuccessMessage(MESSAGE_SUCCESS)
-      enterJudgingMode(response.id)
+      enterJudgingMode(response.id, trimmedNickname)
       syncJudgingPath(response.id)
     } catch (error) {
       setSubmitError(resolveSubmitErrorMessage(error))
@@ -456,8 +469,27 @@ function App() {
         </header>
 
         {viewMode === 'judging' && (
-          <section data-testid="judging-screen">
-            <h2>審査中</h2>
+          <section
+            data-testid="judging-screen"
+            role="region"
+            aria-label="審査中"
+            aria-live="polite"
+            className="mb-4 rounded border p-4"
+          >
+            <h2 className="mb-2 text-lg font-semibold">審査中</h2>
+            <p className="mb-2">{judgingNickname}</p>
+            <p className="mb-4">{judgingBody}</p>
+            <ul className="mb-4 space-y-1">
+              {JUDGE_NAMES.map((judgeName, index) => (
+                <li key={judgeName}>
+                  <p>{judgeName}</p>
+                  {index === HIROYUKI_INDEX && (
+                    <p data-testid="catchphrase-hiroyuki">{HIROYUKI_CATCHPHRASE}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p>{MESSAGE_JUDGING_LOADING}</p>
           </section>
         )}
 
