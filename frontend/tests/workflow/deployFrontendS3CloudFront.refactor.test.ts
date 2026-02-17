@@ -9,23 +9,16 @@ import {
   REQUIRED_RUN_URL_FRAGMENT,
   STEP_NAMES,
   WORKFLOW_DISPATCH_INPUT_NAME,
-  WORKFLOW_PATH,
   docExists,
   getWorkflowStep,
+  loadWorkflowOrFail,
   readDoc,
-  readWorkflow,
   workflowExists,
-  type YamlObject,
 } from './helpers/workflowTestUtils'
-
-const loadWorkflowOrFail = (): YamlObject => {
-  expect(workflowExists(), `不足ファイル: ${WORKFLOW_PATH}`).toBe(true)
-  return readWorkflow()
-}
 
 describe('E14-02 Refactor: workflow edge cases', () => {
   beforeAll(() => {
-    expect(workflowExists(), `不足ファイル: ${WORKFLOW_PATH}`).toBe(true)
+    expect(workflowExists()).toBe(true)
   })
 
   // 何を検証するか: rollback_run_id の型と必須設定が仕様どおりであること
@@ -81,13 +74,13 @@ describe('E14-02 Refactor: docs consistency', () => {
     const doc = readDoc()
 
     REQUIRED_DOC_KEYS.forEach((key) => {
-      expect(doc).toContain(key)
+      expect(doc, `必須キー "${key}" がドキュメントに存在しません`).toContain(key)
     })
     REQUIRED_ROLLBACK_DOC_KEYS.forEach((key) => {
-      expect(doc).toContain(key)
+      expect(doc, `ロールバックキー "${key}" がドキュメントに存在しません`).toContain(key)
     })
     REQUIRED_IAM_PERMISSIONS.forEach((permission) => {
-      expect(doc).toContain(permission)
+      expect(doc, `IAM権限 "${permission}" がドキュメントに存在しません`).toContain(permission)
     })
   })
 })

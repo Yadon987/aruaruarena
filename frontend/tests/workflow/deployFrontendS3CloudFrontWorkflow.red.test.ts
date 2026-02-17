@@ -1,23 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   STEP_NAMES,
-  WORKFLOW_PATH,
   getWorkflowStep,
   getWorkflowSteps,
-  readWorkflow,
+  loadWorkflowOrFail,
   workflowExists,
-  type YamlObject,
 } from './helpers/workflowTestUtils'
-
-const loadWorkflowOrFail = (): YamlObject => {
-  expect(workflowExists(), `不足ファイル: ${WORKFLOW_PATH}`).toBe(true)
-  return readWorkflow()
-}
 
 describe('E14-02 RED: deploy-frontend workflow (S3/CloudFront)', () => {
   // 何を検証するか: deploy-frontend.yml が規定パスに存在すること
   it('deploy-frontend.yml が存在する', () => {
-    expect(workflowExists(), `不足ファイル: ${WORKFLOW_PATH}`).toBe(true)
+    expect(workflowExists()).toBe(true)
   })
 
   // 何を検証するか: S3同期・invalidation・失敗サマリー・artifact保存の各ステップが定義されていること
