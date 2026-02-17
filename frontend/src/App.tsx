@@ -137,11 +137,11 @@ function resolvePostDetailErrorMessage(error: unknown): string {
 }
 
 function resolveResultModalErrorCode(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    return error.code
-  }
   if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
     return RESULT_MODAL_ERROR_NOT_FOUND
+  }
+  if (error instanceof ApiClientError) {
+    return error.code
   }
   return RESULT_MODAL_ERROR_FETCH_FAILED
 }
@@ -241,12 +241,6 @@ function RankingSection({
                   data-testid="ranking-item"
                   className={`w-full rounded border p-3 text-left ${isMyPost ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
                   onClick={() => onSelectRankingPost(item.id)}
-                  onKeyDown={(event) => {
-                    if (OPEN_KEYS.includes(event.key as (typeof OPEN_KEYS)[number])) {
-                      event.preventDefault()
-                      onSelectRankingPost(item.id)
-                    }
-                  }}
                 >
                   <p className="font-semibold">{item.rank}位 {item.nickname}</p>
                   <p>{item.body}</p>
