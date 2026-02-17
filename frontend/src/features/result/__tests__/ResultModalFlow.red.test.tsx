@@ -192,3 +192,106 @@ describe('E15-01 RED: ResultModal Flow', () => {
     expect(getPostSpy).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('E15-02 RED: ResultModal Action Buttons', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.clearAllMocks()
+    setupRanking()
+  })
+
+  it('failed投稿で再審査ボタンを表示する', async () => {
+    // 何を検証するか: status=failed の投稿詳細では再審査ボタンが表示されること
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'failed-post-id',
+      nickname: '失敗太郎',
+      body: '失敗本文',
+      status: 'failed',
+      created_at: '2026-02-17T00:00:00Z',
+      judgments: [],
+    })
+
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('ranking-item'))
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: '再審査する' })).toBeInTheDocument()
+  })
+
+  it('scored投稿でSNSシェアボタンを表示する', async () => {
+    // 何を検証するか: status=scored かつ rank<=20 の投稿詳細ではSNSシェアボタンが表示されること
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'scored-post-id',
+      nickname: '成功太郎',
+      body: '成功本文',
+      status: 'scored',
+      created_at: '2026-02-17T00:00:00Z',
+      average_score: 88.8,
+      rank: 3,
+      total_count: 30,
+      judgments: [],
+    })
+
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('ranking-item'))
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: 'Xでシェア' })).toBeInTheDocument()
+  })
+
+  it('再審査ボタン押下でrejudge APIを1回呼ぶ', async () => {
+    // 何を検証するか: 再審査ボタン押下で /api/posts/:id/rejudge が1回だけ呼ばれること
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'rejudge-post-id',
+      nickname: '再審査太郎',
+      body: '再審査本文',
+      status: 'failed',
+      created_at: '2026-02-17T00:00:00Z',
+      judgments: [],
+    })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+
+    render(<App />)
+    fireEvent.click(screen.getByTestId('ranking-item'))
+
+    const rejudgeButton = await screen.findByRole('button', { name: '再審査する' })
+    fireEvent.click(rejudgeButton)
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/api/posts/rejudge-post-id/rejudge'),
+        expect.objectContaining({ method: 'POST' })
+      )
+    })
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('SNSシェア押下でOGPプレビュー表示後に安全な新規タブ起動を行う', async () => {
+    // 何を検証するか: Xシェア押下時にOGPプレビューを表示し、noopener,noreferrer付きでwindow.openすること
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'share-post-id',
+      nickname: 'シェア太郎',
+      body: 'シェア本文',
+      status: 'scored',
+      created_at: '2026-02-17T00:00:00Z',
+      average_score: 96.1,
+      rank: 1,
+      total_count: 100,
+      judgments: [],
+    })
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+
+    render(<App />)
+    fireEvent.click(screen.getByTestId('ranking-item'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Xでシェア' }))
+
+    expect(screen.getByTestId('ogp-preview')).toBeInTheDocument()
+    expect(openSpy).toHaveBeenCalledWith(expect.any(String), '_blank', 'noopener,noreferrer')
+  })
+})
