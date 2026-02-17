@@ -17,6 +17,12 @@ export const STEP_NAMES = {
   buildFrontend: 'Build frontend',
   configureAwsCredentials: 'Configure AWS credentials',
   deployPlaceholder: 'Deploy placeholder (Issue 2)',
+  verifyDistDirectory: 'Verify dist directory',
+  syncAssetsToS3: 'Sync assets to S3',
+  createCloudFrontInvalidation: 'Create CloudFront invalidation',
+  waitCloudFrontInvalidationCompleted: 'Wait CloudFront invalidation completed',
+  publishFailureSummary: 'Publish failure summary',
+  uploadDeployArtifact: 'Upload deploy artifact',
 } as const
 
 export const REQUIRED_PERMISSIONS = {

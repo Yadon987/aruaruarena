@@ -24,3 +24,20 @@ Issue 1では未使用ですが、Issue 2の本実装で必須化する予定で
 ## 補足
 
 - S3同期とCloudFront invalidationの本実装は Issue 2 で追加します。
+
+## ロールバック手順（Issue 2最小版）
+
+1. `workflow_dispatch` 実行時に `rollback_run_id` を指定する
+2. `frontend-dist` artifact を取得して展開する
+3. 以下コマンドでS3へ再同期する
+   - `aws s3 sync dist s3://$S3_BUCKET_FRONTEND --delete --exact-timestamps`
+4. CloudFrontキャッシュを無効化する
+   - `aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths '/*'`
+
+## IAM最小権限（Issue 2）
+
+- `s3:ListBucket`
+- `s3:PutObject`
+- `s3:DeleteObject`
+- `cloudfront:CreateInvalidation`
+- `cloudfront:GetInvalidation`

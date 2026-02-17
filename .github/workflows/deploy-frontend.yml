@@ -8,6 +8,11 @@ on:
       - frontend/**
       - .github/workflows/deploy-frontend.yml
   workflow_dispatch:
+    inputs:
+      rollback_run_id:
+        description: 'ロールバック元の実行ID（必要時のみ）'
+        required: false
+        type: string
 
 concurrency:
   group: deploy-frontend-${{ github.ref }}
@@ -48,3 +53,32 @@ jobs:
         run: |
           # TODO: Issue 2でS3同期とCloudFront invalidationの本処理へ差し替える
           echo "Deploy placeholder for Issue 2"
+
+      - name: Verify dist directory
+        working-directory: ./frontend
+        run: test -d dist
+
+      - name: Sync assets to S3
+        working-directory: ./frontend
+        run: aws s3 sync dist s3://$S3_BUCKET_FRONTEND --delete --exact-timestamps
+
+      - name: Create CloudFront invalidation
+        run: aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths '/*'
+
+      - name: Wait CloudFront invalidation completed
+        run: aws cloudfront wait invalidation-completed --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --id <invalidation_id>
+
+      - name: Publish failure summary
+        if: failure()
+        run: |
+          echo "## フロントエンドデプロイ失敗" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 失敗ステップ: deploy-frontend job" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 実行URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 復旧手順: docs/deploy/frontend.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload deploy artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 30

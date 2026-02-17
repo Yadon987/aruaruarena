@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getWorkflowStep, readWorkflow, workflowExists, type YamlObject } from './helpers/workflowTestUtils'
-
-const STEP_NAMES = {
-  syncAssetsToS3: 'Sync assets to S3',
-  createCloudFrontInvalidation: 'Create CloudFront invalidation',
-  waitCloudFrontInvalidationCompleted: 'Wait CloudFront invalidation completed',
-  publishFailureSummary: 'Publish failure summary',
-} as const
+import { STEP_NAMES, getWorkflowStep, readWorkflow, workflowExists, type YamlObject } from './helpers/workflowTestUtils'
 
 const loadWorkflowOrFail = (): YamlObject => {
   expect(workflowExists(), '不足ファイル: .github/workflows/deploy-frontend.yml').toBe(true)

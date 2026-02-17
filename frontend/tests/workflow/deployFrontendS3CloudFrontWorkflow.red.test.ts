@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  STEP_NAMES,
   WORKFLOW_PATH,
   getWorkflowStep,
   getWorkflowSteps,
@@ -7,15 +8,6 @@ import {
   workflowExists,
   type YamlObject,
 } from './helpers/workflowTestUtils'
-
-const STEP_NAMES = {
-  verifyDistDirectory: 'Verify dist directory',
-  syncAssetsToS3: 'Sync assets to S3',
-  createCloudFrontInvalidation: 'Create CloudFront invalidation',
-  waitCloudFrontInvalidationCompleted: 'Wait CloudFront invalidation completed',
-  publishFailureSummary: 'Publish failure summary',
-  uploadDeployArtifact: 'Upload deploy artifact',
-} as const
 
 const loadWorkflowOrFail = (): YamlObject => {
   expect(workflowExists(), `不足ファイル: ${WORKFLOW_PATH}`).toBe(true)
