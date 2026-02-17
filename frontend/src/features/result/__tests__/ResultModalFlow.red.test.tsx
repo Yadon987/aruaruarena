@@ -323,7 +323,7 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
   })
 
   it('再審査API失敗時はjudgingへ遷移せずボタンが再押下可能になる', async () => {
-    // 何を検証するか: 再審査APIが失敗した場合に審査中画面へ遷移せず、再審査ボタンが再び押下可能になること
+    // 何を検証するか: 再審査APIが失敗した場合に審査中画面へ遷移せず、エラーメッセージ表示と再押下可能状態へ戻ること
     vi.spyOn(api.posts, 'get').mockResolvedValue({
       id: 'rejudge-failed-post-id',
       nickname: '失敗再審査太郎',
@@ -343,6 +343,9 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('judging-screen')).not.toBeInTheDocument()
       expect(rejudgeButton).not.toBeDisabled()
+      expect(
+        screen.getByText('再審査に失敗しました。時間をおいて再度お試しください')
+      ).toBeInTheDocument()
     })
   })
 })
