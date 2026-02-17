@@ -120,14 +120,16 @@ async function request<T>(path: string, options?: RequestInit & { timeout?: numb
   }
 
   try {
-    const { timeout: _timeout, ...fetchOptions } = options ?? {}
+    const { timeout: _timeout, headers: customHeaders, ...restOptions } = options ?? {}
+    const mergedHeaders = {
+      'Content-Type': 'application/json',
+      ...customHeaders,
+    }
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...fetchOptions.headers,
-      },
+      headers: mergedHeaders,
       credentials: 'same-origin',
-      ...fetchOptions,
+      ...restOptions,
       signal: controller.signal,
     })
 

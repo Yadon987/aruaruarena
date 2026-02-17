@@ -1,13 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { DOC_PATH, docExists, readDoc } from './helpers/workflowTestUtils'
-
-const REQUIRED_IAM_PERMISSIONS = [
-  's3:ListBucket',
-  's3:PutObject',
-  's3:DeleteObject',
-  'cloudfront:CreateInvalidation',
-  'cloudfront:GetInvalidation',
-] as const
+import {
+  DOC_PATH,
+  REQUIRED_IAM_PERMISSIONS,
+  REQUIRED_ROLLBACK_DOC_KEYS,
+  docExists,
+  readDoc,
+} from './helpers/workflowTestUtils'
 
 describe('E14-02 RED: deploy frontend docs (S3/CloudFront)', () => {
   beforeAll(() => {
@@ -23,10 +21,9 @@ describe('E14-02 RED: deploy frontend docs (S3/CloudFront)', () => {
   it('ロールバック手順に rollback_run_id と artifact 復元が記載される', () => {
     const doc = readDoc()
 
-    expect(doc).toContain('rollback_run_id')
-    expect(doc).toContain('frontend-dist')
-    expect(doc).toContain('aws s3 sync')
-    expect(doc).toContain('aws cloudfront create-invalidation')
+    REQUIRED_ROLLBACK_DOC_KEYS.forEach((key) => {
+      expect(doc).toContain(key)
+    })
   })
 
   // 何を検証するか: s3/cloudfront の最小権限一覧が明記されていること

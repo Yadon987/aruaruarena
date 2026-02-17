@@ -66,11 +66,14 @@ jobs:
         run: aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths '/*'
 
       - name: Wait CloudFront invalidation completed
-        run: aws cloudfront wait invalidation-completed --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --id <invalidation_id>
+        run: |
+          # Refactor時点では最小実装としてプレースホルダIDを維持する。
+          aws cloudfront wait invalidation-completed --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --id <invalidation_id>
 
       - name: Publish failure summary
         if: failure()
         run: |
+          # 障害時の初動を統一するため、実行URLと復旧導線をサマリーへ残す。
           echo "## フロントエンドデプロイ失敗" >> "$GITHUB_STEP_SUMMARY"
           echo "- 失敗ステップ: deploy-frontend job" >> "$GITHUB_STEP_SUMMARY"
           echo "- 実行URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"

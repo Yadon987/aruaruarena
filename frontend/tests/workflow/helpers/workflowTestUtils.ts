@@ -33,6 +33,26 @@ export const REQUIRED_PERMISSIONS = {
 export const REQUIRED_PUSH_PATHS = ['frontend/**', '.github/workflows/deploy-frontend.yml'] as const
 export const RESERVED_DOC_KEYS = ['S3_BUCKET_FRONTEND', 'CLOUDFRONT_DISTRIBUTION_ID'] as const
 export const REQUIRED_DOC_KEYS = ['AWS_ROLE_ARN_FRONTEND_DEPLOY', 'AWS_REGION'] as const
+export const REQUIRED_IAM_PERMISSIONS = [
+  's3:ListBucket',
+  's3:PutObject',
+  's3:DeleteObject',
+  'cloudfront:CreateInvalidation',
+  'cloudfront:GetInvalidation',
+] as const
+export const REQUIRED_ROLLBACK_DOC_KEYS = [
+  'rollback_run_id',
+  'frontend-dist',
+  'aws s3 sync',
+  'aws cloudfront create-invalidation',
+] as const
+
+export const WORKFLOW_DISPATCH_INPUT_NAME = 'rollback_run_id' as const
+export const REQUIRED_CONCURRENCY = {
+  group: 'deploy-frontend-${{ github.ref }}',
+  'cancel-in-progress': false,
+} as const
+export const REQUIRED_RUN_URL_FRAGMENT = 'actions/runs/' as const
 
 export const workflowExists = (): boolean => existsSync(WORKFLOW_PATH)
 export const docExists = (): boolean => existsSync(DOC_PATH)
