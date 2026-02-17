@@ -51,16 +51,15 @@ describe('E14-01: deploy-frontend workflow', () => {
   it('主要ステップが期待順序で定義される', () => {
     const workflow = readWorkflow()
     const stepNames = getWorkflowSteps(workflow).map((step) => step.name)
+    const setupIndex = stepNames.indexOf(STEP_NAMES.setupNode)
+    const installIndex = stepNames.indexOf(STEP_NAMES.installDependencies)
+    const buildIndex = stepNames.indexOf(STEP_NAMES.buildFrontend)
 
-    expect(stepNames).toContain(STEP_NAMES.setupNode)
-    expect(stepNames).toContain(STEP_NAMES.installDependencies)
-    expect(stepNames).toContain(STEP_NAMES.buildFrontend)
-    expect(stepNames.indexOf(STEP_NAMES.setupNode)).toBeLessThan(
-      stepNames.indexOf(STEP_NAMES.installDependencies),
-    )
-    expect(stepNames.indexOf(STEP_NAMES.installDependencies)).toBeLessThan(
-      stepNames.indexOf(STEP_NAMES.buildFrontend),
-    )
+    expect(setupIndex).toBeGreaterThanOrEqual(0)
+    expect(installIndex).toBeGreaterThanOrEqual(0)
+    expect(buildIndex).toBeGreaterThanOrEqual(0)
+    expect(setupIndex).toBeLessThan(installIndex)
+    expect(installIndex).toBeLessThan(buildIndex)
   })
 
   // 何を検証するか: Deploy placeholder がIssue2向けダミーとして存在すること
