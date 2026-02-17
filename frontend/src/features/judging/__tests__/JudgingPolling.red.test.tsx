@@ -23,7 +23,6 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
   })
 
   beforeEach(() => {
-    window.history.replaceState({}, '', '/')
     mswServer.use(
       http.post('/api/posts', () => {
         return HttpResponse.json({ id: 'polling-test', status: 'judging' })
