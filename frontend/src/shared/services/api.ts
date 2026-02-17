@@ -121,9 +121,16 @@ async function request<T>(path: string, options?: RequestInit & { timeout?: numb
 
   try {
     const { timeout: _timeout, headers: customHeaders, ...restOptions } = options ?? {}
-    const mergedHeaders = {
-      'Content-Type': 'application/json',
-      ...customHeaders,
+    const mergedHeaders = new Headers(customHeaders)
+    const body = restOptions.body
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+    const isUrlSearchParams = typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams
+    const isBlob = typeof Blob !== 'undefined' && body instanceof Blob
+    const shouldSetJsonContentType =
+      !mergedHeaders.has('Content-Type') && !isFormData && !isUrlSearchParams && !isBlob
+
+    if (shouldSetJsonContentType) {
+      mergedHeaders.set('Content-Type', 'application/json')
     }
 
     const response = await fetch(`${API_BASE_URL}${path}`, {

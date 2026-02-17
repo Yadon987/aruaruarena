@@ -26,16 +26,14 @@ describe('E04-06: API Client', () => {
       const requestData = { nickname: 'テスト', body: 'あるあるネタ' }
       const result = await api.posts.create(requestData)
 
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/posts',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify(requestData),
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-          }),
-        })
-      )
+      expect(fetchMock).toHaveBeenCalledWith('/api/posts', expect.any(Object))
+      const callArgs = fetchMock.mock.calls[0]
+      const fetchOptions = callArgs[1] as RequestInit
+
+      expect(fetchOptions.method).toBe('POST')
+      expect(fetchOptions.body).toBe(JSON.stringify(requestData))
+      expect(fetchOptions.headers).toBeInstanceOf(Headers)
+      expect((fetchOptions.headers as Headers).get('Content-Type')).toBe('application/json')
       expect(result).toEqual(mockResponse)
     })
 
