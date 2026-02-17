@@ -235,23 +235,24 @@ function RankingSection({
           {displayRankings.map((item) => {
             const isMyPost = myPostIdSet.has(item.id)
             return (
-              <li
-                key={item.id}
-                data-testid="ranking-item"
-                className={`rounded border p-3 ${isMyPost ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
-                tabIndex={0}
-                onClick={() => onSelectRankingPost(item.id)}
-                onKeyDown={(event) => {
-                  if (OPEN_KEYS.includes(event.key as (typeof OPEN_KEYS)[number])) {
-                    event.preventDefault()
-                    onSelectRankingPost(item.id)
-                  }
-                }}
-              >
-                <p className="font-semibold">{item.rank}位 {item.nickname}</p>
-                <p>{item.body}</p>
-                <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
-                {isMyPost && <p className="text-sm font-bold">あなたの投稿</p>}
+              <li key={item.id}>
+                <button
+                  type="button"
+                  data-testid="ranking-item"
+                  className={`w-full rounded border p-3 text-left ${isMyPost ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
+                  onClick={() => onSelectRankingPost(item.id)}
+                  onKeyDown={(event) => {
+                    if (OPEN_KEYS.includes(event.key as (typeof OPEN_KEYS)[number])) {
+                      event.preventDefault()
+                      onSelectRankingPost(item.id)
+                    }
+                  }}
+                >
+                  <p className="font-semibold">{item.rank}位 {item.nickname}</p>
+                  <p>{item.body}</p>
+                  <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
+                  {isMyPost && <p className="text-sm font-bold">あなたの投稿</p>}
+                </button>
               </li>
             )
           })}

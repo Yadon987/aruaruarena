@@ -66,12 +66,7 @@ export const readWorkflow = (): YamlObject => {
   return (load(content) ?? {}) as YamlObject
 }
 
-export const loadWorkflowOrFail = (): YamlObject => {
-  if (!workflowExists()) {
-    throw new Error(`不足ファイル: ${WORKFLOW_PATH}`)
-  }
-  return readWorkflow()
-}
+export const loadWorkflowOrFail = (): YamlObject => readWorkflow()
 
 export const getWorkflowStep = (workflow: YamlObject, stepName: string): YamlObject | undefined => {
   const jobs = workflow.jobs as YamlObject | undefined

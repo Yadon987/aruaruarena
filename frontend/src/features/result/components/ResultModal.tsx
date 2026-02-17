@@ -15,6 +15,8 @@ type Props = {
 const ERROR_CODE_NOT_FOUND = 'NOT_FOUND'
 const KEY_ESCAPE = 'Escape'
 const KEY_TAB = 'Tab'
+const KEY_ENTER = 'Enter'
+const KEY_SPACE = ' '
 const MODAL_FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 const MESSAGE_NOT_FOUND = '投稿が見つかりません'
@@ -86,10 +88,22 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
     }
   }
 
+  const handleBackdropKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.currentTarget !== event.target) return
+    if (event.key === KEY_ENTER || event.key === KEY_SPACE || event.key === KEY_ESCAPE) {
+      event.preventDefault()
+      onClose()
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="button"
+      tabIndex={0}
+      aria-label="モーダルを閉じる"
       onClick={onClose}
+      onKeyDown={handleBackdropKeyDown}
     >
       <div
         ref={modalRef}
