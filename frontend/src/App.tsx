@@ -47,6 +47,8 @@ const ROOT_PATH = '/'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
+const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
+const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 
 const RANKING_ERROR_MESSAGES = {
   rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
@@ -139,9 +141,9 @@ function resolveResultModalErrorCode(error: unknown): string {
     return error.code
   }
   if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
-    return 'NOT_FOUND'
+    return RESULT_MODAL_ERROR_NOT_FOUND
   }
-  return 'FETCH_ERROR'
+  return RESULT_MODAL_ERROR_FETCH_FAILED
 }
 
 function validateForm(nickname: string, body: string): ValidationErrors {
@@ -290,6 +292,15 @@ function App() {
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
   const activeResultErrorCode = resultModalErrorCode
   const syncMyPostIds = () => setMyPostIds(readPostIds())
+  const saveResultModalTrigger = useCallback(() => {
+    resultTriggerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+  }, [])
+  const resetResultModalState = useCallback(() => {
+    setActiveResultPost(null)
+    setIsResultPostLoading(false)
+    setResultModalErrorCode(null)
+  }, [])
   const syncTopPath = useCallback(() => {
     window.history.replaceState({}, '', ROOT_PATH)
   }, [])
@@ -297,11 +308,13 @@ function App() {
     window.history.pushState({}, '', `${JUDGING_PATH_PREFIX}${postId}`)
   }, [])
   const fetchResultPost = useCallback(async (postId: string, force: boolean = false) => {
+    // 連続選択時は requestSeq をインクリメントし、最後の要求のみ反映する。
     const requestSeq = ++resultRequestSeqRef.current
     setIsResultPostLoading(true)
     setResultModalErrorCode(null)
 
     if (!force) {
+      // 同一ID再表示ではキャッシュを優先し、不要な再取得を避ける。
       const cachedPost = queryClient.getQueryData<Post>(queryKeys.posts.detail(postId))
       if (cachedPost) {
         if (requestSeq === resultRequestSeqRef.current) {
@@ -330,8 +343,7 @@ function App() {
   }, [])
 
   const openResultModal = useCallback((postId: string, initialPost?: Post | null) => {
-    resultTriggerRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    saveResultModalTrigger()
     setActiveResultPostId(postId)
     setResultModalErrorCode(null)
     if (initialPost) {
@@ -344,29 +356,28 @@ function App() {
     }
     setIsResultModalOpen(true)
     setViewMode('top')
-  }, [fetchResultPost])
+  }, [fetchResultPost, saveResultModalTrigger])
 
   const openResultModalWithError = useCallback((postId: string, errorCode: string) => {
-    resultTriggerRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    saveResultModalTrigger()
     setActiveResultPostId(postId)
     setActiveResultPost(null)
     setResultModalErrorCode(errorCode)
     setIsResultPostLoading(false)
     setIsResultModalOpen(true)
     setViewMode('top')
-  }, [])
+  }, [saveResultModalTrigger])
 
   const closeResultModal = useCallback(() => {
     setIsResultModalOpen(false)
-    setActiveResultPost(null)
-    setIsResultPostLoading(false)
-    setResultModalErrorCode(null)
+    resetResultModalState()
     resultRequestSeqRef.current += 1
-    window.setTimeout(() => {
-      resultTriggerRef.current?.focus()
-    }, 0)
-  }, [])
+    requestAnimationFrame(() => {
+      if (resultTriggerRef.current && document.body.contains(resultTriggerRef.current)) {
+        resultTriggerRef.current.focus()
+      }
+    })
+  }, [resetResultModalState])
 
   const retryResultModal = useCallback(() => {
     if (!activeResultPostId) return
@@ -415,6 +426,16 @@ function App() {
     setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
     syncTopPath()
   }, [clearJudgingPolling, syncTopPath])
+  const exitJudgingWithResultRef = useRef(exitJudgingWithResult)
+  const exitJudgingWithErrorRef = useRef(exitJudgingWithError)
+
+  useEffect(() => {
+    exitJudgingWithResultRef.current = exitJudgingWithResult
+  }, [exitJudgingWithResult])
+
+  useEffect(() => {
+    exitJudgingWithErrorRef.current = exitJudgingWithError
+  }, [exitJudgingWithError])
 
   useEffect(() => {
     const routePostId = readJudgingRoutePostId(window.location.pathname)
@@ -436,7 +457,7 @@ function App() {
 
     const handleJudgingFetchFailed = () => {
       if (isDisposed) return
-      exitJudgingWithError()
+      exitJudgingWithErrorRef.current()
     }
 
     const fetchPost = async () => {
@@ -457,7 +478,7 @@ function App() {
         })
         if (isDisposed) return
         if (response.status === 'scored' || response.status === 'failed') {
-          exitJudgingWithResult(response)
+          exitJudgingWithResultRef.current(response)
           return
         }
         setJudgingNickname(response.nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
@@ -490,7 +511,7 @@ function App() {
       isDisposed = true
       clearJudgingPolling()
     }
-  }, [viewMode, judgingPostId, clearJudgingPolling, exitJudgingWithError, exitJudgingWithResult])
+  }, [viewMode, judgingPostId, clearJudgingPolling])
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -618,7 +639,6 @@ function App() {
                 </li>
               ))}
             </ul>
-            <p>読み込み中...</p>
             <p>{MESSAGE_JUDGING_LOADING}</p>
           </section>
         )}

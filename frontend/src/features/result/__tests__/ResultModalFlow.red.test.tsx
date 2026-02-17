@@ -161,4 +161,34 @@ describe('E15-01 RED: ResultModal Flow', () => {
     expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
   })
+
+  it('再試行ボタン押下で同一idの再取得を1回実行する', async () => {
+    // 何を検証するか: エラー表示中の再試行操作で同一投稿IDの再取得が1回だけ走ること
+    const getPostSpy = vi
+      .spyOn(api.posts, 'get')
+      .mockRejectedValueOnce({ status: 500, code: 'INTERNAL_ERROR' })
+      .mockResolvedValueOnce({
+        id: 'rank-post-1',
+        nickname: '再試行太郎',
+        body: '再試行本文',
+        status: 'scored',
+        created_at: '2026-02-17T00:00:00Z',
+        average_score: 77.7,
+        rank: 8,
+        total_count: 40,
+        judgments: [],
+      })
+
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('ranking-item'))
+    fireEvent.click(await screen.findByRole('button', { name: '再試行' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('平均点: 77.7')).toBeInTheDocument()
+    })
+    expect(getPostSpy).toHaveBeenNthCalledWith(1, 'rank-post-1')
+    expect(getPostSpy).toHaveBeenNthCalledWith(2, 'rank-post-1')
+    expect(getPostSpy).toHaveBeenCalledTimes(2)
+  })
 })

@@ -30,7 +30,12 @@ async function moveToResultScreen(postResponse: {
   average_score?: number
   rank?: number
   total_count?: number
-  judgments?: Array<{ persona: 'hiroyuki' | 'dewi' | 'nakao'; total_score: number; comment: string }>
+  judgments?: Array<{
+    persona: 'hiroyuki' | 'dewi' | 'nakao'
+    total_score: number
+    comment: string
+    success?: boolean
+  }>
 }) {
   vi.spyOn(api.posts, 'create').mockResolvedValue({
     id: 'result-post-id',
@@ -51,7 +56,7 @@ async function moveToResultScreen(postResponse: {
       originality: 20,
       expression: 20,
       comment: item.comment,
-      success: true,
+      success: item.success ?? true,
     })),
   })
 
@@ -128,6 +133,36 @@ describe('E15-01 RED: ResultModal Component', () => {
     expect(screen.getAllByTestId('judge-result-card')).toHaveLength(3)
   })
 
+  it('average_score が 0 の場合でも 0.0 と表示する', async () => {
+    // 何を検証するか: average_score=0 を falsy 扱いせず平均点として表示すること
+    await moveToResultScreen({
+      status: 'scored',
+      average_score: 0,
+      rank: 9,
+      total_count: 30,
+      judgments: [],
+    })
+
+    expect(screen.getByText('平均点: 0.0')).toBeInTheDocument()
+  })
+
+  it('judgment.success=false の場合に失敗表示を行う', async () => {
+    // 何を検証するか: 審査員ごとの success=false がカードに失敗として表示されること
+    await moveToResultScreen({
+      status: 'scored',
+      average_score: 66.6,
+      rank: 10,
+      total_count: 30,
+      judgments: [
+        { persona: 'hiroyuki', total_score: 20, comment: '失敗ケース', success: false },
+        { persona: 'dewi', total_score: 60, comment: '成功ケース', success: true },
+        { persona: 'nakao', total_score: 80, comment: '成功ケース', success: true },
+      ],
+    })
+
+    expect(screen.getByText('失敗')).toBeInTheDocument()
+  })
+
   it('judgmentsが空または欠損時に未取得メッセージを表示する', async () => {
     // 何を検証するか: judgmentsが欠損または空配列でも審査結果はまだありませんを表示すること
     await moveToResultScreen({
@@ -157,7 +192,7 @@ describe('E15-01 RED: ResultModal Component', () => {
   })
 
   it('取得中状態で読み込み中表示を行う', async () => {
-    // 何を検証するか: 結果取得中に読み込み中...を表示すること
+    // 何を検証するか: 結果取得中に審査中メッセージを表示すること
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'loading-post-id',
       status: 'judging',
@@ -175,7 +210,7 @@ describe('E15-01 RED: ResultModal Component', () => {
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
 
     await waitFor(() => {
-      expect(screen.getByText('読み込み中...')).toBeInTheDocument()
+      expect(screen.getByText('AI審査員が採点中...')).toBeInTheDocument()
     })
   })
 })

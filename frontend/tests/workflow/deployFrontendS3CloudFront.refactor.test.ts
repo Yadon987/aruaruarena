@@ -14,6 +14,7 @@ import {
   loadWorkflowOrFail,
   readDoc,
   workflowExists,
+  type YamlObject,
 } from './helpers/workflowTestUtils'
 
 describe('E14-02 Refactor: workflow edge cases', () => {

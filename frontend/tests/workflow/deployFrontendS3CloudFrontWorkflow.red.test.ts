@@ -5,6 +5,7 @@ import {
   getWorkflowSteps,
   loadWorkflowOrFail,
   workflowExists,
+  type YamlObject,
 } from './helpers/workflowTestUtils'
 
 describe('E14-02 RED: deploy-frontend workflow (S3/CloudFront)', () => {

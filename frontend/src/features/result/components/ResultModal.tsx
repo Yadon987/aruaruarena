@@ -12,11 +12,31 @@ type Props = {
   onClose: () => void
 }
 
+const ERROR_CODE_NOT_FOUND = 'NOT_FOUND'
+const KEY_ESCAPE = 'Escape'
+const KEY_TAB = 'Tab'
+const MODAL_FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+const MESSAGE_NOT_FOUND = '投稿が見つかりません'
+const MESSAGE_FETCH_FAILED = '投稿詳細の取得に失敗しました'
+const MESSAGE_LOADING = '読み込み中...'
+const MESSAGE_RANK_FALLBACK = '順位情報を取得できませんでした'
+const MESSAGE_FAILED_RANK = '順位: ---'
+const MESSAGE_NO_JUDGMENTS = '審査結果はまだありません'
+
 function resolveErrorMessage(errorCode: string | null): string {
-  if (errorCode === 'NOT_FOUND') {
-    return '投稿が見つかりません'
+  if (errorCode === ERROR_CODE_NOT_FOUND) {
+    return MESSAGE_NOT_FOUND
   }
-  return '投稿詳細の取得に失敗しました'
+  return MESSAGE_FETCH_FAILED
+}
+
+function isRankInfoAvailable(post: Post | null): boolean {
+  return typeof post?.rank === 'number' && typeof post?.total_count === 'number'
+}
+
+function hasJudgeResults(post: Post | null): boolean {
+  return Array.isArray(post?.judgments) && post.judgments.length > 0
 }
 
 export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClose }: Props) {
@@ -24,15 +44,12 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const prefersReducedMotion = useReducedMotion()
 
-  const hasRankInfo = typeof post?.rank === 'number' && typeof post?.total_count === 'number'
+  const hasRankInfo = isRankInfoAvailable(post)
   const shouldShowScoredFallback = post?.status === 'scored' && !hasRankInfo
   const shouldShowFailedRank = post?.status === 'failed'
-  const hasJudgments = Array.isArray(post?.judgments) && post.judgments.length > 0
+  const hasJudgments = hasJudgeResults(post)
 
-  const focusableSelector = useMemo(
-    () => 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-    []
-  )
+  const focusableSelector = useMemo(() => MODAL_FOCUSABLE_SELECTOR, [])
 
   useEffect(() => {
     if (!isOpen) return
@@ -42,12 +59,12 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
   if (!isOpen) return null
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') {
+    if (event.key === KEY_ESCAPE) {
       onClose()
       return
     }
 
-    if (event.key !== 'Tab') return
+    if (event.key !== KEY_TAB) return
     const focusableElements = Array.from(
       modalRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? []
     )
@@ -57,6 +74,7 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
     const last = focusableElements[focusableElements.length - 1]
     const active = document.activeElement
 
+    // Shift+Tab/Tab でモーダルの先頭・末尾を跨ぐ場合は循環させる。
     if (event.shiftKey && active === first) {
       event.preventDefault()
       last.focus()
@@ -90,7 +108,7 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
           </button>
         </div>
 
-        {isLoading && !post && <p>読み込み中...</p>}
+        {isLoading && !post && <p>{MESSAGE_LOADING}</p>}
 
         {!isLoading && errorCode && (
           <div>
@@ -126,8 +144,8 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
                   </dd>
                 </div>
               )}
-              {shouldShowScoredFallback && <p>順位情報を取得できませんでした</p>}
-              {shouldShowFailedRank && <p>順位: ---</p>}
+              {shouldShowScoredFallback && <p>{MESSAGE_RANK_FALLBACK}</p>}
+              {shouldShowFailedRank && <p>{MESSAGE_FAILED_RANK}</p>}
             </dl>
 
             <section className="mt-4">
@@ -139,7 +157,7 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
                   ))}
                 </div>
               ) : (
-                <p>審査結果はまだありません</p>
+                <p>{MESSAGE_NO_JUDGMENTS}</p>
               )}
             </section>
           </div>
