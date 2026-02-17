@@ -28,6 +28,10 @@ const MESSAGE_NO_JUDGMENTS = '審査結果はまだありません'
 const REJUDGE_BUTTON_LABEL = '再審査する'
 const SHARE_BUTTON_LABEL = 'Xでシェア'
 const SHARE_HASHTAG = '#あるあるアリーナ'
+const SHARE_TARGET = '_blank'
+const SHARE_WINDOW_FEATURES = 'noopener,noreferrer'
+const SHARE_TOP_RANK_THRESHOLD = 20
+const X_SHARE_BASE_URL = 'https://x.com/intent/tweet?text='
 
 function resolveErrorMessage(errorCode: string | null): string {
   if (errorCode === ERROR_CODE_NOT_FOUND) {
@@ -42,6 +46,20 @@ function isRankInfoAvailable(post: Post | null): boolean {
 
 function hasJudgeResults(post: Post | null): boolean {
   return Array.isArray(post?.judgments) && post.judgments.length > 0
+}
+
+function canShowShareButton(post: Post | null): boolean {
+  return (
+    post?.status === 'scored' &&
+    typeof post.rank === 'number' &&
+    post.rank <= SHARE_TOP_RANK_THRESHOLD
+  )
+}
+
+function buildShareUrl(postBody: string): string {
+  const shareText = `${postBody} ${SHARE_HASHTAG}`
+  // 本文とハッシュタグに記号や空白が含まれても壊れないようURLエンコードする。
+  return `${X_SHARE_BASE_URL}${encodeURIComponent(shareText)}`
 }
 
 export function ResultModal({
@@ -64,8 +82,7 @@ export function ResultModal({
   const shouldShowFailedRank = post?.status === 'failed'
   const hasJudgments = hasJudgeResults(post)
   const canShowRejudge = post?.status === 'failed'
-  const canShowShare =
-    post?.status === 'scored' && typeof post.rank === 'number' && post.rank <= 20
+  const canShowShare = canShowShareButton(post)
 
   useEffect(() => {
     if (!isOpen) return
@@ -84,8 +101,9 @@ export function ResultModal({
     try {
       await api.posts.rejudge(post.id)
       onRejudgeSuccess(post)
-    } catch {
-      // Green最小実装では失敗時の詳細表示は後続で対応する。
+    } catch (error) {
+      // Refactor時点ではUI文言追加は行わず、失敗原因の追跡ログのみ出力する。
+      console.error('再審査API呼び出しに失敗しました', error)
     } finally {
       setIsRejudging(false)
     }
@@ -93,10 +111,9 @@ export function ResultModal({
 
   const handleShare = () => {
     if (!post) return
-    const shareText = `${post.body} ${SHARE_HASHTAG}`
-    const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}`
+    const shareUrl = buildShareUrl(post.body)
     setIsSharePreviewVisible(true)
-    window.open(shareUrl, '_blank', 'noopener,noreferrer')
+    window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {

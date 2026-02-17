@@ -409,6 +409,7 @@ function App() {
   }, [])
 
   const handleResultRejudgeSuccess = useCallback((post: Post) => {
+    // 再審査開始がAPIで確定した場合のみ、審査中画面へ遷移する。
     closeResultModal()
     enterJudgingMode(post.id, post.nickname)
     syncJudgingPath(post.id)
