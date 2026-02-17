@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
@@ -256,34 +256,14 @@ function App() {
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
   const syncMyPostIds = () => setMyPostIds(readPostIds())
-  const syncTopPath = () => window.history.replaceState({}, '', ROOT_PATH)
-  const syncJudgingPath = (postId: string) => {
+  const syncTopPath = useCallback(() => {
+    window.history.replaceState({}, '', ROOT_PATH)
+  }, [])
+  const syncJudgingPath = useCallback((postId: string) => {
     window.history.pushState({}, '', `${JUDGING_PATH_PREFIX}${postId}`)
-  }
+  }, [])
 
-  const enterJudgingMode = (postId: string, nickname?: string) => {
-    setJudgingPostId(postId)
-    setJudgingNickname(nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
-    setJudgingBody(MESSAGE_JUDGING_BODY_FALLBACK)
-    setJudgingErrorMessage('')
-    setViewMode('judging')
-  }
-
-  const exitJudgingWithResult = () => {
-    clearJudgingPolling()
-    setViewMode('result')
-    syncTopPath()
-  }
-
-  const exitJudgingWithError = () => {
-    clearJudgingPolling()
-    setViewMode('top')
-    setSuccessMessage('')
-    setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
-    syncTopPath()
-  }
-
-  const clearJudgingPolling = () => {
+  const clearJudgingPolling = useCallback(() => {
     if (pollingTimerRef.current) {
       clearInterval(pollingTimerRef.current)
       pollingTimerRef.current = null
@@ -293,7 +273,29 @@ function App() {
       pollingAbortControllerRef.current = null
     }
     pollingStartedAtRef.current = 0
-  }
+  }, [])
+
+  const enterJudgingMode = useCallback((postId: string, nickname?: string) => {
+    setJudgingPostId(postId)
+    setJudgingNickname(nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
+    setJudgingBody(MESSAGE_JUDGING_BODY_FALLBACK)
+    setJudgingErrorMessage('')
+    setViewMode('judging')
+  }, [])
+
+  const exitJudgingWithResult = useCallback(() => {
+    clearJudgingPolling()
+    setViewMode('result')
+    syncTopPath()
+  }, [clearJudgingPolling, syncTopPath])
+
+  const exitJudgingWithError = useCallback(() => {
+    clearJudgingPolling()
+    setViewMode('top')
+    setSuccessMessage('')
+    setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
+    syncTopPath()
+  }, [clearJudgingPolling, syncTopPath])
 
   useEffect(() => {
     const routePostId = readJudgingRoutePostId(window.location.pathname)
@@ -306,7 +308,7 @@ function App() {
     }
 
     enterJudgingMode(routePostId)
-  }, [])
+  }, [enterJudgingMode, syncTopPath])
 
   useEffect(() => {
     if (viewMode !== 'judging' || !judgingPostId) return
@@ -369,7 +371,7 @@ function App() {
       isDisposed = true
       clearJudgingPolling()
     }
-  }, [viewMode, judgingPostId])
+  }, [viewMode, judgingPostId, clearJudgingPolling, exitJudgingWithError, exitJudgingWithResult])
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -471,7 +473,6 @@ function App() {
         {viewMode === 'judging' && (
           <section
             data-testid="judging-screen"
-            role="region"
             aria-label="審査中"
             aria-live="polite"
             className="mb-4 rounded border p-4"

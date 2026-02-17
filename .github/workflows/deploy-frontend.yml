@@ -46,5 +46,5 @@ jobs:
 
       - name: Deploy placeholder (Issue 2)
         run: |
-          # TODO: Issue 2でS3同期とCloudFront invalidationを実装する
+          # TODO: Issue 2でS3同期とCloudFront invalidationの本処理へ差し替える
           echo "Deploy placeholder for Issue 2"
