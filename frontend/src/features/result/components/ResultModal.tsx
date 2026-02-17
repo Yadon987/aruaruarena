@@ -103,8 +103,8 @@ export function ResultModal({
     setRejudgeErrorMessage('')
     setIsRejudging(true)
     try {
-      await api.posts.rejudge(post.id)
-      onRejudgeSuccess(post)
+      const rejudgeResponse = await api.posts.rejudge(post.id)
+      onRejudgeSuccess({ ...post, ...rejudgeResponse })
     } catch (error) {
       // 再審査失敗時はユーザーに再試行可能な状態と理由を明示する。
       setRejudgeErrorMessage(MESSAGE_REJUDGE_FAILED)
