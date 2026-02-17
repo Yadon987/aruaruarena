@@ -129,8 +129,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
   })
 
-  it('Issue 1範囲外の再審査・SNSシェア・OGPを表示しない', async () => {
-    // 何を検証するか: Issue 1では再審査ボタン・SNSシェア・OGPプレビューが表示されないこと
+  it('TOP20圏外のscored投稿ではシェア関連UIを表示しない', async () => {
+    // 何を検証するか: scoredでもrankが21位以降ならSNSシェアボタンとOGPプレビューを表示しないこと
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'scope-post-id',
       status: 'judging',
@@ -142,7 +142,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       status: 'scored',
       created_at: '2026-02-17T00:00:00Z',
       average_score: 70.3,
-      rank: 7,
+      rank: 21,
       total_count: 30,
       judgments: [],
     })
@@ -157,7 +157,6 @@ describe('E15-01 RED: ResultModal Flow', () => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
     })
 
-    expect(screen.queryByRole('button', { name: '再審査する' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
   })
@@ -255,7 +254,12 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
       created_at: '2026-02-17T00:00:00Z',
       judgments: [],
     })
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ id: 'rejudge-post-id', status: 'judging' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
 
     render(<App />)
     fireEvent.click(screen.getByTestId('ranking-item'))

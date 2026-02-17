@@ -408,6 +408,12 @@ function App() {
     setViewMode('judging')
   }, [])
 
+  const handleResultRejudgeSuccess = useCallback((post: Post) => {
+    closeResultModal()
+    enterJudgingMode(post.id, post.nickname)
+    syncJudgingPath(post.id)
+  }, [closeResultModal, enterJudgingMode, syncJudgingPath])
+
   const exitJudgingWithResult = useCallback((post: Post) => {
     clearJudgingPolling()
     syncTopPath()
@@ -732,6 +738,7 @@ function App() {
           isLoading={isResultModalLoading}
           errorCode={activeResultErrorCode}
           onRetry={retryResultModal}
+          onRejudgeSuccess={handleResultRejudgeSuccess}
           onClose={closeResultModal}
         />
       </div>
