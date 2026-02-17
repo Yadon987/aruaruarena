@@ -1,8 +1,8 @@
-import { FormEvent, KeyboardEvent, useRef, useState } from 'react'
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
-import { HTTP_STATUS } from './shared/constants/api'
+import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
 import {
   DEFAULT_RANKING_LIMIT,
   MAX_RANKING_LIMIT,
@@ -32,6 +32,7 @@ const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
 const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
 const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
+const MESSAGE_JUDGING_FETCH_FAILED = '投稿情報の取得に失敗しました。トップへ戻って再度お試しください。'
 const MESSAGE_JUDGING_LOADING = 'AI審査員が採点中...'
 const MESSAGE_JUDGING_BODY_FALLBACK = '投稿内容を読み込み中です'
 const MESSAGE_JUDGING_NICKNAME_FALLBACK = '名無し'
@@ -40,6 +41,10 @@ const OPEN_KEYS = ['Enter', ' '] as const
 const JUDGE_NAMES = ['ひろゆき風', 'デヴィ婦人風', '中尾彬風'] as const
 const HIROYUKI_INDEX = 0
 const HIROYUKI_CATCHPHRASE = 'それってあなたの感想ですよね'
+const ROOT_PATH = '/'
+const JUDGING_PATH_PREFIX = '/judging/'
+const JUDGING_POLLING_INTERVAL_MS = 3000
+const JUDGING_POLLING_TIMEOUT_MS = 60000
 
 const RANKING_ERROR_MESSAGES = {
   rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
@@ -50,6 +55,17 @@ const RANKING_ERROR_MESSAGES = {
 type ValidationErrors = {
   nicknameError: string
   bodyError: string
+}
+
+type ViewMode = 'top' | 'judging' | 'result'
+
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+}
+
+function readJudgingRoutePostId(pathname: string): string | null {
+  const matched = pathname.match(/^\/judging\/(.+)$/)
+  return matched?.[1] ?? null
 }
 
 function parsePostIds(rawValue: string | null): string[] {
@@ -227,32 +243,133 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [myPostIds, setMyPostIds] = useState<string[]>(() => readPostIds())
   const [isMyPostsOpen, setIsMyPostsOpen] = useState(false)
-  const [isJudgingScreen, setIsJudgingScreen] = useState(false)
   const [judgingNickname, setJudgingNickname] = useState(MESSAGE_JUDGING_NICKNAME_FALLBACK)
   const [judgingBody, setJudgingBody] = useState(MESSAGE_JUDGING_BODY_FALLBACK)
   const [myPostsError, setMyPostsError] = useState('')
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('top')
+  const [judgingPostId, setJudgingPostId] = useState('')
+  const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
+  const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollingStartedAtRef = useRef<number>(0)
+  const pollingAbortControllerRef = useRef<AbortController | null>(null)
   const syncMyPostIds = () => setMyPostIds(readPostIds())
+  const syncTopPath = () => window.history.replaceState({}, '', ROOT_PATH)
+  const syncJudgingPath = (postId: string) => {
+    window.history.pushState({}, '', `${JUDGING_PATH_PREFIX}${postId}`)
+  }
 
-  // 投稿完了直後に審査中画面を先に表示し、UX上の待機時間を体感しづらくする。
-  const startJudgingScreen = (submittedNickname: string) => {
-    setIsJudgingScreen(true)
-    setJudgingNickname(submittedNickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
+  const enterJudgingMode = (postId: string, nickname?: string) => {
+    setJudgingPostId(postId)
+    setJudgingNickname(nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
     setJudgingBody(MESSAGE_JUDGING_BODY_FALLBACK)
+    setJudgingErrorMessage('')
+    setViewMode('judging')
   }
 
-  // 投稿詳細取得に失敗しても審査中画面は維持し、既定文言で継続表示する。
-  const fetchJudgingPostDetail = async (postId: string) => {
-    try {
-      const postDetail = await api.posts.get(postId)
-      setJudgingNickname(postDetail.nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
-      setJudgingBody(postDetail.body || MESSAGE_JUDGING_BODY_FALLBACK)
-    } catch {
-      setJudgingBody(MESSAGE_JUDGING_BODY_FALLBACK)
-    }
+  const exitJudgingWithResult = () => {
+    clearJudgingPolling()
+    setViewMode('result')
+    syncTopPath()
   }
+
+  const exitJudgingWithError = () => {
+    clearJudgingPolling()
+    setViewMode('top')
+    setSuccessMessage('')
+    setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
+    syncTopPath()
+  }
+
+  const clearJudgingPolling = () => {
+    if (pollingTimerRef.current) {
+      clearInterval(pollingTimerRef.current)
+      pollingTimerRef.current = null
+    }
+    if (pollingAbortControllerRef.current) {
+      pollingAbortControllerRef.current.abort()
+      pollingAbortControllerRef.current = null
+    }
+    pollingStartedAtRef.current = 0
+  }
+
+  useEffect(() => {
+    const routePostId = readJudgingRoutePostId(window.location.pathname)
+    if (!routePostId) return
+    if (!isUuidLike(routePostId)) {
+      setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
+      setViewMode('top')
+      syncTopPath()
+      return
+    }
+
+    enterJudgingMode(routePostId)
+  }, [])
+
+  useEffect(() => {
+    if (viewMode !== 'judging' || !judgingPostId) return
+
+    let isDisposed = false
+
+    const handleJudgingFetchFailed = () => {
+      if (isDisposed) return
+      exitJudgingWithError()
+    }
+
+    const fetchPost = async () => {
+      const elapsed = Date.now() - pollingStartedAtRef.current
+      // 監視上限60秒を超えた場合はAPIを呼ばずに終端する。
+      if (elapsed >= JUDGING_POLLING_TIMEOUT_MS) {
+        handleJudgingFetchFailed()
+        return
+      }
+
+      try {
+        pollingAbortControllerRef.current?.abort()
+        const abortController = new AbortController()
+        pollingAbortControllerRef.current = abortController
+
+        const response = await api.posts.get(judgingPostId, {
+          signal: abortController.signal,
+        })
+        if (isDisposed) return
+        if (response.status === 'scored' || response.status === 'failed') {
+          exitJudgingWithResult()
+          return
+        }
+        setJudgingNickname(response.nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
+        setJudgingBody(response.body || MESSAGE_JUDGING_BODY_FALLBACK)
+      } catch (error) {
+        if (isDisposed) return
+        if (error instanceof ApiClientError && error.code === API_ERROR_CODE.ABORTED) return
+        // 404は対象投稿が消失しているため即時終了とする。
+        if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
+          handleJudgingFetchFailed()
+          return
+        }
+
+        const retryElapsed = Date.now() - pollingStartedAtRef.current
+        // 500系/通信系は60秒枠内で再試行し、超過時のみ終了する。
+        if (retryElapsed >= JUDGING_POLLING_TIMEOUT_MS) {
+          handleJudgingFetchFailed()
+        }
+      }
+    }
+
+    clearJudgingPolling()
+    pollingStartedAtRef.current = Date.now()
+    void fetchPost()
+    pollingTimerRef.current = setInterval(() => {
+      void fetchPost()
+    }, JUDGING_POLLING_INTERVAL_MS)
+
+    return () => {
+      isDisposed = true
+      clearJudgingPolling()
+    }
+  }, [viewMode, judgingPostId])
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -269,6 +386,7 @@ function App() {
     setBodyError(nextBodyError)
     setSubmitError('')
     setSuccessMessage('')
+    setJudgingErrorMessage('')
 
     if (nextNicknameError || nextBodyError) {
       return
@@ -279,11 +397,11 @@ function App() {
       const response = await api.posts.create({ nickname: trimmedNickname, body: trimmedBody })
       savePostId(response.id)
       syncMyPostIds()
-      startJudgingScreen(trimmedNickname)
-      void fetchJudgingPostDetail(response.id)
       setNickname('')
       setBody('')
       setSuccessMessage(MESSAGE_SUCCESS)
+      enterJudgingMode(response.id, trimmedNickname)
+      syncJudgingPath(response.id)
     } catch (error) {
       setSubmitError(resolveSubmitErrorMessage(error))
     } finally {
@@ -350,36 +468,7 @@ function App() {
           <h1 className="text-2xl font-bold">あるあるアリーナ</h1>
         </header>
 
-        <form aria-label="投稿フォーム" onSubmit={onSubmit} className="mb-4 space-y-2">
-          <div>
-            <label htmlFor="nickname">ニックネーム</label>
-            <input
-              id="nickname"
-              type="text"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              className="block w-full border rounded p-2"
-            />
-            {nicknameError && <p>{nicknameError}</p>}
-          </div>
-          <div>
-            <label htmlFor="body">あるある本文</label>
-            <textarea
-              id="body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              className="block w-full border rounded p-2"
-            />
-            {bodyError && <p>{bodyError}</p>}
-          </div>
-          <button type="submit" disabled={isSubmitting} className="px-4 py-2 border rounded">
-            投稿する
-          </button>
-          {submitError && <p>{submitError}</p>}
-          {successMessage && <p>{successMessage}</p>}
-        </form>
-
-        {isJudgingScreen && (
+        {viewMode === 'judging' && (
           <section
             data-testid="judging-screen"
             role="region"
@@ -403,19 +492,62 @@ function App() {
             <p>{MESSAGE_JUDGING_LOADING}</p>
           </section>
         )}
-        <RankingSection myPostIds={myPostIds} />
 
-        <footer role="contentinfo">
-          <button type="button" onClick={openMyPosts} onKeyDown={handleMyPostsTriggerKeyDown}>
-            自分の投稿一覧
-          </button>
-          <p>フッター</p>
-        </footer>
+        {viewMode === 'result' && (
+          <section data-testid="judging-result">
+            <h2>審査結果</h2>
+          </section>
+        )}
 
-        {isMyPostsOpen && (
+        {viewMode === 'top' && (
+          <>
+            <form aria-label="投稿フォーム" onSubmit={onSubmit} className="mb-4 space-y-2">
+              <div>
+                <label htmlFor="nickname">ニックネーム</label>
+                <input
+                  id="nickname"
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  className="block w-full border rounded p-2"
+                />
+                {nicknameError && <p>{nicknameError}</p>}
+              </div>
+              <div>
+                <label htmlFor="body">あるある本文</label>
+                <textarea
+                  id="body"
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  className="block w-full border rounded p-2"
+                />
+                {bodyError && <p>{bodyError}</p>}
+              </div>
+              <button type="submit" disabled={isSubmitting} className="px-4 py-2 border rounded">
+                投稿する
+              </button>
+              {submitError && <p>{submitError}</p>}
+              {successMessage && <p>{successMessage}</p>}
+              {judgingErrorMessage && <p>{judgingErrorMessage}</p>}
+            </form>
+
+            <RankingSection myPostIds={myPostIds} />
+
+            <footer role="contentinfo">
+              <button type="button" onClick={openMyPosts} onKeyDown={handleMyPostsTriggerKeyDown}>
+                自分の投稿一覧
+              </button>
+              <p>フッター</p>
+            </footer>
+          </>
+        )}
+
+        {viewMode === 'top' && isMyPostsOpen && (
           <div
             role="dialog"
+            aria-modal="true"
             aria-label="自分の投稿"
+            tabIndex={-1}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
             onKeyDown={(event) => {
               if (event.key === DIALOG_CLOSE_KEY) closeMyPosts()

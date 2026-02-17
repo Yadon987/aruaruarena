@@ -23,8 +23,8 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     localStorage.clear()
   })
 
-  it('有効入力で投稿APIを1回呼び、成功時に入力をクリアする', async () => {
-    // 何を検証するか: 正常送信時にPOSTが1回実行され、フォームが初期化されること
+  it('有効入力で投稿APIを1回呼び、成功時に審査中画面へ遷移する', async () => {
+    // 何を検証するか: 正常送信時にPOSTが1回実行され、審査中画面へ遷移すること
     vi.mocked(api.posts.create).mockResolvedValue({ id: 'post-1', status: 'judging' })
     render(<App />)
 
@@ -40,8 +40,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
       body: 'あるあるネタです',
     })
     await waitFor(() => {
-      expect(screen.getByLabelText('ニックネーム')).toHaveValue('')
-      expect(screen.getByLabelText('あるある本文')).toHaveValue('')
+      expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
     })
   })
 
@@ -111,7 +110,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
 
     resolveRequest?.({ id: 'post-2', status: 'judging' })
     await waitFor(() => {
-      expect(screen.getByText('投稿を受け付けました')).toBeInTheDocument()
+      expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
     })
   })
 })
