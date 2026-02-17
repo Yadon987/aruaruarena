@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { load } from 'js-yaml'
 
-export type YamlValue = string | boolean | null | YamlObject | YamlValue[]
+export type YamlValue = string | number | boolean | null | YamlObject | YamlValue[]
 export type YamlObject = Record<string, YamlValue>
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
@@ -59,9 +59,14 @@ export const docExists = (): boolean => existsSync(DOC_PATH)
 export const readDoc = (): string => readFileSync(DOC_PATH, 'utf-8')
 
 export const readWorkflow = (): YamlObject => {
+  if (!workflowExists()) {
+    throw new Error(`不足ファイル: ${WORKFLOW_PATH}`)
+  }
   const content = readFileSync(WORKFLOW_PATH, 'utf-8')
   return (load(content) ?? {}) as YamlObject
 }
+
+export const loadWorkflowOrFail = (): YamlObject => readWorkflow()
 
 export const getWorkflowStep = (workflow: YamlObject, stepName: string): YamlObject | undefined => {
   const jobs = workflow.jobs as YamlObject | undefined

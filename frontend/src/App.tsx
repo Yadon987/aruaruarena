@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
 import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
+import { queryKeys } from './shared/constants/queryKeys'
 import {
   DEFAULT_RANKING_LIMIT,
   MAX_RANKING_LIMIT,
@@ -10,6 +11,7 @@ import {
 import { useRankings } from './shared/hooks/useRankings'
 import { ApiClientError, api } from './shared/services/api'
 import type { Post, RankingItem } from './shared/types/domain'
+import { ResultModal } from './features/result'
 import { MyPostDetail } from './features/top/components/MyPostDetail'
 import './App.css'
 
@@ -45,6 +47,8 @@ const ROOT_PATH = '/'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
+const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
+const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 
 const RANKING_ERROR_MESSAGES = {
   rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
@@ -57,7 +61,7 @@ type ValidationErrors = {
   bodyError: string
 }
 
-type ViewMode = 'top' | 'judging' | 'result'
+type ViewMode = 'top' | 'judging'
 
 function isUuidLike(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
@@ -132,6 +136,16 @@ function resolvePostDetailErrorMessage(error: unknown): string {
   return MESSAGE_POST_DETAIL_NETWORK_ERROR
 }
 
+function resolveResultModalErrorCode(error: unknown): string {
+  if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
+    return RESULT_MODAL_ERROR_NOT_FOUND
+  }
+  if (error instanceof ApiClientError) {
+    return error.code
+  }
+  return RESULT_MODAL_ERROR_FETCH_FAILED
+}
+
 function validateForm(nickname: string, body: string): ValidationErrors {
   const trimmedNickname = nickname.trim()
   const trimmedBody = body.trim()
@@ -191,7 +205,13 @@ function resolveRankingErrorMessage(error: unknown): string {
   return RANKING_ERROR_MESSAGES.failed
 }
 
-function RankingSection({ myPostIds }: { myPostIds: string[] }) {
+function RankingSection({
+  myPostIds,
+  onSelectRankingPost,
+}: {
+  myPostIds: string[]
+  onSelectRankingPost: (postId: string) => void
+}) {
   const { data, isLoading, isError, error } = useRankings(DEFAULT_RANKING_LIMIT, {
     polling: true,
   })
@@ -215,15 +235,18 @@ function RankingSection({ myPostIds }: { myPostIds: string[] }) {
           {displayRankings.map((item) => {
             const isMyPost = myPostIdSet.has(item.id)
             return (
-              <li
-                key={item.id}
-                data-testid="ranking-item"
-                className={`rounded border p-3 ${isMyPost ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
-              >
-                <p className="font-semibold">{item.rank}位 {item.nickname}</p>
-                <p>{item.body}</p>
-                <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
-                {isMyPost && <p className="text-sm font-bold">あなたの投稿</p>}
+              <li key={item.id}>
+                <button
+                  type="button"
+                  data-testid="ranking-item"
+                  className={`w-full rounded border p-3 text-left ${isMyPost ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
+                  onClick={() => onSelectRankingPost(item.id)}
+                >
+                  <p className="font-semibold">{item.rank}位 {item.nickname}</p>
+                  <p>{item.body}</p>
+                  <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
+                  {isMyPost && <p className="text-sm font-bold">あなたの投稿</p>}
+                </button>
               </li>
             )
           })}
@@ -251,17 +274,119 @@ function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('top')
   const [judgingPostId, setJudgingPostId] = useState('')
   const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false)
+  const [activeResultPostId, setActiveResultPostId] = useState('')
+  const [activeResultPost, setActiveResultPost] = useState<Post | null>(null)
+  const [isResultPostLoading, setIsResultPostLoading] = useState(false)
+  const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
+  const resultTriggerRef = useRef<HTMLElement | null>(null)
+  const resultRequestSeqRef = useRef(0)
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
+  const activeResultErrorCode = resultModalErrorCode
   const syncMyPostIds = () => setMyPostIds(readPostIds())
+  const saveResultModalTrigger = useCallback(() => {
+    resultTriggerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+  }, [])
+  const resetResultModalState = useCallback(() => {
+    setActiveResultPost(null)
+    setIsResultPostLoading(false)
+    setResultModalErrorCode(null)
+  }, [])
   const syncTopPath = useCallback(() => {
     window.history.replaceState({}, '', ROOT_PATH)
   }, [])
   const syncJudgingPath = useCallback((postId: string) => {
     window.history.pushState({}, '', `${JUDGING_PATH_PREFIX}${postId}`)
   }, [])
+  const fetchResultPost = useCallback(async (postId: string, force: boolean = false) => {
+    // 連続選択時は requestSeq をインクリメントし、最後の要求のみ反映する。
+    const requestSeq = ++resultRequestSeqRef.current
+    setIsResultPostLoading(true)
+    setResultModalErrorCode(null)
+
+    if (!force) {
+      // 同一ID再表示ではキャッシュを優先し、不要な再取得を避ける。
+      const cachedPost = queryClient.getQueryData<Post>(queryKeys.posts.detail(postId))
+      if (cachedPost) {
+        if (requestSeq === resultRequestSeqRef.current) {
+          setActiveResultPost(cachedPost)
+          setIsResultPostLoading(false)
+        }
+        return
+      }
+    }
+
+    try {
+      const response = await api.posts.get(postId)
+      if (requestSeq !== resultRequestSeqRef.current) return
+      queryClient.setQueryData(queryKeys.posts.detail(postId), response)
+      setActiveResultPost(response)
+      setResultModalErrorCode(null)
+    } catch (error) {
+      if (requestSeq !== resultRequestSeqRef.current) return
+      setActiveResultPost(null)
+      setResultModalErrorCode(resolveResultModalErrorCode(error))
+    } finally {
+      if (requestSeq === resultRequestSeqRef.current) {
+        setIsResultPostLoading(false)
+      }
+    }
+  }, [])
+
+  const openResultModal = useCallback((postId: string, initialPost?: Post | null) => {
+    saveResultModalTrigger()
+    setActiveResultPostId(postId)
+    setResultModalErrorCode(null)
+    if (initialPost) {
+      queryClient.setQueryData(queryKeys.posts.detail(postId), initialPost)
+      setActiveResultPost(initialPost)
+      setIsResultPostLoading(false)
+    } else {
+      setActiveResultPost(null)
+      void fetchResultPost(postId)
+    }
+    setIsResultModalOpen(true)
+    setViewMode('top')
+  }, [fetchResultPost, saveResultModalTrigger])
+
+  const openResultModalWithError = useCallback((postId: string, errorCode: string) => {
+    saveResultModalTrigger()
+    setActiveResultPostId(postId)
+    setActiveResultPost(null)
+    setResultModalErrorCode(errorCode)
+    setIsResultPostLoading(false)
+    setIsResultModalOpen(true)
+    setViewMode('top')
+  }, [saveResultModalTrigger])
+
+  const closeResultModal = useCallback(() => {
+    setIsResultModalOpen(false)
+    resetResultModalState()
+    resultRequestSeqRef.current += 1
+    requestAnimationFrame(() => {
+      if (resultTriggerRef.current && document.body.contains(resultTriggerRef.current)) {
+        resultTriggerRef.current.focus()
+      }
+    })
+  }, [resetResultModalState])
+
+  const retryResultModal = useCallback(() => {
+    if (!activeResultPostId) return
+    void fetchResultPost(activeResultPostId, true)
+  }, [activeResultPostId, fetchResultPost])
+
+  useEffect(() => {
+    if (!isResultModalOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isResultModalOpen])
 
   const clearJudgingPolling = useCallback(() => {
     if (pollingTimerRef.current) {
@@ -283,11 +408,11 @@ function App() {
     setViewMode('judging')
   }, [])
 
-  const exitJudgingWithResult = useCallback(() => {
+  const exitJudgingWithResult = useCallback((post: Post) => {
     clearJudgingPolling()
-    setViewMode('result')
     syncTopPath()
-  }, [clearJudgingPolling, syncTopPath])
+    openResultModal(post.id, post)
+  }, [clearJudgingPolling, openResultModal, syncTopPath])
 
   const exitJudgingWithError = useCallback(() => {
     clearJudgingPolling()
@@ -296,6 +421,16 @@ function App() {
     setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
     syncTopPath()
   }, [clearJudgingPolling, syncTopPath])
+  const exitJudgingWithResultRef = useRef(exitJudgingWithResult)
+  const exitJudgingWithErrorRef = useRef(exitJudgingWithError)
+
+  useEffect(() => {
+    exitJudgingWithResultRef.current = exitJudgingWithResult
+  }, [exitJudgingWithResult])
+
+  useEffect(() => {
+    exitJudgingWithErrorRef.current = exitJudgingWithError
+  }, [exitJudgingWithError])
 
   useEffect(() => {
     const routePostId = readJudgingRoutePostId(window.location.pathname)
@@ -317,7 +452,7 @@ function App() {
 
     const handleJudgingFetchFailed = () => {
       if (isDisposed) return
-      exitJudgingWithError()
+      exitJudgingWithErrorRef.current()
     }
 
     const fetchPost = async () => {
@@ -338,7 +473,7 @@ function App() {
         })
         if (isDisposed) return
         if (response.status === 'scored' || response.status === 'failed') {
-          exitJudgingWithResult()
+          exitJudgingWithResultRef.current(response)
           return
         }
         setJudgingNickname(response.nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
@@ -371,7 +506,7 @@ function App() {
       isDisposed = true
       clearJudgingPolling()
     }
-  }, [viewMode, judgingPostId, clearJudgingPolling, exitJudgingWithError, exitJudgingWithResult])
+  }, [viewMode, judgingPostId, clearJudgingPolling])
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -429,6 +564,10 @@ function App() {
     }
   }
 
+  const handleRankingPostClick = (postId: string) => {
+    openResultModal(postId)
+  }
+
   const handleMyPostClick = async (postId: string) => {
     if (inFlightPostIdsRef.current.has(postId)) {
       return
@@ -446,11 +585,15 @@ function App() {
     try {
       const response = await api.posts.get(postId)
       setSelectedPost(response)
+      if (response.status === 'scored' || response.status === 'failed') {
+        openResultModal(postId, response)
+      }
       writePostIds(previousPostIds)
       syncMyPostIds()
     } catch (error) {
       const message = resolvePostDetailErrorMessage(error)
       setMyPostsError(message)
+      openResultModalWithError(postId, resolveResultModalErrorCode(error))
       if (getErrorStatus(error) !== HTTP_STATUS.NOT_FOUND) {
         writePostIds(previousPostIds)
         syncMyPostIds()
@@ -462,6 +605,7 @@ function App() {
   }
 
   const displayMyPostIds = Array.from(new Set(myPostIds)).slice(0, MAX_STORED_POST_IDS)
+  const isResultModalLoading = isResultPostLoading && !activeResultPost
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -491,12 +635,6 @@ function App() {
               ))}
             </ul>
             <p>{MESSAGE_JUDGING_LOADING}</p>
-          </section>
-        )}
-
-        {viewMode === 'result' && (
-          <section data-testid="judging-result">
-            <h2>審査結果</h2>
           </section>
         )}
 
@@ -532,7 +670,7 @@ function App() {
               {judgingErrorMessage && <p>{judgingErrorMessage}</p>}
             </form>
 
-            <RankingSection myPostIds={myPostIds} />
+            <RankingSection myPostIds={myPostIds} onSelectRankingPost={handleRankingPostClick} />
 
             <footer role="contentinfo">
               <button type="button" onClick={openMyPosts} onKeyDown={handleMyPostsTriggerKeyDown}>
@@ -587,6 +725,15 @@ function App() {
             </div>
           </div>
         )}
+
+        <ResultModal
+          isOpen={isResultModalOpen}
+          post={activeResultPost}
+          isLoading={isResultModalLoading}
+          errorCode={activeResultErrorCode}
+          onRetry={retryResultModal}
+          onClose={closeResultModal}
+        />
       </div>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>

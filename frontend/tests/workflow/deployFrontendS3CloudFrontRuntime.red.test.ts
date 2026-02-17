@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { STEP_NAMES, getWorkflowStep, readWorkflow, workflowExists, type YamlObject } from './helpers/workflowTestUtils'
-
-const loadWorkflowOrFail = (): YamlObject => {
-  expect(workflowExists(), '不足ファイル: .github/workflows/deploy-frontend.yml').toBe(true)
-  return readWorkflow()
-}
+import { STEP_NAMES, getWorkflowStep, loadWorkflowOrFail } from './helpers/workflowTestUtils'
 
 describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () => {
   // 何を検証するか: S3_BUCKET_FRONTEND 未設定時に Sync assets to S3 で停止し後続へ進まない設計であること
