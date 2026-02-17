@@ -36,3 +36,23 @@ test.describe('E15-01 RED: 結果モーダルUI', () => {
     await expect(page.getByRole('button', { name: '再試行' })).toBeVisible()
   })
 })
+
+test.describe('E15-02 RED: 結果モーダルアクション', () => {
+  test('failed投稿で再審査ボタンを表示する', async ({ page }) => {
+    // 何を検証するか: status=failed の結果モーダルに再審査ボタンが表示されること
+    await page.goto('/?e2e_case=result_failed')
+
+    await page.getByTestId('ranking-item').first().click()
+
+    await expect(page.getByRole('button', { name: '再審査する' })).toBeVisible()
+  })
+
+  test('scored投稿でSNSシェアボタンを表示する', async ({ page }) => {
+    // 何を検証するか: status=scored かつ rank<=20 の結果モーダルにSNSシェアボタンが表示されること
+    await page.goto('/?e2e_case=result_scored_top20')
+
+    await page.getByTestId('ranking-item').first().click()
+
+    await expect(page.getByRole('button', { name: 'Xでシェア' })).toBeVisible()
+  })
+})

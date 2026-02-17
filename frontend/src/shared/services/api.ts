@@ -179,6 +179,10 @@ export const api = {
       }),
     get: (id: string, options?: RequestInit & { timeout?: number }) =>
       request<GetPostResponse>(`/posts/${id}`, options),
+    rejudge: (id: string) =>
+      request<CreatePostResponse>(`/posts/${id}/rejudge`, {
+        method: 'POST',
+      }),
   },
   rankings: {
     list: (limit: number = API_DEFAULTS.RANKING_LIMIT) =>

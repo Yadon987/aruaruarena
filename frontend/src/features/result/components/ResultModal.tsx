@@ -1,5 +1,6 @@
-import { KeyboardEvent, useEffect, useRef } from 'react'
+import { KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
+import { api } from '../../../shared/services/api'
 import type { Post } from '../../../shared/types/domain'
 import { JudgeResultCard } from './JudgeResultCard'
 
@@ -9,6 +10,7 @@ type Props = {
   isLoading: boolean
   errorCode: string | null
   onRetry: () => void
+  onRejudgeSuccess: (post: Post) => void
   onClose: () => void
 }
 
@@ -23,6 +25,14 @@ const MESSAGE_LOADING = '読み込み中...'
 const MESSAGE_RANK_FALLBACK = '順位情報を取得できませんでした'
 const MESSAGE_FAILED_RANK = '順位: ---'
 const MESSAGE_NO_JUDGMENTS = '審査結果はまだありません'
+const REJUDGE_BUTTON_LABEL = '再審査する'
+const SHARE_BUTTON_LABEL = 'Xでシェア'
+const SHARE_HASHTAG = '#あるあるアリーナ'
+const SHARE_TARGET = '_blank'
+const SHARE_WINDOW_FEATURES = 'noopener,noreferrer'
+const SHARE_TOP_RANK_THRESHOLD = 20
+const X_SHARE_BASE_URL = 'https://x.com/intent/tweet?text='
+const MESSAGE_REJUDGE_FAILED = '再審査に失敗しました。時間をおいて再度お試しください'
 
 function resolveErrorMessage(errorCode: string | null): string {
   if (errorCode === ERROR_CODE_NOT_FOUND) {
@@ -39,22 +49,77 @@ function hasJudgeResults(post: Post | null): boolean {
   return Array.isArray(post?.judgments) && post.judgments.length > 0
 }
 
-export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClose }: Props) {
+function canShowShareButton(post: Post | null): boolean {
+  return (
+    post?.status === 'scored' &&
+    typeof post.rank === 'number' &&
+    post.rank <= SHARE_TOP_RANK_THRESHOLD
+  )
+}
+
+function buildShareUrl(postBody: string): string {
+  const shareText = `${postBody} ${SHARE_HASHTAG}`
+  // 本文とハッシュタグに記号や空白が含まれても壊れないようURLエンコードする。
+  return `${X_SHARE_BASE_URL}${encodeURIComponent(shareText)}`
+}
+
+export function ResultModal({
+  isOpen,
+  post,
+  isLoading,
+  errorCode,
+  onRetry,
+  onRejudgeSuccess,
+  onClose,
+}: Props) {
   const modalRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const prefersReducedMotion = useReducedMotion()
+  const [isRejudging, setIsRejudging] = useState(false)
+  const [isSharePreviewVisible, setIsSharePreviewVisible] = useState(false)
+  const [rejudgeErrorMessage, setRejudgeErrorMessage] = useState('')
 
   const hasRankInfo = isRankInfoAvailable(post)
   const shouldShowScoredFallback = post?.status === 'scored' && !hasRankInfo
   const shouldShowFailedRank = post?.status === 'failed'
   const hasJudgments = hasJudgeResults(post)
+  const canShowRejudge = post?.status === 'failed'
+  const canShowShare = canShowShareButton(post)
 
   useEffect(() => {
     if (!isOpen) return
     closeButtonRef.current?.focus()
   }, [isOpen])
 
+  useEffect(() => {
+    setIsSharePreviewVisible(false)
+    setRejudgeErrorMessage('')
+  }, [post?.id, isOpen])
+
   if (!isOpen) return null
+
+  const handleRejudge = async () => {
+    if (!post || isRejudging) return
+    setRejudgeErrorMessage('')
+    setIsRejudging(true)
+    try {
+      const rejudgeResponse = await api.posts.rejudge(post.id)
+      onRejudgeSuccess({ ...post, ...rejudgeResponse })
+    } catch (error) {
+      // 再審査失敗時はユーザーに再試行可能な状態と理由を明示する。
+      setRejudgeErrorMessage(MESSAGE_REJUDGE_FAILED)
+      console.error('再審査API呼び出しに失敗しました', error)
+    } finally {
+      setIsRejudging(false)
+    }
+  }
+
+  const handleShare = () => {
+    if (!post) return
+    const shareUrl = buildShareUrl(post.body)
+    setIsSharePreviewVisible(true)
+    window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
+  }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === KEY_ESCAPE) {
@@ -170,6 +235,29 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
                 <p>{MESSAGE_NO_JUDGMENTS}</p>
               )}
             </section>
+
+            {(canShowRejudge || canShowShare) && (
+              <section className="mt-4">
+                <div className="flex gap-2">
+                  {canShowRejudge && (
+                    <button type="button" onClick={handleRejudge} disabled={isRejudging}>
+                      {REJUDGE_BUTTON_LABEL}
+                    </button>
+                  )}
+                  {canShowShare && (
+                    <button type="button" onClick={handleShare}>
+                      {SHARE_BUTTON_LABEL}
+                    </button>
+                  )}
+                </div>
+                {rejudgeErrorMessage && <p className="mt-2 text-red-600">{rejudgeErrorMessage}</p>}
+                {isSharePreviewVisible && (
+                  <div data-testid="ogp-preview" className="mt-2 rounded border p-2">
+                    <p>{post.body}</p>
+                  </div>
+                )}
+              </section>
+            )}
           </div>
         )}
         </div>
