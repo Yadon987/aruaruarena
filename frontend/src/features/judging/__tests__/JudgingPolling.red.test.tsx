@@ -45,7 +45,10 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     await waitFor(
       () => {
-        expect(getPostSpy).toHaveBeenCalledWith('polling-test')
+        expect(getPostSpy).toHaveBeenCalledWith(
+          'polling-test',
+          expect.objectContaining({ signal: expect.any(AbortSignal) })
+        )
       },
       { timeout: 3500 }
     )

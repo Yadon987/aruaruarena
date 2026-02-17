@@ -48,6 +48,8 @@ export const API_ERROR_CODE = {
   NETWORK_ERROR: 'NETWORK_ERROR',
   /** タイムアウトエラー */
   TIMEOUT: 'TIMEOUT',
+  /** リクエスト中断（キャンセル） */
+  ABORTED: 'ABORTED',
   /** レート制限エラー */
   RATE_LIMITED: 'RATE_LIMITED',
 } as const

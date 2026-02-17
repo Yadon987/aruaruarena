@@ -2,7 +2,7 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
-import { HTTP_STATUS } from './shared/constants/api'
+import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
 import {
   DEFAULT_RANKING_LIMIT,
   MAX_RANKING_LIMIT,
@@ -246,6 +246,7 @@ function App() {
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
+  const pollingAbortControllerRef = useRef<AbortController | null>(null)
   const syncMyPostIds = () => setMyPostIds(readPostIds())
   const syncTopPath = () => window.history.replaceState({}, '', ROOT_PATH)
   const syncJudgingPath = (postId: string) => {
@@ -267,6 +268,7 @@ function App() {
   const exitJudgingWithError = () => {
     clearJudgingPolling()
     setViewMode('top')
+    setSuccessMessage('')
     setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
     syncTopPath()
   }
@@ -275,6 +277,10 @@ function App() {
     if (pollingTimerRef.current) {
       clearInterval(pollingTimerRef.current)
       pollingTimerRef.current = null
+    }
+    if (pollingAbortControllerRef.current) {
+      pollingAbortControllerRef.current.abort()
+      pollingAbortControllerRef.current = null
     }
     pollingStartedAtRef.current = 0
   }
@@ -311,13 +317,20 @@ function App() {
       }
 
       try {
-        const response = await api.posts.get(judgingPostId)
+        pollingAbortControllerRef.current?.abort()
+        const abortController = new AbortController()
+        pollingAbortControllerRef.current = abortController
+
+        const response = await api.posts.get(judgingPostId, {
+          signal: abortController.signal,
+        })
         if (isDisposed) return
         if (response.status === 'scored' || response.status === 'failed') {
           exitJudgingWithResult()
         }
       } catch (error) {
         if (isDisposed) return
+        if (error instanceof ApiClientError && error.code === API_ERROR_CODE.ABORTED) return
         // 404は対象投稿が消失しているため即時終了とする。
         if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
           handleJudgingFetchFailed()

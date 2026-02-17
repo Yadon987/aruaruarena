@@ -50,10 +50,6 @@ reviews:
       - "Gemfile"
       - ".ruby-version"
 
-  # 拡張コンテキスト：より広い範囲のファイルを考慮
-  extended_context:
-    scope: "repo"
-
   tools:
     rubocop:
       enabled: true

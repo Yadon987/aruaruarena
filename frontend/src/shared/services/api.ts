@@ -102,20 +102,34 @@ async function parseResponseBody<T>(response: Response): Promise<T> {
 async function request<T>(path: string, options?: RequestInit & { timeout?: number }): Promise<T> {
   const timeout = options?.timeout ?? API_TIMEOUT.DEFAULT
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
+  const externalSignal = options?.signal
+  const hasExternalSignal = typeof externalSignal !== 'undefined'
+  let isTimeoutTriggered = false
+  const timeoutId = setTimeout(() => {
+    isTimeoutTriggered = true
+    controller.abort()
+  }, timeout)
+  const handleExternalAbort = () => controller.abort()
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      handleExternalAbort()
+    } else {
+      externalSignal.addEventListener('abort', handleExternalAbort, { once: true })
+    }
+  }
 
   try {
+    const { timeout: _timeout, ...fetchOptions } = options ?? {}
     const response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...options?.headers,
+        ...fetchOptions.headers,
       },
       credentials: 'same-origin',
-      ...options,
+      ...fetchOptions,
       signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       await handleHttpError(response)
@@ -123,8 +137,24 @@ async function request<T>(path: string, options?: RequestInit & { timeout?: numb
 
     return parseResponseBody<T>(response)
   } catch (error) {
-    clearTimeout(timeoutId)
+    if (error instanceof Error && error.name === 'AbortError') {
+      if (isTimeoutTriggered || !hasExternalSignal) {
+        throw new ApiClientError(
+          'Request timeout',
+          API_ERROR_CODE.TIMEOUT,
+          HTTP_STATUS.REQUEST_TIMEOUT
+        )
+      }
+
+      throw new ApiClientError('Request aborted', API_ERROR_CODE.ABORTED, 0)
+    }
+
     handleNetworkError(error)
+  } finally {
+    clearTimeout(timeoutId)
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', handleExternalAbort)
+    }
   }
 }
 
@@ -138,7 +168,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    get: (id: string) => request<GetPostResponse>(`/posts/${id}`),
+    get: (id: string, options?: RequestInit & { timeout?: number }) =>
+      request<GetPostResponse>(`/posts/${id}`, options),
   },
   rankings: {
     list: (limit: number = API_DEFAULTS.RANKING_LIMIT) =>
