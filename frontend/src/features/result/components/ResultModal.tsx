@@ -154,9 +154,9 @@ export function ResultModal({ isOpen, post, isLoading, errorCode, onRetry, onClo
                   </dd>
                 </div>
               )}
-              {shouldShowScoredFallback && <p>{MESSAGE_RANK_FALLBACK}</p>}
-              {shouldShowFailedRank && <p>{MESSAGE_FAILED_RANK}</p>}
             </dl>
+            {shouldShowScoredFallback && <p>{MESSAGE_RANK_FALLBACK}</p>}
+            {shouldShowFailedRank && <p>{MESSAGE_FAILED_RANK}</p>}
 
             <section className="mt-4">
               <h3 className="mb-2 font-semibold">審査員コメント</h3>
