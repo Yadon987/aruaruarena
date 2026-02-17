@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { STEP_NAMES, getWorkflowStep, readWorkflow, type YamlObject } from './helpers/workflowTestUtils'
 
 describe('E14-01: deploy frontend runtime assumptions', () => {
+  // 何を検証するか: setup-node が frontend/package-lock.json をキャッシュ参照に使用すること
+  it('Setup Node は cache-dependency-path に frontend/package-lock.json を指定する', () => {
+    const workflow = readWorkflow()
+    const step = getWorkflowStep(workflow, STEP_NAMES.setupNode)
+    const withConfig = (step?.with ?? {}) as YamlObject
+
+    expect(step?.uses).toBe('actions/setup-node@v4')
+    expect(withConfig.cache).toBe('npm')
+    expect(withConfig['cache-dependency-path']).toBe('frontend/package-lock.json')
+  })
+
   // 何を検証するか: OIDC設定が secrets/vars を参照し認証失敗位置を固定できること
   it('Configure AWS credentials は必須パラメータを参照する', () => {
     const workflow = readWorkflow()
