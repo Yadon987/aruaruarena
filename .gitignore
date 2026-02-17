@@ -49,6 +49,7 @@ shared-local-instance.db
 /app/assets/builds/*
 !/app/assets/builds/.keep
 package-lock.json
+!frontend/package-lock.json
 yarn-error.log
 
 # ==============================================================================

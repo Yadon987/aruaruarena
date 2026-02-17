@@ -25,6 +25,9 @@ permissions:
 jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
+    env:
+      S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,12 +67,14 @@ jobs:
         run: aws s3 sync dist s3://$S3_BUCKET_FRONTEND --delete --exact-timestamps
 
       - name: Create CloudFront invalidation
-        run: aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths '/*'
+        id: create_invalidation
+        run: |
+          INVALIDATION_ID="$(aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths '/*' --query 'Invalidation.Id' --output text)"
+          echo "id=$INVALIDATION_ID" >> "$GITHUB_OUTPUT"
 
       - name: Wait CloudFront invalidation completed
         run: |
-          # Refactor時点では最小実装としてプレースホルダIDを維持する。
-          aws cloudfront wait invalidation-completed --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --id <invalidation_id>
+          aws cloudfront wait invalidation-completed --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --id "${{ steps.create_invalidation.outputs.id }}"
 
       - name: Publish failure summary
         if: failure()

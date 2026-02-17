@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { STEP_NAMES, getWorkflowStep, loadWorkflowOrFail } from './helpers/workflowTestUtils'
 
 describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () => {
+  // 何を検証するか: デプロイ先設定をジョブenvへ明示しステップ間で一貫参照すること
+  it('job env に S3_BUCKET_FRONTEND と CLOUDFRONT_DISTRIBUTION_ID を定義する', () => {
+    const workflow = loadWorkflowOrFail()
+    const jobs = (workflow.jobs ?? {}) as Record<string, unknown>
+    const deployJob = (jobs['deploy-frontend'] ?? {}) as Record<string, unknown>
+    const env = (deployJob.env ?? {}) as Record<string, string>
+
+    expect(env.S3_BUCKET_FRONTEND).toBe('${{ vars.S3_BUCKET_FRONTEND }}')
+    expect(env.CLOUDFRONT_DISTRIBUTION_ID).toBe('${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}')
+  })
+
   // 何を検証するか: S3_BUCKET_FRONTEND 未設定時に Sync assets to S3 で停止し後続へ進まない設計であること
   it('Sync assets to S3 が S3_BUCKET_FRONTEND を参照し continue-on-error を使わない', () => {
     const workflow = loadWorkflowOrFail()
@@ -18,8 +29,12 @@ describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () =
     const createStep = getWorkflowStep(workflow, STEP_NAMES.createCloudFrontInvalidation)
     const waitStep = getWorkflowStep(workflow, STEP_NAMES.waitCloudFrontInvalidationCompleted)
 
+    expect(createStep?.id).toBe('create_invalidation')
     expect(String(createStep?.run ?? '')).toContain('$CLOUDFRONT_DISTRIBUTION_ID')
     expect(String(waitStep?.run ?? '')).toContain('$CLOUDFRONT_DISTRIBUTION_ID')
+    expect(String(createStep?.run ?? '')).toContain("--query 'Invalidation.Id'")
+    expect(String(createStep?.run ?? '')).toContain('GITHUB_OUTPUT')
+    expect(String(waitStep?.run ?? '')).toContain('${{ steps.create_invalidation.outputs.id }}')
     expect(createStep?.['continue-on-error']).toBeUndefined()
     expect(waitStep?.['continue-on-error']).toBeUndefined()
   })
