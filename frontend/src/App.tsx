@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './shared/config/queryClient'
@@ -31,6 +31,7 @@ const MESSAGE_RATE_LIMITED = '5分後に再投稿してください'
 const MESSAGE_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_DEFAULT_ERROR = 'エラーが発生しました。再試行してください'
 const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
+const MESSAGE_MY_POST_DETAIL_FETCH_FAILED = '投稿詳細の取得に失敗しました'
 const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
 const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
@@ -269,6 +270,9 @@ function App() {
   const [judgingNickname, setJudgingNickname] = useState(MESSAGE_JUDGING_NICKNAME_FALLBACK)
   const [judgingBody, setJudgingBody] = useState(MESSAGE_JUDGING_BODY_FALLBACK)
   const [myPostsError, setMyPostsError] = useState('')
+  const [myPostDetails, setMyPostDetails] = useState<Record<string, Post>>({})
+  const [myPostDetailErrors, setMyPostDetailErrors] = useState<Record<string, string>>({})
+  const [loadingMyPostIds, setLoadingMyPostIds] = useState<string[]>([])
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('top')
@@ -280,13 +284,24 @@ function App() {
   const [isResultPostLoading, setIsResultPostLoading] = useState(false)
   const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
+  const myPostDetailsRef = useRef<Record<string, Post>>({})
+  const myPostsTriggerRef = useRef<HTMLButtonElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
   const resultRequestSeqRef = useRef(0)
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
   const activeResultErrorCode = resultModalErrorCode
-  const syncMyPostIds = () => setMyPostIds(readPostIds())
+  const syncMyPostIds = useCallback(() => setMyPostIds(readPostIds()), [])
+  const setMyPostLoading = (postId: string, isLoading: boolean) => {
+    setLoadingMyPostIds((prev) => {
+      if (isLoading) {
+        if (prev.includes(postId)) return prev
+        return [...prev, postId]
+      }
+      return prev.filter((id) => id !== postId)
+    })
+  }
   const saveResultModalTrigger = useCallback(() => {
     resultTriggerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -553,15 +568,53 @@ function App() {
     }
   }
 
+  const fetchMyPostDetailForList = useCallback(async (postId: string, force: boolean = false) => {
+    if (!force && myPostDetailsRef.current[postId]) return myPostDetailsRef.current[postId]
+    if (inFlightPostIdsRef.current.has(postId)) return null
+
+    inFlightPostIdsRef.current.add(postId)
+    setMyPostLoading(postId, true)
+    try {
+      const response = await api.posts.get(postId)
+      setMyPostDetails((prev) => {
+        const next = { ...prev, [postId]: response }
+        myPostDetailsRef.current = next
+        return next
+      })
+      setMyPostDetailErrors((prev) => {
+        if (!prev[postId]) return prev
+        const next = { ...prev }
+        delete next[postId]
+        return next
+      })
+      return response
+    } catch (error) {
+      if (getErrorStatus(error) !== HTTP_STATUS.NOT_FOUND) {
+        setMyPostDetailErrors((prev) => ({
+          ...prev,
+          [postId]: MESSAGE_MY_POST_DETAIL_FETCH_FAILED,
+        }))
+      }
+      return null
+    } finally {
+      setMyPostLoading(postId, false)
+      inFlightPostIdsRef.current.delete(postId)
+    }
+  }, [syncMyPostIds])
+
   const openMyPosts = () => {
     syncMyPostIds()
+    setMyPostsError('')
     setIsMyPostsOpen(true)
   }
 
-  const closeMyPosts = () => {
+  const closeMyPosts = (restoreFocus: boolean = true) => {
     setIsMyPostsOpen(false)
     setSelectedPost(null)
     setIsLoadingPostDetail(false)
+    if (restoreFocus) {
+      myPostsTriggerRef.current?.focus()
+    }
   }
 
   const handleMyPostsTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -576,10 +629,16 @@ function App() {
   }
 
   const handleMyPostClick = async (postId: string) => {
-    if (inFlightPostIdsRef.current.has(postId)) {
+    const cachedPost = myPostDetails[postId]
+    if (cachedPost) {
+      closeMyPosts(false)
+      openResultModal(postId, cachedPost)
       return
     }
 
+    if (inFlightPostIdsRef.current.has(postId)) {
+      return
+    }
     inFlightPostIdsRef.current.add(postId)
     setIsLoadingPostDetail(true)
     setMyPostsError('')
@@ -591,17 +650,25 @@ function App() {
     syncMyPostIds()
     try {
       const response = await api.posts.get(postId)
-      setSelectedPost(response)
-      if (response.status === 'scored' || response.status === 'failed') {
-        openResultModal(postId, response)
-      }
+      setMyPostDetails((prev) => {
+        const next = { ...prev, [postId]: response }
+        myPostDetailsRef.current = next
+        return next
+      })
+      closeMyPosts(false)
+      openResultModal(postId, response)
       writePostIds(previousPostIds)
       syncMyPostIds()
     } catch (error) {
-      const message = resolvePostDetailErrorMessage(error)
-      setMyPostsError(message)
-      openResultModalWithError(postId, resolveResultModalErrorCode(error))
-      if (getErrorStatus(error) !== HTTP_STATUS.NOT_FOUND) {
+      const status = getErrorStatus(error)
+      setMyPostsError(resolvePostDetailErrorMessage(error))
+      if (status !== HTTP_STATUS.NOT_FOUND) {
+        setMyPostDetailErrors((prev) => ({
+          ...prev,
+          [postId]: MESSAGE_MY_POST_DETAIL_FETCH_FAILED,
+        }))
+        closeMyPosts(false)
+        openResultModalWithError(postId, resolveResultModalErrorCode(error))
         writePostIds(previousPostIds)
         syncMyPostIds()
       }
@@ -611,8 +678,21 @@ function App() {
     }
   }
 
-  const displayMyPostIds = Array.from(new Set(myPostIds)).slice(0, MAX_STORED_POST_IDS)
+  const displayMyPostIds = useMemo(
+    () => Array.from(new Set(myPostIds)).slice(0, MAX_STORED_POST_IDS),
+    [myPostIds]
+  )
+  const retryMyPostDetail = (postId: string) => {
+    void fetchMyPostDetailForList(postId, true)
+  }
   const isResultModalLoading = isResultPostLoading && !activeResultPost
+
+  useEffect(() => {
+    if (!isMyPostsOpen) return
+    displayMyPostIds.forEach((postId) => {
+      void fetchMyPostDetailForList(postId)
+    })
+  }, [displayMyPostIds, fetchMyPostDetailForList, isMyPostsOpen])
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -680,7 +760,12 @@ function App() {
             <RankingSection myPostIds={myPostIds} onSelectRankingPost={handleRankingPostClick} />
 
             <footer role="contentinfo">
-              <button type="button" onClick={openMyPosts} onKeyDown={handleMyPostsTriggerKeyDown}>
+              <button
+                ref={myPostsTriggerRef}
+                type="button"
+                onClick={openMyPosts}
+                onKeyDown={handleMyPostsTriggerKeyDown}
+              >
                 自分の投稿一覧
               </button>
               <p>フッター</p>
@@ -720,6 +805,28 @@ function App() {
                           <button type="button" onClick={() => handleMyPostClick(postId)}>
                             {postId}
                           </button>
+                          {loadingMyPostIds.includes(postId) && <p>読み込み中...</p>}
+                          {myPostDetails[postId] && (
+                            <div>
+                              <p>本文: {myPostDetails[postId].body}</p>
+                              {typeof myPostDetails[postId].average_score === 'number' && (
+                                <p>{myPostDetails[postId].average_score}</p>
+                              )}
+                              {typeof myPostDetails[postId].rank === 'number' && (
+                                <p>{myPostDetails[postId].rank}位</p>
+                              )}
+                              <p>{myPostDetails[postId].created_at}</p>
+                              <p>{myPostDetails[postId].status}</p>
+                            </div>
+                          )}
+                          {myPostDetailErrors[postId] && (
+                            <div>
+                              <p>{myPostDetailErrors[postId]}</p>
+                              <button type="button" onClick={() => retryMyPostDetail(postId)}>
+                                再試行
+                              </button>
+                            </div>
+                          )}
                         </li>
                       ))}
                     </ul>
