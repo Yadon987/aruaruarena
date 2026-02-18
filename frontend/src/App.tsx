@@ -709,9 +709,9 @@ function App() {
       // 404は欠損投稿として一覧モーダル内で通知し、非404は復旧導線を維持する。
       setMyPostsError(resolvePostDetailErrorMessage(error))
       if (status === HTTP_STATUS.NOT_FOUND) {
+        closeMyPosts(false)
         openResultModalWithError(postId, resolveResultModalErrorCode(error))
-      }
-      if (status !== HTTP_STATUS.NOT_FOUND) {
+      } else {
         setMyPostDetailErrors((prev) => ({
           ...prev,
           [postId]: MESSAGE_MY_POST_DETAIL_FETCH_FAILED,
