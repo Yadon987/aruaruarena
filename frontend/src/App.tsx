@@ -314,6 +314,14 @@ function App() {
       return prev.filter((id) => id !== postId)
     })
   }, [])
+  const clearMyPostDetailError = useCallback((postId: string) => {
+    setMyPostDetailErrors((prev) => {
+      if (!prev[postId]) return prev
+      const next = { ...prev }
+      delete next[postId]
+      return next
+    })
+  }, [])
   const saveResultModalTrigger = useCallback(() => {
     resultTriggerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -603,12 +611,7 @@ function App() {
     try {
       const response = await api.posts.get(postId)
       storeMyPostDetail(postId, response)
-      setMyPostDetailErrors((prev) => {
-        if (!prev[postId]) return prev
-        const next = { ...prev }
-        delete next[postId]
-        return next
-      })
+      clearMyPostDetailError(postId)
       return response
     } catch (error) {
       if (getErrorStatus(error) !== HTTP_STATUS.NOT_FOUND) {
@@ -622,7 +625,7 @@ function App() {
       setMyPostLoading(postId, false)
       inFlightPostIdsRef.current.delete(postId)
     }
-  }, [setMyPostLoading, storeMyPostDetail])
+  }, [clearMyPostDetailError, setMyPostLoading, storeMyPostDetail])
 
   const prefetchMyPostsDetails = useCallback(async (postIds: string[]) => {
     const queue = [...postIds]
@@ -693,13 +696,14 @@ function App() {
     try {
       const response = await api.posts.get(postId)
       storeMyPostDetail(postId, response)
+      clearMyPostDetailError(postId)
       if (canOpenResultModalFromMyPost(response)) {
         closeMyPosts(false)
         openResultModal(postId, response)
-        restorePostIdsAfterNonNotFound(previousPostIds)
       } else {
         setSelectedPost(response)
       }
+      restorePostIdsAfterNonNotFound(previousPostIds)
     } catch (error) {
       const status = getErrorStatus(error)
       // 404は欠損投稿として一覧モーダル内で通知し、非404は復旧導線を維持する。
