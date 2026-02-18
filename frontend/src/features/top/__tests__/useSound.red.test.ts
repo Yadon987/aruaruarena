@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 
 type UseSoundModule = {
-  useSound: () => {
+  createSoundController: () => {
     isMuted: boolean
     audioUnlocked: boolean
     setMuted: (value: boolean) => void
@@ -19,12 +19,13 @@ describe('E18 RED: useSound', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.unstubAllGlobals()
+    vi.resetModules()
   })
 
   it('初期値はミュートtrueで開始する', async () => {
     // 何を検証するか: 初回アクセス時に isMuted が true で初期化されること
     const module = await loadUseSoundModule()
-    const sound = module.useSound()
+    const sound = module.createSoundController()
 
     expect(sound.isMuted).toBe(true)
   })
@@ -34,7 +35,7 @@ describe('E18 RED: useSound', () => {
     localStorage.setItem('aruaru_sound_muted', 'false')
 
     const module = await loadUseSoundModule()
-    const sound = module.useSound()
+    const sound = module.createSoundController()
 
     expect(sound.isMuted).toBe(false)
   })
@@ -44,7 +45,7 @@ describe('E18 RED: useSound', () => {
     localStorage.setItem('aruaru_sound_muted', 'invalid')
 
     const module = await loadUseSoundModule()
-    module.useSound()
+    module.createSoundController()
 
     expect(localStorage.getItem('aruaru_sound_muted')).toBe('true')
   })
@@ -53,21 +54,24 @@ describe('E18 RED: useSound', () => {
     // 何を検証するか: top -> judging 遷移で 500ms のクロスフェードが発生すること
     const fadeSpy = vi.fn()
     vi.stubGlobal('__HOWLER_FADE_SPY__', fadeSpy)
+    vi.stubGlobal('__AUDIO_DEBUG__', [])
 
     const module = await loadUseSoundModule()
-    const sound = module.useSound()
+    const sound = module.createSoundController()
     sound.unlockAudio()
     sound.setMuted(false)
     sound.playSceneBgm('top')
     sound.playSceneBgm('judging')
 
     expect(fadeSpy).toHaveBeenCalledWith(1, 0, 500)
+    const debugEvents = (globalThis as { __AUDIO_DEBUG__?: unknown[] }).__AUDIO_DEBUG__
+    expect(debugEvents).toContainEqual({ type: 'bgm', scene: 'judging' })
   })
 
   it('音声ロード失敗でも例外でアプリが停止しない', async () => {
     // 何を検証するか: 音声ファイル読み込み失敗時に playSe 呼び出しで例外が外へ漏れないこと
     const module = await loadUseSoundModule()
-    const sound = module.useSound()
+    const sound = module.createSoundController()
     sound.unlockAudio()
     sound.setMuted(false)
 

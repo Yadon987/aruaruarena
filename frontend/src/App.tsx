@@ -14,6 +14,8 @@ import type { Post, RankingItem } from './shared/types/domain'
 import { ResultModal } from './features/result'
 import { MyPostDetail } from './features/top/components/MyPostDetail'
 import { PrivacyPolicyModal } from './features/top/components/PrivacyPolicyModal'
+import { SoundToggleButton } from './features/top/components/SoundToggleButton'
+import { createSoundController } from './hooks/useSound'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
@@ -271,6 +273,7 @@ function RankingSection({
 }
 
 function App() {
+  const sound = useMemo(() => createSoundController(), [])
   const [nickname, setNickname] = useState('')
   const [body, setBody] = useState('')
   const [nicknameError, setNicknameError] = useState('')
@@ -290,6 +293,7 @@ function App() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('top')
+  const [isMuted, setIsMuted] = useState(() => sound.isMuted)
   const [judgingPostId, setJudgingPostId] = useState('')
   const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
   const [isResultModalOpen, setIsResultModalOpen] = useState(false)
@@ -303,6 +307,7 @@ function App() {
   const privacyPolicyTriggerRef = useRef<HTMLButtonElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
   const resultRequestSeqRef = useRef(0)
+  const previousResultModalOpenRef = useRef(false)
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
@@ -416,6 +421,27 @@ function App() {
     if (!activeResultPostId) return
     void fetchResultPost(activeResultPostId, true)
   }, [activeResultPostId, fetchResultPost])
+
+  const handleSoundToggle = useCallback(() => {
+    sound.unlockAudio()
+    const nextMuted = !isMuted
+    sound.setMuted(nextMuted)
+    setIsMuted(nextMuted)
+    if (!nextMuted) {
+      sound.playSceneBgm(viewMode)
+    }
+  }, [isMuted, sound, viewMode])
+
+  useEffect(() => {
+    sound.playSceneBgm(viewMode)
+  }, [sound, viewMode])
+
+  useEffect(() => {
+    if (!previousResultModalOpenRef.current && isResultModalOpen) {
+      sound.playSe('se_result_open')
+    }
+    previousResultModalOpenRef.current = isResultModalOpen
+  }, [isResultModalOpen, sound])
 
   useEffect(() => {
     if (!isResultModalOpen) return
@@ -852,6 +878,7 @@ function App() {
               <button ref={privacyPolicyTriggerRef} type="button" onClick={openPrivacyPolicy}>
                 プライバシーポリシー
               </button>
+              <SoundToggleButton isMuted={isMuted} onToggle={handleSoundToggle} />
               <p>フッター</p>
             </footer>
           </>
