@@ -54,10 +54,10 @@ test.describe('E17 RED: プライバシーポリシーモーダル E2E', () => {
       }
     })
 
-    await scrollArea.evaluate((element) => {
+    await scrollArea.evaluate((element, scrollAmount) => {
       const target = element as HTMLElement
-      target.scrollTop = MODAL_SCROLL_AMOUNT
-    })
+      target.scrollTop = scrollAmount
+    }, MODAL_SCROLL_AMOUNT)
 
     const after = await scrollArea.evaluate((element) => {
       const target = element as HTMLElement
