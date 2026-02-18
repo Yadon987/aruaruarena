@@ -13,6 +13,7 @@ import { ApiClientError, api } from './shared/services/api'
 import type { Post, RankingItem } from './shared/types/domain'
 import { ResultModal } from './features/result'
 import { MyPostDetail } from './features/top/components/MyPostDetail'
+import { PrivacyPolicyModal } from './features/top/components/PrivacyPolicyModal'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
@@ -279,6 +280,7 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [myPostIds, setMyPostIds] = useState<string[]>(() => readPostIds())
   const [isMyPostsOpen, setIsMyPostsOpen] = useState(false)
+  const [isPrivacyPolicyOpen, setIsPrivacyPolicyOpen] = useState(false)
   const [judgingNickname, setJudgingNickname] = useState(MESSAGE_JUDGING_NICKNAME_FALLBACK)
   const [judgingBody, setJudgingBody] = useState(MESSAGE_JUDGING_BODY_FALLBACK)
   const [myPostsError, setMyPostsError] = useState('')
@@ -298,6 +300,7 @@ function App() {
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
   const myPostDetailsRef = useRef<Record<string, Post>>({})
   const myPostsTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const privacyPolicyTriggerRef = useRef<HTMLButtonElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
   const resultRequestSeqRef = useRef(0)
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -422,6 +425,16 @@ function App() {
       document.body.style.overflow = previousOverflow
     }
   }, [isResultModalOpen])
+
+  useEffect(() => {
+    if (!isPrivacyPolicyOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      // モーダル解除時に body の状態を復元しないと、画面全体がスクロール不能のまま残る。
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isPrivacyPolicyOpen])
 
   const clearJudgingPolling = useCallback(() => {
     if (pollingTimerRef.current) {
@@ -642,16 +655,22 @@ function App() {
     await Promise.all(workers)
   }, [fetchMyPostDetailForList])
 
+  const resetMyPostsModalState = useCallback(() => {
+    setSelectedPost(null)
+    setIsLoadingPostDetail(false)
+  }, [])
+
   const openMyPosts = () => {
     syncMyPostIds()
     setMyPostsError('')
+    setIsPrivacyPolicyOpen(false)
     setIsMyPostsOpen(true)
+    resetMyPostsModalState()
   }
 
   const closeMyPosts = (restoreFocus: boolean = true) => {
     setIsMyPostsOpen(false)
-    setSelectedPost(null)
-    setIsLoadingPostDetail(false)
+    resetMyPostsModalState()
     if (restoreFocus) {
       // 明示クローズ時のみトリガーへ復帰し、結果モーダル遷移時はフォーカスを奪わない。
       myPostsTriggerRef.current?.focus()
@@ -663,6 +682,16 @@ function App() {
       event.preventDefault()
       openMyPosts()
     }
+  }
+
+  const openPrivacyPolicy = () => {
+    setIsMyPostsOpen(false)
+    resetMyPostsModalState()
+    setIsPrivacyPolicyOpen(true)
+  }
+
+  const closePrivacyPolicy = () => {
+    setIsPrivacyPolicyOpen(false)
   }
 
   const handleRankingPostClick = (postId: string) => {
@@ -820,6 +849,9 @@ function App() {
               >
                 自分の投稿一覧
               </button>
+              <button ref={privacyPolicyTriggerRef} type="button" onClick={openPrivacyPolicy}>
+                プライバシーポリシー
+              </button>
               <p>フッター</p>
             </footer>
           </>
@@ -891,6 +923,12 @@ function App() {
             </div>
           </div>
         )}
+
+        <PrivacyPolicyModal
+          isOpen={viewMode === 'top' && isPrivacyPolicyOpen}
+          onClose={closePrivacyPolicy}
+          triggerRef={privacyPolicyTriggerRef}
+        />
 
         <ResultModal
           isOpen={isResultModalOpen}

@@ -75,6 +75,6 @@ describe('MyPostHighlight RED', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'id-1' }))
 
     expect(localStorage.getItem('my_post_ids')).toBe(JSON.stringify(['id-2']))
-    expect(await screen.findByText('投稿が見つかりませんでした')).toBeInTheDocument()
+    expect(await screen.findByText('投稿が見つかりません')).toBeInTheDocument()
   })
 })
