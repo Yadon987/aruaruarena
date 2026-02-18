@@ -431,6 +431,7 @@ function App() {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
+      // モーダル解除時に body の状態を復元しないと、画面全体がスクロール不能のまま残る。
       document.body.style.overflow = previousOverflow
     }
   }, [isPrivacyPolicyOpen])
@@ -654,17 +655,22 @@ function App() {
     await Promise.all(workers)
   }, [fetchMyPostDetailForList])
 
+  const resetMyPostsModalState = useCallback(() => {
+    setSelectedPost(null)
+    setIsLoadingPostDetail(false)
+  }, [])
+
   const openMyPosts = () => {
     syncMyPostIds()
     setMyPostsError('')
     setIsPrivacyPolicyOpen(false)
     setIsMyPostsOpen(true)
+    resetMyPostsModalState()
   }
 
   const closeMyPosts = (restoreFocus: boolean = true) => {
     setIsMyPostsOpen(false)
-    setSelectedPost(null)
-    setIsLoadingPostDetail(false)
+    resetMyPostsModalState()
     if (restoreFocus) {
       // 明示クローズ時のみトリガーへ復帰し、結果モーダル遷移時はフォーカスを奪わない。
       myPostsTriggerRef.current?.focus()
@@ -680,8 +686,7 @@ function App() {
 
   const openPrivacyPolicy = () => {
     setIsMyPostsOpen(false)
-    setSelectedPost(null)
-    setIsLoadingPostDetail(false)
+    resetMyPostsModalState()
     setIsPrivacyPolicyOpen(true)
   }
 

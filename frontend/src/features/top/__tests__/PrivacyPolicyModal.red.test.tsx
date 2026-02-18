@@ -81,6 +81,46 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     expect(trigger).toHaveFocus()
   })
 
+  it('先頭要素でShift+Tabすると末尾要素に循環する', () => {
+    // 何を検証するか: フォーカストラップで先頭から逆順移動した際に末尾へ循環すること
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
+    const dialog = screen.getByRole('dialog', { name: 'プライバシーポリシー' })
+    const closeButton = within(dialog).getByRole('button', { name: '閉じる' })
+
+    closeButton.focus()
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true })
+
+    expect(closeButton).toHaveFocus()
+  })
+
+  it('末尾要素でTabすると先頭要素に循環する', () => {
+    // 何を検証するか: フォーカストラップで末尾から順方向移動した際に先頭へ循環すること
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
+    const dialog = screen.getByRole('dialog', { name: 'プライバシーポリシー' })
+    const closeButton = within(dialog).getByRole('button', { name: '閉じる' })
+
+    closeButton.focus()
+    fireEvent.keyDown(dialog, { key: 'Tab' })
+
+    expect(closeButton).toHaveFocus()
+  })
+
+  it('背景クリックで閉じた後にトリガーボタンへフォーカスが戻る', () => {
+    // 何を検証するか: 背景クリックで閉じる操作でも起動ボタンへフォーカス復帰すること
+    render(<App />)
+
+    const trigger = screen.getByRole('button', { name: 'プライバシーポリシー' })
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシーモーダル背景' }))
+
+    expect(screen.queryByRole('dialog', { name: 'プライバシーポリシー' })).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+
   it('本文セクションが表示されスクロール可能クラスを持つ', () => {
     // 何を検証するか: 利用規約/プライバシーポリシー本文とスクロール用クラスが適用されること
     render(<App />)

@@ -11,6 +11,8 @@ const KEY_ESCAPE = 'Escape'
 const KEY_TAB = 'Tab'
 const FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+const DIALOG_CONTAINER_CLASS = 'w-full max-w-2xl rounded bg-white p-4'
+const SCROLL_AREA_CLASS = 'max-h-[60vh] overflow-y-auto space-y-6 pr-2'
 
 export function PrivacyPolicyModal({ isOpen, onClose, triggerRef }: Props) {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -28,25 +30,28 @@ export function PrivacyPolicyModal({ isOpen, onClose, triggerRef }: Props) {
     triggerRef?.current?.focus()
   }
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === KEY_ESCAPE) {
-      event.preventDefault()
-      handleClose()
-      return
-    }
+  const getFocusableElements = (): HTMLElement[] => {
+    return Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
+  }
 
+  const handleEscapeKey = (event: KeyboardEvent<HTMLDivElement>): boolean => {
+    if (event.key !== KEY_ESCAPE) return false
+    event.preventDefault()
+    handleClose()
+    return true
+  }
+
+  const handleFocusTrap = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== KEY_TAB) return
 
-    const focusableElements = Array.from(
-      dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? []
-    )
-
+    const focusableElements = getFocusableElements()
     if (focusableElements.length === 0) return
 
     const first = focusableElements[0]
     const last = focusableElements[focusableElements.length - 1]
     const active = document.activeElement
 
+    // Shift+Tab / Tab で先頭・末尾を跨ぐときに循環させ、モーダル外へフォーカスが抜けるのを防ぐ。
     if (event.shiftKey && active === first) {
       event.preventDefault()
       last.focus()
@@ -57,6 +62,11 @@ export function PrivacyPolicyModal({ isOpen, onClose, triggerRef }: Props) {
       event.preventDefault()
       first.focus()
     }
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (handleEscapeKey(event)) return
+    handleFocusTrap(event)
   }
 
   return (
@@ -76,7 +86,7 @@ export function PrivacyPolicyModal({ isOpen, onClose, triggerRef }: Props) {
           tabIndex={-1}
           onClick={(event) => event.stopPropagation()}
           onKeyDown={handleKeyDown}
-          className="w-full max-w-2xl rounded bg-white p-4"
+          className={DIALOG_CONTAINER_CLASS}
         >
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold">プライバシーポリシー</h2>
@@ -85,7 +95,7 @@ export function PrivacyPolicyModal({ isOpen, onClose, triggerRef }: Props) {
             </button>
           </div>
 
-          <div data-testid="privacy-policy-scroll-area" className="max-h-[60vh] overflow-y-auto space-y-6 pr-2">
+          <div data-testid="privacy-policy-scroll-area" className={SCROLL_AREA_CLASS}>
             <section>
               <h3 className="mb-2 font-semibold">利用規約</h3>
               <p className="whitespace-pre-wrap text-sm leading-6">{TERMS_TEXT}</p>
