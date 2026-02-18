@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
+require 'timeout'
 
 RSpec.describe 'API::Posts', type: :request do
   describe 'POST /api/posts' do
@@ -405,10 +406,10 @@ RSpec.describe 'API::Posts', type: :request do
     context '非同期審査トリガー (E05-06)' do
       # 検証: JudgePostServiceが非同期で呼び出される
       it '投稿成功時にJudgePostServiceが非同期で呼び出されること' do
-        # JudgePostService.callが呼ばれることをモックで検証
-        call_count = 0
-        allow(JudgePostService).to receive(:call) do |*_args|
-          call_count += 1
+        # JudgePostService.callが1回だけ呼ばれることを待機可能にする
+        called = Queue.new
+        expect(JudgePostService).to receive(:call).once do |*_args|
+          called << true
         end
 
         # リクエストをThread内で実行して完了を待機
@@ -417,12 +418,11 @@ RSpec.describe 'API::Posts', type: :request do
         end
         thread.join # リクエストの完了を待機
 
-        # Thread内のJudgePostServiceは非同期なので、少し待つ
-        sleep(0.1)
+        # 非同期呼び出しが発生するまで最大1秒待機
+        expect { Timeout.timeout(1) { called.pop } }.not_to raise_error
 
         # レスポンスは即時に返る
         expect(response).to have_http_status(:created)
-        expect(call_count).to eq(1)
       end
 
       # 検証: Thread内の例外はレスポンスに影響しない
