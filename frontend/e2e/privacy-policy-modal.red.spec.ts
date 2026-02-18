@@ -63,6 +63,7 @@ test.describe('E17 RED: プライバシーポリシーモーダル E2E', () => {
 
     const before = await page.evaluate(() => window.scrollY)
     await page.mouse.wheel(0, 1200)
+    await page.waitForTimeout(100)
     const after = await page.evaluate(() => window.scrollY)
 
     expect(after).toBe(before)
