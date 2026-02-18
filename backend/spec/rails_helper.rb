@@ -28,6 +28,12 @@ require 'support/vcr'
 Dir[support_path].each { |f| require f }
 
 RSpec.configure do |config|
+  config.include DynamoDBTestHelpers
+
+  config.add_setting :dynamodb_available, default: false
+  config.add_setting :dynamodb_table_names, default: []
+  config.add_setting :dynamodb_checked, default: false
+
   # Remove this line to enable support for ActiveRecord
   config.use_active_record = false
 
@@ -36,44 +42,47 @@ RSpec.configure do |config|
 
   # Dynamoid テーブルのクリーンアップとセットアップ
   config.before(:suite) do
-    # テーブルを確認し、存在しない場合は作成（CI環境対策）
-    if defined?(Dynamoid)
-      begin
-        # 必要なテーブルが作成されているか確認
-        existing_tables = Dynamoid.adapter.list_tables
-        puts "[Before Suite] Existing tables: #{existing_tables.inspect}" if ENV['DEBUG']
-
-        # モデルに関連するテーブルを作成
-        [Post, Judgment, RateLimit].each do |model|
-          if defined?(model) && existing_tables.exclude?(model.table_name)
-            puts "Creating table for #{model}..."
-            model.create_table
-          end
-        end
-
-        # DuplicateCheckはカスタムキーを使用しているため、明示的に作成
-        if defined?(DuplicateCheck) && existing_tables.exclude?(DuplicateCheck.table_name)
-          puts 'Creating table for DuplicateCheck...'
-          # create_table(table_name, key, options = {})
-          # keyは :id ではなく :body_hash
-          Dynamoid.adapter.create_table(DuplicateCheck.table_name, :body_hash, {})
-        end
-      rescue StandardError => e
-        puts "Failed to setup DynamoDB tables: #{e.message}"
-      end
-    end
+    config.dynamodb_available = false
+    config.dynamodb_table_names = []
+    config.dynamodb_checked = false
   end
 
   # 各テスト前にテーブルをクリーンアップ
-  config.before(:each) do
-    # DynamoDB Localの整合性問題を回避するため、各テスト前にクリーンアップ
-    # truncate_tableはバージョンによって利用できない場合があるため、delete_allを使用
-    if defined?(Dynamoid)
-      existing_tables = Dynamoid.adapter.list_tables
-      [Post, Judgment, RateLimit, DuplicateCheck].each do |model|
-        model.delete_all if existing_tables.include?(model.table_name)
+  config.before(:each, :dynamodb) do |example|
+    next unless defined?(Dynamoid)
+
+    described_class = example.metadata[:described_class]
+    next if described_class.is_a?(Class) && described_class <= BaseAiAdapter
+    next if example.metadata[:full_description].start_with?('Factories ')
+    next if example.file_path.match?(%r{/spec/adapters/})
+    next if example.file_path.match?(%r{/spec/factories/factories_spec\.rb\z/})
+    next if example.file_path.match?(%r{/spec/services/judge_error_spec\.rb\z/})
+    next if example.file_path.match?(%r{/spec/requests/(api/)?health_check_spec\.rb\z/})
+
+    helper = Object.new.extend(DynamoDBTestHelpers)
+
+    # テスト実行時に指定されたエンドポイントを優先して適用する
+    if ENV['DYNAMODB_ENDPOINT'].present? && Dynamoid.config.endpoint != ENV['DYNAMODB_ENDPOINT']
+      Dynamoid.config.endpoint = ENV.fetch('DYNAMODB_ENDPOINT', nil)
+    end
+
+    unless config.dynamodb_checked
+      config.dynamodb_available = helper.dynamodb_available?
+      config.dynamodb_checked = true
+      if config.dynamodb_available
+        config.dynamodb_table_names = helper.ensure_test_tables!
+        puts "[Before Suite] Existing tables: #{config.dynamodb_table_names.inspect}" if ENV['DEBUG']
       end
     end
+
+    raise 'DynamoDB Localに接続できません。docker compose up -d を実行して再試行してください。' unless config.dynamodb_available
+
+    table_names = config.dynamodb_table_names.presence || helper.ensure_test_tables!
+    target_table_names = Array(example.metadata[:dynamodb_tables]).presence || table_names
+    helper.cleanup_test_tables!(target_table_names)
+  rescue Aws::DynamoDB::Errors::ServiceError, Errno::ECONNREFUSED => e
+    warn "Failed to cleanup DynamoDB tables: #{e.message}"
+    raise
   end
 
   # Shoulda Matchers configuration
@@ -111,6 +120,36 @@ RSpec.configure do |config|
   end
   config.include AdapterTestHelpers, type: :model
   config.include AdapterTestHelpers, type: :service
+
+  config.define_derived_metadata(type: :request) { |meta| meta[:dynamodb] = true }
+  config.define_derived_metadata(type: :model) { |meta| meta[:dynamodb] = true }
+  config.define_derived_metadata(type: :service) { |meta| meta[:dynamodb] = true }
+
+  # DB非依存specはDynamoDBクリーンアップ対象から外す
+  config.define_derived_metadata(file_path: %r{/spec/adapters/}) { |meta| meta[:dynamodb] = false }
+  config.define_derived_metadata(file_path: %r{/spec/factories/factories_spec\.rb\z/}) do |meta|
+    meta[:dynamodb] = false
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/judge_error_spec\.rb\z/}) do |meta|
+    meta[:dynamodb] = false
+  end
+  config.define_derived_metadata(file_path: %r{/spec/requests/(api/)?health_check_spec\.rb\z/}) do |meta|
+    meta[:dynamodb] = false
+  end
+
+  # テーブルクリーンアップをspec単位で最小化する
+  config.define_derived_metadata(file_path: %r{/spec/models/rate_limit_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [RateLimit.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/rate_limiter_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [RateLimit.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/models/duplicate_check_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [DuplicateCheck.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/duplicate_check_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [DuplicateCheck.table_name]
+  end
 
   # Filter lines from Rails gems in backtraces.
   config.filter_rails_from_backtrace!

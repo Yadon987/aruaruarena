@@ -50,6 +50,7 @@ const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
+const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
 
 const RANKING_ERROR_MESSAGES = {
   rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
@@ -63,6 +64,17 @@ type ValidationErrors = {
 }
 
 type ViewMode = 'top' | 'judging'
+
+function canOpenResultModalFromMyPost(post: Post): boolean {
+  return (
+    (post.status === 'scored' || post.status === 'failed') &&
+    typeof post.total_count === 'number'
+  )
+}
+
+function shouldOpenResultModalOnMyPostError(status: number | undefined): boolean {
+  return Boolean(status && SERVER_ERROR_STATUSES.includes(status))
+}
 
 function isUuidLike(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
@@ -293,7 +305,7 @@ function App() {
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
   const activeResultErrorCode = resultModalErrorCode
   const syncMyPostIds = useCallback(() => setMyPostIds(readPostIds()), [])
-  const setMyPostLoading = (postId: string, isLoading: boolean) => {
+  const setMyPostLoading = useCallback((postId: string, isLoading: boolean) => {
     setLoadingMyPostIds((prev) => {
       if (isLoading) {
         if (prev.includes(postId)) return prev
@@ -301,7 +313,7 @@ function App() {
       }
       return prev.filter((id) => id !== postId)
     })
-  }
+  }, [])
   const saveResultModalTrigger = useCallback(() => {
     resultTriggerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -568,19 +580,29 @@ function App() {
     }
   }
 
+  const storeMyPostDetail = useCallback((postId: string, post: Post) => {
+    setMyPostDetails((prev) => {
+      const next = { ...prev, [postId]: post }
+      myPostDetailsRef.current = next
+      return next
+    })
+  }, [])
+
+  const restorePostIdsAfterNonNotFound = useCallback((previousPostIds: string[]) => {
+    writePostIds(previousPostIds)
+    syncMyPostIds()
+  }, [syncMyPostIds])
+
   const fetchMyPostDetailForList = useCallback(async (postId: string, force: boolean = false) => {
     if (!force && myPostDetailsRef.current[postId]) return myPostDetailsRef.current[postId]
     if (inFlightPostIdsRef.current.has(postId)) return null
 
+    // 一覧行とクリック遷移の二重リクエストを防ぐため、ID単位でin-flightを共有管理する。
     inFlightPostIdsRef.current.add(postId)
     setMyPostLoading(postId, true)
     try {
       const response = await api.posts.get(postId)
-      setMyPostDetails((prev) => {
-        const next = { ...prev, [postId]: response }
-        myPostDetailsRef.current = next
-        return next
-      })
+      storeMyPostDetail(postId, response)
       setMyPostDetailErrors((prev) => {
         if (!prev[postId]) return prev
         const next = { ...prev }
@@ -600,7 +622,22 @@ function App() {
       setMyPostLoading(postId, false)
       inFlightPostIdsRef.current.delete(postId)
     }
-  }, [syncMyPostIds])
+  }, [setMyPostLoading, storeMyPostDetail])
+
+  const prefetchMyPostsDetails = useCallback(async (postIds: string[]) => {
+    const queue = [...postIds]
+    const workers = Array.from(
+      { length: Math.min(MAX_MY_POST_PREFETCH_CONCURRENCY, queue.length) },
+      async () => {
+        while (queue.length > 0) {
+          const postId = queue.shift()
+          if (!postId) return
+          await fetchMyPostDetailForList(postId)
+        }
+      }
+    )
+    await Promise.all(workers)
+  }, [fetchMyPostDetailForList])
 
   const openMyPosts = () => {
     syncMyPostIds()
@@ -613,6 +650,7 @@ function App() {
     setSelectedPost(null)
     setIsLoadingPostDetail(false)
     if (restoreFocus) {
+      // 明示クローズ時のみトリガーへ復帰し、結果モーダル遷移時はフォーカスを奪わない。
       myPostsTriggerRef.current?.focus()
     }
   }
@@ -631,8 +669,12 @@ function App() {
   const handleMyPostClick = async (postId: string) => {
     const cachedPost = myPostDetails[postId]
     if (cachedPost) {
-      closeMyPosts(false)
-      openResultModal(postId, cachedPost)
+      if (canOpenResultModalFromMyPost(cachedPost)) {
+        closeMyPosts(false)
+        openResultModal(postId, cachedPost)
+      } else {
+        setSelectedPost(cachedPost)
+      }
       return
     }
 
@@ -650,27 +692,31 @@ function App() {
     syncMyPostIds()
     try {
       const response = await api.posts.get(postId)
-      setMyPostDetails((prev) => {
-        const next = { ...prev, [postId]: response }
-        myPostDetailsRef.current = next
-        return next
-      })
-      closeMyPosts(false)
-      openResultModal(postId, response)
-      writePostIds(previousPostIds)
-      syncMyPostIds()
+      storeMyPostDetail(postId, response)
+      if (canOpenResultModalFromMyPost(response)) {
+        closeMyPosts(false)
+        openResultModal(postId, response)
+        restorePostIdsAfterNonNotFound(previousPostIds)
+      } else {
+        setSelectedPost(response)
+      }
     } catch (error) {
       const status = getErrorStatus(error)
+      // 404は欠損投稿として一覧モーダル内で通知し、非404は復旧導線を維持する。
       setMyPostsError(resolvePostDetailErrorMessage(error))
+      if (status === HTTP_STATUS.NOT_FOUND) {
+        openResultModalWithError(postId, resolveResultModalErrorCode(error))
+      }
       if (status !== HTTP_STATUS.NOT_FOUND) {
         setMyPostDetailErrors((prev) => ({
           ...prev,
           [postId]: MESSAGE_MY_POST_DETAIL_FETCH_FAILED,
         }))
-        closeMyPosts(false)
-        openResultModalWithError(postId, resolveResultModalErrorCode(error))
-        writePostIds(previousPostIds)
-        syncMyPostIds()
+        if (shouldOpenResultModalOnMyPostError(status)) {
+          closeMyPosts(false)
+          openResultModalWithError(postId, resolveResultModalErrorCode(error))
+        }
+        restorePostIdsAfterNonNotFound(previousPostIds)
       }
     } finally {
       setIsLoadingPostDetail(false)
@@ -682,6 +728,10 @@ function App() {
     () => Array.from(new Set(myPostIds)).slice(0, MAX_STORED_POST_IDS),
     [myPostIds]
   )
+  const prefetchTargetPostIds = useMemo(
+    () => displayMyPostIds.filter((postId) => isUuidLike(postId)),
+    [displayMyPostIds]
+  )
   const retryMyPostDetail = (postId: string) => {
     void fetchMyPostDetailForList(postId, true)
   }
@@ -689,10 +739,8 @@ function App() {
 
   useEffect(() => {
     if (!isMyPostsOpen) return
-    displayMyPostIds.forEach((postId) => {
-      void fetchMyPostDetailForList(postId)
-    })
-  }, [displayMyPostIds, fetchMyPostDetailForList, isMyPostsOpen])
+    void prefetchMyPostsDetails(prefetchTargetPostIds)
+  }, [isMyPostsOpen, prefetchMyPostsDetails, prefetchTargetPostIds])
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
+require 'timeout'
 
 # Issue: E06-05
 RSpec.describe JudgePostService do
@@ -153,11 +154,11 @@ RSpec.describe JudgePostService do
       # 何を検証するか: タイムアウト発生時にerror_code: timeoutになること
       it 'タイムアウト発生時にerror_code: timeoutになること' do
         # テスト用にタイムアウトを短縮
-        stub_const('JudgePostService::PER_JUDGE_TIMEOUT', 1)
+        stub_const('JudgePostService::PER_JUDGE_TIMEOUT', 0.05)
 
         # sleepでタイムアウトを発生させる
         allow_any_instance_of(GeminiAdapter).to receive(:judge) do
-          sleep(2) # PER_JUDGE_TIMEOUT = 1秒を超える
+          sleep(0.1) # PER_JUDGE_TIMEOUTを超えるまで待機
           create_success_response(scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
                                   comment: 'test')
         end
@@ -194,7 +195,6 @@ RSpec.describe JudgePostService do
       [GeminiAdapter, DewiAdapter, OpenAiAdapter].each do |adapter_class|
         allow_any_instance_of(adapter_class).to receive(:judge) do
           start_times[adapter_class] = Time.zone.now
-          sleep(0.1)
           create_success_response(scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
                                   comment: 'test')
         end
@@ -204,6 +204,7 @@ RSpec.describe JudgePostService do
 
       # 全ての開始時刻が0.2秒以内であることを確認（並列実行の証明）
       times = start_times.values
+      expect(times.size).to eq(3)
       expect(times.max - times.min).to be < 0.2
     end
   end

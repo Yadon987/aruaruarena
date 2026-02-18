@@ -74,7 +74,7 @@ describe('MyPostDetail Integration', () => {
     fireEvent.click(await screen.findByRole('button', { name: '戻る' }))
 
     expect(await screen.findByRole('heading', { name: '自分の投稿' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'id-1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /太郎/ })).toBeInTheDocument()
   })
 
   it('モーダル再オープン時は一覧を初期表示する', async () => {

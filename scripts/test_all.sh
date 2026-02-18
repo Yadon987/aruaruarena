@@ -5,8 +5,8 @@ set -e
 # 全テスト実行スクリプト (aruaruarena)
 # ==========================================
 
-DYNAMODB_CONTAINER_NAME="aruaruarena-dynamodb"
-DYNAMODB_ENDPOINT="http://127.0.0.1:8000"
+DYNAMODB_CONTAINER_NAME="aruaruarena-dynamodb-test"
+DYNAMODB_ENDPOINT="http://127.0.0.1:8002"
 
 # プロジェクトルートに移動
 cd "$(dirname "$0")/.."
@@ -54,14 +54,14 @@ fi
 echo ""
 
 # 2. DynamoDB Localの起動確認
-echo "🔍 DynamoDB Localの状態確認..."
+echo "🔍 DynamoDB Local(テスト用:8002)の状態確認..."
 if ! curl -s "${DYNAMODB_ENDPOINT}" > /dev/null 2>&1; then
-  echo "⚠️  DynamoDB Local (port 8000) が応答しません。"
+  echo "⚠️  DynamoDB Local (port 8002) が応答しません。"
   echo "   Dockerコンテナを起動します..."
 
-  # まず compose サービス起動を試す（通常の起動経路）
-  if docker compose up -d dynamodb-local > /dev/null 2>&1; then
-    echo "   docker compose で dynamodb-local を起動しました"
+  # まずテスト用サービス起動を試す（通常の起動経路）
+  if docker compose up -d dynamodb-test > /dev/null 2>&1; then
+    echo "   docker compose で dynamodb-test を起動しました"
   else
     # compose が使えない場合のみ既存コンテナ再利用/単体起動を試す
     if docker ps -a --format '{{.Names}}' | grep -q "^${DYNAMODB_CONTAINER_NAME}$"; then
