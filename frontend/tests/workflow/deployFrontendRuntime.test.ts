@@ -52,6 +52,7 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     expect(step?.run).toBeDefined()
     const run = String(step?.run ?? '')
 
+    expect(run).toContain('${AWS_ROLE_ARN_FRONTEND_DEPLOY:?')
     expect(run).toContain('${AWS_REGION:?')
     expect(run).toContain('${S3_BUCKET_FRONTEND:?')
     expect(run).toContain('${CLOUDFRONT_DISTRIBUTION_ID:?')

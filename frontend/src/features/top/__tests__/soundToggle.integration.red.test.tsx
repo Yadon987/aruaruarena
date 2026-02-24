@@ -41,7 +41,8 @@ describe('E18 RED: SoundToggle integration', () => {
     // 何を検証するか: 初期状態がミュートであり音声OFFラベルが表示されること
     render(<App />)
 
-    expect(screen.getByRole('button', { name: '音声OFF' })).toBeInTheDocument()
+    const toggle = screen.getByRole('button', { name: '音声OFF' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('トグル押下でラベルが切り替わる', () => {
@@ -49,11 +50,10 @@ describe('E18 RED: SoundToggle integration', () => {
     render(<App />)
 
     const toggle = screen.getByRole('button', { name: '音声OFF' })
-    expect(toggle).toBeInTheDocument()
-
     fireEvent.click(toggle)
 
-    expect(screen.getByRole('button', { name: '音声ON' })).toBeInTheDocument()
+    const toggled = screen.getByRole('button', { name: '音声ON' })
+    expect(toggled).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('音声ONに切り替えるとlocalStorageへfalseを保存する', () => {

@@ -5,7 +5,7 @@ export type SoundToggleButtonProps = {
 
 export function SoundToggleButton({ isMuted, onToggle }: SoundToggleButtonProps) {
   return (
-    <button type="button" onClick={onToggle}>
+    <button type="button" onClick={onToggle} aria-pressed={!isMuted}>
       {isMuted ? '音声OFF' : '音声ON'}
     </button>
   )

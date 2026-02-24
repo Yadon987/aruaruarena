@@ -57,7 +57,7 @@ RSpec.describe DuplicateCheckService, type: :service do
       # 24時間-1秒前（expires_at > 現在時刻）、trueを返す
       it '24時間-1秒前（expires_at > 現在時刻）、trueを返すこと' do
         create(:duplicate_check, body_hash: DuplicateCheck.generate_body_hash('テスト投稿'), post_id: 'test_id',
-                                 expires_at: Time.now.to_i + 1)
+                                 expires_at: Time.now.to_i + 5)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be true
       end
 

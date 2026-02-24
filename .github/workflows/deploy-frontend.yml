@@ -50,6 +50,7 @@ jobs:
 
       - name: Validate deploy variables
         run: |
+          : "${AWS_ROLE_ARN_FRONTEND_DEPLOY:?AWS_ROLE_ARN_FRONTEND_DEPLOY is required}"
           : "${AWS_REGION:?AWS_REGION is required}"
           : "${S3_BUCKET_FRONTEND:?S3_BUCKET_FRONTEND is required}"
           : "${CLOUDFRONT_DISTRIBUTION_ID:?CLOUDFRONT_DISTRIBUTION_ID is required}"
