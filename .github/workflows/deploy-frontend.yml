@@ -49,6 +49,8 @@ jobs:
         run: npm run build
 
       - name: Validate deploy variables
+        env:
+          AWS_ROLE_ARN_FRONTEND_DEPLOY: ${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY }}
         run: |
           : "${AWS_ROLE_ARN_FRONTEND_DEPLOY:?AWS_ROLE_ARN_FRONTEND_DEPLOY is required}"
           : "${AWS_REGION:?AWS_REGION is required}"

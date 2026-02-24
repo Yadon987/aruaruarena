@@ -50,8 +50,10 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     const step = getWorkflowStep(workflow, STEP_NAMES.validateDeployVariables)
     expect(step).toBeDefined()
     expect(step?.run).toBeDefined()
+    const env = (step?.env ?? {}) as YamlObject
     const run = String(step?.run ?? '')
 
+    expect(env.AWS_ROLE_ARN_FRONTEND_DEPLOY).toBe('${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY }}')
     expect(run).toContain('${AWS_ROLE_ARN_FRONTEND_DEPLOY:?')
     expect(run).toContain('${AWS_REGION:?')
     expect(run).toContain('${S3_BUCKET_FRONTEND:?')
