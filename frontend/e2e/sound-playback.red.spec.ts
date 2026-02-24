@@ -1,6 +1,21 @@
+import type { Page } from '@playwright/test'
 import { test, expect } from './fixtures/test-fixtures'
 
+type AudioDebugEvent = { type: string; scene?: string; id?: string }
+
+async function getAudioDebugEvents(page: Page): Promise<AudioDebugEvent[]> {
+  return page.evaluate(
+    () => ((window as { __AUDIO_DEBUG__?: AudioDebugEvent[] }).__AUDIO_DEBUG__ ?? [])
+  )
+}
+
 test.describe('E18 RED: BGM・SE再生 E2E', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      ;(window as { __AUDIO_DEBUG__?: AudioDebugEvent[] }).__AUDIO_DEBUG__ = []
+    })
+  })
+
   test('初期表示で音声OFFが表示される', async ({ page }) => {
     // 何を検証するか: 初期状態でサウンドトグルが音声OFF表示になること
     await page.goto('/')
@@ -30,13 +45,12 @@ test.describe('E18 RED: BGM・SE再生 E2E', () => {
     await page.getByRole('button', { name: '投稿する' }).click()
 
     await expect(page).toHaveURL(/\/judging\//)
-
-    const judgingBgmEvents = await page.evaluate(() => {
-      const events = ((window as { __AUDIO_DEBUG__?: { type: string; scene?: string }[] }).__AUDIO_DEBUG__ ?? [])
-      return events.filter((event) => event.type === 'bgm' && event.scene === 'judging').length
-    })
-
-    expect(judgingBgmEvents).toBe(1)
+    await expect
+      .poll(async () => {
+        const events = await getAudioDebugEvents(page)
+        return events.filter((event) => event.type === 'bgm' && event.scene === 'judging').length
+      }, { timeout: 10000 })
+      .toBe(1)
   })
 
   test('結果モーダル表示でse_result_openイベントが1回発生する', async ({ page }) => {
@@ -45,12 +59,12 @@ test.describe('E18 RED: BGM・SE再生 E2E', () => {
 
     await page.getByRole('button', { name: '音声OFF' }).click()
     await page.getByTestId('ranking-item').first().click()
-
-    const resultSeEvents = await page.evaluate(() => {
-      const events = ((window as { __AUDIO_DEBUG__?: { type: string; id?: string }[] }).__AUDIO_DEBUG__ ?? [])
-      return events.filter((event) => event.type === 'se' && event.id === 'se_result_open').length
-    })
-
-    expect(resultSeEvents).toBe(1)
+    await expect(page.getByRole('dialog').first()).toBeVisible()
+    await expect
+      .poll(async () => {
+        const events = await getAudioDebugEvents(page)
+        return events.filter((event) => event.type === 'se' && event.id === 'se_result_open').length
+      }, { timeout: 10000 })
+      .toBe(1)
   })
 })

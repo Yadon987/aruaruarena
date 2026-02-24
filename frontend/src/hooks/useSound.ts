@@ -11,17 +11,27 @@ type DebugEvent =
 
 type FadeSpy = (from: number, to: number, durationMs: number) => void
 
-function readMutedState(): boolean {
-  const rawValue = localStorage.getItem(SOUND_STORAGE_KEY)
-  if (rawValue === 'true') return true
-  if (rawValue === 'false') return false
+function getOrInitMutedState(): boolean {
+  try {
+    if (typeof localStorage === 'undefined') return DEFAULT_MUTED
+    const rawValue = localStorage.getItem(SOUND_STORAGE_KEY)
+    if (rawValue === 'true') return true
+    if (rawValue === 'false') return false
 
-  localStorage.setItem(SOUND_STORAGE_KEY, 'true')
-  return DEFAULT_MUTED
+    localStorage.setItem(SOUND_STORAGE_KEY, DEFAULT_MUTED ? 'true' : 'false')
+    return DEFAULT_MUTED
+  } catch {
+    return DEFAULT_MUTED
+  }
 }
 
 function writeMutedState(isMuted: boolean) {
-  localStorage.setItem(SOUND_STORAGE_KEY, isMuted ? 'true' : 'false')
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(SOUND_STORAGE_KEY, isMuted ? 'true' : 'false')
+  } catch {
+    // ストレージ無効環境ではメモリ上の状態だけを維持する。
+  }
 }
 
 function pushAudioDebugEvent(event: DebugEvent) {
@@ -38,7 +48,8 @@ function runFade(from: number, to: number, durationMs: number) {
 }
 
 export function createSoundController() {
-  let isMuted = readMutedState()
+  // 現在はE18段階の最小実装として、音声実再生ではなく状態管理とイベント通知に限定している。
+  let isMuted = getOrInitMutedState()
   let audioUnlocked = false
   let currentScene: Scene | null = null
 
@@ -52,6 +63,10 @@ export function createSoundController() {
     setMuted(nextMuted: boolean) {
       isMuted = nextMuted
       writeMutedState(nextMuted)
+      if (nextMuted) {
+        // ミュート中は現在シーンを破棄し、解除後の同一シーン再生を許可する。
+        currentScene = null
+      }
     },
     unlockAudio() {
       audioUnlocked = true

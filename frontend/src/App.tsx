@@ -22,7 +22,7 @@ const STORAGE_KEY = 'my_post_ids'
 const LEGACY_STORAGE_KEY = 'aruaruarena_my_posts'
 const MIN_BODY_LENGTH = 3
 const MAX_STORED_POST_IDS = 20
-const SERVER_ERROR_STATUSES = [
+const SERVER_ERROR_STATUSES: ReadonlyArray<number> = [
   HTTP_STATUS.INTERNAL_SERVER_ERROR,
   HTTP_STATUS.BAD_GATEWAY,
   HTTP_STATUS.SERVICE_UNAVAILABLE,
@@ -273,7 +273,11 @@ function RankingSection({
 }
 
 function App() {
-  const sound = useMemo(() => createSoundController(), [])
+  const soundControllerRef = useRef<ReturnType<typeof createSoundController> | null>(null)
+  if (!soundControllerRef.current) {
+    soundControllerRef.current = createSoundController()
+  }
+  const sound = soundControllerRef.current
   const [nickname, setNickname] = useState('')
   const [body, setBody] = useState('')
   const [nicknameError, setNicknameError] = useState('')
@@ -807,6 +811,9 @@ function App() {
         <header role="banner" className="mb-4">
           <h1 className="text-2xl font-bold">あるあるアリーナ</h1>
         </header>
+        <div className="mb-4">
+          <SoundToggleButton isMuted={isMuted} onToggle={handleSoundToggle} />
+        </div>
 
         {viewMode === 'judging' && (
           <section
@@ -878,7 +885,6 @@ function App() {
               <button ref={privacyPolicyTriggerRef} type="button" onClick={openPrivacyPolicy}>
                 プライバシーポリシー
               </button>
-              <SoundToggleButton isMuted={isMuted} onToggle={handleSoundToggle} />
               <p>フッター</p>
             </footer>
           </>
@@ -942,7 +948,7 @@ function App() {
                       ))}
                     </ul>
                   )}
-                  <button type="button" onClick={closeMyPosts} className="mt-4">
+                  <button type="button" onClick={() => closeMyPosts()} className="mt-4">
                     閉じる
                   </button>
                 </>

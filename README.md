@@ -332,12 +332,11 @@ aruaruarena/
 │   ├── package.json
 │   └── vite.config.ts
 │
-├── terraform/                # Infrastructure as Code
-│   ├── main.tf
+├── backend/terraform/        # Infrastructure as Code
+│   ├── provider.tf
+│   ├── variables.tf
 │   ├── dynamodb.tf
 │   ├── lambda.tf
-│   ├── s3.tf
-│   ├── cloudfront.tf
 │   └── api_gateway.tf
 │
 ├── docs/                     # Documentation
@@ -401,8 +400,8 @@ GLM_API_KEY=your-glm-key
 OPENAI_API_KEY=your-openai-key
 
 # Frontend
-REACT_APP_API_URL=http://localhost:3000/api
-REACT_APP_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+VITE_API_BASE_URL=/api
+VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
 
 ### 3. バックエンドのセットアップ
@@ -450,21 +449,20 @@ npm run test:e2e  # Playwright E2E
 ### 1. AWSインフラの構築
 
 ```bash
-cd terraform
+cd backend/terraform
 terraform init
 terraform plan
 terraform apply
 ```
 
-### 2. GitHub Secrets設定
+### 2. GitHub Actions 設定（フロントエンド配信）
 
-リポジトリの Settings > Secrets で以下を設定：
+リポジトリの Settings > Secrets / Variables で以下を設定：
 
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `GEMINI_API_KEY`
-- `GLM_API_KEY`
-- `OPENAI_API_KEY`
+- Secret: `AWS_ROLE_ARN_FRONTEND_DEPLOY`
+- Variable: `AWS_REGION`
+- Variable: `S3_BUCKET_FRONTEND`
+- Variable: `CLOUDFRONT_DISTRIBUTION_ID`
 
 ### 3. 自動デプロイ
 

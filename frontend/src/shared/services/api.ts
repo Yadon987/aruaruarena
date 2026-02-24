@@ -158,7 +158,7 @@ async function request<T>(path: string, options?: RequestInit & { timeout?: numb
       throw new ApiClientError('Request aborted', API_ERROR_CODE.ABORTED, 0)
     }
 
-    handleNetworkError(error)
+    return handleNetworkError(error)
   } finally {
     clearTimeout(timeoutId)
     if (externalSignal) {

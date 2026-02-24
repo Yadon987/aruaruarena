@@ -101,7 +101,7 @@ className = 'bg-error-500' // #ef4444
 `.env` ファイルを作成して以下の環境変数を設定してください：
 
 ```env
-VITE_API_URL=http://localhost:3000
+VITE_API_BASE_URL=/api
 ```
 
 詳しくは `.env.example` を参照してください。

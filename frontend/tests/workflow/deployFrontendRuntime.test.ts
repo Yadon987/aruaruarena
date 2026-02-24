@@ -21,7 +21,7 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
 
     expect(step?.uses).toBe('aws-actions/configure-aws-credentials@v4')
     expect(withConfig['role-to-assume']).toBe('${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY }}')
-    expect(withConfig['aws-region']).toBe('${{ vars.AWS_REGION }}')
+    expect(withConfig['aws-region']).toBe('${{ env.AWS_REGION }}')
   })
 
   // 何を検証するか: npm ci 失敗時に後続へ進まないため continue-on-error を使わないこと
@@ -42,5 +42,19 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     expect(step?.['continue-on-error']).toBeUndefined()
     expect(step?.run).toBe('npm run build')
     expect(step?.['working-directory']).toBe('./frontend')
+  })
+
+  // 何を検証するか: 必須デプロイ変数が未設定なら以降へ進まないようにすること
+  it('Validate deploy variables が必須値を検証する', () => {
+    const workflow = readWorkflow()
+    const step = getWorkflowStep(workflow, STEP_NAMES.validateDeployVariables)
+    expect(step).toBeDefined()
+    expect(step?.run).toBeDefined()
+    const run = String(step?.run ?? '')
+
+    expect(run).toContain('${AWS_REGION:?')
+    expect(run).toContain('${S3_BUCKET_FRONTEND:?')
+    expect(run).toContain('${CLOUDFRONT_DISTRIBUTION_ID:?')
+    expect(step?.['continue-on-error']).toBeUndefined()
   })
 })

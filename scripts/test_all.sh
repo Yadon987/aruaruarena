@@ -19,6 +19,12 @@ chown -R $(id -u):$(id -g) . 2>/dev/null || echo "⚠️  権限変更をスキ�
 echo "�🚀 aruaruarenaのテストを開始します..."
 echo "----------------------------------------"
 
+# タイムアウト付きDynamoDBヘルスチェック
+dynamodb_is_healthy() {
+  # DynamoDB Localは GET / に対して 400 を返すため、HTTPステータスではなく疎通で判定する。
+  curl -sS --max-time 3 "${DYNAMODB_ENDPOINT}" > /dev/null 2>&1
+}
+
 # backendディレクトリへ移動
 cd backend
 
@@ -55,7 +61,7 @@ echo ""
 
 # 2. DynamoDB Localの起動確認
 echo "🔍 DynamoDB Local(テスト用:8002)の状態確認..."
-if ! curl -s "${DYNAMODB_ENDPOINT}" > /dev/null 2>&1; then
+if ! dynamodb_is_healthy; then
   echo "⚠️  DynamoDB Local (port 8002) が応答しません。"
   echo "   Dockerコンテナを起動します..."
 
@@ -75,7 +81,7 @@ if ! curl -s "${DYNAMODB_ENDPOINT}" > /dev/null 2>&1; then
   sleep 3
 
   count=0
-  until curl -s "${DYNAMODB_ENDPOINT}" > /dev/null 2>&1; do
+  until dynamodb_is_healthy; do
     echo "   ...waiting for DynamoDB Local ($count/5)"
     sleep 1
     count=$((count+1))
