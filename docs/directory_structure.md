@@ -24,16 +24,17 @@ aruaruarena/
 │   │   ├── initializers/     # 初期化設定 (Dynamoid, CORS)
 │   │   └── routes.rb         # ルーティング定義
 │   │
-│   └── spec/                 #★ テスト (RSpec)
-│       ├── factories/        # テストデータ定義 (FactoryBot)
-│       ├── models/           # モデルテスト
-│       ├── requests/         # APIエンドポイントテスト
-│       ├── services/         # サービス単体テスト
-│       └── support/          # テスト設定・ヘルパー
+│   ├── spec/                 #★ テスト (RSpec)
+│   │   ├── factories/        # テストデータ定義 (FactoryBot)
+│   │   ├── models/           # モデルテスト
+│   │   ├── requests/         # APIエンドポイントテスト
+│   │   ├── services/         # サービス単体テスト
+│   │   └── support/          # テスト設定・ヘルパー
 │
+│   └── terraform/            # インフラコード (AWS)
 ├── docs/                     # プロジェクトドキュメント
 ├── .github/                  # GitHub設定 (CI/CD, Templates)
-└── terraform/                # インフラコード (AWS)
+└── frontend/                 # React SPA
 ```
 
 ---
@@ -69,6 +70,18 @@ TDDの実践において最も重要なディレクトリです。
 - **`spec/requests/`**: APIのエンドポイント（Controller）をテストします。ステータスコード、レスポンスボディ、DBの副作用を検証します。
 - **`spec/factories/`**: テストデータを簡単に生成するための定義です。`FactoryBot`を使用します。
 - **`spec/support/`**: テストの共通設定です。DynamoDB Localの起動設定や、WebMockの設定などを記述します。
+
+### `backend/terraform/` (Infrastructure as Code)
+AWSリソースをTerraformで管理するディレクトリです。
+
+- **役割**: AWS環境の構築・更新・差分管理
+- **内容**: provider設定、変数定義、各AWSサービスのリソース定義
+
+### `frontend/` (React SPA)
+ユーザー向けフロントエンドアプリケーションの実装ディレクトリです。
+
+- **役割**: 画面UI、ユーザー操作、バックエンドAPI連携
+- **内容**: Reactコンポーネント、Vite設定、E2E/ユニットテスト
 
 ---
 

@@ -27,7 +27,7 @@ describe('TopPage Ranking Integration RED', () => {
       isLoading: false,
       isError: false,
       error: null,
-    } as ReturnType<typeof useRankings>)
+    } as unknown as ReturnType<typeof useRankings>)
   })
 
   it('初回表示でローディング後にランキング一覧が表示される', async () => {
@@ -45,7 +45,7 @@ describe('TopPage Ranking Integration RED', () => {
       isLoading: false,
       isError: true,
       error: new ApiClientError('rate limited', 'RATE_LIMITED', 429),
-    } as ReturnType<typeof useRankings>)
+    } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
 
     expect(
@@ -60,7 +60,7 @@ describe('TopPage Ranking Integration RED', () => {
       isLoading: false,
       isError: true,
       error: new ApiClientError('server error', 'HTTP_ERROR', 500),
-    } as ReturnType<typeof useRankings>)
+    } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
 
     expect(
@@ -75,7 +75,7 @@ describe('TopPage Ranking Integration RED', () => {
       isLoading: false,
       isError: true,
       error: new ApiClientError('network error', 'NETWORK_ERROR', 0),
-    } as ReturnType<typeof useRankings>)
+    } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
 
     expect(
@@ -90,7 +90,7 @@ describe('TopPage Ranking Integration RED', () => {
       isLoading: false,
       isError: false,
       error: null,
-    } as ReturnType<typeof useRankings>)
+    } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
 
     expect(await screen.findByText('ランキングはまだありません')).toBeInTheDocument()
@@ -112,7 +112,7 @@ describe('TopPage Ranking Integration RED', () => {
       isLoading: false,
       isError: false,
       error: null,
-    } as ReturnType<typeof useRankings>)
+    } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
 
     expect(await screen.findAllByTestId('ranking-item')).toHaveLength(20)

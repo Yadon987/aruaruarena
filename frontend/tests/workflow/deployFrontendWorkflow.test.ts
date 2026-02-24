@@ -62,13 +62,18 @@ describe('E14-01: deploy-frontend workflow', () => {
     expect(installIndex).toBeLessThan(buildIndex)
   })
 
-  // 何を検証するか: Deploy placeholder がIssue2向けダミーとして存在すること
-  it('Deploy placeholder (Issue 2) が定義される', () => {
+  // 何を検証するか: 必須環境変数チェックで未設定時に早期失敗できること
+  it('デプロイ変数の検証ステップが定義される', () => {
     const workflow = readWorkflow()
-    const placeholder = getWorkflowStep(workflow, STEP_NAMES.deployPlaceholder)
+    const validateStep = getWorkflowStep(workflow, STEP_NAMES.validateDeployVariables)
+    expect(validateStep).toBeDefined()
+    const runScript = String(validateStep?.run ?? '')
 
-    expect(placeholder).toBeDefined()
-    expect(String(placeholder?.run ?? '')).toContain('TODO')
-    expect(String(placeholder?.run ?? '')).toContain('echo')
+    expect(runScript).toContain('AWS_REGION')
+    expect(runScript).toContain('S3_BUCKET_FRONTEND')
+    expect(runScript).toContain('CLOUDFRONT_DISTRIBUTION_ID')
+    expect(runScript).toContain('${AWS_REGION:?')
+    expect(runScript).toContain('${S3_BUCKET_FRONTEND:?')
+    expect(runScript).toContain('${CLOUDFRONT_DISTRIBUTION_ID:?')
   })
 })

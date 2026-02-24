@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type UseSoundModule = {
   createSoundController: () => {
@@ -12,7 +12,11 @@ type UseSoundModule = {
 }
 
 async function loadUseSoundModule(): Promise<UseSoundModule> {
-  return import('../../../hooks/useSound') as Promise<UseSoundModule>
+  const module = await import('../../../hooks/useSound')
+  if (typeof module.createSoundController !== 'function') {
+    throw new Error('useSound module does not export createSoundController')
+  }
+  return module as UseSoundModule
 }
 
 describe('E18 RED: useSound', () => {
@@ -22,12 +26,17 @@ describe('E18 RED: useSound', () => {
     vi.resetModules()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('初期値はミュートtrueで開始する', async () => {
     // 何を検証するか: 初回アクセス時に isMuted が true で初期化されること
     const module = await loadUseSoundModule()
     const sound = module.createSoundController()
 
     expect(sound.isMuted).toBe(true)
+    expect(sound.audioUnlocked).toBe(false)
   })
 
   it('localStorageがfalseならミュート解除状態を復元する', async () => {
@@ -52,6 +61,7 @@ describe('E18 RED: useSound', () => {
 
   it('シーン変更時に500msクロスフェードを実行する', async () => {
     // 何を検証するか: top -> judging 遷移で 500ms のクロスフェードが発生すること
+    vi.useFakeTimers()
     const fadeSpy = vi.fn()
     vi.stubGlobal('__HOWLER_FADE_SPY__', fadeSpy)
     vi.stubGlobal('__AUDIO_DEBUG__', [])
@@ -59,12 +69,14 @@ describe('E18 RED: useSound', () => {
     const module = await loadUseSoundModule()
     const sound = module.createSoundController()
     sound.unlockAudio()
+    expect(sound.audioUnlocked).toBe(true)
     sound.setMuted(false)
     sound.playSceneBgm('top')
     sound.playSceneBgm('judging')
+    vi.runAllTimers()
 
     expect(fadeSpy).toHaveBeenCalledWith(1, 0, 500)
-    const debugEvents = (globalThis as { __AUDIO_DEBUG__?: unknown[] }).__AUDIO_DEBUG__
+    const debugEvents = (globalThis as { __AUDIO_DEBUG__?: unknown[] }).__AUDIO_DEBUG__ ?? []
     expect(debugEvents).toContainEqual({ type: 'bgm', scene: 'judging' })
   })
 
@@ -75,6 +87,6 @@ describe('E18 RED: useSound', () => {
     sound.unlockAudio()
     sound.setMuted(false)
 
-    expect(() => sound.playSe('se_submit')).not.toThrow()
+    await expect(Promise.resolve().then(() => sound.playSe('se_submit'))).resolves.toBeUndefined()
   })
 })

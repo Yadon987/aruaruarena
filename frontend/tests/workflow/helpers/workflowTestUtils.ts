@@ -15,9 +15,10 @@ export const STEP_NAMES = {
   setupNode: 'Setup Node',
   installDependencies: 'Install dependencies',
   buildFrontend: 'Build frontend',
+  validateDeployVariables: 'Validate deploy variables',
   configureAwsCredentials: 'Configure AWS credentials',
-  deployPlaceholder: 'Deploy placeholder (Issue 2)',
   verifyDistDirectory: 'Verify dist directory',
+  verifyDistEntrypoint: 'Verify dist entrypoint',
   syncAssetsToS3: 'Sync assets to S3',
   createCloudFrontInvalidation: 'Create CloudFront invalidation',
   waitCloudFrontInvalidationCompleted: 'Wait CloudFront invalidation completed',
@@ -31,8 +32,12 @@ export const REQUIRED_PERMISSIONS = {
 } as const
 
 export const REQUIRED_PUSH_PATHS = ['frontend/**', '.github/workflows/deploy-frontend.yml'] as const
-export const RESERVED_DOC_KEYS = ['S3_BUCKET_FRONTEND', 'CLOUDFRONT_DISTRIBUTION_ID'] as const
-export const REQUIRED_DOC_KEYS = ['AWS_ROLE_ARN_FRONTEND_DEPLOY', 'AWS_REGION'] as const
+export const REQUIRED_DOC_KEYS = [
+  'AWS_ROLE_ARN_FRONTEND_DEPLOY',
+  'AWS_REGION',
+  'S3_BUCKET_FRONTEND',
+  'CLOUDFRONT_DISTRIBUTION_ID',
+] as const
 export const REQUIRED_IAM_PERMISSIONS = [
   's3:ListBucket',
   's3:PutObject',

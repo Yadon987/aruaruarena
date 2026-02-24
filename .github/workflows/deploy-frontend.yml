@@ -26,6 +26,7 @@ jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
     env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
       S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
     steps:
@@ -47,20 +48,26 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
+      - name: Validate deploy variables
+        run: |
+          : "${AWS_ROLE_ARN_FRONTEND_DEPLOY:?AWS_ROLE_ARN_FRONTEND_DEPLOY is required}"
+          : "${AWS_REGION:?AWS_REGION is required}"
+          : "${S3_BUCKET_FRONTEND:?S3_BUCKET_FRONTEND is required}"
+          : "${CLOUDFRONT_DISTRIBUTION_ID:?CLOUDFRONT_DISTRIBUTION_ID is required}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Deploy placeholder (Issue 2)
-        run: |
-          # TODO: Issue 2でS3同期とCloudFront invalidationの本処理へ差し替える
-          echo "Deploy placeholder for Issue 2"
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Verify dist directory
         working-directory: ./frontend
         run: test -d dist
+
+      - name: Verify dist entrypoint
+        working-directory: ./frontend
+        run: test -f dist/index.html
 
       - name: Sync assets to S3
         working-directory: ./frontend

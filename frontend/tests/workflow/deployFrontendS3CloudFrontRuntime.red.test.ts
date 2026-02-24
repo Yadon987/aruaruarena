@@ -3,12 +3,13 @@ import { STEP_NAMES, getWorkflowStep, loadWorkflowOrFail } from './helpers/workf
 
 describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () => {
   // 何を検証するか: デプロイ先設定をジョブenvへ明示しステップ間で一貫参照すること
-  it('job env に S3_BUCKET_FRONTEND と CLOUDFRONT_DISTRIBUTION_ID を定義する', () => {
+  it('job env に AWS_REGION, S3_BUCKET_FRONTEND と CLOUDFRONT_DISTRIBUTION_ID を定義する', () => {
     const workflow = loadWorkflowOrFail()
     const jobs = (workflow.jobs ?? {}) as Record<string, unknown>
     const deployJob = (jobs['deploy-frontend'] ?? {}) as Record<string, unknown>
     const env = (deployJob.env ?? {}) as Record<string, string>
 
+    expect(env.AWS_REGION).toBe('${{ vars.AWS_REGION }}')
     expect(env.S3_BUCKET_FRONTEND).toBe('${{ vars.S3_BUCKET_FRONTEND }}')
     expect(env.CLOUDFRONT_DISTRIBUTION_ID).toBe('${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}')
   })
@@ -17,6 +18,7 @@ describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () =
   it('Sync assets to S3 が S3_BUCKET_FRONTEND を参照し continue-on-error を使わない', () => {
     const workflow = loadWorkflowOrFail()
     const step = getWorkflowStep(workflow, STEP_NAMES.syncAssetsToS3)
+    expect(step).toBeDefined()
     const run = String(step?.run ?? '')
 
     expect(run).toContain('$S3_BUCKET_FRONTEND')
@@ -28,6 +30,8 @@ describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () =
     const workflow = loadWorkflowOrFail()
     const createStep = getWorkflowStep(workflow, STEP_NAMES.createCloudFrontInvalidation)
     const waitStep = getWorkflowStep(workflow, STEP_NAMES.waitCloudFrontInvalidationCompleted)
+    expect(createStep).toBeDefined()
+    expect(waitStep).toBeDefined()
 
     expect(createStep?.id).toBe('create_invalidation')
     expect(String(createStep?.run ?? '')).toContain('$CLOUDFRONT_DISTRIBUTION_ID')
@@ -43,8 +47,21 @@ describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () =
   it('Publish failure summary が failure() 条件で定義される', () => {
     const workflow = loadWorkflowOrFail()
     const step = getWorkflowStep(workflow, STEP_NAMES.publishFailureSummary)
+    expect(step).toBeDefined()
 
     expect(step?.if).toBe('failure()')
     expect(String(step?.run ?? '')).toContain('GITHUB_STEP_SUMMARY')
+  })
+
+  // 何を検証するか: distのエントリポイントが存在しない場合に同期前で停止すること
+  it('Verify dist entrypoint が dist/index.html を検証する', () => {
+    const workflow = loadWorkflowOrFail()
+    const step = getWorkflowStep(workflow, STEP_NAMES.verifyDistEntrypoint)
+    expect(step).toBeDefined()
+    const run = String(step?.run ?? '')
+
+    expect(run).toContain('dist/index.html')
+    expect(step?.['working-directory']).toBe('./frontend')
+    expect(step?.['continue-on-error']).toBeUndefined()
   })
 })

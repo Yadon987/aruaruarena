@@ -19,7 +19,9 @@ describe('E14-02 RED: deploy-frontend workflow (S3/CloudFront)', () => {
     const workflow = loadWorkflowOrFail()
     const stepNames = getWorkflowSteps(workflow).map((step) => String(step.name ?? ''))
 
+    expect(stepNames).toContain(STEP_NAMES.validateDeployVariables)
     expect(stepNames).toContain(STEP_NAMES.verifyDistDirectory)
+    expect(stepNames).toContain(STEP_NAMES.verifyDistEntrypoint)
     expect(stepNames).toContain(STEP_NAMES.syncAssetsToS3)
     expect(stepNames).toContain(STEP_NAMES.createCloudFrontInvalidation)
     expect(stepNames).toContain(STEP_NAMES.waitCloudFrontInvalidationCompleted)

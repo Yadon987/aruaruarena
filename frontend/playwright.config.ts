@@ -75,6 +75,9 @@ export default defineConfig({
   // ========================================================================
 
   use: {
+    /** ルート相対URL（page.goto('/')）を解決するベースURL */
+    baseURL: VITE_DEV_SERVER_URL,
+
     /** 失敗時のみスクリーンショットを保存（ディスク容量節約） */
     screenshot: 'only-on-failure',
 

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
 
@@ -33,23 +33,27 @@ describe('E18 RED: SoundToggle integration', () => {
     vi.stubGlobal('__AUDIO_DEBUG__', [])
   })
 
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('初期表示で音声OFFが表示される', () => {
     // 何を検証するか: 初期状態がミュートであり音声OFFラベルが表示されること
     render(<App />)
 
-    expect(screen.getByRole('button', { name: '音声OFF' })).toBeInTheDocument()
+    const toggle = screen.getByRole('button', { name: '音声OFF' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('トグル押下でaria-pressedが切り替わる', () => {
-    // 何を検証するか: 音声トグル押下で aria-pressed が false -> true へ変わること
+  it('トグル押下でラベルが切り替わる', () => {
+    // 何を検証するか: 音声トグル押下でラベルが 音声OFF -> 音声ON に変わること
     render(<App />)
 
     const toggle = screen.getByRole('button', { name: '音声OFF' })
-    expect(toggle).toHaveAttribute('aria-pressed', 'false')
-
     fireEvent.click(toggle)
 
-    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    const toggled = screen.getByRole('button', { name: '音声ON' })
+    expect(toggled).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('音声ONに切り替えるとlocalStorageへfalseを保存する', () => {
