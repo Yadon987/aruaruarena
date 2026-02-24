@@ -52,16 +52,34 @@ jobs:
         env:
           AWS_ROLE_ARN_FRONTEND_DEPLOY: ${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY }}
         run: |
-          : "${AWS_ROLE_ARN_FRONTEND_DEPLOY:?AWS_ROLE_ARN_FRONTEND_DEPLOY is required}"
-          : "${AWS_REGION:?AWS_REGION is required}"
-          : "${S3_BUCKET_FRONTEND:?S3_BUCKET_FRONTEND is required}"
-          : "${CLOUDFRONT_DISTRIBUTION_ID:?CLOUDFRONT_DISTRIBUTION_ID is required}"
+          missing_vars=()
+          [ -n "${AWS_ROLE_ARN_FRONTEND_DEPLOY:-}" ] || missing_vars+=("AWS_ROLE_ARN_FRONTEND_DEPLOY")
+          [ -n "${AWS_REGION:-}" ] || missing_vars+=("AWS_REGION")
+          [ -n "${S3_BUCKET_FRONTEND:-}" ] || missing_vars+=("S3_BUCKET_FRONTEND")
+          [ -n "${CLOUDFRONT_DISTRIBUTION_ID:-}" ] || missing_vars+=("CLOUDFRONT_DISTRIBUTION_ID")
+
+          if [ ${#missing_vars[@]} -gt 0 ]; then
+            missing_csv="$(IFS=,; echo "${missing_vars[*]}")"
+            echo "MISSING_DEPLOY_VARS=${missing_csv}" >> "$GITHUB_ENV"
+            echo "Missing deploy variables: ${missing_csv}" >&2
+            exit 1
+          fi
+
+          echo "MISSING_DEPLOY_VARS=" >> "$GITHUB_ENV"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity --output json
+
+      - name: Validate deploy targets
+        run: |
+          aws s3api head-bucket --bucket "$S3_BUCKET_FRONTEND"
+          aws cloudfront get-distribution --id "$CLOUDFRONT_DISTRIBUTION_ID" --query 'Distribution.Id' --output text > /dev/null
 
       - name: Verify dist directory
         working-directory: ./frontend
@@ -91,6 +109,9 @@ jobs:
           # 障害時の初動を統一するため、実行URLと復旧導線をサマリーへ残す。
           echo "## フロントエンドデプロイ失敗" >> "$GITHUB_STEP_SUMMARY"
           echo "- 失敗ステップ: deploy-frontend job" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${MISSING_DEPLOY_VARS:-}" ]; then
+            echo "- 未設定の必須変数: ${MISSING_DEPLOY_VARS}" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "- 実行URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- 復旧手順: docs/deploy/frontend.md" >> "$GITHUB_STEP_SUMMARY"
 

@@ -72,8 +72,17 @@ describe('E14-01: deploy-frontend workflow', () => {
     expect(runScript).toContain('AWS_REGION')
     expect(runScript).toContain('S3_BUCKET_FRONTEND')
     expect(runScript).toContain('CLOUDFRONT_DISTRIBUTION_ID')
-    expect(runScript).toContain('${AWS_REGION:?')
-    expect(runScript).toContain('${S3_BUCKET_FRONTEND:?')
-    expect(runScript).toContain('${CLOUDFRONT_DISTRIBUTION_ID:?')
+    expect(runScript).toContain('missing_vars=()')
+    expect(runScript).toContain('MISSING_DEPLOY_VARS=')
+  })
+
+  // 何を検証するか: AWS認証確認とデプロイ対象検証のステップが存在すること
+  it('事前検証ステップが定義される', () => {
+    const workflow = readWorkflow()
+    const stsStep = getWorkflowStep(workflow, STEP_NAMES.verifyAwsIdentity)
+    const targetStep = getWorkflowStep(workflow, STEP_NAMES.validateDeployTargets)
+
+    expect(stsStep).toBeDefined()
+    expect(targetStep).toBeDefined()
   })
 })

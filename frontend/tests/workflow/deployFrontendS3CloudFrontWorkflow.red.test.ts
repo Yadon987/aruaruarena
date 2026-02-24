@@ -20,6 +20,8 @@ describe('E14-02 RED: deploy-frontend workflow (S3/CloudFront)', () => {
     const stepNames = getWorkflowSteps(workflow).map((step) => String(step.name ?? ''))
 
     expect(stepNames).toContain(STEP_NAMES.validateDeployVariables)
+    expect(stepNames).toContain(STEP_NAMES.verifyAwsIdentity)
+    expect(stepNames).toContain(STEP_NAMES.validateDeployTargets)
     expect(stepNames).toContain(STEP_NAMES.verifyDistDirectory)
     expect(stepNames).toContain(STEP_NAMES.verifyDistEntrypoint)
     expect(stepNames).toContain(STEP_NAMES.syncAssetsToS3)
