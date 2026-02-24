@@ -21,6 +21,7 @@ describe('E19-01: frontend env consistency', () => {
 
     expect.soft(rootReadme).not.toContain('REACT_APP_API_URL')
     expect.soft(rootReadme).not.toContain('REACT_APP_GA_MEASUREMENT_ID')
+    expect.soft(rootReadme).not.toContain('VITE_API_URL=')
     expect.soft(frontendEnvExample).not.toContain('VITE_API_URL=')
     expect.soft(frontendEnvExample).not.toContain('REACT_APP_API_URL')
     expect.soft(frontendEnvExample).not.toContain('REACT_APP_GA_MEASUREMENT_ID')
