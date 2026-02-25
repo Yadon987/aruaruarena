@@ -79,10 +79,17 @@ describe('E14-01: deploy-frontend workflow', () => {
   // 何を検証するか: AWS認証確認とデプロイ対象検証のステップが存在すること
   it('事前検証ステップが定義される', () => {
     const workflow = readWorkflow()
+    const steps = getWorkflowSteps(workflow)
     const stsStep = getWorkflowStep(workflow, STEP_NAMES.verifyAwsIdentity)
     const targetStep = getWorkflowStep(workflow, STEP_NAMES.validateDeployTargets)
 
     expect(stsStep).toBeDefined()
     expect(targetStep).toBeDefined()
+
+    const configureIdx = steps.findIndex((step) => step.name === STEP_NAMES.configureAwsCredentials)
+    const stsIdx = steps.findIndex((step) => step.name === STEP_NAMES.verifyAwsIdentity)
+    const targetIdx = steps.findIndex((step) => step.name === STEP_NAMES.validateDeployTargets)
+    expect(configureIdx).toBeLessThan(stsIdx)
+    expect(stsIdx).toBeLessThan(targetIdx)
   })
 })
