@@ -6,10 +6,10 @@
 
 ワークフローで実際に参照する値です。
 
-- Secret: `AWS_ROLE_ARN_FRONTEND_DEPLOY`
-- Variable: `AWS_REGION`
-- Variable: `S3_BUCKET_FRONTEND`
-- Variable: `CLOUDFRONT_DISTRIBUTION_ID`
+- Secret: `AWS_ROLE_ARN_FRONTEND_DEPLOY`（`vars` フォールバック可）
+- Variable: `AWS_REGION`（未設定時は `Secret: AWS_REGION`、それも未設定なら `ap-northeast-1` を使用）
+- Variable: `S3_BUCKET_FRONTEND`（`Secret` フォールバック可）
+- Variable: `CLOUDFRONT_DISTRIBUTION_ID`（`Secret` フォールバック可）
 
 ## 運用前チェック（最小）
 
@@ -34,4 +34,5 @@
 - `s3:PutObject`
 - `s3:DeleteObject`
 - `cloudfront:CreateInvalidation`
+- `cloudfront:GetDistribution`
 - `cloudfront:GetInvalidation`

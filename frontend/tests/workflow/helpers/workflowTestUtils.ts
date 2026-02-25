@@ -45,6 +45,7 @@ export const REQUIRED_IAM_PERMISSIONS = [
   's3:PutObject',
   's3:DeleteObject',
   'cloudfront:CreateInvalidation',
+  'cloudfront:GetDistribution',
   'cloudfront:GetInvalidation',
 ] as const
 export const REQUIRED_ROLLBACK_DOC_KEYS = [

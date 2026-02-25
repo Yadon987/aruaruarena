@@ -20,7 +20,9 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     const withConfig = (step?.with ?? {}) as YamlObject
 
     expect(step?.uses).toBe('aws-actions/configure-aws-credentials@v4')
-    expect(withConfig['role-to-assume']).toBe('${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY }}')
+    expect(withConfig['role-to-assume']).toBe(
+      '${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY || vars.AWS_ROLE_ARN_FRONTEND_DEPLOY }}'
+    )
     expect(withConfig['aws-region']).toBe('${{ env.AWS_REGION }}')
   })
 
@@ -53,7 +55,9 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     const env = (step?.env ?? {}) as YamlObject
     const run = String(step?.run ?? '')
 
-    expect(env.AWS_ROLE_ARN_FRONTEND_DEPLOY).toBe('${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY }}')
+    expect(env.AWS_ROLE_ARN_FRONTEND_DEPLOY).toBe(
+      '${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY || vars.AWS_ROLE_ARN_FRONTEND_DEPLOY }}'
+    )
     expect(run).toContain('missing_vars=()')
     expect(run).toContain('AWS_ROLE_ARN_FRONTEND_DEPLOY')
     expect(run).toContain('AWS_REGION')
