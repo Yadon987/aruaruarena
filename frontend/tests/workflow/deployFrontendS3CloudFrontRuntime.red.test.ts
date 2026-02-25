@@ -51,6 +51,7 @@ describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () =
 
     expect(step?.if).toBe('failure()')
     expect(String(step?.run ?? '')).toContain('GITHUB_STEP_SUMMARY')
+    expect(String(step?.run ?? '')).toContain('MISSING_DEPLOY_VARS')
   })
 
   // 何を検証するか: distのエントリポイントが存在しない場合に同期前で停止すること

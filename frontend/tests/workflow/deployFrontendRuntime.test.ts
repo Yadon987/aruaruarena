@@ -50,12 +50,40 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     const step = getWorkflowStep(workflow, STEP_NAMES.validateDeployVariables)
     expect(step).toBeDefined()
     expect(step?.run).toBeDefined()
+    const env = (step?.env ?? {}) as YamlObject
     const run = String(step?.run ?? '')
 
-    expect(run).toContain('${AWS_ROLE_ARN_FRONTEND_DEPLOY:?')
-    expect(run).toContain('${AWS_REGION:?')
-    expect(run).toContain('${S3_BUCKET_FRONTEND:?')
-    expect(run).toContain('${CLOUDFRONT_DISTRIBUTION_ID:?')
+    expect(env.AWS_ROLE_ARN_FRONTEND_DEPLOY).toBe('${{ secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY }}')
+    expect(run).toContain('missing_vars=()')
+    expect(run).toContain('AWS_ROLE_ARN_FRONTEND_DEPLOY')
+    expect(run).toContain('AWS_REGION')
+    expect(run).toContain('S3_BUCKET_FRONTEND')
+    expect(run).toContain('CLOUDFRONT_DISTRIBUTION_ID')
+    expect(run).toContain('MISSING_DEPLOY_VARS=')
+    expect(step?.['continue-on-error']).toBeUndefined()
+  })
+
+  // 何を検証するか: AWS認証情報の有効性をデプロイ前に検証すること
+  it('Verify AWS identity が sts get-caller-identity を実行する', () => {
+    const workflow = readWorkflow()
+    const step = getWorkflowStep(workflow, STEP_NAMES.verifyAwsIdentity)
+    expect(step).toBeDefined()
+
+    expect(step?.run).toBe('aws sts get-caller-identity --output json')
+    expect(step?.['continue-on-error']).toBeUndefined()
+  })
+
+  // 何を検証するか: デプロイ対象のS3/CloudFrontを事前検証して早期失敗できること
+  it('Validate deploy targets が S3/CloudFront の存在を検証する', () => {
+    const workflow = readWorkflow()
+    const step = getWorkflowStep(workflow, STEP_NAMES.validateDeployTargets)
+    expect(step).toBeDefined()
+    const run = String(step?.run ?? '')
+
+    expect(run).toContain('aws s3api head-bucket --bucket "$S3_BUCKET_FRONTEND"')
+    expect(run).toContain(
+      'aws cloudfront get-distribution --id "$CLOUDFRONT_DISTRIBUTION_ID" --query \'Distribution.Id\' --output text'
+    )
     expect(step?.['continue-on-error']).toBeUndefined()
   })
 })
