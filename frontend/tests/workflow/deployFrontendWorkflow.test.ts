@@ -80,15 +80,20 @@ describe('E14-01: deploy-frontend workflow', () => {
   it('事前検証ステップが定義される', () => {
     const workflow = readWorkflow()
     const steps = getWorkflowSteps(workflow)
+    const configureStep = getWorkflowStep(workflow, STEP_NAMES.configureAwsCredentials)
     const stsStep = getWorkflowStep(workflow, STEP_NAMES.verifyAwsIdentity)
     const targetStep = getWorkflowStep(workflow, STEP_NAMES.validateDeployTargets)
 
+    expect(configureStep).toBeDefined()
     expect(stsStep).toBeDefined()
     expect(targetStep).toBeDefined()
 
     const configureIdx = steps.findIndex((step) => step.name === STEP_NAMES.configureAwsCredentials)
     const stsIdx = steps.findIndex((step) => step.name === STEP_NAMES.verifyAwsIdentity)
     const targetIdx = steps.findIndex((step) => step.name === STEP_NAMES.validateDeployTargets)
+    expect(configureIdx).toBeGreaterThanOrEqual(0)
+    expect(stsIdx).toBeGreaterThanOrEqual(0)
+    expect(targetIdx).toBeGreaterThanOrEqual(0)
     expect(configureIdx).toBeLessThan(stsIdx)
     expect(stsIdx).toBeLessThan(targetIdx)
   })
