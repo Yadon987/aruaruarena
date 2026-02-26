@@ -29,6 +29,7 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION || secrets.AWS_REGION || 'ap-northeast-1' }}
       S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND || secrets.S3_BUCKET_FRONTEND }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID || secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || secrets.VITE_API_BASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +47,8 @@ jobs:
 
       - name: Build frontend
         working-directory: ./frontend
+        env:
+          VITE_API_BASE_URL: ${{ env.VITE_API_BASE_URL }}
         run: npm run build
 
       - name: Validate deploy variables
@@ -57,6 +60,7 @@ jobs:
           [ -n "${AWS_REGION:-}" ] || missing_vars+=("AWS_REGION")
           [ -n "${S3_BUCKET_FRONTEND:-}" ] || missing_vars+=("S3_BUCKET_FRONTEND")
           [ -n "${CLOUDFRONT_DISTRIBUTION_ID:-}" ] || missing_vars+=("CLOUDFRONT_DISTRIBUTION_ID")
+          [ -n "${VITE_API_BASE_URL:-}" ] || missing_vars+=("VITE_API_BASE_URL")
 
           if [ ${#missing_vars[@]} -gt 0 ]; then
             missing_csv="$(IFS=,; echo "${missing_vars[*]}")"

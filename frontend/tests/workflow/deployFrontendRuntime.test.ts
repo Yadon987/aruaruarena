@@ -40,10 +40,12 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
   it('Build frontend は continue-on-error を設定しない', () => {
     const workflow = readWorkflow()
     const step = getWorkflowStep(workflow, STEP_NAMES.buildFrontend)
+    const env = (step?.env ?? {}) as YamlObject
 
     expect(step?.['continue-on-error']).toBeUndefined()
     expect(step?.run).toBe('npm run build')
     expect(step?.['working-directory']).toBe('./frontend')
+    expect(env.VITE_API_BASE_URL).toBe('${{ env.VITE_API_BASE_URL }}')
   })
 
   // 何を検証するか: 必須デプロイ変数が未設定なら以降へ進まないようにすること
@@ -63,6 +65,7 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     expect(run).toContain('AWS_REGION')
     expect(run).toContain('S3_BUCKET_FRONTEND')
     expect(run).toContain('CLOUDFRONT_DISTRIBUTION_ID')
+    expect(run).toContain('VITE_API_BASE_URL')
     expect(run).toContain('MISSING_DEPLOY_VARS=')
     expect(step?.['continue-on-error']).toBeUndefined()
   })
