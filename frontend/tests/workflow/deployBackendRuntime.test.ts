@@ -37,7 +37,9 @@ describe('E19-01: backend deploy workflow runtime assumptions', () => {
     const env = (step?.env ?? {}) as YamlObject
     const run = String(step?.run ?? '')
 
-    expect(env.AWS_ROLE_ARN).toBe('${{ secrets.AWS_ROLE_ARN || vars.AWS_ROLE_ARN }}')
+    expect(env.AWS_ROLE_ARN).toBe(
+      '${{ secrets.AWS_ROLE_ARN || vars.AWS_ROLE_ARN || secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY || vars.AWS_ROLE_ARN_FRONTEND_DEPLOY }}'
+    )
     expect(env.AWS_REGION).toBe('${{ env.AWS_REGION }}')
     expect(run).toContain('missing_vars=()')
     expect(run).toContain('AWS_ROLE_ARN')
@@ -52,7 +54,9 @@ describe('E19-01: backend deploy workflow runtime assumptions', () => {
     expect(step).toBeDefined()
 
     const withConfig = (step?.with ?? {}) as YamlObject
-    expect(withConfig['role-to-assume']).toBe('${{ secrets.AWS_ROLE_ARN || vars.AWS_ROLE_ARN }}')
+    expect(withConfig['role-to-assume']).toBe(
+      '${{ secrets.AWS_ROLE_ARN || vars.AWS_ROLE_ARN || secrets.AWS_ROLE_ARN_FRONTEND_DEPLOY || vars.AWS_ROLE_ARN_FRONTEND_DEPLOY }}'
+    )
     expect(withConfig['aws-region']).toBe('${{ env.AWS_REGION }}')
   })
 
