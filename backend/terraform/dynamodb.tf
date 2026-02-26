@@ -29,9 +29,9 @@ resource "aws_dynamodb_table" "posts" {
   }
 
   # Global Secondary Index: RankingIndex
-  # Dynamoidの :ranking_index に対応（kebab-caseで統一）
+  # Dynamoidの :ranking_index に対応（実テーブル名もsnake_caseで統一）
   global_secondary_index {
-    name            = "ranking-index"
+    name            = "ranking_index"
     hash_key        = "status"
     range_key       = "score_key"
     projection_type = "ALL"
