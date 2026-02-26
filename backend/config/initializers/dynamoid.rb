@@ -30,8 +30,10 @@ Rails.application.config.after_initialize do
     else
       config.endpoint = nil # AWS DynamoDB
       config.region = ENV['AWS_REGION'] || 'ap-northeast-1'
-      config.access_key = ENV.fetch('AWS_ACCESS_KEY_ID', nil)
-      config.secret_key = ENV.fetch('AWS_SECRET_ACCESS_KEY', nil)
+      # Lambda実行ロールの一時認証情報（session token含む）を利用する。
+      # access_key/secret_key を個別指定すると session token が欠け、認証エラーを起こしうる。
+      config.access_key = nil
+      config.secret_key = nil
       config.namespace = nil # 本番ではネームスペースなし
     end
   end
