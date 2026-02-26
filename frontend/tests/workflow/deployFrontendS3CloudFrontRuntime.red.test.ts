@@ -9,9 +9,11 @@ describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () =
     const deployJob = (jobs['deploy-frontend'] ?? {}) as Record<string, unknown>
     const env = (deployJob.env ?? {}) as Record<string, string>
 
-    expect(env.AWS_REGION).toBe('${{ vars.AWS_REGION }}')
-    expect(env.S3_BUCKET_FRONTEND).toBe('${{ vars.S3_BUCKET_FRONTEND }}')
-    expect(env.CLOUDFRONT_DISTRIBUTION_ID).toBe('${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}')
+    expect(env.AWS_REGION).toBe('${{ vars.AWS_REGION || secrets.AWS_REGION || \'ap-northeast-1\' }}')
+    expect(env.S3_BUCKET_FRONTEND).toBe('${{ vars.S3_BUCKET_FRONTEND || secrets.S3_BUCKET_FRONTEND }}')
+    expect(env.CLOUDFRONT_DISTRIBUTION_ID).toBe(
+      '${{ vars.CLOUDFRONT_DISTRIBUTION_ID || secrets.CLOUDFRONT_DISTRIBUTION_ID }}'
+    )
   })
 
   // 何を検証するか: S3_BUCKET_FRONTEND 未設定時に Sync assets to S3 で停止し後続へ進まない設計であること

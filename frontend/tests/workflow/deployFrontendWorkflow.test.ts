@@ -72,6 +72,7 @@ describe('E14-01: deploy-frontend workflow', () => {
     expect(runScript).toContain('AWS_REGION')
     expect(runScript).toContain('S3_BUCKET_FRONTEND')
     expect(runScript).toContain('CLOUDFRONT_DISTRIBUTION_ID')
+    expect(runScript).toContain('VITE_API_BASE_URL')
     expect(runScript).toContain('missing_vars=()')
     expect(runScript).toContain('MISSING_DEPLOY_VARS=')
   })
