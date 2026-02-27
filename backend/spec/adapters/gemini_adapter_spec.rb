@@ -168,6 +168,28 @@ RSpec.describe GeminiAdapter do
         expect(result[:scores][:empathy]).to be_a(Integer)
       end
 
+      it '複数のpartsに分割されたJSONレスポンスも解析できること' do
+        response_hash = {
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { text: "```json\n" },
+                  { text: JSON.generate(base_scores.merge(comment: '分割レスポンス')) },
+                  { text: "\n```" }
+                ]
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores]).to eq(base_scores.transform_keys(&:to_sym))
+        expect(result[:comment]).to eq('分割レスポンス')
+      end
+
       # 何を検証するか: 小数点文字列のスコア変換（CodeRabbitレビュー対応）
       context '小数点スコアの扱い' do
         it 'スコアが小数点文字列（"12.5"）の場合に四捨五入して整数に変換できること' do
