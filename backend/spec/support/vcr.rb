@@ -25,6 +25,7 @@ VCR.configure do |config|
   config.filter_sensitive_data('<GEMINI_API_KEY>') { ENV.fetch('GEMINI_API_KEY', nil) }
   config.filter_sensitive_data('<GLM_API_KEY>') { ENV.fetch('GLM_API_KEY', nil) }
   config.filter_sensitive_data('<OPENAI_API_KEY>') { ENV.fetch('OPENAI_API_KEY', nil) }
+  config.filter_sensitive_data('<GROQ_API_KEY>') { ENV.fetch('GROQ_API_KEY', nil) }
 
   # カセットがない場合の挙動
   config.configure_rspec_metadata!
