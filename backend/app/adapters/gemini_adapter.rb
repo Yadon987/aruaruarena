@@ -13,8 +13,8 @@ class GeminiAdapter < BaseAiAdapter
   # Gemini APIのベースURL
   BASE_URL = 'https://generativelanguage.googleapis.com'
 
-  # Gemini 2.0 Flash Experimentalモデル
-  MODEL_NAME = 'gemini-2.0-flash-exp'
+  # Gemini 2.5 Flashモデル
+  MODEL_NAME = 'gemini-2.5-flash'
 
   # APIバージョン
   API_VERSION = 'v1beta'
