@@ -26,7 +26,7 @@ class CerebrasAdapter < BaseOpenAiCompatAdapter
   end
 
   def api_key
-    key = ENV['CEREBRAS_API_KEY']
+    key = ENV.fetch('CEREBRAS_API_KEY', nil)
     raise ArgumentError, 'CEREBRAS_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
 
     key

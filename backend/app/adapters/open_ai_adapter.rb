@@ -30,7 +30,7 @@ class OpenAiAdapter < BaseOpenAiCompatAdapter
   end
 
   def api_key
-    key = ENV['OPENAI_API_KEY']
+    key = ENV.fetch('OPENAI_API_KEY', nil)
     raise ArgumentError, 'OPENAI_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
 
     key

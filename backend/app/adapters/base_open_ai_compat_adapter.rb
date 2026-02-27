@@ -125,7 +125,7 @@ class BaseOpenAiCompatAdapter < BaseAiAdapter
   # レスポンスからコンテンツを抽出（Cerebrasの特殊な形式にも対応）
   def extract_content_from_response(parsed)
     choices = parsed[:choices] || parsed['choices']
-    return nil unless choices&.is_a?(Array) && choices.any?
+    return nil unless choices.is_a?(Array) && choices.any?
 
     msg = choices[0][:message] || choices[0]['message']
     return nil unless msg
@@ -157,6 +157,7 @@ class BaseOpenAiCompatAdapter < BaseAiAdapter
     REQUIRED_SCORE_KEYS.each do |key|
       value = data[key]
       raise ArgumentError, "Score value is nil for #{key}" if value.nil?
+
       scores[key] = value.is_a?(Integer) ? value : Float(value).round
     end
     scores
@@ -165,6 +166,7 @@ class BaseOpenAiCompatAdapter < BaseAiAdapter
   # コメントを切り詰め
   def truncate_comment(comment)
     return nil if comment.nil?
+
     comment.to_s.strip[0...MAX_COMMENT_LENGTH]
   end
 
@@ -174,6 +176,12 @@ class BaseOpenAiCompatAdapter < BaseAiAdapter
   end
 
   class << self
+    # テスト用: クラスごとのプロンプトキャッシュをクリア
+    def reset_prompt_cache!
+      @prompt_mutex ||= Mutex.new
+      @prompt_mutex.synchronize { @prompt_cache = nil }
+    end
+
     def prompt_cache
       @prompt_mutex ||= Mutex.new
       @prompt_mutex.synchronize { @prompt_cache }
