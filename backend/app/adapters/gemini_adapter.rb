@@ -217,7 +217,7 @@ class GeminiAdapter < BaseAiAdapter
     json_text = extract_json_from_codeblock(text)
 
     begin
-      data = JSON.parse(json_text, symbolize_names: true)
+      data = parse_json_payload(json_text)
     rescue JSON::ParserError => e
       Rails.logger.error("JSONパースエラー: #{e.class} - #{e.message}")
       return invalid_response_error
@@ -236,6 +236,63 @@ class GeminiAdapter < BaseAiAdapter
       scores: scores,
       comment: comment
     }
+  end
+
+  # JSON文字列をパースする（前後に余計なテキストがある場合はJSON本体を抽出）
+  #
+  # @param text [String] JSON文字列またはJSONを含む文字列
+  # @return [Hash] パース済みJSON
+  # @raise [JSON::ParserError] JSONとして解釈できない場合
+  def parse_json_payload(text)
+    JSON.parse(text, symbolize_names: true)
+  rescue JSON::ParserError
+    extracted = extract_first_json_object(text)
+    raise unless extracted
+
+    JSON.parse(extracted, symbolize_names: true)
+  end
+
+  # 文字列から最初のJSONオブジェクト（{...}）を抽出する
+  #
+  # 不完全なmarkdownコードブロックや、前後に説明文が付与されたレスポンスを
+  # 安全に扱うためのフォールバック抽出。
+  #
+  # @param text [String] 入力文字列
+  # @return [String, nil] 抽出されたJSONオブジェクト
+  def extract_first_json_object(text)
+    return nil unless text.is_a?(String)
+
+    start_index = text.index('{')
+    return nil if start_index.nil?
+
+    depth = 0
+    in_string = false
+    escaped = false
+
+    text[start_index..].each_char.with_index do |char, index|
+      if in_string
+        if escaped
+          escaped = false
+        elsif char == '\\'
+          escaped = true
+        elsif char == '"'
+          in_string = false
+        end
+        next
+      end
+
+      case char
+      when '"'
+        in_string = true
+      when '{'
+        depth += 1
+      when '}'
+        depth -= 1
+        return text[start_index, index + 1] if depth.zero?
+      end
+    end
+
+    nil
   end
 
   # コードブロックからJSONを抽出する
