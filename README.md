@@ -397,7 +397,7 @@ DYNAMODB_ENDPOINT=http://localhost:8000
 # AI APIs
 GEMINI_API_KEY=your-gemini-key
 GLM_API_KEY=your-glm-key
-OPENAI_API_KEY=your-openai-key
+GROQ_API_KEY=your-groq-key
 
 # Frontend
 VITE_API_BASE_URL=/api

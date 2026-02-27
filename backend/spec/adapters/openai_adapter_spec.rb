@@ -17,8 +17,8 @@ RSpec.describe OpenAiAdapter do
   describe '定数' do
     it '必要な定数が正しく定義されていること', :aggregate_failures do
       expect(described_class::PROMPT_PATH).to eq('app/prompts/nakao.txt')
-      expect(described_class::BASE_URL).to eq('https://api.openai.com')
-      expect(described_class::MODEL_NAME).to eq('gpt-4o-mini')
+      expect(described_class::BASE_URL).to eq('https://api.groq.com/openai/v1')
+      expect(described_class::MODEL_NAME).to eq('llama-3.3-70b-versatile')
     end
   end
 
@@ -37,11 +37,11 @@ RSpec.describe OpenAiAdapter do
       expect(adapter.send(:client)).to be_a(Faraday::Connection)
     end
 
-    # 何を検証するか: OpenAI APIのベースURLが設定されていること
+    # 何を検証するか: Groq APIのベースURLが設定されていること
 
-    it 'OpenAI APIのベースURLが設定されていること' do
+    it 'Groq APIのベースURLが設定されていること' do
       client = adapter.send(:client)
-      expect(client.url_prefix.to_s).to include('api.openai.com')
+      expect(client.url_prefix.to_s).to include('api.groq.com/openai/v1')
     end
 
     # 何を検証するか: SSL証明書の検証が有効であること
@@ -72,7 +72,7 @@ RSpec.describe OpenAiAdapter do
         request = adapter.send(:build_request, post_content, persona)
 
         expect(request).to be_a(Hash)
-        expect(request[:model]).to eq('gpt-4o-mini')
+        expect(request[:model]).to eq('llama-3.3-70b-versatile')
         expect(request[:messages]).to be_present
       end
 
@@ -86,11 +86,11 @@ RSpec.describe OpenAiAdapter do
         expect(user_content).not_to include('{post_content}')
       end
 
-      # 何を検証するか: modelがgpt-4o-miniに設定されていること
+      # 何を検証するか: modelがllama-3.3-70b-versatileに設定されていること
       # 失敗理由: build_requestメソッドがまだ実装されていないため
-      it 'modelがgpt-4o-miniに設定されていること' do
+      it 'modelがllama-3.3-70b-versatileに設定されていること' do
         request = adapter.send(:build_request, post_content, persona)
-        expect(request[:model]).to eq('gpt-4o-mini')
+        expect(request[:model]).to eq('llama-3.3-70b-versatile')
       end
 
       # 何を検証するか: temperatureが0.7に設定されていること
@@ -118,5 +118,5 @@ RSpec.describe OpenAiAdapter do
   end
 
   # 何を検証するか: APIキーの取得
-  it_behaves_like 'adapter api key validation', 'OPENAI_API_KEY'
+  it_behaves_like 'adapter api key validation', 'GROQ_API_KEY'
 end

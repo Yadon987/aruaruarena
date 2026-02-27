@@ -1,19 +1,20 @@
 # frozen_string_literal: true
 
-# OpenAiAdapter - OpenAI GPT-4o-mini API用アダプター
+# OpenAiAdapter - Groq OpenAI互換API用アダプター
 #
 # BaseOpenAiCompatAdapterを継承し、中尾彬風の審査員として投稿を採点します。
+# OpenAI互換エンドポイントとしてGroqを使用します。
 #
-# @see https://platform.openai.com/docs/api-reference/chat
+# @see https://console.groq.com/docs/openai
 class OpenAiAdapter < BaseOpenAiCompatAdapter
   # プロンプトファイルのパス
   PROMPT_PATH = 'app/prompts/nakao.txt'
 
-  # OpenAI APIのベースURL
-  BASE_URL = 'https://api.openai.com'
+  # Groq OpenAI互換APIのベースURL
+  BASE_URL = 'https://api.groq.com/openai/v1'
 
-  # GPT-4o-miniモデル
-  MODEL_NAME = 'gpt-4o-mini'
+  # Llama 3.3 70Bモデル
+  MODEL_NAME = 'llama-3.3-70b-versatile'
 
   private
 
@@ -22,7 +23,7 @@ class OpenAiAdapter < BaseOpenAiCompatAdapter
   end
 
   def api_endpoint
-    'v1/chat/completions'
+    'chat/completions'
   end
 
   def model_name
@@ -30,8 +31,8 @@ class OpenAiAdapter < BaseOpenAiCompatAdapter
   end
 
   def api_key
-    key = ENV.fetch('OPENAI_API_KEY', nil)
-    raise ArgumentError, 'OPENAI_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
+    key = ENV.fetch('GROQ_API_KEY', nil)
+    raise ArgumentError, 'GROQ_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
 
     key
   end
