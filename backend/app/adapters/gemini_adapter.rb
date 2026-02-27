@@ -155,12 +155,14 @@ class GeminiAdapter < BaseAiAdapter
     parsed = JSON.parse(body, symbolize_names: true)
 
     candidates = parsed[:candidates]
-    unless candidates&.first&.dig(:content, :parts)&.first&.dig(:text)
+    parts = candidates&.first&.dig(:content, :parts)
+
+    unless parts.is_a?(Array) && parts.any? { |part| part[:text].present? }
       Rails.logger.error('Gemini APIレスポンスにcandidatesが含まれていません')
       raise ArgumentError, 'Invalid candidates structure'
     end
 
-    candidates.first[:content][:parts].first[:text]
+    parts.filter_map { |part| part[:text] }.join
   rescue JSON::ParserError => e
     Rails.logger.error("APIレスポンスのJSONパースエラー: #{e.message}")
     raise
