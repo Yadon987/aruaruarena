@@ -44,6 +44,23 @@ RSpec.describe JudgePostService do
     end
   end
 
+  describe 'dewiアダプター選択' do
+    let!(:post) { create(:post) }
+    let(:service) { described_class.new(post.id) }
+
+    it 'test環境ではDewiAdapterを返すこと' do
+      expect(service.send(:dewi_adapter_class)).to eq(DewiAdapter)
+    end
+
+    it 'production環境かつCEREBRAS_API_KEY設定時はCerebrasAdapterを返すこと' do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new('production'))
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with('CEREBRAS_API_KEY').and_return('test_cerebras_key')
+
+      expect(service.send(:dewi_adapter_class)).to eq(CerebrasAdapter)
+    end
+  end
+
   # 何を検証するか: 並列審査の実行
   describe '#execute' do
     let!(:post) { create(:post) }

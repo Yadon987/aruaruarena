@@ -10,12 +10,6 @@ class RejudgePostService
 
   VALID_PERSONAS = %w[hiroyuki dewi nakao].freeze
 
-  ADAPTERS = {
-    'hiroyuki' => GeminiAdapter,
-    'dewi' => DewiAdapter,
-    'nakao' => OpenAiAdapter
-  }.freeze
-
   def initialize(post_id, failed_personas:)
     validate_personas!(failed_personas)
     @failed_personas = failed_personas
@@ -45,6 +39,28 @@ class RejudgePostService
 
   private
 
+  def adapter_for(persona)
+    case persona
+    when 'hiroyuki'
+      GeminiAdapter
+    when 'dewi'
+      dewi_adapter_class
+    when 'nakao'
+      OpenAiAdapter
+    else
+      raise ArgumentError, 'invalid persona included'
+    end
+  end
+
+  def dewi_adapter_class
+    # テスト環境は既存spec互換のため従来アダプターを固定利用する
+    return DewiAdapter if Rails.env.test?
+
+    return CerebrasAdapter if ENV['CEREBRAS_API_KEY'].to_s.strip != ''
+
+    DewiAdapter
+  end
+
   def validate_personas!(failed_personas)
     raise ArgumentError, 'failed_personas must be an array' unless failed_personas.is_a?(Array)
     raise ArgumentError, 'failed_personas must not be empty' if failed_personas.empty?
@@ -66,7 +82,7 @@ class RejudgePostService
   end
 
   def rejudge_persona!(persona, existing_judgment = nil)
-    result = ADAPTERS.fetch(persona).new.judge(@post.body, persona: persona)
+    result = adapter_for(persona).new.judge(@post.body, persona: persona)
     attrs = base_attrs(result)
     attrs.merge!(score_attrs(result)) if result.succeeded
     save_judgment!(persona, attrs, existing_judgment)

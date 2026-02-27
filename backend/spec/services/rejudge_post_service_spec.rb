@@ -42,6 +42,23 @@ RSpec.describe 'RejudgePostService', type: :service do
     end
   end
 
+  describe 'dewiアダプター選択' do
+    let!(:post_record) { create(:post, :failed, judges_count: 1) }
+    let(:service) { service_class.new(post_record.id, failed_personas: ['dewi']) }
+
+    it 'test環境ではDewiAdapterを返すこと' do
+      expect(service.send(:dewi_adapter_class)).to eq(DewiAdapter)
+    end
+
+    it 'production環境かつCEREBRAS_API_KEY設定時はCerebrasAdapterを返すこと' do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new('production'))
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with('CEREBRAS_API_KEY').and_return('test_cerebras_key')
+
+      expect(service.send(:dewi_adapter_class)).to eq(CerebrasAdapter)
+    end
+  end
+
   describe '#execute' do
     context '正常系' do
       # 何を検証するか: 指定personaのみ再審査し、既存の成功Judgmentを保持すること
