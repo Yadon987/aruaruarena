@@ -439,6 +439,72 @@ RSpec.describe GeminiAdapter do
           expect(result[:scores]).to be_present
           expect(result[:comment]).to eq('それって本当？')
         end
+
+        it 'コードブロックが閉じていない場合でもJSON本体を抽出して解析できること' do
+          broken_codeblock = <<~TEXT
+            以下が審査結果です。
+            ```json
+            {
+              "empathy": 15,
+              "humor": 14,
+              "brevity": 16,
+              "originality": 13,
+              "expression": 15,
+              "comment": "それって本当？"
+            }
+          TEXT
+
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: broken_codeblock }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          expect(result[:scores]).to be_present
+          expect(result[:comment]).to eq('それって本当？')
+        end
+
+        it '前後に説明文がある生テキストからJSONを抽出して解析できること' do
+          prose_with_json = <<~TEXT
+            審査結果を返します。JSONのみを利用してください。
+            {
+              "empathy": 12,
+              "humor": 11,
+              "brevity": 14,
+              "originality": 13,
+              "expression": 15,
+              "comment": "あるあるですね"
+            }
+            以上です。
+          TEXT
+
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: prose_with_json }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          expect(result[:scores]).to be_present
+          expect(result[:comment]).to eq('あるあるですね')
+        end
       end
     end
 
