@@ -440,6 +440,50 @@ RSpec.describe GeminiAdapter do
           expect(result[:comment]).to eq('それって本当？')
         end
 
+        it '```jsonの直後に改行がなくても解析できること' do
+          inline_codeblock = "```json#{JSON.generate(base_scores.merge(comment: 'インライン'))}```"
+
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: inline_codeblock }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          expect(result[:scores]).to be_present
+          expect(result[:comment]).to eq('インライン')
+        end
+
+        it 'Windows改行の```jsonコードブロックも解析できること' do
+          windows_codeblock = "```json\r\n#{JSON.generate(base_scores.merge(comment: 'CRLF対応'))}\r\n```"
+
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: windows_codeblock }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          result = adapter.send(:parse_response, faraday_response)
+
+          expect(result[:scores]).to be_present
+          expect(result[:comment]).to eq('CRLF対応')
+        end
+
         it 'コードブロックが閉じていない場合でもJSON本体を抽出して解析できること' do
           broken_codeblock = <<~TEXT
             以下が審査結果です。
