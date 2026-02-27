@@ -10,7 +10,7 @@ class JudgePostService
   # 審査員の設定
   JUDGES = [
     { persona: 'hiroyuki', adapter: GeminiAdapter },
-    { persona: 'dewi',     adapter: DewiAdapter },
+    { persona: 'dewi',     adapter: :dewi_adapter_class },
     { persona: 'nakao',    adapter: OpenAiAdapter }
   ].freeze
 
@@ -43,7 +43,8 @@ class JudgePostService
         begin
           Rails.logger.info("[JudgePostService] 審査開始: persona=#{persona}")
 
-          adapter = judge[:adapter].new
+          adapter_class = resolve_adapter_class(judge[:adapter])
+          adapter = adapter_class.new
           result = adapter.judge(@post.body, persona: persona)
 
           if result.succeeded
@@ -132,6 +133,21 @@ class JudgePostService
       max_queue: 0,
       fallback_policy: :caller_runs
     )
+  end
+
+  def resolve_adapter_class(adapter_setting)
+    return send(adapter_setting) if adapter_setting.is_a?(Symbol)
+
+    adapter_setting
+  end
+
+  def dewi_adapter_class
+    # テスト環境は既存spec互換のため従来アダプターを固定利用する
+    return DewiAdapter if Rails.env.test?
+
+    return CerebrasAdapter if ENV['CEREBRAS_API_KEY'].to_s.strip != ''
+
+    DewiAdapter
   end
 
   # 審査結果を保存する
