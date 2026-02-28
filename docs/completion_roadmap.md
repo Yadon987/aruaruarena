@@ -103,7 +103,7 @@
 | Playwright（E2E） | ✅ 完了（11ファイル、229 tests） |
 | Vitest（ユニット） | ✅ 完了（32ファイル） |
 | MSW（APIモック） | ✅ 完了 |
-| Framer Motion | 🟡 未使用 | インストール済みだが未使用 |
+| Framer Motion | 🟡 未使用（インストール済みだが未使用） |
 
 ### 画面実装状況
 
@@ -175,11 +175,13 @@
 ## セキュリティ観点
 
 ### CORS設定
+
 - 現状: 全オリジン許可（`allow_origins = ["*"]`）
 - 本番: 特定のオリジンのみ許可が必要
 - 実装: 環境変数でオリジンを管理し、Terraformで設定
 
 ### レート制限
+
 - IPアドレスの検証方法: `X-Forwarded-For` ヘッダーを使用
 - プロキシ経由のリクエスト処理: 複数のIPヘッダーの考慮
 
@@ -257,11 +259,13 @@
 **実装手順**:
 
 1. **App.tsxにFramer Motionを追加**
+
    ```tsx
    import { AnimatePresence, motion } from 'framer-motion'
    ```
 
 2. **審査中画面のアニメーション実装**
+
    ```tsx
    <AnimatePresence mode="wait">
      {viewMode === 'judging' && (
@@ -278,6 +282,7 @@
    ```
 
 3. **審査員キャラクターのアニメーション**
+
    ```tsx
    {JUDGE_NAMES.map((judgeName, index) => (
      <motion.li
@@ -315,6 +320,7 @@
 **実装手順**:
 
 1. **backend/terraform/s3.tf 作成**
+
    ```hcl
    resource "aws_s3_bucket" "frontend" {
      bucket_prefix = "aruaruarena-frontend-"
@@ -375,6 +381,7 @@
    ```
 
 2. **backend/terraform/cloudfront.tf 作成**
+
    ```hcl
    resource "aws_cloudfront_origin_access_control" "frontend" {
      name                              = "aruaruarena-frontend-oac"
@@ -475,6 +482,7 @@
 **実装手順**:
 
 1. **Secrets Manager シークレットの作成（Terraform）**
+
    ```hcl
    resource "aws_secretsmanager_secret" "gemini_api_key" {
      name = "aruaruarena/gemini_api_key"
@@ -549,10 +557,11 @@
    - 投稿情報中心レイアウトのテキスト配置を調整
 
 2. **ImageMagickでの作成例**
+
    ```bash
    convert -size 1200x630 xc:#ffffff \
      -fill "#333333" -pointsize 48 -font "Noto-Sans-JP" -gravity center -annotate +0-100 "あるあるアリーナ" \
-     base_ogp.png
+   base_ogp.png
    ```
 
 3. **画像の配置**
@@ -596,11 +605,13 @@
    - ループ用に編集
 
 3. **ファイル圧縮**
+
    ```bash
    ffmpeg -i input.wav -b:a 128k output.mp3
    ```
 
 4. **ディレクトリ作成と配置**
+
    ```bash
    mkdir -p frontend/public/sounds
    cp *.mp3 frontend/public/sounds/
@@ -619,6 +630,7 @@
 **実装手順**:
 
 1. **Dockerfileの編集**
+
    ```dockerfile
    FROM ruby:3.2-slim
 
@@ -637,6 +649,7 @@
    ```
 
 2. **動作確認**
+
    ```bash
    docker build -t aruaruarena-backend .
    docker run --rm aruaruarena-backend identify -version
@@ -662,6 +675,7 @@
 **実装手順**:
 
 1. **Howler.jsのインストール**
+
    ```bash
    cd frontend
    npm install howler
@@ -669,6 +683,7 @@
    ```
 
 2. **useSound.tsの実装**
+
    ```typescript
    import { Howl } from 'howler'
    import { useEffect, useRef } from 'react'
@@ -793,6 +808,7 @@
 **実装手順**:
 
 1. **キャラクター口癖の定義**
+
    ```typescript
    // constants/judgeCatchphrases.ts
    export const JUDGE_CATCHPHRASES = {
@@ -815,6 +831,7 @@
    ```
 
 2. **キャラクターコンポーネントの作成**
+
    ```typescript
    // components/JudgeCharacter.tsx
    import { motion } from 'framer-motion'
@@ -874,6 +891,7 @@
 **実装手順**:
 
 1. **SNSトピックの作成**
+
    ```hcl
    resource "aws_sns_topic" "alerts" {
      name = "aruaruarena-alerts"
@@ -887,6 +905,7 @@
    ```
 
 2. **CloudWatchメトリクスアラームの作成**
+
    ```hcl
    # Lambdaエラーアラーム
    resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
@@ -943,6 +962,7 @@
 **実装手順**:
 
 1. **新しいディレクトリ構造**
+
    ```text
    frontend/src/
      features/
@@ -986,6 +1006,7 @@
 **実装手順**:
 
 1. **ACM証明書の作成**
+
    ```hcl
    resource "aws_acm_certificate" "main" {
      domain_name       = "aruaruarena.example.com"
@@ -1025,6 +1046,7 @@
    - DNS検証コマンド: `nslookup aruaruarena.example.com`
 
 3. **API Gatewayのカスタムドメイン**
+
    ```hcl
    resource "aws_apigatewayv2_domain_name" "main" {
      domain_name = "api.aruaruarena.example.com"
@@ -1038,6 +1060,7 @@
    ```
 
 4. **CloudFrontのカスタムドメイン**
+
    ```hcl
    resource "aws_cloudfront_distribution" "frontend" {
      # 既存の設定...
