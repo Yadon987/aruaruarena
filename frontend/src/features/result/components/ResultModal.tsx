@@ -35,7 +35,8 @@ const X_SHARE_BASE_URL = 'https://x.com/intent/tweet?text='
 const MESSAGE_REJUDGE_FAILED = '再審査に失敗しました。時間をおいて再度お試しください'
 
 // フロントエンドのベースURL（シェアURL生成用）
-const FRONTEND_BASE_URL = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'
+// 末尾スラッシュを除去して二重スラッシュを防止
+const FRONTEND_BASE_URL = (import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173').replace(/\/$/, '')
 
 function resolveErrorMessage(errorCode: string | null): string {
   if (errorCode === ERROR_CODE_NOT_FOUND) {
