@@ -31,7 +31,7 @@ RSpec.describe JudgePostService do
     end
 
     it 'JOIN_TIMEOUT定数が定義されていること' do
-      expect(described_class::JOIN_TIMEOUT).to eq(120)
+      expect(described_class::JOIN_TIMEOUT).to eq(90)
     end
   end
   describe '.call' do
