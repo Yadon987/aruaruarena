@@ -896,7 +896,7 @@ RSpec.describe GeminiAdapter do
       allow(adapter).to receive(:retry_sleep) # sleepをスキップ
 
       # リトライログの確認
-      expect(Rails.logger).to receive(:warn).with(%r{リトライ 1/3: Faraday::TimeoutError})
+      expect(Rails.logger).to receive(:warn).with(%r{リトライ 1/2: Faraday::TimeoutError})
 
       # loop/retryのテスト用モック
       call_count = 0

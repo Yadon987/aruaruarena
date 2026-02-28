@@ -30,13 +30,13 @@
 #   end
 class BaseAiAdapter
   # 最大リトライ回数
-  MAX_RETRIES = 3
+  MAX_RETRIES = 2
 
   # APIタイムアウト時間（秒）
-  BASE_TIMEOUT = 30
+  BASE_TIMEOUT = 20
 
   # リトライ時の基本遅延時間（秒）
-  # 指数バックオフで1秒→2秒→4秒と増加
+  # 指数バックオフで1秒→2秒と増加
   RETRY_DELAY = 1.0
 
   # 有効なペルソナID
@@ -129,7 +129,7 @@ class BaseAiAdapter
   # リトライ処理付きでAI APIを呼び出す
   #
   # 指数バックオフアルゴリズムを使用してリトライを実行します。
-  # 1回目: 1秒, 2回目: 2秒, 3回目: 4秒
+  # 1回目: 1秒, 2回目: 2秒
   #
   # @param post_content [String] 投稿本文
   # @param persona [String] 審査員ID

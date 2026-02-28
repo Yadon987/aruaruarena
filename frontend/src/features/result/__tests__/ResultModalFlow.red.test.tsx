@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
-import { useRankings } from '../../../shared/hooks/useRankings'
 import { api } from '../../../shared/services/api'
+import { mockRankings, selectMyPost } from '../../../test/appTestHelpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -11,25 +11,13 @@ vi.mock('../../../shared/hooks/useRankings', () => ({
   useRankings: vi.fn(),
 }))
 
-const mockedUseRankings = vi.mocked(useRankings)
-
-function setupRanking() {
-  mockedUseRankings.mockReturnValue({
-    data: {
-      rankings: [{ rank: 1, id: 'rank-post-1', nickname: 'ランク太郎', body: '本文', average_score: 90.1 }],
-      total_count: 1,
-    },
-    isLoading: false,
-    isError: false,
-    error: null,
-  } as ReturnType<typeof useRankings>)
-}
-
 describe('E15-01 RED: ResultModal Flow', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
-    setupRanking()
+    mockRankings([
+      { rank: 1, id: 'rank-post-1', nickname: 'ランク太郎', body: '本文', average_score: 90.1 },
+    ])
   })
 
   it('ランキング項目クリックで結果モーダルが開く', async () => {
@@ -89,8 +77,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'my-post-id' }))
+    await selectMyPost('my-post-id')
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -196,7 +183,9 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
-    setupRanking()
+    mockRankings([
+      { rank: 1, id: 'rank-post-1', nickname: 'ランク太郎', body: '本文', average_score: 90.1 },
+    ])
   })
 
   it('failed投稿で再審査ボタンを表示する', async () => {

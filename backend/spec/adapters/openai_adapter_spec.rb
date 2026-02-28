@@ -51,11 +51,11 @@ RSpec.describe OpenAiAdapter do
       expect(client.ssl.verify).to be true
     end
 
-    # 何を検証するか: タイムアウトが30秒に設定されていること
+    # 何を検証するか: タイムアウトが20秒に設定されていること
 
-    it 'タイムアウトが30秒に設定されていること' do
+    it 'タイムアウトが20秒に設定されていること' do
       client = adapter.send(:client)
-      expect(client.options.timeout).to eq(30)
+      expect(client.options.timeout).to eq(20)
     end
   end
 

@@ -50,7 +50,7 @@ const HIROYUKI_CATCHPHRASE = 'それってあなたの感想ですよね'
 const ROOT_PATH = '/'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_POLLING_INTERVAL_MS = 3000
-const JUDGING_POLLING_TIMEOUT_MS = 60000
+const JUDGING_POLLING_TIMEOUT_MS = 150000
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
@@ -542,7 +542,7 @@ function App() {
 
     const fetchPost = async () => {
       const elapsed = Date.now() - pollingStartedAtRef.current
-      // 監視上限60秒を超えた場合はAPIを呼ばずに終端する。
+      // 監視上限150秒を超えた場合はAPIを呼ばずに終端する。
       if (elapsed >= JUDGING_POLLING_TIMEOUT_MS) {
         handleJudgingFetchFailed()
         return
@@ -573,7 +573,7 @@ function App() {
         }
 
         const retryElapsed = Date.now() - pollingStartedAtRef.current
-        // 500系/通信系は60秒枠内で再試行し、超過時のみ終了する。
+        // 500系/通信系は150秒枠内で再試行し、超過時のみ終了する。
         if (retryElapsed >= JUDGING_POLLING_TIMEOUT_MS) {
           handleJudgingFetchFailed()
         }

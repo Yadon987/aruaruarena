@@ -18,12 +18,12 @@ RSpec.describe BaseAiAdapter do
   end
 
   describe '定数' do
-    it 'MAX_RETRIESが3であること' do
-      expect(described_class::MAX_RETRIES).to eq(3)
+    it 'MAX_RETRIESが2であること' do
+      expect(described_class::MAX_RETRIES).to eq(2)
     end
 
-    it 'BASE_TIMEOUTが30であること' do
-      expect(described_class::BASE_TIMEOUT).to eq(30)
+    it 'BASE_TIMEOUTが20であること' do
+      expect(described_class::BASE_TIMEOUT).to eq(20)
     end
 
     it 'RETRY_DELAYが1.0であること' do
@@ -251,7 +251,7 @@ RSpec.describe BaseAiAdapter do
         }
 
         adapter.judge('テスト投稿', persona: 'hiroyuki')
-        expect(adapter.call_count).to eq(described_class::MAX_RETRIES + 1) # 初回 + 3回リトライ
+        expect(adapter.call_count).to eq(described_class::MAX_RETRIES + 1) # 初回 + 2回リトライ
       end
 
       it 'MAX_RETRIES超過で失敗すること' do
@@ -265,10 +265,10 @@ RSpec.describe BaseAiAdapter do
         expect(result.error_code).to eq('timeout')
       end
 
-      it 'リトライ時に指数バックオフで遅延が増加すること（1秒→2秒→4秒）' do
+      it 'リトライ時に指数バックオフで遅延が増加すること（1秒→2秒）' do
         adapter.reset_call_count!
         adapter.mock_response_proc = lambda { |attempt|
-          raise Timeout::Error, 'API timeout' if attempt <= 3
+          raise Timeout::Error, 'API timeout' if attempt <= 2
 
           described_class::JudgmentResult.new(
             succeeded: true,
@@ -286,7 +286,7 @@ RSpec.describe BaseAiAdapter do
 
         adapter.judge('テスト投稿', persona: 'hiroyuki')
 
-        expect(sleep_calls).to eq([1.0, 2.0, 4.0])
+        expect(sleep_calls).to eq([1.0, 2.0])
       end
     end
 
@@ -569,7 +569,7 @@ RSpec.describe BaseAiAdapter do
       it 'MAX_RETRIES回のリトライ後に成功すること' do
         adapter.reset_call_count!
         adapter.mock_response_proc = lambda { |attempt|
-          raise Timeout::Error, 'API timeout' if attempt <= 3
+          raise Timeout::Error, 'API timeout' if attempt <= 2
 
           described_class::JudgmentResult.new(
             succeeded: true,
@@ -581,13 +581,13 @@ RSpec.describe BaseAiAdapter do
 
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
         expect(result.succeeded).to be true
-        expect(adapter.call_count).to eq(4) # 初回 + 3回リトライ
+        expect(adapter.call_count).to eq(3) # 初回 + 2回リトライ
       end
 
       it 'MAX_RETRIES超過で失敗すること' do
         adapter.reset_call_count!
         adapter.mock_response_proc = lambda { |attempt|
-          raise Timeout::Error, 'API timeout' if attempt <= 4 # 初回 + 4回リトライ
+          raise Timeout::Error, 'API timeout' if attempt <= 3 # 初回 + 3回試行
 
           described_class::JudgmentResult.new(
             succeeded: true,
@@ -600,7 +600,7 @@ RSpec.describe BaseAiAdapter do
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
         expect(result.succeeded).to be false
         expect(result.error_code).to eq('timeout')
-        expect(adapter.call_count).to eq(4) # 初回 + 3回リトライ（MAX_RETRIES=3）
+        expect(adapter.call_count).to eq(3) # 初回 + 2回リトライ（MAX_RETRIES=2）
       end
     end
 

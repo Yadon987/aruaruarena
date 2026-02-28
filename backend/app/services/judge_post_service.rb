@@ -15,8 +15,8 @@ class JudgePostService
   ].freeze
 
   # タイムアウト設定（Lambda環境を考慮）
-  PER_JUDGE_TIMEOUT = 90  # 各審査員のタイムアウト（秒）
-  JOIN_TIMEOUT = 120      # 全体のタイムアウト（秒）
+  PER_JUDGE_TIMEOUT = 70  # 各審査員のタイムアウト（秒）
+  JOIN_TIMEOUT = 90       # 全体のタイムアウト（秒）
 
   # 初期化
   #

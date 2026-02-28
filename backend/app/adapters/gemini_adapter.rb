@@ -104,7 +104,7 @@ class GeminiAdapter < BaseAiAdapter
   # Faraday HTTPクライアントを返す
   #
   # SSL証明書検証が有効化されています。
-  # タイムアウトは親クラスのBASE_TIMEOUT（30秒）を使用します。
+  # タイムアウトは親クラスのBASE_TIMEOUT（20秒）を使用します。
   #
   # @return [Faraday::Connection] HTTPクライアント
   def client
