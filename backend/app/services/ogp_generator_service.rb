@@ -1,26 +1,15 @@
 # frozen_string_literal: true
 
 # OGP画像生成サービス
+# rubocop:disable Metrics/ClassLength
 class OgpGeneratorService
   IMAGE_WIDTH = 1200
   IMAGE_HEIGHT = 630
   IMAGE_FORMAT = 'PNG'
 
-  JUDGE_COLORS = {
-    'hiroyuki' => '#4A90E2',
-    'dewi' => '#F5A623',
-    'nakao' => '#D0021B'
-  }.freeze
-
   BASE_IMAGE_PATH = Rails.root.join('app/assets/images/base_ogp.png')
   FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
   FONT_BOLD_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
-
-  JUDGE_ICON_PATHS = {
-    'hiroyuki' => Rails.root.join('app/assets/images/judge_hiroyuki.png'),
-    'dewi' => Rails.root.join('app/assets/images/judge_dewi.png'),
-    'nakao' => Rails.root.join('app/assets/images/judge_nakao.png')
-  }.freeze
 
   # 画像レイアウト定数
   LAYOUT = {
@@ -28,20 +17,7 @@ class OgpGeneratorService
     nickname: { x: 100, y: 100 },
     body: { x: 100, y: 160 },
     score: { x: 900, y: 100 },
-    rank: { x: 900, y: 180 },
-
-    # 審査員情報描画位置
-    judges_start_y: 250,
-    judges_x_offset: 50,
-    judges_y_step: 100,
-
-    # 審査員アイコン位置
-    icon: { width: 50, height: 50, x: 50 },
-
-    # 審査員テキスト位置
-    judge_score_y_offset: 10,
-    judge_comment_y_offset: 40,
-    judge_text_x_offset: 120
+    rank: { x: 900, y: 180 }
   }.freeze
 
   # フォントサイズ定数
@@ -49,9 +25,7 @@ class OgpGeneratorService
     nickname: 48,
     body: 36,
     score: 72,
-    rank: 36,
-    judge_score: 24,
-    judge_comment: 18
+    rank: 36
   }.freeze
 
   # テキスト色定数
@@ -63,10 +37,6 @@ class OgpGeneratorService
 
   # テキスト定数
   TEXT_CONFIG = {
-    # 最大文字数
-    max_comment_length: 20,
-    comment_ellipsis: '...',
-
     # テキストフォーマット
     rank_prefix: '第',
     rank_suffix: '位',
@@ -76,7 +46,6 @@ class OgpGeneratorService
 
   def initialize(post_id)
     @post = Post.find(post_id)
-    @judgments = @post.judgments.to_a
   rescue Dynamoid::Errors::RecordNotFound, Dynamoid::Errors::MissingHashKey
     Rails.logger.warn("[OgpGeneratorService] Post not found: #{post_id}")
     @post = nil
@@ -91,8 +60,6 @@ class OgpGeneratorService
     return nil if image.nil?
 
     draw_post_info(image)
-    image = draw_judgments(image)
-    return nil if image.nil?
 
     log_success
     image.to_blob
@@ -132,6 +99,7 @@ class OgpGeneratorService
   end
 
   # すべての必須ファイルが存在するか確認する
+  # rubocop:disable Metrics/MethodLength
   def ensure_resources_exist?
     unless file_exists?(BASE_IMAGE_PATH)
       log_error("Base image not found: #{BASE_IMAGE_PATH}")
@@ -150,8 +118,10 @@ class OgpGeneratorService
 
     true
   end
+  # rubocop:enable Metrics/MethodLength
 
   # 投稿情報（ニックネーム・本文・スコア・ランキング）を描画する
+  # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
   def draw_post_info(image)
     # ランキング取得（例外ハンドリング付き）
     rank = calculate_rank_with_fallback
@@ -174,55 +144,7 @@ class OgpGeneratorService
     draw_text(image, rank_text, FONT_SIZES[:rank], TEXT_COLORS[:secondary], LAYOUT[:rank][:x], LAYOUT[:rank][:y],
               FONT_PATH)
   end
-
-  # 審査員情報（アイコン・スコア・コメント）を描画する
-  # rubocop:disable Metrics/MethodLength
-  def draw_judgments(image)
-    # 審査員情報描画
-    y_offset = LAYOUT[:judges_start_y]
-    @judgments.each do |judgment|
-      next unless judgment.succeeded
-      next unless JUDGE_COLORS.key?(judgment.persona)
-
-      # アイコン存在チェック（Pathnameオブジェクトを文字列に変換してチェック）
-      icon_path = JUDGE_ICON_PATHS[judgment.persona]
-      unless file_exists?(icon_path)
-        log_error('Judge icon not found')
-        return nil
-      end
-
-      # アイコン合成（位置指定付き）
-      icon = MiniMagick::Image.open(icon_path)
-      image = image.composite(icon) do |c|
-        c.geometry "#{LAYOUT[:icon][:width]}x#{LAYOUT[:icon][:height]}+#{LAYOUT[:icon][:x]}+#{y_offset}"
-        c.compose 'over'
-      end
-
-      # スコア描画
-      color = JUDGE_COLORS[judgment.persona]
-      draw_text(image, "#{judgment.total_score}#{TEXT_CONFIG[:score_suffix]}", FONT_SIZES[:judge_score], color,
-                LAYOUT[:judge_text_x_offset], y_offset + LAYOUT[:judge_score_y_offset], FONT_PATH)
-
-      # コメント描画（先頭20文字）
-      comment = sanitize_text(judgment.comment)
-      comment_text = if comment.length > TEXT_CONFIG[:max_comment_length]
-                       "#{comment[0,
-                                  TEXT_CONFIG[:max_comment_length]]}#{TEXT_CONFIG[:comment_ellipsis]}"
-                     else
-                       comment
-                     end
-      draw_text(image, comment_text, FONT_SIZES[:judge_comment], TEXT_COLORS[:secondary], LAYOUT[:judge_text_x_offset],
-                y_offset + LAYOUT[:judge_comment_y_offset], FONT_PATH)
-
-      y_offset += LAYOUT[:judges_y_step]
-    end
-
-    image
-  rescue MiniMagick::Error => e
-    log_error("Failed to draw judgments: #{e.message}")
-    nil
-  end
-  # rubocop:enable Metrics/MethodLength
+  # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
   # アイコンが有効か確認する（存在チェック）
   def file_exists?(path)
@@ -280,3 +202,4 @@ class OgpGeneratorService
     text.gsub('\\', '\\\\').gsub("'", "\\'")
   end
 end
+# rubocop:enable Metrics/ClassLength

@@ -104,6 +104,7 @@ RSpec.describe OgpGeneratorService do
 
     # 何を検証するか: スコア表示は小数第1位付きで描画されること
     it '総合スコアが85.5点として描画されること' do
+      allow(service).to receive(:draw_text).and_call_original
       expect(service).to receive(:draw_text)
         .with(anything, '85.5点', described_class::FONT_SIZES[:score], described_class::TEXT_COLORS[:score],
               described_class::LAYOUT[:score][:x], described_class::LAYOUT[:score][:y], described_class::FONT_BOLD_PATH)
@@ -114,6 +115,7 @@ RSpec.describe OgpGeneratorService do
 
     # 何を検証するか: ランキング1位の投稿で順位表示が第1位として描画されること
     it 'ランキング1位では第1位が描画されること' do
+      allow(service).to receive(:draw_text).and_call_original
       expect(service).to receive(:draw_text)
         .with(anything, '第1位', described_class::FONT_SIZES[:rank], described_class::TEXT_COLORS[:secondary],
               described_class::LAYOUT[:rank][:x], described_class::LAYOUT[:rank][:y], described_class::FONT_PATH)
