@@ -7,11 +7,6 @@ module OgpTestHelpers
     @mock_base_image ||= double('MiniMagick::Image')
   end
 
-  # 何を検証するか: アイコン画像のモックオブジェクトを生成する
-  def mock_icon_image
-    @mock_icon_image ||= double('MiniMagick::Image (icon)')
-  end
-
   # 何を検証するか: 描画コマンドのモックオブジェクトを生成する
   def mock_draw
     @mock_draw ||= double('MiniMagick::CommandBuilder')
@@ -60,22 +55,12 @@ module OgpTestHelpers
     allow(File).to receive(:exist?).with(OgpGeneratorService::BASE_IMAGE_PATH.to_s).and_return(true)
     allow(File).to receive(:exist?).with(OgpGeneratorService::FONT_PATH.to_s).and_return(true)
     allow(File).to receive(:exist?).with(OgpGeneratorService::FONT_BOLD_PATH.to_s).and_return(true)
-    OgpGeneratorService::JUDGE_ICON_PATHS.each_value do |path|
-      allow(File).to receive(:exist?).with(path.to_s).and_return(true)
-    end
   end
 
   # フォントファイルが存在しないモックを設定する
   def setup_font_file_not_exist_mock
     setup_file_exist_mocks
     allow(File).to receive(:exist?).with(OgpGeneratorService::FONT_PATH.to_s).and_return(false)
-  end
-
-  # 審査員アイコンファイルが存在しないモックを設定する
-  def setup_judge_icon_file_not_exist_mock
-    setup_file_exist_mocks
-    # hiroyukiのアイコンパスのみをfalseに設定（部分一致）
-    allow(File).to receive(:exist?).with(include('judge_hiroyuki.png')).and_return(false)
   end
   # rubocop:enable Metrics/AbcSize
 
