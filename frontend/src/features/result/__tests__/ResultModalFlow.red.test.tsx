@@ -305,9 +305,8 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
 
     expect(screen.getByTestId('ogp-preview')).toBeInTheDocument()
     expect(openSpy.mock.calls[0]?.[0]).toContain('https://x.com/intent/tweet?text=')
-    expect(String(openSpy.mock.calls[0]?.[0])).toContain(
-      encodeURIComponent('シェア本文 #あるあるアリーナ')
-    )
+    // シェアURLに投稿URLが含まれていることを確認（OGP表示のため）
+    expect(String(openSpy.mock.calls[0]?.[0])).toContain('share-post-id')
     expect(openSpy).toHaveBeenCalledWith(expect.any(String), '_blank', 'noopener,noreferrer')
   })
 
