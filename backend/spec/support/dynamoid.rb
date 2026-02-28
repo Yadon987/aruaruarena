@@ -3,9 +3,11 @@
 # DynamoDB Localの設定
 RSpec.configure do |config|
   config.before(:suite) do
+    ENV['DYNAMODB_ENDPOINT'] = 'http://127.0.0.1:8002'
+
     # テスト用DynamoDB設定
     Dynamoid.configure do |dynamoid_config|
-      dynamoid_config.endpoint = 'http://localhost:8000'
+      dynamoid_config.endpoint = 'http://127.0.0.1:8002'
       dynamoid_config.namespace = 'aruaruarena_test'
       dynamoid_config.warn_on_scan = false
       dynamoid_config.read_capacity = 5

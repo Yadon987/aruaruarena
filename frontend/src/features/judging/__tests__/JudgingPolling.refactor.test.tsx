@@ -41,8 +41,8 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     getPostSpy.mockRestore()
   })
 
-  it('60秒未満の経過時間ではタイムアウトせず審査中画面を維持する', async () => {
-    // 何を検証するか: 60秒未満の判定では監視を継続し審査中画面を維持すること
+  it('150秒未満の経過時間ではタイムアウトせず審査中画面を維持する', async () => {
+    // 何を検証するか: 150秒未満の判定では監視を継続し審査中画面を維持すること
     const baseTime = 1_700_000_000_000
     let currentTime = baseTime
     dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => currentTime)
@@ -60,7 +60,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
       expect(getPostSpy).toHaveBeenCalledTimes(1)
     })
 
-    currentTime = baseTime + 50_000
+    currentTime = baseTime + 149_000
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 3200))
@@ -70,8 +70,8 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     expect(screen.queryByText('投稿情報の取得に失敗しました。トップへ戻って再度お試しください。')).not.toBeInTheDocument()
   }, 10000)
 
-  it('60秒到達時にポーリングを停止し固定エラーメッセージを表示する', async () => {
-    // 何を検証するか: 60秒到達でAPI追加送信せずトップ復帰して固定文言を表示すること
+  it('150秒到達時にポーリングを停止し固定エラーメッセージを表示する', async () => {
+    // 何を検証するか: 150秒到達でAPI追加送信せずトップ復帰して固定文言を表示すること
     const baseTime = 1_700_000_000_000
     let currentTime = baseTime
     dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => currentTime)
@@ -89,7 +89,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
       expect(getPostSpy).toHaveBeenCalledTimes(1)
     })
 
-    currentTime = baseTime + 60_000
+    currentTime = baseTime + 150_000
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 3200))

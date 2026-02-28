@@ -17,7 +17,9 @@ beforeEach(() => {
   window.history.replaceState({}, '', ROOT_PATH)
 
   consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation((message, ...rest) => {
-    const normalizedMessage = typeof message === 'string' ? message : String(message ?? '')
+    const normalizedMessage = [message, ...rest]
+      .map((value) => (typeof value === 'string' ? value : String(value ?? '')))
+      .join(' ')
 
     if (SUPPRESSED_ERROR_MESSAGES.some((pattern) => normalizedMessage.includes(pattern))) {
       return

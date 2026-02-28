@@ -25,8 +25,31 @@ dynamodb_is_healthy() {
   curl -sS --max-time 3 "${DYNAMODB_ENDPOINT}" > /dev/null 2>&1
 }
 
+# backendの古いテストプロセスを停止
+#
+# 共有のテスト用DynamoDBに対して複数のrspec/rails runnerが同時接続すると、
+# StaleObjectErrorやcleanupタイムアウトの原因になるため、開始前に掃除する。
+cleanup_backend_test_processes() {
+  echo "🧹 backendテスト残骸プロセスを確認中..."
+
+  local pids
+  pids=$(ps -ef | grep -E 'bundle exec rspec|bin/rails runner|rails runner' | grep -v grep | awk '{print $2}')
+
+  if [ -z "$pids" ]; then
+    echo "   ✅ 競合プロセスはありません"
+    return
+  fi
+
+  echo "   ⚠️  既存のbackendテスト系プロセスを停止します: ${pids}"
+  pkill -f 'bundle exec rspec|bin/rails runner|rails runner' 2>/dev/null || true
+  sleep 1
+}
+
 # backendディレクトリへ移動
 cd backend
+
+# 0. backendテスト残骸の掃除
+cleanup_backend_test_processes
 
 # 1. 静的解析
 echo "🔍 Running Static Analysis..."
@@ -73,7 +96,7 @@ if ! dynamodb_is_healthy; then
     if docker ps -a --format '{{.Names}}' | grep -q "^${DYNAMODB_CONTAINER_NAME}$"; then
       docker start "${DYNAMODB_CONTAINER_NAME}"
     else
-      docker run -d --name "${DYNAMODB_CONTAINER_NAME}" -p 8000:8000 amazon/dynamodb-local:latest -jar DynamoDBLocal.jar -inMemory -sharedDb
+      docker run -d --name "${DYNAMODB_CONTAINER_NAME}" -p 8002:8000 amazon/dynamodb-local:latest -jar DynamoDBLocal.jar -inMemory -sharedDb
     fi
   fi
 

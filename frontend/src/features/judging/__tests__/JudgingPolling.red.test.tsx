@@ -127,7 +127,7 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     })
   })
 
-  it('GET /api/posts/:id が500でも60秒枠内は再試行を継続する', async () => {
+  it('GET /api/posts/:id が500でも150秒枠内は再試行を継続する', async () => {
     // 何を検証するか: サーバーエラー時に1回で停止せず次周期で再試行すること
     mswServer.use(
       http.get('/api/posts/:id', () => {
