@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe OgpGeneratorService, type: :service, dynamodb: false do
+RSpec.describe OgpGeneratorService do
   include OgpTestHelpers
 
   describe 'E20 RED: 定数整理' do
