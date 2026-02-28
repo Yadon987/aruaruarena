@@ -7,11 +7,6 @@ module OgpTestHelpers
     @mock_base_image ||= double('MiniMagick::Image')
   end
 
-  # 何を検証するか: アイコン画像のモックオブジェクトを生成する
-  def mock_icon_image
-    @mock_icon_image ||= double('MiniMagick::Image (icon)')
-  end
-
   # 何を検証するか: 描画コマンドのモックオブジェクトを生成する
   def mock_draw
     @mock_draw ||= double('MiniMagick::CommandBuilder')

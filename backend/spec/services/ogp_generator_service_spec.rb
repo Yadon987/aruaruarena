@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe OgpGeneratorService, type: :service, dynamodb: false do
+RSpec.describe OgpGeneratorService, dynamodb: false do
   include OgpTestHelpers
 
   describe 'E20 RED: 定数整理' do
@@ -69,7 +69,6 @@ RSpec.describe OgpGeneratorService, type: :service, dynamodb: false do
 
     before do
       allow(Post).to receive(:find).with('post-id').and_return(post)
-      allow(post).to receive(:judgments).and_return([])
 
       setup_image_mocks
       setup_draw_mocks
@@ -88,14 +87,6 @@ RSpec.describe OgpGeneratorService, type: :service, dynamodb: false do
 
     # 何を検証するか: 審査員結果が存在しても描画処理はニックネーム・本文・スコア・順位の4回だけで完結すること
     it '審査員結果が存在してもdraw_textは4回だけ呼ばれること' do
-      allow(post).to receive(:judgments).and_return(
-        [
-          instance_double(Judgment, succeeded: true, persona: 'hiroyuki', total_score: 80, comment: 'コメント'),
-          instance_double(Judgment, succeeded: true, persona: 'dewi', total_score: 81, comment: 'コメント'),
-          instance_double(Judgment, succeeded: true, persona: 'nakao', total_score: 82, comment: 'コメント')
-        ]
-      )
-
       redraw_service = described_class.new('post-id')
       expect(redraw_service).to receive(:draw_text).exactly(4).times.and_call_original
 
@@ -113,11 +104,35 @@ RSpec.describe OgpGeneratorService, type: :service, dynamodb: false do
       service.execute
     end
 
+    # 何を検証するか: average_score=nilでも0.0点でフォールバックして描画すること
+    it 'average_scoreがnilのときは0.0点が描画されること' do
+      allow(post).to receive(:average_score).and_return(nil)
+      allow(service).to receive(:draw_text).and_call_original
+      expect(service).to receive(:draw_text)
+        .with(anything, '0.0点', described_class::FONT_SIZES[:score], described_class::TEXT_COLORS[:score],
+              described_class::LAYOUT[:score][:x], described_class::LAYOUT[:score][:y], described_class::FONT_BOLD_PATH)
+        .and_call_original
+
+      service.execute
+    end
+
     # 何を検証するか: ランキング1位の投稿で順位表示が第1位として描画されること
     it 'ランキング1位では第1位が描画されること' do
       allow(service).to receive(:draw_text).and_call_original
       expect(service).to receive(:draw_text)
         .with(anything, '第1位', described_class::FONT_SIZES[:rank], described_class::TEXT_COLORS[:secondary],
+              described_class::LAYOUT[:rank][:x], described_class::LAYOUT[:rank][:y], described_class::FONT_PATH)
+        .and_call_original
+
+      service.execute
+    end
+
+    # 何を検証するか: ランキング計算に失敗しても圏外表示でOGP生成を継続すること
+    it 'calculate_rank失敗時は圏外が描画されること' do
+      allow(post).to receive(:calculate_rank).and_raise(StandardError, 'rank error')
+      allow(service).to receive(:draw_text).and_call_original
+      expect(service).to receive(:draw_text)
+        .with(anything, '圏外', described_class::FONT_SIZES[:rank], described_class::TEXT_COLORS[:secondary],
               described_class::LAYOUT[:rank][:x], described_class::LAYOUT[:rank][:y], described_class::FONT_PATH)
         .and_call_original
 
@@ -149,6 +164,44 @@ RSpec.describe OgpGeneratorService, type: :service, dynamodb: false do
       allow(Post).to receive(:find).with('failed-id').and_return(post)
 
       expect(described_class.call('failed-id')).to be_nil
+    end
+
+    # 何を検証するか: ベース画像が欠けている場合はnilを返して処理を中断すること
+    it 'ベース画像が存在しない場合はnilを返すこと' do
+      post = instance_double(
+        Post,
+        id: 'post-id',
+        status: Post::STATUS_SCORED,
+        nickname: '太郎',
+        body: 'あるある本文',
+        average_score: 85.5,
+        calculate_rank: 1
+      )
+      allow(Post).to receive(:find).with('post-id').and_return(post)
+      service = described_class.new('post-id')
+      setup_file_exist_mocks
+      allow(File).to receive(:exist?).with(described_class::BASE_IMAGE_PATH.to_s).and_return(false)
+
+      expect(service.execute).to be_nil
+    end
+
+    # 何を検証するか: フォントファイルが欠けている場合はnilを返して処理を中断すること
+    it 'フォントファイルが存在しない場合はnilを返すこと' do
+      post = instance_double(
+        Post,
+        id: 'post-id',
+        status: Post::STATUS_SCORED,
+        nickname: '太郎',
+        body: 'あるある本文',
+        average_score: 85.5,
+        calculate_rank: 1
+      )
+      allow(Post).to receive(:find).with('post-id').and_return(post)
+      service = described_class.new('post-id')
+      setup_file_exist_mocks
+      allow(File).to receive(:exist?).with(described_class::FONT_PATH.to_s).and_return(false)
+
+      expect(service.execute).to be_nil
     end
   end
 end

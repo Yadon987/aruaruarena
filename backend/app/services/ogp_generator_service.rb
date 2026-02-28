@@ -6,10 +6,15 @@ class OgpGeneratorService
   IMAGE_WIDTH = 1200
   IMAGE_HEIGHT = 630
   IMAGE_FORMAT = 'PNG'
+  # 仕様書で定義されている表示上限。切り詰め自体は別Issueで扱う。
+  MAX_NICKNAME_LENGTH = 20
+  MAX_BODY_LENGTH = 50
+  SCORE_DEFAULT = 0
 
   BASE_IMAGE_PATH = Rails.root.join('app/assets/images/base_ogp.png')
   FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
   FONT_BOLD_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
+  REQUIRED_FILES = [BASE_IMAGE_PATH, FONT_PATH, FONT_BOLD_PATH].freeze
 
   # 画像レイアウト定数
   LAYOUT = {
@@ -82,10 +87,7 @@ class OgpGeneratorService
 
   # 投稿が有効か判定する（存在確認とステータスチェック）
   def valid_post?
-    return false if @post.nil?
-    return false if @post.status != Post::STATUS_SCORED
-
-    true
+    @post.present? && @post.status == Post::STATUS_SCORED
   end
 
   # ベース画像を作成する（ファイル存在チェックを含む）
@@ -99,54 +101,23 @@ class OgpGeneratorService
   end
 
   # すべての必須ファイルが存在するか確認する
-  # rubocop:disable Metrics/MethodLength
   def ensure_resources_exist?
-    unless file_exists?(BASE_IMAGE_PATH)
-      log_error("Base image not found: #{BASE_IMAGE_PATH}")
-      return false
-    end
+    # ImageMagick実行前にfail-fastすることで、外部コマンド実行後の曖昧な失敗を避ける。
+    missing_file = REQUIRED_FILES.find { |path| !file_exists?(path) }
+    return true if missing_file.nil?
 
-    unless file_exists?(FONT_PATH)
-      log_error("Font file not found: #{FONT_PATH}")
-      return false
-    end
-
-    unless file_exists?(FONT_BOLD_PATH)
-      log_error("Font file not found: #{FONT_BOLD_PATH}")
-      return false
-    end
-
-    true
+    log_error("#{resource_label(missing_file)} not found: #{missing_file}")
+    false
   end
-  # rubocop:enable Metrics/MethodLength
 
   # 投稿情報（ニックネーム・本文・スコア・ランキング）を描画する
-  # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
   def draw_post_info(image)
-    # ランキング取得（例外ハンドリング付き）
-    rank = calculate_rank_with_fallback
-    rank_text = rank ? "#{TEXT_CONFIG[:rank_prefix]}#{rank}#{TEXT_CONFIG[:rank_suffix]}" : TEXT_CONFIG[:out_of_rank]
-
-    # スコア表示（nilなら0点、小数第1位まで表示）
-    score = @post.average_score || 0
-    score_text = "#{format('%.1f', score)}#{TEXT_CONFIG[:score_suffix]}"
-
-    # 文字列サニタイズ
-    nickname = sanitize_text(@post.nickname)
-    body = sanitize_text(@post.body)
-
-    # テキスト描画
-    draw_text(image, nickname, FONT_SIZES[:nickname], TEXT_COLORS[:primary], LAYOUT[:nickname][:x],
-              LAYOUT[:nickname][:y], FONT_BOLD_PATH)
-    draw_text(image, body, FONT_SIZES[:body], TEXT_COLORS[:primary], LAYOUT[:body][:x], LAYOUT[:body][:y], FONT_PATH)
-    draw_text(image, score_text, FONT_SIZES[:score], TEXT_COLORS[:score], LAYOUT[:score][:x], LAYOUT[:score][:y],
-              FONT_BOLD_PATH)
-    draw_text(image, rank_text, FONT_SIZES[:rank], TEXT_COLORS[:secondary], LAYOUT[:rank][:x], LAYOUT[:rank][:y],
-              FONT_PATH)
+    build_post_draw_items.each do |item|
+      draw_text(image, item[:text], item[:size], item[:color], item[:x], item[:y], item[:font])
+    end
   end
-  # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
-  # アイコンが有効か確認する（存在チェック）
+  # ファイル存在確認で例外が起きても生成フロー全体は落とさない
   def file_exists?(path)
     File.exist?(path.to_s)
   rescue StandardError => e
@@ -154,12 +125,55 @@ class OgpGeneratorService
     false
   end
 
-  # ランキング計算（例外ハンドリング付き）
+  # ランキング取得失敗時はOGP生成自体を止めず、「圏外」でフォールバックする。
   def calculate_rank_with_fallback
     @post.calculate_rank
   rescue StandardError => e
     log_warn("Failed to calculate rank: #{e.message}")
     nil
+  end
+
+  def build_rank_text(rank)
+    return TEXT_CONFIG[:out_of_rank] if rank.nil?
+
+    "#{TEXT_CONFIG[:rank_prefix]}#{rank}#{TEXT_CONFIG[:rank_suffix]}"
+  end
+
+  def build_score_text(score)
+    "#{format('%.1f', score || SCORE_DEFAULT)}#{TEXT_CONFIG[:score_suffix]}"
+  end
+
+  def build_post_draw_items
+    rank_text = build_rank_text(calculate_rank_with_fallback)
+    score_text = build_score_text(@post.average_score)
+
+    [
+      text_item(:nickname, sanitize_post_text(@post.nickname), TEXT_COLORS[:primary], FONT_BOLD_PATH),
+      text_item(:body, sanitize_post_text(@post.body), TEXT_COLORS[:primary], FONT_PATH),
+      text_item(:score, score_text, TEXT_COLORS[:score], FONT_BOLD_PATH),
+      text_item(:rank, rank_text, TEXT_COLORS[:secondary], FONT_PATH)
+    ]
+  end
+
+  def sanitize_post_text(text)
+    sanitize_text(text)
+  end
+
+  def text_item(layout_key, text, color, font_path)
+    {
+      text: text,
+      size: FONT_SIZES[layout_key],
+      color: color,
+      x: LAYOUT[layout_key][:x],
+      y: LAYOUT[layout_key][:y],
+      font: font_path
+    }
+  end
+
+  def resource_label(path)
+    return 'Base image' if path == BASE_IMAGE_PATH
+
+    'Font file'
   end
 
   # ログ出力メソッド
@@ -192,14 +206,14 @@ class OgpGeneratorService
     return '' if text.nil?
 
     # 0x00-0x08, 0x0B-0x0C, 0x0E-0x1F, 0x7F のみ削除（改行0x0A、タブ0x09は保持）
-    # さらに改行文字を半角スペースに置換（ImageMagick描画崩れ防止）
+    # ImageMagick描画前にサニタイズし、コマンド注入とレイアウト崩れの両方を防ぐ。
     text.gsub(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/, '').gsub(/[\r\n]+/, ' ')
   end
 
   def escape_single_quotes(text)
     # まずバックスラッシュをエスケープし、その後シングルクォートをエスケープ
     # ImageMagick MVGパーサーではバックスラッシュも特殊文字として扱われるため
-    text.gsub('\\', '\\\\').gsub("'", "\\'")
+    text.gsub('\\') { '\\\\' }.gsub("'") { "\\'" }
   end
 end
 # rubocop:enable Metrics/ClassLength

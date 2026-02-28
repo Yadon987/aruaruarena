@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe OgpGeneratorService do
+RSpec.describe OgpGeneratorService, dynamodb: false do
   include OgpTestHelpers
 
   describe 'E20 RED: 定数整理' do
@@ -69,7 +69,6 @@ RSpec.describe OgpGeneratorService do
 
     before do
       allow(Post).to receive(:find).with('post-id').and_return(post)
-      allow(post).to receive(:judgments).and_return([])
 
       setup_image_mocks
       setup_draw_mocks
@@ -88,14 +87,6 @@ RSpec.describe OgpGeneratorService do
 
     # 何を検証するか: 審査員結果が存在しても描画処理はニックネーム・本文・スコア・順位の4回だけで完結すること
     it '審査員結果が存在してもdraw_textは4回だけ呼ばれること' do
-      allow(post).to receive(:judgments).and_return(
-        [
-          instance_double(Judgment, succeeded: true, persona: 'hiroyuki', total_score: 80, comment: 'コメント'),
-          instance_double(Judgment, succeeded: true, persona: 'dewi', total_score: 81, comment: 'コメント'),
-          instance_double(Judgment, succeeded: true, persona: 'nakao', total_score: 82, comment: 'コメント')
-        ]
-      )
-
       redraw_service = described_class.new('post-id')
       expect(redraw_service).to receive(:draw_text).exactly(4).times.and_call_original
 
@@ -149,6 +140,76 @@ RSpec.describe OgpGeneratorService do
       allow(Post).to receive(:find).with('failed-id').and_return(post)
 
       expect(described_class.call('failed-id')).to be_nil
+    end
+  end
+
+  describe 'E20 REFACTOR: 補強テスト' do
+    let(:post) do
+      instance_double(
+        Post,
+        id: 'post-id',
+        status: Post::STATUS_SCORED,
+        nickname: "太郎\r\n次郎",
+        body: "本文\n続き",
+        average_score: nil,
+        calculate_rank: 1
+      )
+    end
+    let(:service) { described_class.new('post-id') }
+
+    before do
+      allow(Post).to receive(:find).with('post-id').and_return(post)
+      setup_image_mocks
+      setup_draw_mocks
+      setup_file_exist_mocks
+    end
+
+    # 何を検証するか: 改行コードの違いに関係なく描画前に半角スペースへ正規化されること
+    it 'sanitize_textがLFとCRLFを半角スペースへ置換すること' do
+      expect(service.send(:sanitize_text, "a\nb\r\nc")).to eq('a b c')
+    end
+
+    # 何を検証するか: ImageMagick向けのエスケープ処理がバックスラッシュとシングルクォートを維持すること
+    it 'escape_single_quotesがバックスラッシュとシングルクォートをエスケープすること' do
+      expect(service.send(:escape_single_quotes, "a'b")).to eq("a\\'b")
+      expect(service.send(:escape_single_quotes, 'a\\b')).to eq('a\\\\b')
+    end
+
+    # 何を検証するか: nilスコアでも0.0点表記で描画されること
+    it 'average_scoreがnilでも0.0点で描画されること' do
+      allow(service).to receive(:draw_text).and_call_original
+      expect(service).to receive(:draw_text)
+        .with(anything, '0.0点', described_class::FONT_SIZES[:score], described_class::TEXT_COLORS[:score],
+              described_class::LAYOUT[:score][:x], described_class::LAYOUT[:score][:y], described_class::FONT_BOLD_PATH)
+        .and_call_original
+
+      service.execute
+    end
+
+    # 何を検証するか: ランキング計算失敗時は圏外表記へフォールバックすること
+    it 'calculate_rank失敗時に圏外が描画されること' do
+      allow(post).to receive(:calculate_rank).and_raise(StandardError, 'rank error')
+      allow(service).to receive(:draw_text).and_call_original
+      expect(service).to receive(:draw_text)
+        .with(anything, '圏外', described_class::FONT_SIZES[:rank], described_class::TEXT_COLORS[:secondary],
+              described_class::LAYOUT[:rank][:x], described_class::LAYOUT[:rank][:y], described_class::FONT_PATH)
+        .and_call_original
+
+      service.execute
+    end
+
+    # 何を検証するか: scored以外の投稿やnil投稿は生成対象外のままであること
+    it 'valid_post相当のnilとステータスガードが維持されること' do
+      failed_post = instance_double(Post, status: Post::STATUS_FAILED)
+      judging_post = instance_double(Post, status: Post::STATUS_JUDGING)
+
+      allow(Post).to receive(:find).with('missing-id').and_raise(Dynamoid::Errors::RecordNotFound.new('not found'))
+      allow(Post).to receive(:find).with('failed-id').and_return(failed_post)
+      allow(Post).to receive(:find).with('judging-id').and_return(judging_post)
+
+      expect(described_class.call('missing-id')).to be_nil
+      expect(described_class.call('failed-id')).to be_nil
+      expect(described_class.call('judging-id')).to be_nil
     end
   end
 end
