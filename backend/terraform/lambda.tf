@@ -16,6 +16,7 @@ resource "aws_lambda_function" "app" {
       RAILS_LOG_LEVEL          = "info" # debug -> info to save CloudWatch costs
       SECRET_KEY_BASE          = var.secret_key_base
       DYNAMODB_TABLE_POSTS     = aws_dynamodb_table.posts.name
+      BASE_URL                 = var.base_url
     }
   }
 

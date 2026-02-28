@@ -33,3 +33,9 @@ variable "secret_key_base" {
   type        = string
   sensitive   = true
 }
+
+variable "base_url" {
+  description = "Base URL for the application (e.g. CloudFront URL)"
+  type        = string
+  default     = "https://dzt7yd2jha9r3.cloudfront.net"
+}
