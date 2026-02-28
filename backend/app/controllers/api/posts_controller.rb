@@ -2,6 +2,10 @@
 
 module Api
   class PostsController < ApplicationController
+    # Cache-Control設定
+    # 投稿詳細: 1時間（3600秒）- 投稿内容が変わる可能性を考慮して短期キャッシュ
+    CACHE_CONTROL_POST_DETAIL = 'max-age=3600, public'
+
     # エラーコード定数
     ERROR_CODE_VALIDATION = 'VALIDATION_ERROR'
     ERROR_CODE_BAD_REQUEST = 'BAD_REQUEST'
@@ -219,6 +223,7 @@ module Api
       base_url = ENV.fetch('BASE_URL', 'https://example.com')
       html = OgpMetaTagService.generate_html(post:, base_url:)
 
+      response.headers['Cache-Control'] = CACHE_CONTROL_POST_DETAIL
       render html: html.html_safe, content_type: 'text/html', status: :ok
     end
 
@@ -229,6 +234,7 @@ module Api
       judgments = Judgment.where(post_id: post.id).to_a
       rank = post.calculate_rank
       total_count = Post.total_scored_count
+      response.headers['Cache-Control'] = CACHE_CONTROL_POST_DETAIL
       render json: post.to_detail_json(judgments, rank, total_count)
     end
     # rubocop:enable Metrics/MethodLength

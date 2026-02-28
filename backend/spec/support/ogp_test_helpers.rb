@@ -79,6 +79,30 @@ module OgpTestHelpers
   def setup_calculate_rank_error(error_class = Aws::DynamoDB::Errors::ServiceError)
     allow_any_instance_of(Post).to receive(:calculate_rank).and_raise(error_class.new(nil, 'DB error'))
   end
+
+  # デフォルトOGP画像の存在確認モックを設定する
+  #
+  # @param exist [Boolean] 画像が存在するかどうか
+  # 何を検証するか: デフォルト画像のパスは定数として定義し、ユーザー入力を含まないためパストラバーサル攻撃のリスクはない
+  def setup_default_ogp_image_exist_mock(exist: true)
+    default_path = Rails.root.join('app/assets/images/default_ogp.png')
+    # 既存のsetup_file_exist_mocksを呼び出してから、デフォルト画像パスをオーバーライド
+    allow(File).to receive(:exist?).with(default_path.to_s).and_return(exist)
+  end
+
+  # MiniMagick::Errorを発生させるモックを設定する
+  #
+  # 何を検証するか: MiniMagick::Error発生時のフォールバック動作を検証
+  def setup_mini_magick_error_mock
+    allow(OgpGeneratorService).to receive(:call).and_raise(MiniMagick::Error.new('ImageMagick error'))
+  end
+
+  # OgpGeneratorServiceがnilを返すモックを設定する
+  #
+  # 何を検証するか: サービスがnilを返した場合のフォールバック動作を検証
+  def setup_ogp_service_nil_mock
+    allow(OgpGeneratorService).to receive(:call).and_return(nil)
+  end
 end
 
 RSpec.configure do |config|

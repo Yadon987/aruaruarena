@@ -123,21 +123,6 @@ RSpec.describe 'API::OGP Posts', type: :request do
         expect(json['code']).to eq('NOT_FOUND')
       end
 
-      # 何を検証するか: OgpGeneratorServiceがnilを返した場合、404を返すこと
-      it 'OgpGeneratorServiceがnilを返した場合、404を返すこと' do
-        post = create(:post, :scored, average_score: nil)
-
-        # サービスがnilを返すようにモック
-        allow(OgpGeneratorService).to receive(:call).and_return(nil)
-
-        get "/ogp/posts/#{post.id}.png"
-
-        expect(response).to have_http_status(:not_found)
-        json = response.parsed_body
-        expect(json['error']).to include('投稿が見つかりません')
-        expect(json['code']).to eq('NOT_FOUND')
-      end
-
       context '異常UUIDフォーマット' do
         # 何を検証するか: 短すぎるIDは404を返すこと
         it '短すぎるIDは404を返すこと' do
@@ -266,6 +251,90 @@ RSpec.describe 'API::OGP Posts', type: :request do
           get "/ogp/posts/#{nonexistent_id}.png"
           expect(response).to have_http_status(:not_found)
         end
+      end
+    end
+
+    context 'フォールバック機能' do
+      before do
+        create(:judgment, :hiroyuki, post_id: scored_post.id, succeeded: true)
+        setup_file_exist_mocks
+      end
+
+      # 何を検証するか: OgpGeneratorServiceがnilを返した場合、デフォルト画像が返ること
+      it 'OGP生成失敗時（nil返却）にデフォルト画像が返ること' do
+        setup_ogp_service_nil_mock
+        setup_default_ogp_image_exist_mock(exist: true)
+
+        get "/ogp/posts/#{scored_post.id}.png"
+
+        # RED: 現状は404を返すため失敗する
+        expect(response).to have_http_status(:ok)
+        expect(response.content_type).to eq('image/png')
+      end
+
+      # 何を検証するか: MiniMagick::Error発生時にデフォルト画像が返ること
+      it 'MiniMagick::Error発生時にデフォルト画像が返ること' do
+        setup_mini_magick_error_mock
+        setup_default_ogp_image_exist_mock(exist: true)
+
+        get "/ogp/posts/#{scored_post.id}.png"
+
+        # RED: 現状は例外がハンドルされないため失敗する
+        expect(response).to have_http_status(:ok)
+        expect(response.content_type).to eq('image/png')
+      end
+
+      # 何を検証するか: デフォルト画像のCache-Controlがmax-age=3600, publicであること
+      # 注: デフォルト画像は一時的な問題発生時に返されるため、問題解決後の再取得を促す観点から短期キャッシュとしている
+      it 'デフォルト画像返却時のCache-Controlがmax-age=3600, publicであること' do
+        setup_ogp_service_nil_mock
+        setup_default_ogp_image_exist_mock(exist: true)
+
+        get "/ogp/posts/#{scored_post.id}.png"
+
+        # RED: 現状はCache-Controlが設定されないため失敗する
+        cache_control = response.headers['Cache-Control']
+        expect(cache_control).to include('public')
+        expect(cache_control).to include('max-age=3600')
+      end
+
+      # 何を検証するか: デフォルト画像不存在時に500エラーが返ること
+      it 'デフォルト画像が存在しない場合、500エラーが返ること' do
+        setup_ogp_service_nil_mock
+        setup_default_ogp_image_exist_mock(exist: false)
+
+        get "/ogp/posts/#{scored_post.id}.png"
+
+        # RED: 現状は404を返すため失敗する
+        expect(response).to have_http_status(:internal_server_error)
+        json = response.parsed_body
+        expect(json['code']).to eq('INTERNAL_ERROR')
+      end
+
+      # 何を検証するか: フォールバック時に警告ログが出力されること
+      it 'フォールバック発生時にRails.logger.warnでログが出力されること' do
+        setup_ogp_service_nil_mock
+        setup_default_ogp_image_exist_mock(exist: true)
+
+        allow(Rails.logger).to receive(:warn)
+
+        get "/ogp/posts/#{scored_post.id}.png"
+
+        # RED: 現状はログ出力されないため失敗する
+        expect(Rails.logger).to have_received(:warn).with(/Serving default OGP image/)
+      end
+
+      # 何を検証するか: デフォルト画像不存在時にエラーログが出力されること
+      it 'デフォルト画像不存在時にRails.logger.errorでログが出力されること' do
+        setup_ogp_service_nil_mock
+        setup_default_ogp_image_exist_mock(exist: false)
+
+        allow(Rails.logger).to receive(:error)
+
+        get "/ogp/posts/#{scored_post.id}.png"
+
+        # RED: 現状はログ出力されないため失敗する
+        expect(Rails.logger).to have_received(:error).with(/Default OGP image not found/)
       end
     end
   end

@@ -290,15 +290,34 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
     end
 
     context 'キャッシュ制御' do
-      # Cache-Controlヘッダーの実装はRefactorフェーズで行うため、テストをスキップ
-      it 'クローラー向けHTMLに適切なCache-Controlヘッダーが設定されること' do
-        # 何を検証するか: クローラー向けHTMLに適切なキャッシュヘッダーが設定されること
-        skip 'Cache-Controlヘッダーの実装はRefactorフェーズで行う'
+      let(:cache_scored_post) do
+        create(:post, :scored, nickname: '太郎', body: 'テスト', average_score: 85.5)
       end
 
+      before do
+        create(:judgment, :hiroyuki, post_id: cache_scored_post.id, succeeded: true)
+      end
+
+      # 何を検証するか: クローラー向けHTMLにCache-Control: max-age=3600, publicが設定されること
+      it 'クローラー向けHTMLに適切なCache-Controlヘッダーが設定されること' do
+        get "/api/posts/#{cache_scored_post.id}", headers: { 'User-Agent' => 'Twitterbot/1.0' }
+
+        # RED: 現状はCache-Controlが設定されないため失敗する
+        expect(response).to have_http_status(:ok)
+        cache_control = response.headers['Cache-Control']
+        expect(cache_control).to include('public')
+        expect(cache_control).to include('max-age=3600')
+      end
+
+      # 何を検証するか: 通常ユーザー向けJSONにCache-Control: max-age=3600, publicが設定されること
       it '通常ユーザー向けJSONに適切なCache-Controlヘッダーが設定されること' do
-        # 何を検証するか: 通常ユーザー向けJSONに適切なキャッシュヘッダーが設定されること
-        skip 'Cache-Controlヘッダーの実装はRefactorフェーズで行う'
+        get "/api/posts/#{cache_scored_post.id}", headers: { 'User-Agent' => 'Mozilla/5.0' }
+
+        # RED: 現状はCache-Controlが設定されないため失敗する
+        expect(response).to have_http_status(:ok)
+        cache_control = response.headers['Cache-Control']
+        expect(cache_control).to include('public')
+        expect(cache_control).to include('max-age=3600')
       end
     end
   end
