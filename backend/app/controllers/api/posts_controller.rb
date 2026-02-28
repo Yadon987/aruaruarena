@@ -219,6 +219,7 @@ module Api
       base_url = ENV.fetch('BASE_URL', 'https://example.com')
       html = OgpMetaTagService.generate_html(post:, base_url:)
 
+      response.headers['Cache-Control'] = 'max-age=3600, public'
       render html: html.html_safe, content_type: 'text/html', status: :ok
     end
 
@@ -229,6 +230,7 @@ module Api
       judgments = Judgment.where(post_id: post.id).to_a
       rank = post.calculate_rank
       total_count = Post.total_scored_count
+      response.headers['Cache-Control'] = 'max-age=3600, public'
       render json: post.to_detail_json(judgments, rank, total_count)
     end
     # rubocop:enable Metrics/MethodLength
