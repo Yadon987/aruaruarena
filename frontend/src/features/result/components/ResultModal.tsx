@@ -34,6 +34,9 @@ const SHARE_TOP_RANK_THRESHOLD = 20
 const X_SHARE_BASE_URL = 'https://x.com/intent/tweet?text='
 const MESSAGE_REJUDGE_FAILED = '再審査に失敗しました。時間をおいて再度お試しください'
 
+// フロントエンドのベースURL（シェアURL生成用）
+const FRONTEND_BASE_URL = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'
+
 function resolveErrorMessage(errorCode: string | null): string {
   if (errorCode === ERROR_CODE_NOT_FOUND) {
     return MESSAGE_NOT_FOUND
@@ -57,9 +60,11 @@ function canShowShareButton(post: Post | null): boolean {
   )
 }
 
-function buildShareUrl(postBody: string): string {
-  const shareText = `${postBody} ${SHARE_HASHTAG}`
-  // 本文とハッシュタグに記号や空白が含まれても壊れないようURLエンコードする。
+function buildShareUrl(postBody: string, postId: string): string {
+  // OGP画像を表示するために投稿URLを含める
+  const postUrl = `${FRONTEND_BASE_URL}/posts/${postId}`
+  const shareText = `${postBody} ${SHARE_HASHTAG} ${postUrl}`
+  // 本文、ハッシュタグ、URLに記号や空白が含まれても壊れないようURLエンコードする。
   return `${X_SHARE_BASE_URL}${encodeURIComponent(shareText)}`
 }
 
@@ -116,7 +121,7 @@ export function ResultModal({
 
   const handleShare = () => {
     if (!post) return
-    const shareUrl = buildShareUrl(post.body)
+    const shareUrl = buildShareUrl(post.body, post.id)
     setIsSharePreviewVisible(true)
     window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
   }
