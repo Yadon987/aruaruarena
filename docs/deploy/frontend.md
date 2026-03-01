@@ -45,7 +45,7 @@ curl -i -A "Twitterbot/1.0" \
 - `content-type: text/html`
 - `og:title`, `og:image`, `twitter:card` を含む
 
-2. CloudFront 経由でクローラー向け OGP HTML が返ることを確認する
+1. CloudFront 経由でクローラー向け OGP HTML が返ることを確認する
 
 ```bash
 curl -i -A "Twitterbot/1.0" \
@@ -57,7 +57,7 @@ curl -i -A "Twitterbot/1.0" \
 - `content-type: text/html`
 - S3 の `index.html` ではなく、OGPメタタグ付きHTMLが返る
 
-3. OGP画像 URL が PNG を返すことを確認する
+1. OGP画像 URL が PNG を返すことを確認する
 
 ```bash
 curl -I \
@@ -69,7 +69,7 @@ curl -I \
 - `content-type: image/png`
 - `cache-control: max-age=604800, public`
 
-4. 問題発生時の切り分け
+1. 問題発生時の切り分け
 
 ```bash
 # CloudFront は失敗し、API Gateway は成功する場合
