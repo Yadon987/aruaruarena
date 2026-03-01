@@ -67,86 +67,70 @@ RSpec.describe 'API::OGP Posts', type: :request do
     end
 
     context '異常系' do
-      # 何を検証するか: judging状態の投稿は404を返すこと
-      it 'judging状態の投稿は404を返すこと' do
+      before do
+        setup_file_exist_mocks
+        setup_default_ogp_image_exist_mock(exist: true)
+      end
+
+      # 何を検証するか: judging状態の投稿はデフォルト画像を返すこと
+      # 注: CloudFrontのcustom_error_responseでindex.htmlが返るのを防ぐため、404ではなくデフォルト画像を返す
+      it 'judging状態の投稿はデフォルト画像を返すこと' do
         judging_post = create(:post, status: 'judging')
 
         get "/ogp/posts/#{judging_post.id}.png"
 
-        expect(response).to have_http_status(:not_found)
-        json = response.parsed_body
-        expect(json['error']).to include('投稿が見つかりません')
-        expect(json['code']).to eq('NOT_FOUND')
+        expect(response).to have_http_status(:ok)
+        expect(response.content_type).to eq('image/png')
       end
 
-      # 何を検証するか: failed状態の投稿は404を返すこと
-      it 'failed状態の投稿は404を返すこと' do
+      # 何を検証するか: failed状態の投稿はデフォルト画像を返すこと
+      it 'failed状態の投稿はデフォルト画像を返すこと' do
         failed_post = create(:post, status: 'failed')
 
         get "/ogp/posts/#{failed_post.id}.png"
 
-        expect(response).to have_http_status(:not_found)
-        json = response.parsed_body
-        expect(json['error']).to include('投稿が見つかりません')
-        expect(json['code']).to eq('NOT_FOUND')
+        expect(response).to have_http_status(:ok)
+        expect(response.content_type).to eq('image/png')
       end
 
-      # 何を検証するか: 存在しないIDは404を返すこと
-      it '存在しないIDは404を返すこと' do
+      # 何を検証するか: 存在しないIDはデフォルト画像を返すこと
+      it '存在しないIDはデフォルト画像を返すこと' do
         nonexistent_id = SecureRandom.uuid
 
         get "/ogp/posts/#{nonexistent_id}.png"
 
-        expect(response).to have_http_status(:not_found)
-        json = response.parsed_body
-        expect(json['error']).to include('投稿が見つかりません')
-        expect(json['code']).to eq('NOT_FOUND')
+        expect(response).to have_http_status(:ok)
+        expect(response.content_type).to eq('image/png')
       end
 
-      # 何を検証するか: 不正なUUID（例: invalid-id）は404を返すこと
-      it '不正なUUID（例: invalid-id）は404を返すこと' do
+      # 何を検証するか: 不正なUUID（例: invalid-id）はデフォルト画像を返すこと
+      it '不正なUUID（例: invalid-id）はデフォルト画像を返すこと' do
         get '/ogp/posts/invalid-id.png'
 
-        expect(response).to have_http_status(:not_found)
-        json = response.parsed_body
-        expect(json['error']).to include('投稿が見つかりません')
-        expect(json['code']).to eq('NOT_FOUND')
-      end
-
-      # 何を検証するか: エラーレスポンスが統一フォーマット { error: "...", code: "NOT_FOUND" } であること
-      it 'エラーレスポンスが統一フォーマット { error: "...", code: "NOT_FOUND" } であること' do
-        get '/ogp/posts/nonexistent.png'
-
-        json = response.parsed_body
-        expect(json).to have_key('error')
-        expect(json).to have_key('code')
-        expect(json['code']).to eq('NOT_FOUND')
+        expect(response).to have_http_status(:ok)
+        expect(response.content_type).to eq('image/png')
       end
 
       context '異常UUIDフォーマット' do
-        # 何を検証するか: 短すぎるIDは404を返すこと
-        it '短すぎるIDは404を返すこと' do
+        # 何を検証するか: 短すぎるIDはデフォルト画像を返すこと
+        it '短すぎるIDはデフォルト画像を返すこと' do
           get '/ogp/posts/a.png'
 
-          expect(response).to have_http_status(:not_found)
-          json = response.parsed_body
-          expect(json['error']).to include('投稿が見つかりません')
-          expect(json['code']).to eq('NOT_FOUND')
+          expect(response).to have_http_status(:ok)
+          expect(response.content_type).to eq('image/png')
         end
 
-        # 何を検証するか: 長すぎるIDは404を返すこと
-        it '長すぎるIDは404を返すこと' do
+        # 何を検証するか: 長すぎるIDはデフォルト画像を返すこと
+        it '長すぎるIDはデフォルト画像を返すこと' do
           long_id = 'a' * 100
           get "/ogp/posts/#{long_id}.png"
 
-          expect(response).to have_http_status(:not_found)
-          json = response.parsed_body
-          expect(json['error']).to include('投稿が見つかりません')
-          expect(json['code']).to eq('NOT_FOUND')
+          expect(response).to have_http_status(:ok)
+          expect(response.content_type).to eq('image/png')
         end
 
-        # 何を検証するか: SQLインジェクション風の文字列は404を返すこと
-        it 'SQLインジェクション風の文字列は404を返すこと' do
+        # 何を検証するか: SQLインジェクション風の文字列はデフォルト画像を返すこと
+        it 'SQLインジェクション風の文字列はデフォルト画像を返すこと' do
           injection_inputs = [
             'test-drop',
             "1'or1",
@@ -156,21 +140,17 @@ RSpec.describe 'API::OGP Posts', type: :request do
           injection_inputs.each do |input|
             get "/ogp/posts/#{input}.png"
 
-            expect(response).to have_http_status(:not_found)
-            json = response.parsed_body
-            expect(json['error']).to include('投稿が見つかりません')
-            expect(json['code']).to eq('NOT_FOUND')
+            expect(response).to have_http_status(:ok)
+            expect(response.content_type).to eq('image/png')
           end
         end
 
-        # 何を検証するか: ヌルバイトを含む文字列は404を返すこと
-        it 'ヌルバイトを含む文字列は404を返すこと' do
+        # 何を検証するか: ヌルバイトを含む文字列はデフォルト画像を返すこと
+        it 'ヌルバイトを含む文字列はデフォルト画像を返すこと' do
           get '/ogp/posts/test%00id.png'
 
-          expect(response).to have_http_status(:not_found)
-          json = response.parsed_body
-          expect(json['error']).to include('投稿が見つかりません')
-          expect(json['code']).to eq('NOT_FOUND')
+          expect(response).to have_http_status(:ok)
+          expect(response.content_type).to eq('image/png')
         end
       end
     end
@@ -242,14 +222,16 @@ RSpec.describe 'API::OGP Posts', type: :request do
         end
       end
 
-      # 何を検証するか: 存在しない投稿IDに対する同時リクエストが404を返すこと
-      it '存在しない投稿IDに対する同時リクエストが404を返すこと' do
+      # 何を検証するか: 存在しない投稿IDに対する同時リクエストがデフォルト画像を返すこと
+      it '存在しない投稿IDに対する同時リクエストがデフォルト画像を返すこと' do
+        setup_default_ogp_image_exist_mock(exist: true)
         nonexistent_id = SecureRandom.uuid
 
         # 10件のリクエストを送信（同時実行の模倣）
         10.times do
           get "/ogp/posts/#{nonexistent_id}.png"
-          expect(response).to have_http_status(:not_found)
+          expect(response).to have_http_status(:ok)
+          expect(response.content_type).to eq('image/png')
         end
       end
     end
