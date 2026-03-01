@@ -28,6 +28,7 @@ resource "aws_iam_role_policy" "dynamodb_access" {
       {
         Effect = "Allow"
         Action = [
+          "dynamodb:DescribeTable",
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
@@ -42,8 +43,18 @@ resource "aws_iam_role_policy" "dynamodb_access" {
           aws_dynamodb_table.judgments.arn,
           aws_dynamodb_table.rate_limits.arn,
           aws_dynamodb_table.duplicate_checks.arn,
-          "${aws_dynamodb_table.posts.arn}/index/*" # GSI（ranking-index）へのアクセス権限
+          "${aws_dynamodb_table.posts.arn}/index/*",
+          "${aws_dynamodb_table.judgments.arn}/index/*",
+          "${aws_dynamodb_table.rate_limits.arn}/index/*",
+          "${aws_dynamodb_table.duplicate_checks.arn}/index/*"
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:ListTables"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -107,4 +118,3 @@ resource "aws_iam_role_policy_attachment" "lambda_edge_ogp_basic" {
   role       = aws_iam_role.lambda_edge_ogp.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
-

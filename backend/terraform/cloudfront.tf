@@ -48,18 +48,10 @@ resource "aws_cloudfront_distribution" "frontend" {
   http_version        = "http2"
 
   origin {
-    domain_name              = "${var.frontend_s3_bucket_name}.s3.${var.aws_region}.amazonaws.com"
-    origin_id                = local.frontend_s3_origin_id
-    origin_access_control_id = var.frontend_origin_access_control_id
-
-    s3_origin_config {
-      origin_access_identity = ""
-    }
-  }
-
-  origin {
-    domain_name = local.api_gateway_domain
-    origin_id   = local.api_gateway_origin_id
+    domain_name         = local.api_gateway_domain
+    origin_id           = local.api_gateway_origin_id
+    connection_attempts = 3
+    connection_timeout  = 10
 
     custom_origin_config {
       http_port                = 80
@@ -68,6 +60,18 @@ resource "aws_cloudfront_distribution" "frontend" {
       origin_ssl_protocols     = ["TLSv1", "TLSv1.1", "TLSv1.2"]
       origin_read_timeout      = 30
       origin_keepalive_timeout = 5
+    }
+  }
+
+  origin {
+    domain_name              = "${var.frontend_s3_bucket_name}.s3.${var.aws_region}.amazonaws.com"
+    origin_id                = local.frontend_s3_origin_id
+    origin_access_control_id = var.frontend_origin_access_control_id
+    connection_attempts      = 3
+    connection_timeout       = 10
+
+    s3_origin_config {
+      origin_access_identity = ""
     }
   }
 
