@@ -28,6 +28,7 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
         expect(response.body).to include('<meta property="og:title"')
         expect(response.body).to include('<meta property="og:image"')
         expect(response.body).to include('<meta property="og:description"')
+        expect(response.body).to include('<meta name="twitter:image"')
       end
 
       it 'facebookexternalhitとしてリクエストした場合、OGPタグを含むHTMLが返ること' do
@@ -86,6 +87,13 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
         get "/api/posts/#{scored_post.id}", headers: { 'User-Agent' => 'Twitterbot/1.0' }
 
         expect(response.body).to include("/ogp/posts/#{scored_post.id}.png")
+      end
+
+      it 'twitter:imageに正しい画像パスが含まれること' do
+        # 何を検証するか: X向け画像パスが正しく設定されていること
+        get "/api/posts/#{scored_post.id}", headers: { 'User-Agent' => 'Twitterbot/1.0' }
+
+        expect(response.body).to include("name=\"twitter:image\" content=\"https://example.com/ogp/posts/#{scored_post.id}.png\"")
       end
 
       it '完全なHTML構造でレスポンスが返ること' do

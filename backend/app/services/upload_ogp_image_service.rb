@@ -5,7 +5,7 @@ class UploadOgpImageService
   OGP_S3_PREFIX = 'ogp/posts'
   CACHE_CONTROL = 'max-age=604800, public'
 
-  def initialize(post_id, s3_client: default_s3_client)
+  def initialize(post_id, s3_client:)
     @post = Post.find(post_id)
     @s3_client = s3_client
   rescue Dynamoid::Errors::RecordNotFound, Dynamoid::Errors::MissingHashKey
@@ -40,10 +40,24 @@ class UploadOgpImageService
 
   class << self
     def call(post_id, s3_client: nil)
-      new(post_id, s3_client: s3_client || Aws::S3::Client.new(region: aws_region)).execute
+      return false if bucket_name.empty?
+
+      new(post_id, s3_client: s3_client || build_s3_client).execute
     end
 
     private
+
+    def bucket_name
+      ENV.fetch('OGP_S3_BUCKET', '').strip
+    end
+
+    def build_s3_client
+      Aws::S3::Client.new(
+        region: aws_region,
+        http_open_timeout: 5,
+        http_read_timeout: 5
+      )
+    end
 
     def aws_region
       ENV.fetch('AWS_REGION', 'ap-northeast-1')
@@ -62,9 +76,5 @@ class UploadOgpImageService
 
   def object_key
     "#{OGP_S3_PREFIX}/#{@post.id}.png"
-  end
-
-  def default_s3_client
-    Aws::S3::Client.new(region: ENV.fetch('AWS_REGION', 'ap-northeast-1'))
   end
 end

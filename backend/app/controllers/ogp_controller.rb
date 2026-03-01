@@ -10,6 +10,7 @@ class OgpController < ApplicationController
   CACHE_CONTROL_OGP_IMAGE = 'max-age=604800, public'
   # デフォルト画像: 1時間（3600秒）- 問題解決後の再取得を促すため短期キャッシュ
   CACHE_CONTROL_DEFAULT_IMAGE = 'max-age=3600, public'
+  LAMBY_BASE64_HEADER = '1'
 
   # デフォルトOGP画像のパス
   DEFAULT_OGP_IMAGE_PATH = Rails.root.join('app/assets/images/default_ogp.png')
@@ -26,6 +27,7 @@ class OgpController < ApplicationController
 
     if image_data
       response.headers['Cache-Control'] = CACHE_CONTROL_OGP_IMAGE
+      response.headers['X-Lamby-Base64'] = LAMBY_BASE64_HEADER
       send_data image_data, type: 'image/png', disposition: 'inline'
     else
       # OGP生成がnilを返した場合のフォールバック
@@ -65,6 +67,7 @@ class OgpController < ApplicationController
 
     Rails.logger.warn("[OgpController] Serving default OGP image for post #{params[:id]}")
     response.headers['Cache-Control'] = CACHE_CONTROL_DEFAULT_IMAGE
+    response.headers['X-Lamby-Base64'] = LAMBY_BASE64_HEADER
     send_file DEFAULT_OGP_IMAGE_PATH, type: 'image/png', disposition: 'inline'
   end
 end

@@ -24,6 +24,18 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
     ENV.delete('OGP_S3_BUCKET')
   end
 
+  describe 'OGP_S3_BUCKET未設定時' do
+    before do
+      ENV.delete('OGP_S3_BUCKET')
+    end
+
+    it 'S3クライアントを生成せず早期リターンすること' do
+      expect(Aws::S3::Client).not_to receive(:new)
+
+      expect(described_class.call('post-id')).to be false
+    end
+  end
+
   it '生成したOGP画像をS3へ保存すること' do
     expect(described_class.call('post-id', s3_client:)).to be true
 
@@ -46,5 +58,17 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
 
     expect(described_class.call('post-id', s3_client:)).to be false
     expect(s3_client.api_requests).to be_empty
+  end
+
+  it 'S3クライアント生成時にHTTPタイムアウトを設定すること' do
+    allow(Aws::S3::Client).to receive(:new).and_return(s3_client)
+
+    described_class.call('post-id')
+
+    expect(Aws::S3::Client).to have_received(:new).with(
+      region: 'ap-northeast-1',
+      http_open_timeout: 5,
+      http_read_timeout: 5
+    )
   end
 end

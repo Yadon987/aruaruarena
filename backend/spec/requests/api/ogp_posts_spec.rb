@@ -39,6 +39,12 @@ RSpec.describe 'API::OGP Posts', type: :request do
         expect(cache_control).to include('max-age=604800')
       end
 
+      it 'Lamby向けbase64ヘッダーが設定されていること' do
+        get "/ogp/posts/#{scored_post.id}.png"
+
+        expect(response.headers['X-Lamby-Base64']).to eq('1')
+      end
+
       # 何を検証するか: 画像サイズが1200x630pxであること
       it '画像サイズが1200x630pxであること' do
         get "/ogp/posts/#{scored_post.id}.png"
@@ -278,6 +284,15 @@ RSpec.describe 'API::OGP Posts', type: :request do
         cache_control = response.headers['Cache-Control']
         expect(cache_control).to include('public')
         expect(cache_control).to include('max-age=3600')
+      end
+
+      it 'デフォルト画像返却時もLamby向けbase64ヘッダーが設定されること' do
+        setup_ogp_service_nil_mock
+        setup_default_ogp_image_exist_mock(exist: true)
+
+        get "/ogp/posts/#{scored_post.id}.png"
+
+        expect(response.headers['X-Lamby-Base64']).to eq('1')
       end
 
       # 何を検証するか: デフォルト画像不存在時に500エラーが返ること
