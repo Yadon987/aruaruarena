@@ -53,6 +53,9 @@ class OgpMetaTagService
         <meta property="og:site_name" content="#{SITE_NAME}">
         <meta property="og:locale" content="#{LOCALE}">
         <meta name="twitter:card" content="#{TWITTER_CARD}">
+        <meta name="twitter:title" content="#{escape_html(post.nickname || '')}さんのあるある投稿 | #{SITE_NAME}">
+        <meta name="twitter:description" content="#{escape_html(generate_description(body: post.body, average_score: post.average_score))}">
+        <meta name="twitter:image" content="#{normalized_base_url}/ogp/posts/#{post.id}.png">
       </head>
       <body></body>
       </html>

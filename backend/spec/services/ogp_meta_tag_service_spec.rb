@@ -164,6 +164,9 @@ RSpec.describe OgpMetaTagService, type: :service do
         expect(html).to include('<meta property="og:site_name"')
         expect(html).to include('<meta property="og:locale"')
         expect(html).to include('<meta name="twitter:card"')
+        expect(html).to include('<meta name="twitter:title"')
+        expect(html).to include('<meta name="twitter:description"')
+        expect(html).to include('<meta name="twitter:image"')
       end
 
       it '完全なHTML構造を持っていること' do
@@ -233,6 +236,13 @@ RSpec.describe OgpMetaTagService, type: :service do
         html = described_class.generate_html(post:, base_url:)
 
         expect(html).to include('name="twitter:card" content="summary_large_image"')
+      end
+
+      it 'twitter:imageに正しい画像パスが設定されること' do
+        # 何を検証するか: X向け画像パスが正しく設定されていること
+        html = described_class.generate_html(post:, base_url:)
+
+        expect(html).to include("name=\"twitter:image\" content=\"#{base_url}/ogp/posts/#{post.id}.png\"")
       end
     end
 
