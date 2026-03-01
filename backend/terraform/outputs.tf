@@ -12,7 +12,12 @@ output "lambda_function_arn" {
   description = "ARN of the Lambda function."
   value       = aws_lambda_function.app.arn
 }
-output "github_actions_role_arn" {
-  description = "ARN of the IAM role for GitHub Actions."
-  value       = aws_iam_role.github_actions.arn
+output "frontend_github_actions_role_arn" {
+  description = "ARN of the IAM role for GitHub Actions frontend deploy."
+  value       = aws_iam_role.frontend_github_actions.arn
+}
+
+output "backend_github_actions_role_arn" {
+  description = "ARN of the IAM role for GitHub Actions backend deploy."
+  value       = aws_iam_role.backend_github_actions.arn
 }

@@ -279,7 +279,7 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     fireEvent.click(rejudgeButton)
 
     await waitFor(() => {
-      expect(rejudgeSpy).toHaveBeenCalledWith('rejudge-post-id')
+      expect(rejudgeSpy).toHaveBeenCalledWith('rejudge-post-id', ['hiroyuki', 'dewi', 'nakao'])
     })
     expect(rejudgeSpy).toHaveBeenCalledTimes(1)
   })

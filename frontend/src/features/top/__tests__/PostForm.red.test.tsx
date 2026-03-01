@@ -44,6 +44,30 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     })
   })
 
+  it('failed応答時は成功メッセージを表示せず結果モーダルを開く', async () => {
+    // 何を検証するか: failed応答では成功文言を出さず結果モーダルへ遷移すること
+    vi.mocked(api.posts.create).mockResolvedValue({ id: 'post-failed-1', status: 'failed' })
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'post-failed-1',
+      nickname: 'てすと太郎',
+      body: 'あるあるネタです',
+      status: 'failed',
+      created_at: '2026-03-01T00:00:00Z',
+      judgments: [],
+    })
+
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: 'てすと太郎' } })
+    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: 'あるあるネタです' } })
+    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+    })
+    expect(screen.queryByText('投稿を受け付けました')).not.toBeInTheDocument()
+  })
+
   it('ニックネーム未入力時はAPIを呼ばずエラー表示する', () => {
     // 何を検証するか: 必須入力バリデーションで未入力を拒否すること
     render(<App />)

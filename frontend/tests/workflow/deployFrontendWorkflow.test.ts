@@ -77,16 +77,31 @@ describe('E14-01: deploy-frontend workflow', () => {
     expect(runScript).toContain('MISSING_DEPLOY_VARS=')
   })
 
+  // 何を検証するか: 手動デプロイは main / feature ブランチに限定し、IAM失敗前に理由を返すこと
+  it('デプロイブランチの検証ステップが定義される', () => {
+    const workflow = readWorkflow()
+    const validateStep = getWorkflowStep(workflow, STEP_NAMES.validateDeployBranch)
+    expect(validateStep).toBeDefined()
+    const runScript = String(validateStep?.run ?? '')
+
+    expect(runScript).toContain('refs/heads/main|refs/heads/feature/*')
+    expect(runScript).toContain('Unsupported deploy ref')
+    expect(runScript).toContain('workflow_dispatch は main または feature/* ブランチから実行してください')
+  })
+
   // 何を検証するか: AWS認証確認とデプロイ対象検証のステップが存在すること
   it('事前検証ステップが定義される', () => {
     const workflow = readWorkflow()
     const steps = getWorkflowSteps(workflow)
+    const branchIdx = steps.findIndex((step) => step.name === STEP_NAMES.validateDeployBranch)
     const configureIdx = steps.findIndex((step) => step.name === STEP_NAMES.configureAwsCredentials)
     const stsIdx = steps.findIndex((step) => step.name === STEP_NAMES.verifyAwsIdentity)
     const targetIdx = steps.findIndex((step) => step.name === STEP_NAMES.validateDeployTargets)
+    expect(branchIdx).toBeGreaterThanOrEqual(0)
     expect(configureIdx).toBeGreaterThanOrEqual(0)
     expect(stsIdx).toBeGreaterThanOrEqual(0)
     expect(targetIdx).toBeGreaterThanOrEqual(0)
+    expect(branchIdx).toBeLessThan(configureIdx)
     expect(configureIdx).toBeLessThan(stsIdx)
     expect(stsIdx).toBeLessThan(targetIdx)
   })

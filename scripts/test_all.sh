@@ -18,8 +18,12 @@ echo "----------------------------------------"
 
 # タイムアウト付きDynamoDBヘルスチェック
 dynamodb_is_healthy() {
-  # DynamoDB Localは GET / に対して 400 を返すため、HTTPステータスではなく疎通で判定する。
-  curl -sS --max-time 3 "${DYNAMODB_ENDPOINT}" > /dev/null 2>&1
+  # DynamoDB Localは GET / に対して認証エラーJSONを返すため、
+  # その応答を確認して疎通を判定する。
+  local response
+  response=$(curl -s --max-time 3 "${DYNAMODB_ENDPOINT}" 2>&1)
+  # 認証エラーメッセージまたは空でない応答があれば成功
+  [[ -n "$response" && ("$response" == *"MissingAuthenticationToken"* || "$response" == *"__type"* || "$response" == *"com.amazon"* || "$response" == *"healthy"*) ]]
 }
 
 # backendの古いテストプロセスを停止
@@ -98,14 +102,14 @@ if ! dynamodb_is_healthy; then
   fi
 
   echo "⏳ DynamoDB Localの起動を待機中..."
-  sleep 3
+  sleep 5
 
   count=0
   until dynamodb_is_healthy; do
-    echo "   ...waiting for DynamoDB Local ($count/5)"
+    echo "   ...waiting for DynamoDB Local ($count/10)"
     sleep 1
     count=$((count+1))
-    if [ $count -ge 5 ]; then
+    if [ $count -ge 10 ]; then
       echo "🚨 DynamoDB Localの起動に失敗しました"
       exit 1
     fi
@@ -146,6 +150,13 @@ fi
 
 echo ""
 echo "backend tests finished."
+echo "----------------------------------------"
+
+echo "🖼️ Running OGP Smoke Check..."
+echo "----------------------------------------"
+cd ..
+bash scripts/check_ogp_docker.sh
+cd backend
 echo "----------------------------------------"
 
 # 4. Frontendテスト実行

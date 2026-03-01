@@ -177,19 +177,15 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    get: (id: string, options?: RequestInit & { timeout?: number }) => {
-      const headers = new Headers(options?.headers)
-      headers.set('Cache-Control', 'no-cache')
-
-      return request<GetPostResponse>(`/posts/${id}`, {
+    get: (id: string, options?: RequestInit & { timeout?: number }) =>
+      request<GetPostResponse>(`/posts/${id}`, {
         ...options,
-        headers,
         cache: 'no-store',
-      })
-    },
-    rejudge: (id: string) =>
+      }),
+    rejudge: (id: string, failedPersonas: string[]) =>
       request<CreatePostResponse>(`/posts/${id}/rejudge`, {
         method: 'POST',
+        body: JSON.stringify({ failed_personas: failedPersonas }),
       }),
   },
   rankings: {

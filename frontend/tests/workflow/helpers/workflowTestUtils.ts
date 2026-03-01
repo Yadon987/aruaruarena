@@ -16,6 +16,7 @@ export const STEP_NAMES = {
   installDependencies: 'Install dependencies',
   buildFrontend: 'Build frontend',
   validateDeployVariables: 'Validate deploy variables',
+  validateDeployBranch: 'Validate deploy branch',
   configureAwsCredentials: 'Configure AWS credentials',
   verifyAwsIdentity: 'Verify AWS identity',
   validateDeployTargets: 'Validate deploy targets',

@@ -11,9 +11,17 @@
 - Variable: `S3_BUCKET_FRONTEND`（`Secret` フォールバック可）
 - Variable: `CLOUDFRONT_DISTRIBUTION_ID`（`Secret` フォールバック可）
 
+## 実行可能ブランチ
+
+- `push`: `main` のみ
+- `workflow_dispatch`: `main` または `feature/*`
+
+`workflow_dispatch` を `main` / `feature/*` 以外から実行すると、AWS 認証前の `Validate deploy branch` ステップで停止する。
+
 ## 運用前チェック（最小）
 
 - `AWS_ROLE_ARN_FRONTEND_DEPLOY`、`AWS_REGION`、`S3_BUCKET_FRONTEND`、`CLOUDFRONT_DISTRIBUTION_ID` が設定済みであること
+- `AWS_ROLE_ARN_FRONTEND_DEPLOY` は `github-actions-frontend-deploy-role` を指すこと
 - `workflow_dispatch` で手動実行できること
 - CloudFront の `Default root object` が `index.html` であること
 - CloudFront の `Custom error response` で `403` と `404` を `200 /index.html` にフォールバックしていること（SPAルーティング向け。S3プライベートバケット運用では404相当が403になるため両方必要）

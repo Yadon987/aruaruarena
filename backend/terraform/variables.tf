@@ -60,3 +60,33 @@ variable "groq_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "github_repository" {
+  description = "GitHub repository slug allowed to assume deploy roles"
+  type        = string
+  default     = "Yadon987/aruaruarena"
+}
+
+variable "frontend_deploy_ref_patterns" {
+  description = "Git refs allowed to assume the frontend deploy role"
+  type        = list(string)
+  default     = ["refs/heads/main", "refs/heads/feature/*"]
+}
+
+variable "backend_deploy_ref_patterns" {
+  description = "Git refs allowed to assume the backend deploy role"
+  type        = list(string)
+  default     = ["refs/heads/main"]
+}
+
+variable "frontend_s3_bucket_name" {
+  description = "S3 bucket name used by the frontend deploy workflow"
+  type        = string
+  default     = "aruaruarena-frontend-854971405730-ap-northeast-1"
+}
+
+variable "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID used by the frontend deploy workflow"
+  type        = string
+  default     = "E3IADTV7B5GN3Q"
+}
