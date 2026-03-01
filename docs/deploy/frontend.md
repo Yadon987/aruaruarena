@@ -32,12 +32,13 @@
 ## OGP本番確認
 
 本番で OGP が正しく配信されるかは、API Gateway 直叩きと CloudFront 経由の両方を確認する。
+実行前に `${API_GATEWAY_ENDPOINT}` と `${CLOUDFRONT_DOMAIN}` を対象環境の実値に置き換えること。
 
 1. API Gateway がクローラー向け OGP HTML を返すことを確認する
 
 ```bash
 curl -i -A "Twitterbot/1.0" \
-  https://zzi7p6lmn5.execute-api.ap-northeast-1.amazonaws.com/api/posts/<POST_ID>
+  https://${API_GATEWAY_ENDPOINT}/api/posts/<POST_ID>
 ```
 
 期待値:
@@ -49,7 +50,7 @@ curl -i -A "Twitterbot/1.0" \
 
 ```bash
 curl -i -A "Twitterbot/1.0" \
-  https://dzt7yd2jha9r3.cloudfront.net/posts/<POST_ID>
+  https://${CLOUDFRONT_DOMAIN}/posts/<POST_ID>
 ```
 
 期待値:
@@ -61,7 +62,7 @@ curl -i -A "Twitterbot/1.0" \
 
 ```bash
 curl -I \
-  https://dzt7yd2jha9r3.cloudfront.net/ogp/posts/<POST_ID>.png
+  https://${CLOUDFRONT_DOMAIN}/ogp/posts/<POST_ID>.png
 ```
 
 期待値:
