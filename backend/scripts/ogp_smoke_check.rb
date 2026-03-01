@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
 require 'action_dispatch/testing/integration'
-require 'digest'
 require 'json'
 require 'securerandom'
 
-# scored投稿を作成し、OGPエンドポイントから動的画像が返ることを確認する。
+# scored投稿を作成し、事前生成サービスがS3へPNGを保存できることを確認する。
 post = nil
 
 begin
@@ -21,31 +20,32 @@ begin
   post.score_key = post.generate_score_key
   post.save!
 
-  session = ActionDispatch::Integration::Session.new(Rails.application)
-  session.get("/ogp/posts/#{post.id}.png")
+  s3_client = Aws::S3::Client.new(
+    region: 'ap-northeast-1',
+    stub_responses: true
+  )
+  ENV['OGP_S3_BUCKET'] = 'ogp-smoke-test-bucket'
 
-  default_path = Rails.root.join('app/assets/images/default_ogp.png')
-  default_digest = Digest::SHA256.file(default_path).hexdigest
-  response_digest = Digest::SHA256.hexdigest(session.response.body)
-  generated_image = response_digest != default_digest
+  uploaded = UploadOgpImageService.call(post.id, s3_client:)
+  put_request = s3_client.api_requests.find { |request| request[:operation_name] == :put_object }
 
   result = {
     post_id: post.id,
-    status: session.response.status,
-    content_type: session.response.media_type,
-    cache_control: session.response.headers['Cache-Control'],
-    content_length: session.response.body.bytesize,
-    generated_image: generated_image,
-    response_sha256: response_digest,
-    default_sha256: default_digest
+    uploaded: uploaded,
+    bucket: put_request&.dig(:params, :bucket),
+    key: put_request&.dig(:params, :key),
+    content_type: put_request&.dig(:params, :content_type),
+    cache_control: put_request&.dig(:params, :cache_control),
+    body_size: put_request&.dig(:params, :body)&.bytesize
   }
 
   puts JSON.pretty_generate(result)
 
-  unless session.response.status == 200 &&
-         session.response.media_type == 'image/png' &&
-         generated_image
-    warn '[OGP Smoke Check] OGP画像の動的生成に失敗しました'
+  unless uploaded &&
+         put_request&.dig(:params, :bucket) == 'ogp-smoke-test-bucket' &&
+         put_request&.dig(:params, :key) == "ogp/posts/#{post.id}.png" &&
+         put_request&.dig(:params, :content_type) == 'image/png'
+    warn '[OGP Smoke Check] OGP画像の事前生成アップロードに失敗しました'
     exit 1
   end
 ensure

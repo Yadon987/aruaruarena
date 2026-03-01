@@ -95,7 +95,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   ordered_cache_behavior {
     path_pattern           = "/ogp/*"
-    target_origin_id       = local.api_gateway_origin_id
+    target_origin_id       = local.frontend_s3_origin_id
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
     allowed_methods        = ["GET", "HEAD"]

@@ -72,12 +72,14 @@ RSpec.describe JudgePostService do
         mock_adapter_judge(GeminiAdapter, success: true)
         mock_adapter_judge(DewiAdapter, success: true)
         mock_adapter_judge(OpenAiAdapter, success: true)
+        allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(true)
 
         service.execute
 
         post.reload
         expect(post.status).to eq('scored')
         expect(post.judges_count).to eq(3)
+        expect(UploadOgpImageService).to have_received(:call).with(post.id)
       end
 
       # 何を検証するか: 2人成功時にstatus: scoredになること
@@ -85,12 +87,14 @@ RSpec.describe JudgePostService do
         mock_adapter_judge(GeminiAdapter, success: true)
         mock_adapter_judge(DewiAdapter, success: true)
         mock_adapter_judge(OpenAiAdapter, success: false)
+        allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(true)
 
         service.execute
 
         post.reload
         expect(post.status).to eq('scored')
         expect(post.judges_count).to eq(2)
+        expect(UploadOgpImageService).to have_received(:call).with(post.id)
       end
 
       # 何を検証するか: 平均点が小数第1位に丸められること
@@ -108,6 +112,7 @@ RSpec.describe JudgePostService do
           create_success_response(scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
                                   comment: 'test')
         )
+        allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(true)
 
         service.execute
 
@@ -134,12 +139,14 @@ RSpec.describe JudgePostService do
         mock_adapter_judge(GeminiAdapter, success: false)
         mock_adapter_judge(DewiAdapter, success: false)
         mock_adapter_judge(OpenAiAdapter, success: false)
+        allow(UploadOgpImageService).to receive(:call)
 
         service.execute
 
         post.reload
         expect(post.status).to eq('failed')
         expect(post.judges_count).to eq(0)
+        expect(UploadOgpImageService).not_to have_received(:call)
       end
 
       # 何を検証するか: 1人成功時にstatus: failedになること
@@ -147,12 +154,14 @@ RSpec.describe JudgePostService do
         mock_adapter_judge(GeminiAdapter, success: true)
         mock_adapter_judge(DewiAdapter, success: false)
         mock_adapter_judge(OpenAiAdapter, success: false)
+        allow(UploadOgpImageService).to receive(:call)
 
         service.execute
 
         post.reload
         expect(post.status).to eq('failed')
         expect(post.judges_count).to eq(1)
+        expect(UploadOgpImageService).not_to have_received(:call)
       end
 
       # 何を検証するか: Postがnilの場合は何もしないこと

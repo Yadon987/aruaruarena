@@ -61,8 +61,7 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         status: Post::STATUS_SCORED,
         nickname: '太郎',
         body: 'あるある本文',
-        average_score: 85.5,
-        calculate_rank: 1
+        average_score: 85.5
       )
     end
     let(:service) { described_class.new('post-id') }
@@ -85,10 +84,10 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class.private_instance_methods(false)).not_to include(:draw_judgments)
     end
 
-    # 何を検証するか: 審査員結果が存在しても描画処理はニックネーム・本文・スコア・順位の4回だけで完結すること
-    it '審査員結果が存在してもdraw_textは4回だけ呼ばれること' do
+    # 何を検証するか: 描画処理はニックネーム・本文・スコアの3回だけで完結すること
+    it 'draw_textは3回だけ呼ばれること' do
       redraw_service = described_class.new('post-id')
-      expect(redraw_service).to receive(:draw_text).exactly(4).times.and_call_original
+      expect(redraw_service).to receive(:draw_text).exactly(3).times.and_call_original
 
       redraw_service.execute
     end
@@ -116,28 +115,6 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       service.execute
     end
 
-    # 何を検証するか: ランキング1位の投稿で順位表示が第1位として描画されること
-    it 'ランキング1位では第1位が描画されること' do
-      allow(service).to receive(:draw_text).and_call_original
-      expect(service).to receive(:draw_text)
-        .with(anything, '第1位', described_class::FONT_SIZES[:rank], described_class::TEXT_COLORS[:secondary],
-              described_class::LAYOUT[:rank][:x], described_class::LAYOUT[:rank][:y], described_class::FONT_PATH)
-        .and_call_original
-
-      service.execute
-    end
-
-    # 何を検証するか: ランキング計算に失敗しても圏外表示でOGP生成を継続すること
-    it 'calculate_rank失敗時は圏外が描画されること' do
-      allow(post).to receive(:calculate_rank).and_raise(StandardError, 'rank error')
-      allow(service).to receive(:draw_text).and_call_original
-      expect(service).to receive(:draw_text)
-        .with(anything, '圏外', described_class::FONT_SIZES[:rank], described_class::TEXT_COLORS[:secondary],
-              described_class::LAYOUT[:rank][:x], described_class::LAYOUT[:rank][:y], described_class::FONT_PATH)
-        .and_call_original
-
-      service.execute
-    end
   end
 
   describe 'sanitize_text' do
@@ -200,8 +177,7 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         status: Post::STATUS_SCORED,
         nickname: '太郎',
         body: 'あるある本文',
-        average_score: 85.5,
-        calculate_rank: 1
+        average_score: 85.5
       )
       allow(Post).to receive(:find).with('post-id').and_return(post)
       service = described_class.new('post-id')
@@ -219,8 +195,7 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         status: Post::STATUS_SCORED,
         nickname: '太郎',
         body: 'あるある本文',
-        average_score: 85.5,
-        calculate_rank: 1
+        average_score: 85.5
       )
       allow(Post).to receive(:find).with('post-id').and_return(post)
       service = described_class.new('post-id')

@@ -21,16 +21,14 @@ class OgpGeneratorService
     # テキスト描画位置
     nickname: { x: 100, y: 100 },
     body: { x: 100, y: 160 },
-    score: { x: 900, y: 100 },
-    rank: { x: 900, y: 180 }
+    score: { x: 900, y: 100 }
   }.freeze
 
   # フォントサイズ定数
   FONT_SIZES = {
     nickname: 48,
     body: 36,
-    score: 72,
-    rank: 36
+    score: 72
   }.freeze
 
   # テキスト色定数
@@ -43,9 +41,6 @@ class OgpGeneratorService
   # テキスト定数
   TEXT_CONFIG = {
     # テキストフォーマット
-    rank_prefix: '第',
-    rank_suffix: '位',
-    out_of_rank: '圏外',
     score_suffix: '点'
   }.freeze
 
@@ -125,33 +120,17 @@ class OgpGeneratorService
     false
   end
 
-  # ランキング取得失敗時はOGP生成自体を止めず、「圏外」でフォールバックする。
-  def calculate_rank_with_fallback
-    @post.calculate_rank
-  rescue StandardError => e
-    log_warn("Failed to calculate rank: #{e.message}")
-    nil
-  end
-
-  def build_rank_text(rank)
-    return TEXT_CONFIG[:out_of_rank] if rank.nil?
-
-    "#{TEXT_CONFIG[:rank_prefix]}#{rank}#{TEXT_CONFIG[:rank_suffix]}"
-  end
-
   def build_score_text(score)
     "#{format('%.1f', score || SCORE_DEFAULT)}#{TEXT_CONFIG[:score_suffix]}"
   end
 
   def build_post_draw_items
-    rank_text = build_rank_text(calculate_rank_with_fallback)
     score_text = build_score_text(@post.average_score)
 
     [
       text_item(:nickname, sanitize_post_text(@post.nickname), TEXT_COLORS[:primary], FONT_BOLD_PATH),
       text_item(:body, sanitize_post_text(@post.body), TEXT_COLORS[:primary], FONT_PATH),
-      text_item(:score, score_text, TEXT_COLORS[:score], FONT_BOLD_PATH),
-      text_item(:rank, rank_text, TEXT_COLORS[:secondary], FONT_PATH)
+      text_item(:score, score_text, TEXT_COLORS[:score], FONT_BOLD_PATH)
     ]
   end
 
@@ -183,10 +162,6 @@ class OgpGeneratorService
 
   def log_error(message)
     Rails.logger.error("[OgpGeneratorService] #{message}")
-  end
-
-  def log_warn(message)
-    Rails.logger.warn("[OgpGeneratorService] #{message}")
   end
 
   # rubocop:disable Metrics/ParameterLists, Naming/MethodParameterName

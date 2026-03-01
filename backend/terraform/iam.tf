@@ -84,6 +84,24 @@ resource "aws_iam_role_policy" "sqs_access" {
   })
 }
 
+resource "aws_iam_role_policy" "s3_ogp_access" {
+  name = "s3_ogp_access"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject"
+        ]
+        Resource = "arn:aws:s3:::${var.frontend_s3_bucket_name}/ogp/*"
+      }
+    ]
+  })
+}
+
 # =============================================================================
 # Lambda@Edge用IAMロール（OGPメタタグ配信用）
 # =============================================================================
