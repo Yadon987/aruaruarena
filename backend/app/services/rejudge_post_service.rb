@@ -200,9 +200,18 @@ class RejudgePostService
       total = successful_judgments.sum(&:total_score)
       @post.average_score = (total.to_f / succeeded_count).round(ROUND_PRECISION)
       @post.update_status!(Post::STATUS_SCORED)
+      upload_ogp_image
     else
       @post.average_score = nil
       @post.update_status!(Post::STATUS_FAILED)
     end
+  end
+
+  def upload_ogp_image
+    return if UploadOgpImageService.call(@post.id)
+
+    Rails.logger.warn("[RejudgePostService] OGP画像の事前生成に失敗: post_id=#{@post.id}")
+  rescue StandardError => e
+    Rails.logger.warn("[RejudgePostService] OGP画像の事前生成で例外: post_id=#{@post.id} error=#{e.class} - #{e.message}")
   end
 end

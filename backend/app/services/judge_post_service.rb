@@ -232,6 +232,7 @@ class JudgePostService
     if succeeded_count >= 2
       calculate_average_score!
       @post.update_status!(:scored)
+      upload_ogp_image
       Rails.logger.info("[JudgePostService] 審査完了: status=scored, post_id=#{@post.id}, judges_count=#{succeeded_count}")
     else
       @post.update_status!(:failed)
@@ -251,5 +252,13 @@ class JudgePostService
   def skip_processed_post
     Rails.logger.info("[JudgePostService] スキップ(処理済み): post_id=#{@post.id}, status=#{@post.status}")
     nil
+  end
+
+  def upload_ogp_image
+    return if UploadOgpImageService.call(@post.id)
+
+    Rails.logger.warn("[JudgePostService] OGP画像の事前生成に失敗: post_id=#{@post.id}")
+  rescue StandardError => e
+    Rails.logger.warn("[JudgePostService] OGP画像の事前生成で例外: post_id=#{@post.id} error=#{e.class} - #{e.message}")
   end
 end

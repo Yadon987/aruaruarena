@@ -32,6 +32,7 @@
 ## OGP本番確認
 
 本番で OGP が正しく配信されるかは、API Gateway 直叩きと CloudFront 経由の両方を確認する。
+OGP画像は投稿が `scored` になった時点（および再審査成功時）で事前生成され、frontend 用 S3 バケットの `ogp/posts/` 配下から CloudFront 経由で配信される。
 実行前に `${API_GATEWAY_ENDPOINT}` と `${CLOUDFRONT_DOMAIN}` を対象環境の実値に置き換えること。
 
 1. API Gateway がクローラー向け OGP HTML を返すことを確認する
@@ -75,6 +76,12 @@ curl -I \
 ```bash
 # CloudFront は失敗し、API Gateway は成功する場合
 # Lambda@Edge 関連付け、origin request policy、User-Agent 転送を確認する
+
+# OGP画像だけ失敗する場合
+# 1. S3 に PNG が存在するか確認する
+# aws s3 ls s3://${S3_BUCKET_FRONTEND}/ogp/posts/<POST_ID>.png
+# 2. 事前生成ログを確認する（CloudWatch Logs の /aws/lambda/<LAMBDA_NAME> を参照）
+# 投稿審査（scored移行）または再審査時の UploadOgpImageService 実行ログを探す
 
 # CloudFront / API Gateway の両方が失敗する場合
 # Rails 側の OGP HTML 生成と投稿ステータス(scored)を確認する
