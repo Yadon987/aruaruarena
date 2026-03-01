@@ -140,6 +140,32 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     end
   end
 
+  describe 'sanitize_text' do
+    it '絵文字を除去してOGP描画用テキストへ変換すること' do
+      service = described_class.allocate
+
+      sanitized = service.send(:sanitize_text, "あるある😀\n次の行")
+
+      expect(sanitized).to eq('あるある 次の行')
+    end
+
+    it '日本語を保持すること' do
+      service = described_class.allocate
+
+      sanitized = service.send(:sanitize_text, 'あいうえお')
+
+      expect(sanitized).to eq('あいうえお')
+    end
+
+    it 'ASCII数字を保持すること' do
+      service = described_class.allocate
+
+      sanitized = service.send(:sanitize_text, '100点')
+
+      expect(sanitized).to eq('100点')
+    end
+  end
+
   describe 'E20 RED: 異常系' do
     # 何を検証するか: 投稿が見つからない場合はnilを返して処理を中断すること
     it '存在しない投稿IDではnilを返すこと' do

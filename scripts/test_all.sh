@@ -11,12 +11,9 @@ DYNAMODB_ENDPOINT="http://127.0.0.1:8002"
 # プロジェクトルートに移動
 cd "$(dirname "$0")/.."
 
-# 権限変更（Docker作成ファイル対策）
-# sudoが必要な場合があるため、失敗しても続行
-echo "� Fixing permissions..."
-chown -R $(id -u):$(id -g) . 2>/dev/null || echo "⚠️  権限変更をスキップしました（sudoが必要な可能性があります）"
+echo "   ✅ Skipping permission fix (chown -R) for performance. If you encounter permission errors, run 'sudo chown -R \$(id -u):\$(id -g) .' manually."
 
-echo "�🚀 aruaruarenaのテストを開始します..."
+echo "🚀 aruaruarenaのテストを開始します..."
 echo "----------------------------------------"
 
 # タイムアウト付きDynamoDBヘルスチェック

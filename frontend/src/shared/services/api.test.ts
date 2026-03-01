@@ -53,6 +53,9 @@ describe('E04-06: API Client', () => {
       const result = await api.posts.get('valid-uuid')
 
       expect(fetchMock).toHaveBeenCalledWith('/api/posts/valid-uuid', expect.any(Object))
+      const fetchOptions = fetchMock.mock.calls[0][1] as RequestInit
+      expect(fetchOptions.cache).toBe('no-store')
+      expect((fetchOptions.headers as Headers).get('Cache-Control')).toBe('no-cache')
       expect(result).toEqual(mockResponse)
     })
 

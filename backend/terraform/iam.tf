@@ -49,44 +49,9 @@ resource "aws_iam_role_policy" "dynamodb_access" {
   })
 }
 
-# =============================================================================
-# GitHub OIDC Integration
-# =============================================================================
-
-# GitHub OIDC Provider
-resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
-}
-
-# GitHub Actions用IAMロール
-resource "aws_iam_role" "github_actions" {
-  name = "github-actions-deploy-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Effect = "Allow"
-        Principal = {
-          Federated = aws_iam_openid_connect_provider.github.arn
-        }
-        Condition = {
-          StringLike = {
-            "token.actions.githubusercontent.com:sub" : "repo:Yadon987/aruaruarena:*"
-          }
-        }
-      }
-    ]
-  })
-}
-
-# デプロイに必要な権限を付与
-resource "aws_iam_role_policy" "deploy_policy" {
-  name = "deploy_policy"
-  role = aws_iam_role.github_actions.id
+resource "aws_iam_role_policy" "sqs_access" {
+  name = "sqs_access"
+  role = aws_iam_role.lambda_exec.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -94,29 +59,17 @@ resource "aws_iam_role_policy" "deploy_policy" {
       {
         Effect = "Allow"
         Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:InitiateLayerUpload",
-          "ecr:UploadLayerPart",
-          "ecr:CompleteLayerUpload",
-          "ecr:PutImage"
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
         ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "lambda:UpdateFunctionCode",
-          "lambda:GetFunctionConfiguration"
+        Resource = [
+          aws_sqs_queue.judgment_queue.arn,
+          aws_sqs_queue.judgment_dlq.arn
         ]
-        Resource = aws_lambda_function.app.arn
       }
     ]
   })
 }
 
-output "github_actions_role_arn" {
-  value = aws_iam_role.github_actions.arn
-}
