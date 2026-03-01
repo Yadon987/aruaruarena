@@ -31,8 +31,9 @@ class OgpController < ApplicationController
       # OGP生成がnilを返した場合のフォールバック
       send_default_ogp_image
     end
-  rescue Dynamoid::Errors::RecordNotFound, Dynamoid::Errors::MissingHashKey
-    render_not_found
+  rescue Dynamoid::Errors::RecordNotFound, Dynamoid::Errors::MissingHashKey => e
+    Rails.logger.warn("[OgpController] Dynamoid error for post #{params[:id]}: #{e.message}")
+    send_default_ogp_image
   rescue MiniMagick::Error => e
     # ImageMagick関連エラー時のフォールバック
     Rails.logger.warn("[OgpController] MiniMagick error for post #{params[:id]}: #{e.message}")
