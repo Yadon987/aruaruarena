@@ -169,9 +169,17 @@ RSpec.describe 'API::Posts', type: :request do
 
       # 検証: Content-Type検証
       it 'Content-Type: text/htmlで415 Unsupported Media Type' do
-        skip 'Content-Type検証は次のフェーズで実装'
         post '/api/posts', params: valid_params.to_json, headers: { 'Content-Type' => 'text/html' }
         expect(response).to have_http_status(:unsupported_media_type)
+        json = response.parsed_body
+        expect(json['code']).to eq('UNSUPPORTED_MEDIA_TYPE')
+      end
+
+      it 'Content-Type に charset が付いていても application/json なら受け付ける' do
+        post '/api/posts', params: valid_params.to_json,
+                           headers: { 'Content-Type' => 'application/json; charset=utf-8' }
+
+        expect(response).to have_http_status(:created)
       end
     end
 

@@ -61,21 +61,24 @@ RSpec.configure do |config|
 
     helper = Object.new.extend(DynamoDBTestHelpers)
 
-    # テスト実行時に指定されたエンドポイントを優先して適用する
-    if ENV['DYNAMODB_ENDPOINT'].present? && Dynamoid.config.endpoint != ENV['DYNAMODB_ENDPOINT']
-      Dynamoid.config.endpoint = ENV.fetch('DYNAMODB_ENDPOINT', nil)
-    end
-
     unless config.dynamodb_checked
+      # テスト実行時に指定されたエンドポイントを優先して適用する（疎通確認前に必要）
+      if ENV['DYNAMODB_ENDPOINT'].present? && Dynamoid.config.endpoint != ENV['DYNAMODB_ENDPOINT']
+        Dynamoid.config.endpoint = ENV.fetch('DYNAMODB_ENDPOINT', nil)
+      end
+
       config.dynamodb_available = helper.dynamodb_available?
       config.dynamodb_checked = true
       if config.dynamodb_available
         config.dynamodb_table_names = helper.ensure_test_tables!
-        puts "[Before Suite] Existing tables: #{config.dynamodb_table_names.inspect}" if ENV['DEBUG']
+        puts "[Before Suite] Connected to DynamoDB: #{Dynamoid.config.endpoint}" if ENV['DEBUG']
       end
     end
 
-    raise 'DynamoDB Localに接続できません。docker compose up -d を実行して再試行してください。' unless config.dynamodb_available
+    unless config.dynamodb_available
+      endpoint = Dynamoid.config.endpoint
+      raise "DynamoDB Local (#{endpoint}) に接続できません。docker compose up -d を実行して再試行してください。"
+    end
 
     table_names = config.dynamodb_table_names.presence || helper.ensure_test_tables!
     target_table_names = Array(example.metadata[:dynamodb_tables]).presence || table_names

@@ -4,15 +4,15 @@
 # カバレッジ90%以上を要求
 
 SimpleCov.start 'rails' do
-  # カバレッジの最低ラインを90%に設定
-  minimum_coverage 90
+  # カバレッジの最低ラインを設定（ローカルでも大きな低下は検知する）
+  minimum_coverage ENV['CI'] ? 90 : 80
 
   # ファイルごとの最低カバレッジ（現状66%程度のファイルがあるため60%に緩和）
   # 0行のファイル（設定ファイル等）による警告を回避するためコメントアウト
   # minimum_coverage_by_file 60
 
-  # カバレッジが閾値を下回った場合にテストを失敗させる
-  refuse_coverage_drop
+  # カバレッジが閾値を下回った場合にテストを失敗させる（CI環境のみ）
+  refuse_coverage_drop if ENV['CI']
 
   # フィルタ設定（/spec/はSimpleCovが自動的に除外するため不要）
   add_filter '/bin/'

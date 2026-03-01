@@ -2,6 +2,7 @@
 
 module Api
   class PostsController < ApplicationController
+    before_action :validate_content_type, only: %i[create rejudge]
     # Cache-Control設定
     # 投稿詳細: 1時間（3600秒）- 投稿内容が変わる可能性を考慮して短期キャッシュ
     CACHE_CONTROL_POST_DETAIL = 'max-age=3600, public'
@@ -15,6 +16,7 @@ module Api
     ERROR_CODE_DUPLICATE_CONTENT = 'DUPLICATE_CONTENT'
     ERROR_CODE_INVALID_STATUS = 'INVALID_STATUS'
     ERROR_CODE_INVALID_PERSONA = 'INVALID_PERSONA'
+    ERROR_CODE_UNSUPPORTED_MEDIA_TYPE = 'UNSUPPORTED_MEDIA_TYPE'
 
     # エラーメッセージ定数
     ERROR_MESSAGE_NOT_FOUND = '投稿が見つかりません'
@@ -22,6 +24,7 @@ module Api
     ERROR_MESSAGE_DUPLICATE_CONTENT = '同じ内容の投稿があります'
     ERROR_MESSAGE_INVALID_STATUS = '再審査できないステータスです'
     ERROR_MESSAGE_INVALID_PERSONA = '無効な審査員IDです'
+    ERROR_MESSAGE_UNSUPPORTED_MEDIA_TYPE = 'Content-Type は application/json を指定してください'
 
     # エラーメッセージ定数
     ERROR_MESSAGE_INVALID_REQUEST = 'リクエスト形式が正しくありません'
@@ -113,6 +116,16 @@ module Api
     end
 
     private
+
+    def validate_content_type
+      # JSONリクエストのみ許可（application/json）
+      return if request.media_type == 'application/json'
+
+      render json: {
+        error: ERROR_MESSAGE_UNSUPPORTED_MEDIA_TYPE,
+        code: ERROR_CODE_UNSUPPORTED_MEDIA_TYPE
+      }, status: :unsupported_media_type
+    end
 
     def post_params
       params.expect(post: %i[nickname body])
