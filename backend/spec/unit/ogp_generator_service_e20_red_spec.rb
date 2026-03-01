@@ -85,10 +85,11 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class.private_instance_methods(false)).not_to include(:draw_judgments)
     end
 
-    # 何を検証するか: 審査員結果が存在しても描画処理はニックネーム・本文・スコア・順位の4回だけで完結すること
-    it '審査員結果が存在してもdraw_textは4回だけ呼ばれること' do
+    # 何を検証するか: 審査員結果が存在しても描画処理はニックネーム・本文・スコアの3回だけで完結すること
+    # E20-03でランク表示を削除したため4回→3回に変更
+    it '審査員結果が存在してもdraw_textは3回だけ呼ばれること' do
       redraw_service = described_class.new('post-id')
-      expect(redraw_service).to receive(:draw_text).exactly(4).times.and_call_original
+      expect(redraw_service).to receive(:draw_text).exactly(3).times.and_call_original
 
       redraw_service.execute
     end
@@ -99,17 +100,6 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(service).to receive(:draw_text)
         .with(anything, '85.5点', described_class::FONT_SIZES[:score], described_class::TEXT_COLORS[:score],
               described_class::LAYOUT[:score][:x], described_class::LAYOUT[:score][:y], described_class::FONT_BOLD_PATH)
-        .and_call_original
-
-      service.execute
-    end
-
-    # 何を検証するか: ランキング1位の投稿で順位表示が第1位として描画されること
-    it 'ランキング1位では第1位が描画されること' do
-      allow(service).to receive(:draw_text).and_call_original
-      expect(service).to receive(:draw_text)
-        .with(anything, '第1位', described_class::FONT_SIZES[:rank], described_class::TEXT_COLORS[:secondary],
-              described_class::LAYOUT[:rank][:x], described_class::LAYOUT[:rank][:y], described_class::FONT_PATH)
         .and_call_original
 
       service.execute
@@ -181,18 +171,6 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(service).to receive(:draw_text)
         .with(anything, '0.0点', described_class::FONT_SIZES[:score], described_class::TEXT_COLORS[:score],
               described_class::LAYOUT[:score][:x], described_class::LAYOUT[:score][:y], described_class::FONT_BOLD_PATH)
-        .and_call_original
-
-      service.execute
-    end
-
-    # 何を検証するか: ランキング計算失敗時は圏外表記へフォールバックすること
-    it 'calculate_rank失敗時に圏外が描画されること' do
-      allow(post).to receive(:calculate_rank).and_raise(StandardError, 'rank error')
-      allow(service).to receive(:draw_text).and_call_original
-      expect(service).to receive(:draw_text)
-        .with(anything, '圏外', described_class::FONT_SIZES[:rank], described_class::TEXT_COLORS[:secondary],
-              described_class::LAYOUT[:rank][:x], described_class::LAYOUT[:rank][:y], described_class::FONT_PATH)
         .and_call_original
 
       service.execute
