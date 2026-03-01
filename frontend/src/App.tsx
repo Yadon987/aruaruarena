@@ -542,7 +542,7 @@ function App() {
 
     const fetchPost = async () => {
       const elapsed = Date.now() - pollingStartedAtRef.current
-      // 監視上限180秒を超えた場合はAPIを呼ばずに終端する。
+      // 監視上限（JUDGING_POLLING_TIMEOUT_MS。現在は60秒）を超えた場合はAPIを呼ばずに終端する。
       if (elapsed >= JUDGING_POLLING_TIMEOUT_MS) {
         handleJudgingFetchFailed()
         return
@@ -573,7 +573,7 @@ function App() {
         }
 
         const retryElapsed = Date.now() - pollingStartedAtRef.current
-        // 500系/通信系は180秒枠内で再試行し、超過時のみ終了する。
+        // 500系/通信系は監視上限（JUDGING_POLLING_TIMEOUT_MS。現在は60秒）内で再試行し、超過時のみ終了する。
         if (retryElapsed >= JUDGING_POLLING_TIMEOUT_MS) {
           handleJudgingFetchFailed()
         }
