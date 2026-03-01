@@ -6,8 +6,30 @@ HOST_DYNAMODB_ENDPOINT="${HOST_DYNAMODB_ENDPOINT:-http://127.0.0.1:8002}"
 CONTAINER_DYNAMODB_ENDPOINT="${CONTAINER_DYNAMODB_ENDPOINT:-http://host.docker.internal:8002}"
 DYNAMODB_CONTAINER_NAME="${DYNAMODB_CONTAINER_NAME:-aruaruarena-dynamodb-test}"
 SKIP_IMAGE_BUILD="${SKIP_BACKEND_OGP_IMAGE_BUILD:-0}"
+OGP_E2E_BASE_URL="${OGP_E2E_BASE_URL:-}"
+OGP_E2E_POST_ID="${OGP_E2E_POST_ID:-}"
+OGP_E2E_S3_BUCKET="${OGP_E2E_S3_BUCKET:-}"
+OGP_E2E_AWS_REGION="${OGP_E2E_AWS_REGION:-ap-northeast-1}"
 
 cd "$(dirname "$0")/.."
+
+require_env_pair() {
+  local left_name="$1"
+  local left_value="$2"
+  local right_name="$3"
+  local right_value="$4"
+
+  if [ -n "${left_value}" ] && [ -n "${right_value}" ]; then
+    return
+  fi
+
+  if [ -z "${left_value}" ] && [ -z "${right_value}" ]; then
+    return
+  fi
+
+  echo "🚨 ${left_name} と ${right_name} は両方セットする必要があります"
+  exit 1
+}
 
 dynamodb_is_healthy() {
   local response
@@ -56,6 +78,68 @@ ensure_image() {
   docker build -t "${IMAGE_NAME}" backend
 }
 
+check_e2e_static_delivery() {
+  require_env_pair "OGP_E2E_BASE_URL" "${OGP_E2E_BASE_URL}" "OGP_E2E_POST_ID" "${OGP_E2E_POST_ID}"
+
+  if [ -z "${OGP_E2E_BASE_URL}" ]; then
+    echo "ℹ️  OGP E2E静的配信チェックは未設定のためスキップします"
+    echo "   実行する場合は OGP_E2E_BASE_URL と OGP_E2E_POST_ID を指定してください"
+    return
+  fi
+
+  local normalized_base_url post_url image_url image_headers html_response
+  normalized_base_url="${OGP_E2E_BASE_URL%/}"
+  post_url="${normalized_base_url}/posts/${OGP_E2E_POST_ID}"
+  image_url="${normalized_base_url}/ogp/posts/${OGP_E2E_POST_ID}.png"
+
+  echo "🌐 OGP静的配信E2Eチェックを実行します..."
+  echo "   HTML: ${post_url}"
+  echo "   PNG : ${image_url}"
+
+  html_response=$(curl -fsS -A "Twitterbot/1.0" "${post_url}")
+  [[ "${html_response}" == *"property=\"og:image\" content=\"${image_url}\""* ]] || {
+    echo "🚨 og:image が期待値と一致しません"
+    exit 1
+  }
+  [[ "${html_response}" == *"name=\"twitter:image\" content=\"${image_url}\""* ]] || {
+    echo "🚨 twitter:image が期待値と一致しません"
+    exit 1
+  }
+  echo "✅ Twitterbot向けHTMLに og:image / twitter:image を確認しました"
+
+  image_headers=$(curl -fsSI "${image_url}")
+  [[ "${image_headers}" == *"200"* ]] || {
+    echo "🚨 CloudFront 画像レスポンスが 200 ではありません"
+    exit 1
+  }
+  [[ "${image_headers}" == *"content-type: image/png"* ]] || {
+    echo "🚨 CloudFront 画像レスポンスの content-type が image/png ではありません"
+    exit 1
+  }
+  [[ "${image_headers}" == *"server: AmazonS3"* ]] || {
+    echo "🚨 CloudFront が S3 実体を返していません"
+    exit 1
+  }
+
+  local content_length
+  content_length=$(printf '%s\n' "${image_headers}" | awk 'BEGIN{IGNORECASE=1} /^content-length:/ {gsub("\r", "", $2); print $2; exit}')
+  if [ -z "${content_length}" ] || [ "${content_length}" -le 0 ]; then
+    echo "🚨 CloudFront 画像レスポンスの content-length が不正です: ${content_length:-missing}"
+    exit 1
+  fi
+  echo "✅ CloudFront が S3 由来の PNG を静的配信しています"
+
+  if [ -n "${OGP_E2E_S3_BUCKET}" ]; then
+    aws s3api head-object \
+      --bucket "${OGP_E2E_S3_BUCKET}" \
+      --key "ogp/posts/${OGP_E2E_POST_ID}.png" \
+      --region "${OGP_E2E_AWS_REGION}" > /dev/null
+    echo "✅ S3 に OGP オブジェクトが存在します"
+  else
+    echo "ℹ️  OGP_E2E_S3_BUCKET 未設定のため S3 head-object 確認はスキップします"
+  fi
+}
+
 echo "🖼️ Docker上でOGPスモークチェックを実行します..."
 ensure_dynamodb
 ensure_image
@@ -74,3 +158,5 @@ docker run --rm \
   -e GROQ_API_KEY=dummy-groq \
   "${IMAGE_NAME}" \
   -lc "bundle exec rails runner -e test scripts/ogp_smoke_check.rb"
+
+check_e2e_static_delivery

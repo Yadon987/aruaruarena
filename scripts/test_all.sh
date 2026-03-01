@@ -152,7 +152,7 @@ echo ""
 echo "backend tests finished."
 echo "----------------------------------------"
 
-echo "🖼️ Running OGP Smoke Check..."
+echo "🖼️ Running OGP Smoke / E2E Check..."
 echo "----------------------------------------"
 cd ..
 bash scripts/check_ogp_docker.sh
