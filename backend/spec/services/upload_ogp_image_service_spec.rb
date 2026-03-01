@@ -13,6 +13,7 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
     )
   end
   let(:s3_client) { Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true) }
+  let(:aws_region) { ENV.fetch('AWS_REGION', 'ap-northeast-1') }
 
   before do
     allow(Post).to receive(:find).with('post-id').and_return(post)
@@ -66,7 +67,7 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
     described_class.call('post-id')
 
     expect(Aws::S3::Client).to have_received(:new).with(
-      region: 'ap-northeast-1',
+      region: aws_region,
       http_open_timeout: 5,
       http_read_timeout: 5
     )
