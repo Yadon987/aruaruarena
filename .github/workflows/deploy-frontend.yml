@@ -74,6 +74,19 @@ jobs:
 
           echo "MISSING_DEPLOY_VARS=" >> "$GITHUB_ENV"
 
+      - name: Validate deploy branch
+        run: |
+          case "$GITHUB_REF" in
+            refs/heads/main|refs/heads/feature/*)
+              echo "Allowed deploy ref: $GITHUB_REF"
+              ;;
+            *)
+              echo "Unsupported deploy ref: $GITHUB_REF" >&2
+              echo "workflow_dispatch は main または feature/* ブランチから実行してください" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:

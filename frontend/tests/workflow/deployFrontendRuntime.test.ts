@@ -70,6 +70,18 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     expect(step?.['continue-on-error']).toBeUndefined()
   })
 
+  // 何を検証するか: main / feature ブランチ以外は AWS 認証前に停止すること
+  it('Validate deploy branch が許可ブランチを判定する', () => {
+    const workflow = readWorkflow()
+    const step = getWorkflowStep(workflow, STEP_NAMES.validateDeployBranch)
+    expect(step).toBeDefined()
+    const run = String(step?.run ?? '')
+
+    expect(run).toContain('refs/heads/main|refs/heads/feature/*')
+    expect(run).toContain('Allowed deploy ref')
+    expect(run).toContain('Unsupported deploy ref')
+  })
+
   // 何を検証するか: AWS認証情報の有効性をデプロイ前に検証すること
   it('Verify AWS identity が sts get-caller-identity を実行する', () => {
     const workflow = readWorkflow()
