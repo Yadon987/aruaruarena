@@ -18,7 +18,9 @@ class OgpController < ApplicationController
   # rubocop:disable Metrics/AbcSize
   def show
     post = Post.where(id: params[:id]).first
-    return render_not_found if post.nil? || post.status != Post::STATUS_SCORED
+    # 投稿が見つからない/未審査の場合もデフォルト画像を返す
+    # 404を返すとCloudFrontのcustom_error_responseでindex.htmlが返るため
+    return send_default_ogp_image if post.nil? || post.status != Post::STATUS_SCORED
 
     image_data = OgpGeneratorService.call(post.id)
 

@@ -93,9 +93,11 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
+  # OGP画像はAPI Gateway経由でOgpControllerが動的生成
+  # S3への事前生成ではなく、リクエスト時に画像を生成してCloudFrontでキャッシュする
   ordered_cache_behavior {
-    path_pattern           = "/ogp/*"
-    target_origin_id       = local.frontend_s3_origin_id
+    path_pattern           = "/ogp/posts/*.png"
+    target_origin_id       = local.api_gateway_origin_id
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
     allowed_methods        = ["GET", "HEAD"]
