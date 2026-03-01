@@ -73,3 +73,38 @@ resource "aws_iam_role_policy" "sqs_access" {
   })
 }
 
+# =============================================================================
+# Lambda@Edge用IAMロール（OGPメタタグ配信用）
+# =============================================================================
+
+resource "aws_iam_role" "lambda_edge_ogp" {
+  name = "${var.project_name}-lambda-edge-ogp"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = [
+            "lambda.amazonaws.com",
+            "edgelambda.amazonaws.com"
+          ]
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Project     = var.project_name
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_edge_ogp_basic" {
+  role       = aws_iam_role.lambda_edge_ogp.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
