@@ -21,3 +21,8 @@ output "backend_github_actions_role_arn" {
   description = "ARN of the IAM role for GitHub Actions backend deploy."
   value       = aws_iam_role.backend_github_actions.arn
 }
+
+output "cloudfront_domain_name" {
+  description = "Domain name of the frontend CloudFront distribution."
+  value       = aws_cloudfront_distribution.frontend.domain_name
+}

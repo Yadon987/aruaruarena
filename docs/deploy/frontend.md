@@ -26,6 +26,59 @@
 - CloudFront の `Default root object` が `index.html` であること
 - CloudFront の `Custom error response` で `403` と `404` を `200 /index.html` にフォールバックしていること（SPAルーティング向け。S3プライベートバケット運用では404相当が403になるため両方必要）
 - `403 -> 200` は正規のアクセス拒否を隠す可能性があるため、適用前にバケットポリシーとWAFルールを確認すること
+- CloudFront の Default behavior に Lambda@Edge (`origin-request`) が関連付いていること
+- CloudFront の Default behavior で `User-Agent` を origin request policy 経由で転送していること（クローラー判定用）
+
+## OGP本番確認
+
+本番で OGP が正しく配信されるかは、API Gateway 直叩きと CloudFront 経由の両方を確認する。
+実行前に `${API_GATEWAY_ENDPOINT}` と `${CLOUDFRONT_DOMAIN}` を対象環境の実値に置き換えること。
+
+1. API Gateway がクローラー向け OGP HTML を返すことを確認する
+
+```bash
+curl -i -A "Twitterbot/1.0" \
+  https://${API_GATEWAY_ENDPOINT}/api/posts/<POST_ID>
+```
+
+期待値:
+- `HTTP/2 200`
+- `content-type: text/html`
+- `og:title`, `og:image`, `twitter:card` を含む
+
+1. CloudFront 経由でクローラー向け OGP HTML が返ることを確認する
+
+```bash
+curl -i -A "Twitterbot/1.0" \
+  https://${CLOUDFRONT_DOMAIN}/posts/<POST_ID>
+```
+
+期待値:
+- `HTTP/2 200`
+- `content-type: text/html`
+- S3 の `index.html` ではなく、OGPメタタグ付きHTMLが返る
+
+1. OGP画像 URL が PNG を返すことを確認する
+
+```bash
+curl -I \
+  https://${CLOUDFRONT_DOMAIN}/ogp/posts/<POST_ID>.png
+```
+
+期待値:
+- `HTTP/2 200`
+- `content-type: image/png`
+- `cache-control: max-age=604800, public`
+
+1. 問題発生時の切り分け
+
+```bash
+# CloudFront は失敗し、API Gateway は成功する場合
+# Lambda@Edge 関連付け、origin request policy、User-Agent 転送を確認する
+
+# CloudFront / API Gateway の両方が失敗する場合
+# Rails 側の OGP HTML 生成と投稿ステータス(scored)を確認する
+```
 
 ## ロールバック手順
 

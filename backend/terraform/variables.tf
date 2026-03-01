@@ -90,3 +90,21 @@ variable "cloudfront_distribution_id" {
   type        = string
   default     = "E3IADTV7B5GN3Q"
 }
+
+variable "frontend_origin_access_control_id" {
+  description = "Origin Access Control ID for the frontend S3 origin"
+  type        = string
+  default     = "EMRC958W8TBN3"
+}
+
+variable "posts_cache_policy_id" {
+  description = "Cache policy ID for the default frontend behavior"
+  type        = string
+  default     = "2dc3c65b-cacb-45d0-a7be-e9472851047f"
+}
+
+variable "ogp_cache_policy_id" {
+  description = "Cache policy ID for the /ogp/* behavior"
+  type        = string
+  default     = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+}
