@@ -106,10 +106,19 @@ export function ResultModal({
 
   const handleRejudge = async () => {
     if (!post || isRejudging) return
+
+    // 失敗した審査員を抽出
+    const extractedFailedPersonas = post.judgments
+      ?.filter((j) => !j.success)
+      .map((j) => j.persona)
+    const failedPersonas = extractedFailedPersonas?.length
+      ? extractedFailedPersonas
+      : ['hiroyuki', 'dewi', 'nakao']
+
     setRejudgeErrorMessage('')
     setIsRejudging(true)
     try {
-      const rejudgeResponse = await api.posts.rejudge(post.id)
+      const rejudgeResponse = await api.posts.rejudge(post.id, failedPersonas)
       onRejudgeSuccess({ ...post, ...rejudgeResponse })
     } catch (error) {
       // 再審査失敗時はユーザーに再試行可能な状態と理由を明示する。

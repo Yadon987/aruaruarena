@@ -182,9 +182,10 @@ export const api = {
         ...options,
         cache: 'no-store',
       }),
-    rejudge: (id: string) =>
+    rejudge: (id: string, failedPersonas: string[]) =>
       request<CreatePostResponse>(`/posts/${id}/rejudge`, {
         method: 'POST',
+        body: JSON.stringify({ failed_personas: failedPersonas }),
       }),
   },
   rankings: {

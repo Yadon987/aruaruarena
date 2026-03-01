@@ -622,8 +622,16 @@ function App() {
       setNickname('')
       setBody('')
       setSuccessMessage(MESSAGE_SUCCESS)
-      enterJudgingMode(response.id, trimmedNickname)
-      syncJudgingPath(response.id)
+
+      // ステータスに応じた遷移
+      if (response.status === 'failed') {
+        // キュー投入失敗時は直接結果モーダルを開く
+        openResultModal(response.id)
+      } else {
+        // 通常は審査中画面へ
+        enterJudgingMode(response.id, trimmedNickname)
+        syncJudgingPath(response.id)
+      }
     } catch (error) {
       setSubmitError(resolveSubmitErrorMessage(error))
     } finally {

@@ -77,7 +77,18 @@ jobs:
             --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
             --publish
 
-      - name: Wait for Lambda update
+      - name: Wait for Lambda code update
+        run: |
+          aws lambda wait function-updated \
+            --function-name $LAMBDA_FUNCTION_NAME
+
+      - name: Update Lambda configuration
+        run: |
+          aws lambda update-function-configuration \
+            --function-name $LAMBDA_FUNCTION_NAME \
+            --timeout 120
+
+      - name: Wait for Lambda configuration update
         run: |
           aws lambda wait function-updated \
             --function-name $LAMBDA_FUNCTION_NAME
