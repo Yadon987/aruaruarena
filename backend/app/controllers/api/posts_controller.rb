@@ -5,6 +5,7 @@ module Api
     # Cache-Control設定
     # 投稿詳細: 1時間（3600秒）- 投稿内容が変わる可能性を考慮して短期キャッシュ
     CACHE_CONTROL_POST_DETAIL = 'max-age=3600, public'
+    CACHE_CONTROL_NO_STORE = 'no-store'
 
     # エラーコード定数
     ERROR_CODE_VALIDATION = 'VALIDATION_ERROR'
@@ -192,13 +193,11 @@ module Api
     # Thread内で例外が発生した場合はログに出力のみ行う
     #
     # @param post [Post] 投稿オブジェクト
-    # @return [Thread] 生成されたThreadオブジェクト（テスト用）
+    # @return [void]
     def start_judgment_async(post)
-      Thread.new do
-        JudgePostService.call(post.id)
-      rescue StandardError => e
-        handle_judgment_error(e, post.id)
-      end
+      JudgmentQueueService.enqueue(post.id)
+    rescue StandardError => e
+      handle_judgment_error(e, post)
     end
 
     # Thread内の例外を処理する
@@ -207,10 +206,13 @@ module Api
     # ERRORレベルでログを出力して監視可能にする
     #
     # @param error [Exception] 発生した例外
-    # @param _post_id [String] 投稿ID（将来のログ出力用に確保）
-    def handle_judgment_error(error, _post_id)
+    # @param post [Post] 投稿オブジェクト
+    def handle_judgment_error(error, post)
       Rails.logger.error("[JudgePostService] Failed: #{error.class} - #{error.message}")
       Rails.logger.error(error.backtrace.join("\n")) if Rails.env.development?
+      post.update_status!(Post::STATUS_FAILED)
+    rescue StandardError => e
+      Rails.logger.error("[JudgePostService] Failed to update post status: #{e.class} - #{e.message}")
     end
 
     # クローラー向けOGPタグ付きHTMLをレンダリング
@@ -234,8 +236,14 @@ module Api
       judgments = Judgment.where(post_id: post.id).to_a
       rank = post.calculate_rank
       total_count = Post.total_scored_count
-      response.headers['Cache-Control'] = CACHE_CONTROL_POST_DETAIL
+      response.headers['Cache-Control'] = cache_control_for(post)
       render json: post.to_detail_json(judgments, rank, total_count)
+    end
+
+    def cache_control_for(post)
+      return CACHE_CONTROL_NO_STORE if post.status == Post::STATUS_JUDGING
+
+      CACHE_CONTROL_POST_DETAIL
     end
     # rubocop:enable Metrics/MethodLength
   end

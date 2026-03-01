@@ -33,6 +33,7 @@ class JudgePostService
   # @return [void]
   def execute
     return if @post.nil?
+    return skip_processed_post if @post.status != Post::STATUS_JUDGING
 
     # Concurrent::Futureを使用して並列審査を実行
     futures = JUDGES.map do |judge|
@@ -245,5 +246,10 @@ class JudgePostService
     total = @successful_judgments.sum(&:total_score)
     # 四捨五入で小数第1位に丸める（85.35 -> 85.4, 85.34 -> 85.3）
     @post.average_score = (total.to_f / @successful_judgments.size).round(1)
+  end
+
+  def skip_processed_post
+    Rails.logger.info("[JudgePostService] スキップ(処理済み): post_id=#{@post.id}, status=#{@post.status}")
+    nil
   end
 end

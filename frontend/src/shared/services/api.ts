@@ -177,8 +177,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    get: (id: string, options?: RequestInit & { timeout?: number }) =>
-      request<GetPostResponse>(`/posts/${id}`, options),
+    get: (id: string, options?: RequestInit & { timeout?: number }) => {
+      const headers = new Headers(options?.headers)
+      headers.set('Cache-Control', 'no-cache')
+
+      return request<GetPostResponse>(`/posts/${id}`, {
+        ...options,
+        headers,
+        cache: 'no-store',
+      })
+    },
     rejudge: (id: string) =>
       request<CreatePostResponse>(`/posts/${id}/rejudge`, {
         method: 'POST',

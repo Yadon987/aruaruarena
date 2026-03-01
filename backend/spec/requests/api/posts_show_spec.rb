@@ -36,6 +36,7 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
       get "/api/posts/#{post.id}"
 
       expect(response).to have_http_status(:ok)
+      expect(response.headers['Cache-Control']).to eq('no-store')
       json = response.parsed_body
       expect(json['status']).to eq('judging')
       expect(json['judges_count']).to eq(0)
@@ -69,6 +70,7 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
       get "/api/posts/#{post.id}"
 
       expect(response).to have_http_status(:ok)
+      expect(response.headers['Cache-Control']).to eq('max-age=3600, public')
       json = response.parsed_body
       expect(json['status']).to eq('failed')
 
@@ -102,6 +104,18 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
       expect(dewi['succeeded']).to be false
       expect(dewi['error_code']).to eq('timeout')
       expect(dewi['total_score']).to be_nil
+    end
+
+    it '審査完了した投稿では詳細レスポンスにキャッシュヘッダーを設定する' do
+      post = create(:post, :scored, average_score: 90.0, judges_count: 3)
+      create(:judgment, :hiroyuki, post_id: post.id)
+      create(:judgment, :dewi, post_id: post.id)
+      create(:judgment, :nakao, post_id: post.id)
+
+      get "/api/posts/#{post.id}"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers['Cache-Control']).to eq('max-age=3600, public')
     end
   end
 

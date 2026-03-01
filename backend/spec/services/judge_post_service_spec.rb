@@ -118,6 +118,17 @@ RSpec.describe JudgePostService do
     end
 
     context '異常系' do
+      it 'judging以外の投稿は再処理せずスキップすること' do
+        post.update_status!(Post::STATUS_FAILED)
+
+        expect(Rails.logger).to receive(:info).with(
+          /\[JudgePostService\] スキップ\(処理済み\): post_id=#{post.id}, status=failed/
+        )
+        expect_any_instance_of(GeminiAdapter).not_to receive(:judge)
+
+        service.execute
+      end
+
       # 何を検証するか: 全員失敗時にstatus: failedになること
       it '全員失敗時にstatus: failedになること' do
         mock_adapter_judge(GeminiAdapter, success: false)

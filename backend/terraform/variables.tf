@@ -39,3 +39,24 @@ variable "base_url" {
   type        = string
   default     = "https://dzt7yd2jha9r3.cloudfront.net"
 }
+
+variable "gemini_api_key" {
+  description = "Gemini API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cerebras_api_key" {
+  description = "Cerebras API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "groq_api_key" {
+  description = "Groq API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

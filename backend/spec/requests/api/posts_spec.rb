@@ -1,11 +1,13 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
-require 'timeout'
 
 RSpec.describe 'API::Posts', type: :request do
   describe 'POST /api/posts' do
-    before { Post.delete_all }
+    before do
+      Post.delete_all
+      allow(JudgmentQueueService).to receive(:enqueue)
+    end
 
     let(:valid_headers) { { 'Content-Type' => 'application/json' } }
     let(:valid_params) do
@@ -404,68 +406,35 @@ RSpec.describe 'API::Posts', type: :request do
     end
 
     context '非同期審査トリガー (E05-06)' do
-      # 検証: JudgePostServiceが非同期で呼び出される
-      it '投稿成功時にJudgePostServiceが非同期で呼び出されること' do
-        # JudgePostService.callが1回だけ呼ばれることを待機可能にする
-        called = Queue.new
-        expect(JudgePostService).to receive(:call).once do |*_args|
-          called << true
-        end
+      it '投稿成功時に審査キューへ投入されること' do
+        expect(JudgmentQueueService).to receive(:enqueue).once.with(instance_of(String))
 
-        # リクエストをThread内で実行して完了を待機
-        thread = Thread.new do
-          post '/api/posts', params: valid_params.to_json, headers: valid_headers
-        end
-        thread.join # リクエストの完了を待機
-
-        # 非同期呼び出しが発生するまで最大1秒待機
-        expect { Timeout.timeout(1) { called.pop } }.not_to raise_error
-
-        # レスポンスは即時に返る
-        expect(response).to have_http_status(:created)
-      end
-
-      # 検証: Thread内の例外はレスポンスに影響しない
-      it 'Thread内で例外が発生してもレスポンスには影響しないこと' do
-        # JudgePostService.callで例外を発生させる
-        allow(JudgePostService).to receive(:call) do
-          raise StandardError, 'Test error in JudgePostService'
-        end
-
-        # 例外が発生してもレスポンスは正常に返る
-        expect do
-          post '/api/posts', params: valid_params.to_json, headers: valid_headers
-        end.not_to raise_error
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
 
         expect(response).to have_http_status(:created)
       end
 
-      # 検証: Postが削除されている場合の挙動
+      it 'キュー投入で例外が発生した場合は投稿をfailedに更新すること' do
+        allow(JudgmentQueueService).to receive(:enqueue).and_raise(StandardError, 'queue error')
+
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+
+        expect(response).to have_http_status(:created)
+        created_post = Post.find(response.parsed_body['id'])
+        expect(created_post.status).to eq(Post::STATUS_FAILED)
+      end
+
       it 'Postが削除されている場合は審査をスキップすること' do
-        # コントローラーの非同期呼び出しをスタブ化して競合を回避
-        allow(JudgePostService).to receive(:call)
+        allow(JudgmentQueueService).to receive(:enqueue)
 
-        # 投稿を作成
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
         post_id = response.parsed_body['id']
-
-        # 投稿を削除
         Post.find(post_id).destroy
-
-        # スタブを解除
-        allow(JudgePostService).to receive(:call).and_call_original
 
         # JudgePostServiceが呼ばれてもRecordNotFoundでWARNログが出力されること
         expect(Rails.logger).to receive(:warn).with(/\[JudgePostService\] Post not found: #{post_id}/)
 
-        # Thread内でJudgePostServiceを実行
-        thread = Thread.new do
-          JudgePostService.call(post_id)
-        end
-        thread.join
-
-        # 例外が発生しないこと
-        expect(thread.value).to be_nil
+        expect(JudgePostService.call(post_id)).to be_nil
       end
     end
 
@@ -563,8 +532,9 @@ RSpec.describe 'API::Posts', type: :request do
 
       # DynamoDB接続エラー時は投稿を阻害しない
       it 'DynamoDB接続エラー時は投稿を阻害しない' do
-        allow(DuplicateCheck).to receive(:find).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
-                                                                                                  'Service unavailable'))
+        allow(DuplicateCheck).to receive(:find).and_raise(
+          Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable')
+        )
         allow(Rails.logger).to receive(:error)
 
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
@@ -575,8 +545,9 @@ RSpec.describe 'API::Posts', type: :request do
 
       # 重複チェック時のDynamoDBエラーは投稿を阻害しない
       it 'register!時のDynamoDBエラーは投稿を阻害しない' do
-        allow(DuplicateCheckService).to receive(:register!).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
-                                                                                                              'Service unavailable'))
+        allow(DuplicateCheckService).to receive(:register!).and_raise(
+          Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable')
+        )
         allow(Rails.logger).to receive(:error)
 
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
