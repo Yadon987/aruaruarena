@@ -113,9 +113,15 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
-async function isOgpImageReady(postId: string): Promise<boolean> {
+async function isOgpImageReady(postId: string, signal?: AbortSignal): Promise<boolean> {
   const controller = new AbortController()
   const timeoutId = window.setTimeout(() => controller.abort(), 3000)
+
+  const handleAbort = () => controller.abort()
+  if (signal) {
+    if (signal.aborted) return false
+    signal.addEventListener('abort', handleAbort)
+  }
 
   try {
     const response = await fetch(buildOgpImageUrl(postId), {
@@ -129,16 +135,22 @@ async function isOgpImageReady(postId: string): Promise<boolean> {
     return false
   } finally {
     window.clearTimeout(timeoutId)
+    if (signal) {
+      signal.removeEventListener('abort', handleAbort)
+    }
   }
 }
 
-async function waitUntilOgpImageReady(postId: string): Promise<boolean> {
+async function waitUntilOgpImageReady(postId: string, signal?: AbortSignal): Promise<boolean> {
   for (let attempt = 0; attempt < SHARE_IMAGE_CHECK_RETRY_COUNT; attempt += 1) {
-    if (await isOgpImageReady(postId)) {
+    if (signal?.aborted) return false
+
+    if (await isOgpImageReady(postId, signal)) {
       return true
     }
 
     if (attempt < SHARE_IMAGE_CHECK_RETRY_COUNT - 1) {
+      if (signal?.aborted) return false
       await sleep(SHARE_IMAGE_CHECK_RETRY_DELAY_MS)
     }
   }
@@ -164,6 +176,7 @@ export function ResultModal({
   const [isShareReady, setIsShareReady] = useState(false)
   const [shareStatusMessage, setShareStatusMessage] = useState('')
   const [rejudgeErrorMessage, setRejudgeErrorMessage] = useState('')
+  const shareAbortControllerRef = useRef<AbortController | null>(null)
 
   const hasRankInfo = isRankInfoAvailable(post)
   const shouldShowScoredFallback = post?.status === 'scored' && !hasRankInfo
@@ -182,6 +195,11 @@ export function ResultModal({
     setIsShareSubmitting(false)
     setShareStatusMessage('')
     setRejudgeErrorMessage('')
+
+    return () => {
+      shareAbortControllerRef.current?.abort()
+      shareAbortControllerRef.current = null
+    }
   }, [post?.id, isOpen])
 
   useEffect(() => {
@@ -240,10 +258,17 @@ export function ResultModal({
   const handleShare = async () => {
     if (!post || isShareSubmitting || !isShareReady) return
 
+    shareAbortControllerRef.current?.abort()
+    const controller = new AbortController()
+    shareAbortControllerRef.current = controller
+    const signal = controller.signal
+
     setIsShareSubmitting(true)
     setShareStatusMessage(MESSAGE_SHARE_CHECKING)
 
-    const isImageReady = await waitUntilOgpImageReady(post.id)
+    const isImageReady = await waitUntilOgpImageReady(post.id, signal)
+    if (signal.aborted) return
+
     if (!isImageReady) {
       setShareStatusMessage(MESSAGE_SHARE_NOT_READY)
       setIsShareSubmitting(false)
