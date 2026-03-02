@@ -114,15 +114,21 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function isOgpImageReady(postId: string): Promise<boolean> {
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), 3000)
+
   try {
     const response = await fetch(buildOgpImageUrl(postId), {
       method: 'HEAD',
       cache: 'no-store',
+      signal: controller.signal,
     })
 
     return response.ok
   } catch {
     return false
+  } finally {
+    window.clearTimeout(timeoutId)
   }
 }
 
@@ -247,7 +253,11 @@ export function ResultModal({
     const shareUrl = buildShareUrl(post.body, post.id)
     setIsSharePreviewVisible(true)
     setShareStatusMessage('')
-    window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
+    const openedWindow = window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
+    if (!openedWindow) {
+      // ポップアップがブロックされた場合、同じタブで開く
+      window.location.assign(shareUrl)
+    }
     setIsShareSubmitting(false)
   }
 
