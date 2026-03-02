@@ -11,17 +11,11 @@ RSpec.describe DewiAdapter, type: :model do
   end
 
   let(:adapter) { described_class.new }
-  # 何を検証するか: BaseAiAdapterを継承していること
-  it 'BaseAiAdapterを継承していること' do
-    expect(described_class < BaseAiAdapter).to be true
-  end
+  it_behaves_like 'base ai adapter inheritance'
 
   # 何を検証するか: 定数の定義
-  # 定数の定義
   describe '定数' do
-    it 'PROMPT_PATH定数が正しく定義されていること' do
-      expect(described_class::PROMPT_PATH).to eq('app/prompts/dewi.txt')
-    end
+    it_behaves_like 'adapter constants', { PROMPT_PATH: 'app/prompts/dewi.txt' }
   end
 
   # 何を検証するか: プロンプトファイルが読み込まれていること
@@ -31,16 +25,9 @@ RSpec.describe DewiAdapter, type: :model do
 
   # 何を検証するか: Faradayクライアントの設定
   describe '#client' do
-    it 'Faraday::Connectionインスタンスを返すこと' do
-      adapter = described_class.new
-      expect(adapter.send(:client)).to be_a(Faraday::Connection)
-    end
+    let(:adapter) { described_class.new }
 
-    it 'GLM APIのベースURLが設定されていること' do
-      adapter = described_class.new
-      client = adapter.send(:client)
-      expect(client.url_prefix.to_s).to include('open.bigmodel.cn')
-    end
+    it_behaves_like 'glm client', 'https://open.bigmodel.cn/api/paas/v4/'
   end
 
   # 何を検証するか: APIキーの取得
@@ -52,18 +39,7 @@ RSpec.describe DewiAdapter, type: :model do
     let(:post_content) { 'テスト投稿' }
     let(:persona) { 'dewi' }
 
-    it 'リクエストボディが正しく構築されること' do
-      request = adapter.send(:build_request, post_content, persona)
-      expect(request[:model]).to eq('glm-4-flash')
-      expect(request[:messages]).to be_a(Array)
-      expect(request[:messages].first[:content]).to include('テスト投稿')
-    end
-
-    it 'temperatureとmax_tokensが設定されていること' do
-      request = adapter.send(:build_request, post_content, persona)
-      expect(request[:temperature]).to eq(0.7)
-      expect(request[:max_tokens]).to eq(1000)
-    end
+    it_behaves_like 'openai compatible build request', 'glm-4-flash', 'dewi'
   end
 
   # 何を検証するか: スコアバリデーション
@@ -73,13 +49,7 @@ RSpec.describe DewiAdapter, type: :model do
   end
 
   describe '.reset_prompt_cache!' do
-    it 'プロンプトキャッシュをリセットすること' do
-      # キャッシュを作成
-      described_class.new
-      # キャッシュをリセット
-      described_class.reset_prompt_cache!
-      expect(described_class.prompt_cache).to be_nil
-    end
+    it_behaves_like 'prompt cache reset'
   end
 
   describe '#execute_request' do
