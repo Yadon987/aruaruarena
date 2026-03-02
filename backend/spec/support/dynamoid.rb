@@ -13,5 +13,19 @@ RSpec.configure do |config|
       dynamoid_config.read_capacity = 5
       dynamoid_config.write_capacity = 5
     end
+
+    existing_tables = Dynamoid.adapter.list_tables
+
+    [Post, Judgment, RateLimit].each do |model|
+      next if existing_tables.include?(model.table_name)
+
+      model.create_table
+      existing_tables = Dynamoid.adapter.list_tables
+    end
+
+    next unless defined?(DuplicateCheck)
+    next if existing_tables.include?(DuplicateCheck.table_name)
+
+    Dynamoid.adapter.create_table(DuplicateCheck.table_name, :body_hash, {})
   end
 end

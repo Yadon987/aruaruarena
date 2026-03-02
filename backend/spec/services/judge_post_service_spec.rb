@@ -175,6 +175,7 @@ RSpec.describe JudgePostService do
 
       # 何を検証するか: Thread内で例外発生時に失敗として記録されること
       it 'Thread内で例外発生時に失敗として記録されること' do
+        expect(service).to receive(:handle_thread_error).with('hiroyuki', instance_of(StandardError)).and_call_original
         allow_any_instance_of(GeminiAdapter).to receive(:judge).and_raise(StandardError.new('test error'))
         mock_adapter_judge(DewiAdapter, success: true)
         mock_adapter_judge(OpenAiAdapter, success: true)
@@ -192,6 +193,7 @@ RSpec.describe JudgePostService do
       it 'タイムアウト発生時にerror_code: timeoutになること' do
         # テスト用にタイムアウトを短縮
         stub_const('JudgePostService::PER_JUDGE_TIMEOUT', 0.05)
+        expect(service).to receive(:handle_timeout).with('hiroyuki').and_call_original
 
         # sleepでタイムアウトを発生させる
         allow_any_instance_of(GeminiAdapter).to receive(:judge) do
@@ -207,6 +209,20 @@ RSpec.describe JudgePostService do
         # タイムアウトしたJudgmentを確認（AWS SDKを直接使用）
         timeout_judgment = find_judgment_by_aws(post.id, 'hiroyuki')
         expect(timeout_judgment.error_code).to eq('timeout')
+      end
+
+      it 'OGP生成に失敗しても審査結果はscoredのまま継続すること' do
+        mock_adapter_judge(GeminiAdapter, success: true)
+        mock_adapter_judge(DewiAdapter, success: true)
+        mock_adapter_judge(OpenAiAdapter, success: true)
+        allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(false)
+        expect(Rails.logger).to receive(:warn).with(/\[JudgePostService\] OGP画像の事前生成に失敗: post_id=#{post.id}/)
+
+        service.execute
+
+        post.reload
+        expect(post.status).to eq('scored')
+        expect(post.judges_count).to eq(3)
       end
 
       # 何を検証するか: 混合パターンで正しくステータスが決まること

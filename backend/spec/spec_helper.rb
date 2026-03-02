@@ -15,8 +15,11 @@
 # it.
 #
 # See https://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+single_spec_run = ARGV.one? { |arg| arg.match?(%r{\Aspec/.*_spec\.rb(?::\d+)?\z}) }
+ENV['SIMPLECOV_DISABLE_MINIMUM_COVERAGE'] = '1' if single_spec_run && !ENV['CI']
+
 require 'simplecov'
-SimpleCov.start
+load File.expand_path('../.simplecov', __dir__)
 
 RSpec.configure do |config|
   # rspec-expectations config goes here. You can use an alternate

@@ -17,6 +17,7 @@ class JudgePostService
   # タイムアウト設定（Lambda環境を考慮）
   PER_JUDGE_TIMEOUT = 70  # 各審査員のタイムアウト（秒）
   JOIN_TIMEOUT = 90       # 全体のタイムアウト（秒）
+  MAX_ERROR_BACKTRACE_LINES = 20
 
   # 初期化
   #
@@ -35,81 +36,44 @@ class JudgePostService
     return if @post.nil?
     return skip_processed_post if @post.status != Post::STATUS_JUDGING
 
+    # スレッドセーフにクラスを事前にロード/解決しておく
+    resolved_judges = JUDGES.map do |judge|
+      {
+        persona: judge[:persona],
+        adapter_class: resolve_adapter_class(judge[:adapter])
+      }
+    end
+
     # Concurrent::Futureを使用して並列審査を実行
-    futures = JUDGES.map do |judge|
+    futures = resolved_judges.map do |judge_config|
       Concurrent::Future.execute(executor: executor) do
-        persona = judge[:persona]
-        result = nil
-
-        begin
-          Rails.logger.info("[JudgePostService] 審査開始: persona=#{persona}")
-
-          adapter_class = resolve_adapter_class(judge[:adapter])
-          adapter = adapter_class.new
-          result = adapter.judge(@post.body, persona: persona)
-
-          if result.succeeded
-            Rails.logger.info("[JudgePostService] 審査成功: persona=#{persona}")
-          else
-            Rails.logger.warn("[JudgePostService] 審査失敗: persona=#{persona}, error_code=#{result.error_code}")
-          end
-        rescue StandardError => e
-          # JudgeErrorで例外情報をラップ
-          judge_error = JudgeError.new(
-            judge_persona: persona,
-            error_code: 'thread_exception',
-            original_error: e
-          )
-          Rails.logger.error("[JudgePostService] #{judge_error.message}")
-          result = BaseAiAdapter::JudgmentResult.new(
-            succeeded: false,
-            error_code: judge_error.error_code,
-            scores: nil,
-            comment: nil
-          )
+        # RailsのExecutorでラップして、オートロードやDB接続をスレッドセーフにする
+        Rails.application.executor.wrap do
+          process_single_judge(judge_config[:persona], judge_config[:adapter_class])
         end
-
-        { persona: persona, result: result }
+      rescue StandardError => e
+        handle_thread_error(judge_config[:persona], e)
       end
     end
 
     # タイムアウト付きでFutureを待機
     results = futures.each_with_index.map do |future, idx|
+      persona = resolved_judges[idx][:persona]
       result = future.value(PER_JUDGE_TIMEOUT)
 
-      # タイムアウトした場合
       if result.nil?
-        persona = JUDGES[idx][:persona]
-        judge_error = JudgeError.new(
-          judge_persona: persona,
-          error_code: 'timeout',
-          original_error: nil
-        )
-        Rails.logger.error("[JudgePostService] #{judge_error.message}")
-        {
-          persona: persona,
-          result: BaseAiAdapter::JudgmentResult.new(
-            succeeded: false,
-            error_code: judge_error.error_code,
-            scores: nil,
-            comment: nil
-          )
-        }
+        handle_timeout(persona)
       else
         result
       end
+    rescue StandardError => e
+      handle_thread_error(persona, e)
     end
 
     save_judgments!(results)
     update_post_status!
   ensure
-    # Executorをシャットダウン（リソースリーク防止）
-    begin
-      @executor&.shutdown
-      @executor&.wait_for_termination(5)
-    rescue StandardError => e
-      Rails.logger.error("[JudgePostService] Executor shutdown error: #{e.class}")
-    end
+    shutdown_executor
   end
 
   class << self
@@ -124,9 +88,81 @@ class JudgePostService
 
   private
 
+  # 個別の審査員処理
+  def process_single_judge(persona, adapter_class)
+    Rails.logger.info("[JudgePostService] 審査開始: persona=#{persona}")
+
+    adapter = adapter_class.new
+    result = adapter.judge(@post.body, persona: persona)
+
+    if result.succeeded
+      Rails.logger.info("[JudgePostService] 審査成功: persona=#{persona}")
+    else
+      Rails.logger.warn("[JudgePostService] 審査失敗: persona=#{persona}, error_code=#{result.error_code}")
+    end
+
+    { persona: persona, result: result }
+  rescue StandardError => e
+    handle_thread_error(persona, e)
+  end
+
+  # スレッド内エラーハンドリング
+  def handle_thread_error(persona, error)
+    # スタックトレースを含めてログ出力（デバッグ用）
+    Rails.logger.error("[JudgePostService] Exception in thread for #{persona}: #{error.message}")
+    Rails.logger.error(Array(error.backtrace).first(MAX_ERROR_BACKTRACE_LINES).join("\n"))
+
+    judge_error = JudgeError.new(
+      judge_persona: persona,
+      error_code: 'thread_exception',
+      original_error: error
+    )
+
+    {
+      persona: persona,
+      result: BaseAiAdapter::JudgmentResult.new(
+        succeeded: false,
+        error_code: judge_error.error_code,
+        scores: nil,
+        comment: nil
+      )
+    }
+  end
+
+  # タイムアウト処理
+  def handle_timeout(persona)
+    judge_error = JudgeError.new(
+      judge_persona: persona,
+      error_code: 'timeout',
+      original_error: nil
+    )
+    Rails.logger.error("[JudgePostService] #{judge_error.message}")
+
+    {
+      persona: persona,
+      result: BaseAiAdapter::JudgmentResult.new(
+        succeeded: false,
+        error_code: judge_error.error_code,
+        scores: nil,
+        comment: nil
+      )
+    }
+  end
+
+  # Executorのシャットダウン
+  def shutdown_executor
+    return unless @executor
+
+    @executor.shutdown
+    unless @executor.wait_for_termination(5)
+      @executor.kill
+      Rails.logger.warn('[JudgePostService] Executor killed after timeout')
+    end
+  rescue StandardError => e
+    Rails.logger.error("[JudgePostService] Executor shutdown error: #{e.class}")
+  end
+
   # ThreadPool executorを取得（遅延初期化）
-  #
-  # @return [Concurrent::ThreadPoolExecutor] スレッドプール
   def executor
     @executor ||= Concurrent::ThreadPoolExecutor.new(
       min_threads: 3,
@@ -145,14 +181,12 @@ class JudgePostService
   def dewi_adapter_class
     # テスト環境は既存spec互換のため従来アダプターを固定利用する
     return DewiAdapter if Rails.env.test?
-
     return CerebrasAdapter if ENV['CEREBRAS_API_KEY'].to_s.strip != ''
 
     DewiAdapter
   end
 
   # 審査結果を保存する
-  # DynamoDB Localの整合性問題を回避するため、条件なし書き込みを使用
   def save_judgments!(results)
     @successful_judgments = []
 
@@ -182,10 +216,9 @@ class JudgePostService
         )
       end
 
-      # 条件なし書き込みを実行（DynamoDB Localの整合性問題を回避）
+      # 条件なし書き込みを実行
       put_item_without_condition(@post.id, persona, attrs)
 
-      # successful_judgmentsに追加（保存したデータから直接構築）
       next unless result.succeeded
 
       judgment = Judgment.new(
@@ -193,21 +226,15 @@ class JudgePostService
         persona: persona,
         **attrs.symbolize_keys
       )
-      # total_scoreを設定（already included in attrs, but ensure it's set）
       judgment.total_score ||= Judgment.calculate_total_score(result.scores)
       @successful_judgments << judgment
     end
   end
 
   # DynamoDBに条件なしでアイテムを書き込む
-  # @param post_id [String] パーティションキー
-  # @param persona [String] ソートキー
-  # @param attrs [Hash] 属性ハッシュ
   def put_item_without_condition(post_id, persona, attrs)
     client = Dynamoid.adapter.client
     table_name = Judgment.table_name
-
-    # 現在時刻を取得
     now = Time.now.to_f
 
     item = {
@@ -226,7 +253,6 @@ class JudgePostService
   # ステータスを更新する
   def update_post_status!
     succeeded_count = @successful_judgments.size
-
     @post.judges_count = succeeded_count
 
     if succeeded_count >= 2
@@ -245,7 +271,6 @@ class JudgePostService
     return if @successful_judgments.empty?
 
     total = @successful_judgments.sum(&:total_score)
-    # 四捨五入で小数第1位に丸める（85.35 -> 85.4, 85.34 -> 85.3）
     @post.average_score = (total.to_f / @successful_judgments.size).round(1)
   end
 
