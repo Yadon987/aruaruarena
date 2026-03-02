@@ -115,77 +115,100 @@ class BaseGlmAdapter < BaseAiAdapter
 
   # HTTPリクエストを実行する
   def execute_request(request_body)
-    response = client.post('chat/completions') do |req|
-      req.headers['Authorization'] = "Bearer #{api_key}"
-      req.body = request_body
-    end
-
-    handle_response_status(response)
-  rescue Faraday::TimeoutError => e
-    Rails.logger.warn("GLM APIタイムアウト: #{e.class}")
-    raise
-  rescue Faraday::ConnectionFailed => e
-    Rails.logger.error("GLM API接続エラー: #{e.class}")
+    handle_response_status(send_request(request_body))
+  rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
+    log_request_error(e)
     raise
   end
 
   # ステータスコードをチェックする
   def handle_response_status(response)
-    case response.status
-    when 200..299
-      Rails.logger.info('GLM API呼び出し成功')
-      response
-    when 429
-      Rails.logger.warn("GLM APIレート制限: status=#{response.status}")
-      raise Faraday::ClientError.new('rate limit', faraday_response: response)
-    when 400..499
-      Rails.logger.error("GLM APIクライアントエラー: status=#{response.status}")
-      raise Faraday::ClientError.new("Client error: #{response.status}", faraday_response: response)
-    when 500..599
-      Rails.logger.error("GLM APIサーバーエラー: status=#{response.status}")
-      raise Faraday::ServerError.new("Server error: #{response.status}", faraday_response: response)
-    else
-      Rails.logger.error("GLM API未知のエラー: status=#{response.status}")
-      raise Faraday::ClientError.new("Unknown error: #{response.status}", faraday_response: response)
-    end
+    return log_successful_response(response) if response.status.between?(200, 299)
+    return raise_rate_limit_error(response) if response.status == 429
+    return raise_client_error(response) if response.status.between?(400, 499)
+    return raise_server_error(response) if response.status.between?(500, 599)
+
+    raise_unknown_error(response)
   end
 
   # レスポンスを解析する
   def parse_response(response)
-    body = response.body
-    # FaradayミドルウェアでJSONパース済みの場合と未パースの場合を考慮（テスト時はmockなので文字列の場合あり）
-    parsed = body.is_a?(String) ? JSON.parse(body, symbolize_names: true) : body
+    content = extract_content_from_response(response)
+    return invalid_response_error unless content
 
-    content = parsed.dig(:choices, 0, :message, :content)
-    unless content
-      Rails.logger.error('GLM APIレスポンスにcontentが含まれていません')
-      return invalid_response_error
-    end
-
-    json_text = extract_json_from_codeblock(content)
-
-    begin
-      data = JSON.parse(json_text, symbolize_names: true)
-    rescue JSON::ParserError => e
-      Rails.logger.error("JSONパースエラー: #{e.class} - #{e.message}")
-      return invalid_response_error
-    end
-
-    begin
-      scores = convert_scores_to_integers(data)
-    rescue ArgumentError => e
-      Rails.logger.error("スコア変換エラー: #{e.message}")
-      return invalid_response_error
-    end
-
-    comment = truncate_comment(data[:comment], max_length: MAX_COMMENT_LENGTH)
-
-    {
-      scores: scores,
-      comment: comment
-    }
+    build_parsed_result(content)
   rescue JSON::ParserError => e
     Rails.logger.error("APIレスポンスのJSONパースエラー: #{e.message}")
     invalid_response_error
+  end
+
+  def send_request(request_body)
+    client.post('chat/completions') do |req|
+      req.headers['Authorization'] = "Bearer #{api_key}"
+      req.body = request_body
+    end
+  end
+
+  def log_request_error(error)
+    level = error.is_a?(Faraday::TimeoutError) ? :warn : :error
+    message = error.is_a?(Faraday::TimeoutError) ? 'タイムアウト' : '接続エラー'
+    Rails.logger.public_send(level, "GLM API#{message}: #{error.class}")
+  end
+
+  def log_successful_response(response)
+    Rails.logger.info('GLM API呼び出し成功')
+    response
+  end
+
+  def raise_rate_limit_error(response)
+    Rails.logger.warn("GLM APIレート制限: status=#{response.status}")
+    raise Faraday::ClientError.new('rate limit', faraday_response: response)
+  end
+
+  def raise_client_error(response)
+    Rails.logger.error("GLM APIクライアントエラー: status=#{response.status}")
+    raise Faraday::ClientError.new("Client error: #{response.status}", faraday_response: response)
+  end
+
+  def raise_server_error(response)
+    Rails.logger.error("GLM APIサーバーエラー: status=#{response.status}")
+    raise Faraday::ServerError.new("Server error: #{response.status}", faraday_response: response)
+  end
+
+  def raise_unknown_error(response)
+    Rails.logger.error("GLM API未知のエラー: status=#{response.status}")
+    raise Faraday::ClientError.new("Unknown error: #{response.status}", faraday_response: response)
+  end
+
+  def extract_content_from_response(response)
+    parsed = parse_response_body(response.body)
+    content = parsed.dig(:choices, 0, :message, :content)
+    return content if content
+
+    Rails.logger.error('GLM APIレスポンスにcontentが含まれていません')
+    nil
+  end
+
+  def parse_response_body(body)
+    body.is_a?(String) ? JSON.parse(body, symbolize_names: true) : body
+  end
+
+  def build_parsed_result(content)
+    data = parse_json_payload(content)
+    parsed_result_hash(data)
+  rescue JSON::ParserError => e
+    Rails.logger.error("JSONパースエラー: #{e.class} - #{e.message}")
+    Rails.logger.warn("Raw Content: #{content.truncate(200)}")
+    invalid_response_error
+  rescue ArgumentError => e
+    Rails.logger.error("スコア変換エラー: #{e.message}")
+    invalid_response_error
+  end
+
+  def parsed_result_hash(data)
+    {
+      scores: convert_scores_to_integers(data),
+      comment: truncate_comment(data[:comment], max_length: MAX_COMMENT_LENGTH)
+    }
   end
 end
