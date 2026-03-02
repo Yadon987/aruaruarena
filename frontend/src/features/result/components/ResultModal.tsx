@@ -84,6 +84,8 @@ function buildOgpImageUrl(postId: string): string {
 function parseCreatedAtMs(createdAt: Post['created_at']): number | null {
   if (!createdAt) return null
 
+  // 純粋な数字文字列のみをUnixタイムスタンプとして扱う
+  // （ISO文字列 "2026-02-17..." もNumberに変換されるとNaNにならない場合があるため）
   const unixSeconds = Number(createdAt)
   if (Number.isFinite(unixSeconds) && /^\d+$/.test(String(createdAt))) {
     return unixSeconds * 1000
