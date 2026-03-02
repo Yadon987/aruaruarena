@@ -19,21 +19,16 @@ RSpec.describe GlmAdapter do
   end
 
   describe '#client' do
-    let(:adapter) { described_class.new }
-
     it_behaves_like 'glm client', 'https://open.bigmodel.cn/api/paas/v4/'
   end
 
   describe '#build_request' do
-    let(:adapter) { described_class.new }
     let(:post_content) { 'テスト投稿' }
-    let(:persona) { 'hiroyuki' }
 
     it_behaves_like 'openai compatible build request', 'glm-4-flash', 'hiroyuki'
   end
 
   describe '#parse_response' do
-    let(:adapter) { described_class.new }
     it_behaves_like 'openai style parse response'
   end
 
@@ -44,15 +39,12 @@ RSpec.describe GlmAdapter do
   end
 
   describe '#execute_request' do
-    let(:adapter) { described_class.new }
     let(:request_body) { { model: 'glm-4-flash', messages: [] } }
 
     it_behaves_like 'GLM execute request error handling'
   end
 
   describe '#handle_response_status' do
-    let(:adapter) { described_class.new }
-
     it_behaves_like 'GLM response status handling'
   end
 end

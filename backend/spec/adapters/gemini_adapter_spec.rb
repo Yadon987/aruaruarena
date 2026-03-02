@@ -7,46 +7,21 @@ RSpec.describe GeminiAdapter do
   include AdapterTestHelpers
 
   let(:adapter) { described_class.new }
-  # 何を検証するか: BaseAiAdapterを継承していること
-  it 'BaseAiAdapterを継承していること' do
-    expect(described_class < BaseAiAdapter).to be true
-  end
+  it_behaves_like 'base ai adapter inheritance'
 
-  # 何を検証するか: PROMPT_PATH定数の定義
   describe '定数' do
-    it '必要な定数が正しく定義されていること', :aggregate_failures do
-      expect(described_class::PROMPT_PATH).to eq('app/prompts/hiroyuki.txt')
-    end
+    it_behaves_like 'adapter constants', { PROMPT_PATH: 'app/prompts/hiroyuki.txt' }
   end
 
-  # 何を検証するか: プロンプトファイルが読み込まれていること
   describe '初期化' do
     it_behaves_like 'adapter initialization', 'ひろゆき風'
   end
 
-  # 何を検証するか: Faradayクライアントの設定
   describe '#client' do
-    it 'Faraday::Connectionインスタンスを返すこと' do
-      adapter = described_class.new
-      expect(adapter.send(:client)).to be_a(Faraday::Connection)
-    end
-
-    it 'Gemini APIのベースURLが設定されていること' do
-      adapter = described_class.new
-      client = adapter.send(:client)
-      expect(client.url_prefix.to_s).to include('generativelanguage.googleapis.com')
-    end
-
-    it 'SSL証明書の検証が有効であること' do
-      adapter = described_class.new
-      client = adapter.send(:client)
-      expect(client.ssl.verify).to be true
-    end
+    it_behaves_like 'gemini client', 'https://generativelanguage.googleapis.com/'
   end
 
-  # 何を検証するか: リクエストの構築
   describe '#build_request' do
-    let(:adapter) { described_class.new }
     let(:post_content) { 'テスト投稿' }
     let(:persona) { 'hiroyuki' }
 
@@ -91,9 +66,7 @@ RSpec.describe GeminiAdapter do
     end
   end
 
-  # 何を検証するか: レスポンスの解析
   describe '#parse_response' do
-    let(:adapter) { described_class.new }
     let(:base_scores) do
       {
         empathy: 15,
@@ -427,13 +400,10 @@ RSpec.describe GeminiAdapter do
       end
     end
   end
-  # 何を検証するか: APIキーの取得
+
   it_behaves_like 'adapter api key validation', 'GEMINI_API_KEY'
 
-  # 何を検証するか: Integration Test（VCR使用）
   describe '#judge (Integration)', vcr: true do
-    let(:adapter) { described_class.new }
-
     # VCRカセットが作成されるまでスキップ
     before { skip 'VCRカセットを作成する必要があります' }
 
