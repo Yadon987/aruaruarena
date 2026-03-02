@@ -1,5 +1,16 @@
 services:
   # ----------------------------------------------------------------------------
+  # 🔧 開発用 DynamoDB ボリューム初期化
+  # ----------------------------------------------------------------------------
+  dynamodb-volume-init:
+    image: alpine:latest
+    container_name: aruaruarena-dynamodb-volume-init
+    user: "0:0"
+    volumes:
+      - dynamodb-data:/mnt
+    command: sh -lc "mkdir -p /mnt && chown -R 1000:1000 /mnt"
+
+  # ----------------------------------------------------------------------------
   # 🛠️ 開発用 DynamoDB (永続化あり)
   # Port: 8000
   # ----------------------------------------------------------------------------
@@ -11,6 +22,9 @@ services:
     volumes:
       - dynamodb-data:/home/dynamodblocal/data
     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    depends_on:
+      dynamodb-volume-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl http://localhost:8000 || exit 1"]
       interval: 5s

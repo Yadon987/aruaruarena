@@ -49,7 +49,9 @@ class RateLimit
   # @return [Boolean] trueなら制限中（投稿不可）
   def self.limited?(identifier)
     record = find(identifier)
-    record&.expires_at&.to_i&.> Time.now.to_i
+    return false if record.nil? || record.expires_at.nil?
+
+    record.expires_at.to_i > current_timestamp
   rescue Dynamoid::Errors::RecordNotFound
     false
   end
@@ -61,13 +63,18 @@ class RateLimit
   def self.set_limit(identifier, seconds: 300)
     # upsert: レコードが存在する場合は更新、存在しない場合は作成
     record = find(identifier)
-    record.expires_at = Time.now.to_i + seconds
+    record.expires_at = current_timestamp + seconds
     record.save! # save!で例外を投げてRateLimitを返す
     record
   rescue Dynamoid::Errors::RecordNotFound
     create!(
       identifier: identifier,
-      expires_at: Time.now.to_i + seconds
+      expires_at: current_timestamp + seconds
     )
   end
+
+  def self.current_timestamp
+    Time.current.to_i
+  end
+  private_class_method :current_timestamp
 end

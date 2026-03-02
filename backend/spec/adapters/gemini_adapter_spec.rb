@@ -190,6 +190,29 @@ RSpec.describe GeminiAdapter do
         expect(result[:comment]).to eq('分割レスポンス')
       end
 
+      it 'ノイズとダミーJSONが混在していても有効な採点JSONを解析できること' do
+        response_hash = {
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { text: "こんにちは！\n```json\n{\"thought\":\"分析中\"}\n```\n" },
+                  { text: "採点結果です。\n```json\n" },
+                  { text: JSON.generate(base_scores.merge(comment: 'ノイズ耐性テスト')) },
+                  { text: "\n```" }
+                ]
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores]).to eq(base_scores.transform_keys(&:to_sym))
+        expect(result[:comment]).to eq('ノイズ耐性テスト')
+      end
+
       # 何を検証するか: 小数点文字列のスコア変換（CodeRabbitレビュー対応）
       context '小数点スコアの扱い' do
         it 'スコアが小数点文字列（"12.5"）の場合に四捨五入して整数に変換できること' do

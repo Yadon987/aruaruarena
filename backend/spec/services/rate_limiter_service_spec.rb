@@ -3,6 +3,14 @@
 require 'rails_helper'
 
 RSpec.describe RateLimiterService, type: :service do
+  include ActiveSupport::Testing::TimeHelpers
+
+  around do |example|
+    travel_to(Time.zone.local(2026, 3, 2, 12, 0, 0)) do
+      example.run
+    end
+  end
+
   # 何を検証するか: 定数が定義されていること
   describe '定数' do
     it 'LIMIT_DURATION定数が300秒で定義されていること' do
@@ -16,7 +24,7 @@ RSpec.describe RateLimiterService, type: :service do
     let(:nickname) { '太郎' }
     let(:ip_identifier) { RateLimit.generate_ip_identifier(ip) }
     let(:nickname_identifier) { RateLimit.generate_nickname_identifier(nickname) }
-    let(:current_time) { Time.now.to_i }
+    let(:current_time) { Time.current.to_i }
 
     context '正常系 (Happy Path)' do
       # Given: IP・ニックネームともに制限なし
@@ -134,7 +142,7 @@ RSpec.describe RateLimiterService, type: :service do
       # When: set_limit!を呼び出す
       # Then: expires_atが現在時刻+300秒に設定される（Integer型）
       it 'expires_atが現在時刻+300秒のInteger型で設定されること' do
-        current_time = Time.now.to_i
+        current_time = Time.current.to_i
         described_class.set_limit!(ip: ip, nickname: nickname)
 
         ip_limit = RateLimit.find(ip_identifier)
@@ -151,7 +159,7 @@ RSpec.describe RateLimiterService, type: :service do
       # When: set_limit!を呼び出す
       # Then: IPレコードのexpires_atが更新される（上書き）
       it '既に制限中のIPのexpires_atが更新されること' do
-        old_time = Time.now.to_i + 100
+        old_time = Time.current.to_i + 100
         create(:rate_limit, identifier: ip_identifier, expires_at: old_time)
 
         described_class.set_limit!(ip: ip, nickname: nickname)
