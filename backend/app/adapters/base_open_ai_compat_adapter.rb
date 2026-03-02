@@ -4,6 +4,8 @@
 #
 # Cerebras, Groq, OpenRouterなどのOpenAI互換エンドポイントを持つサービスで共有されます。
 class BaseOpenAiCompatAdapter < BaseAiAdapter
+  include JsonParserConcern
+
   # レスポンスの最大長（コメント用）
   MAX_COMMENT_LENGTH = 30
 
@@ -63,116 +65,105 @@ class BaseOpenAiCompatAdapter < BaseAiAdapter
 
   # HTTPリクエストを実行する
   def execute_request(request_body)
-    response = client.post(api_endpoint) do |req|
-      req.headers['Authorization'] = "Bearer #{api_key}"
-      req.body = request_body
-    end
-
-    handle_response_status(response)
-  rescue Faraday::TimeoutError => e
-    Rails.logger.warn("#{self.class.name} APIタイムアウト: #{e.class}")
-    raise
-  rescue Faraday::ConnectionFailed => e
-    Rails.logger.error("#{self.class.name} API接続エラー: #{e.class}")
+    handle_response_status(send_request(request_body))
+  rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
+    log_request_error(e)
     raise
   end
 
   # ステータスコードに応じてレスポンスを処理する
   def handle_response_status(response)
-    case response.status
-    when 200..299
-      Rails.logger.info("#{self.class.name} API呼び出し成功")
-      response
-    when 429
-      Rails.logger.warn("#{self.class.name} APIレート制限: #{response.body}")
-      raise Faraday::ClientError.new('rate limit', faraday_response: response)
-    else
-      Rails.logger.error("#{self.class.name} APIエラー: #{response.status} - #{response.body}")
-      raise Faraday::ClientError.new("Error: #{response.status}", faraday_response: response)
-    end
+    return log_successful_response(response) if response.status.between?(200, 299)
+    return raise_rate_limit_error(response) if response.status == 429
+
+    raise_unexpected_response_error(response)
   end
 
   # OpenAI互換のレスポンスを解析する
   def parse_response(response)
-    body = response.body
-    # Faradayのミドルウェア設定によっては文字列キーになる場合があるため柔軟に対応
-    parsed = if body.is_a?(String)
-               JSON.parse(body, symbolize_names: true)
-             elsif body.respond_to?(:transform_keys)
-               body.transform_keys(&:to_sym)
-             else
-               body
-             end
+    content = extract_content_from_response(normalize_response_body(response.body))
+    return invalid_response_error if blank_content?(content)
 
-    content = extract_content_from_response(parsed)
-
-    return invalid_response_error if content.nil? || content.strip.empty?
-
-    json_text = extract_json_from_codeblock(content)
-
-    begin
-      data = JSON.parse(json_text, symbolize_names: true)
-      scores = convert_scores_to_integers(data)
-      comment = truncate_comment(data[:comment])
-
-      { scores: scores, comment: comment }
-    rescue JSON::ParserError, ArgumentError => e
-      Rails.logger.error("#{self.class.name} パースエラー: #{e.message}")
-      invalid_response_error
-    end
+    build_parsed_result(content)
   end
 
   # レスポンスからコンテンツを抽出（Cerebrasの特殊な形式にも対応）
   def extract_content_from_response(parsed)
-    choices = parsed[:choices] || parsed['choices']
-    return nil unless choices.is_a?(Array) && choices.any?
+    message = first_response_message(parsed)
+    return nil unless message
 
-    msg = choices[0][:message] || choices[0]['message']
-    return nil unless msg
-
-    # 通常のOpenAI形式は content。
-    # Cerebras (gpt-oss-120b) 等、回答が reasoning に入るケースがあるため、フォールバック。
-    content = msg[:content] || msg['content']
-    content = msg[:reasoning] || msg['reasoning'] if content.nil? || content.to_s.strip.empty?
-
-    content.to_s
-  end
-
-  # コードブロックからJSONを抽出（OpenAiAdapterと同等のロジック）
-  def extract_json_from_codeblock(text)
-    if text.include?('```')
-      if text.match?(/```json/)
-        extracted = text.slice(/```json\s*\n(.*?)\n?```/m, 1)
-        return extracted.strip if extracted
-      end
-      extracted = text.slice(/```\s*\n(.*?)\n?```/m, 1)
-      return extracted.strip if extracted
-    end
-    text
-  end
-
-  # スコアを整数に変換
-  def convert_scores_to_integers(data)
-    scores = {}
-    REQUIRED_SCORE_KEYS.each do |key|
-      value = data[key]
-      raise ArgumentError, "Score value is nil for #{key}" if value.nil?
-
-      scores[key] = value.is_a?(Integer) ? value : Float(value).round
-    end
-    scores
-  end
-
-  # コメントを切り詰め
-  def truncate_comment(comment)
-    return nil if comment.nil?
-
-    comment.to_s.strip[0...MAX_COMMENT_LENGTH]
+    response_content_from(message).to_s
   end
 
   # 無効なレスポンスエラー
   def invalid_response_error
     JudgmentResult.new(succeeded: false, error_code: ERROR_CODE_INVALID_RESPONSE, scores: nil, comment: nil)
+  end
+
+  def send_request(request_body)
+    client.post(api_endpoint) do |req|
+      req.headers['Authorization'] = "Bearer #{api_key}"
+      req.body = request_body
+    end
+  end
+
+  def log_request_error(error)
+    level = error.is_a?(Faraday::TimeoutError) ? :warn : :error
+    message = error.is_a?(Faraday::TimeoutError) ? 'タイムアウト' : '接続エラー'
+    Rails.logger.public_send(level, "#{self.class.name} API#{message}: #{error.class}")
+  end
+
+  def log_successful_response(response)
+    Rails.logger.info("#{self.class.name} API呼び出し成功")
+    response
+  end
+
+  def raise_rate_limit_error(response)
+    Rails.logger.warn("#{self.class.name} APIレート制限: #{response.body}")
+    raise Faraday::ClientError.new('rate limit', faraday_response: response)
+  end
+
+  def raise_unexpected_response_error(response)
+    Rails.logger.error("#{self.class.name} APIエラー: #{response.status} - #{response.body}")
+    raise Faraday::ClientError.new("Error: #{response.status}", faraday_response: response)
+  end
+
+  def normalize_response_body(body)
+    return JSON.parse(body, symbolize_names: true) if body.is_a?(String)
+    return body.transform_keys(&:to_sym) if body.respond_to?(:transform_keys)
+
+    body
+  end
+
+  def blank_content?(content)
+    content.nil? || content.strip.empty?
+  end
+
+  def build_parsed_result(content)
+    data = parse_json_payload(content)
+    { scores: convert_scores_to_integers(data), comment: truncate_comment(data[:comment]) }
+  rescue JSON::ParserError, ArgumentError => e
+    log_parse_error(e, content)
+    invalid_response_error
+  end
+
+  def log_parse_error(error, content)
+    Rails.logger.error("#{self.class.name} パースエラー: #{error.message}")
+    Rails.logger.warn("Raw Content: #{content.truncate(200)}")
+  end
+
+  def first_response_message(parsed)
+    choices = parsed[:choices] || parsed['choices']
+    return nil unless choices.is_a?(Array) && choices.any?
+
+    choices.first[:message] || choices.first['message']
+  end
+
+  def response_content_from(message)
+    content = message[:content] || message['content']
+    return content unless blank_content?(content)
+
+    message[:reasoning] || message['reasoning']
   end
 
   class << self

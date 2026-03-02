@@ -1,0 +1,18 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Unmaintained Dependency",
+      "warning_code": 123,
+      "fingerprint": "40be17ee84017c91503dab23873e24bdd71665ab665bf6f351cfc09ff83e6582",
+      "check_name": "EOLRuby",
+      "message": "Support for Ruby 3.2.3 ends on 2026-03-31",
+      "file": ".ruby-version",
+      "line": 1,
+      "link": "https://brakemanscanner.org/docs/warning_types/unmaintained_dependency/",
+      "confidence": "Medium",
+      "note": "ローカル開発中の既知警告として一時的に無視"
+    }
+  ],
+  "updated": "2026-03-02 10:29:42 +0900",
+  "brakeman_version": "8.0.2"
+}

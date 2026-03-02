@@ -63,6 +63,89 @@ RSpec.describe JsonParserConcern do
     end
   end
 
+  describe '#parse_json_payload' do
+    let(:valid_json) do
+      JSON.generate(
+        empathy: 15,
+        humor: 10,
+        brevity: 20,
+        originality: 5,
+        expression: 12,
+        comment: '良い投稿です'
+      )
+    end
+
+    it 'コードブロック内のダミーJSONを無視して有効なJSONを返すこと' do
+      text = <<~TEXT
+        こんにちは！採点しますね。
+        ```json
+        {"thought":"分析中です"}
+        ```
+
+        ```json
+        #{valid_json}
+        ```
+      TEXT
+
+      result = instance.parse_json_payload(text)
+
+      expect(result[:empathy]).to eq(15)
+      expect(result[:comment]).to eq('良い投稿です')
+    end
+
+    it '本文中のノイズを無視して有効なJSONオブジェクトを返すこと' do
+      text = <<~TEXT
+        分析します。
+        {"thought":"途中経過"}
+        採点結果はこちらです。
+        #{valid_json}
+        以上です。
+      TEXT
+
+      result = instance.parse_json_payload(text)
+
+      expect(result[:humor]).to eq(10)
+      expect(result[:expression]).to eq(12)
+    end
+
+    it '文字列中の波括弧を含むJSONを正しく抽出すること' do
+      text = <<~TEXT
+        途中結果:
+        {"thought":"コメント内に } がある"}
+        最終結果:
+        {"empathy":15,"humor":10,"brevity":20,"originality":5,"expression":12,"comment":"記号 } を含む"}
+      TEXT
+
+      result = instance.parse_json_payload(text)
+
+      expect(result[:comment]).to eq('記号 } を含む')
+      expect(result[:originality]).to eq(5)
+    end
+
+    it '文字列キーのJSONも受け付けること' do
+      text = <<~TEXT
+        ```json
+        {"empathy":"15","humor":"10","brevity":"20","originality":"5","expression":"12","comment":"文字列キー"}
+        ```
+      TEXT
+
+      result = instance.parse_json_payload(text)
+
+      expect(result['comment'] || result[:comment]).to eq('文字列キー')
+    end
+
+    it '有効なJSONが見つからない場合はJSON::ParserErrorを発生させること' do
+      text = <<~TEXT
+        こんにちは！
+        ```json
+        {"thought":"分析中です"}
+        ```
+      TEXT
+
+      expect { instance.parse_json_payload(text) }.to raise_error(JSON::ParserError, /No valid score JSON/)
+    end
+  end
+
   describe '#convert_scores_to_integers' do
     let(:valid_data) do
       { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 }

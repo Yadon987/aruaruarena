@@ -80,6 +80,27 @@ RSpec.shared_examples 'openai style parse response' do
       result = adapter.send(:parse_response, resp)
       expect(result[:scores][:empathy]).to eq(16)
     end
+
+    it 'ノイズとダミーJSONが混在していても有効な採点JSONを解析できること' do
+      content = <<~TEXT
+        こんにちは！採点しますね。
+        ```json
+        {"thought":"分析中..."}
+        ```
+
+        最終結果です。
+        ```json
+        #{JSON.generate(base_scores.merge(comment: '良い投稿です'))}
+        ```
+      TEXT
+      response_body = { choices: [{ message: { content: content } }] }
+      resp = build_faraday_response(response_body)
+
+      result = adapter.send(:parse_response, resp)
+
+      expect(result[:scores]).to eq(base_scores)
+      expect(result[:comment]).to eq('良い投稿です')
+    end
   end
 
   context '異常系' do
