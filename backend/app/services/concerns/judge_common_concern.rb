@@ -30,8 +30,9 @@ module JudgeCommonConcern
   end
 
   # OGP画像の事前生成を行う
+  # Postオブジェクトを直接渡すことで、DynamoDBの結果的整合性問題を回避
   def upload_ogp_image(post)
-    return if UploadOgpImageService.call(post.id)
+    return if UploadOgpImageService.call(post)
 
     Rails.logger.warn("[#{self.class.name}] OGP画像の事前生成に失敗: post_id=#{post.id}")
   rescue StandardError => e

@@ -5,12 +5,18 @@ class UploadOgpImageService
   OGP_S3_PREFIX = 'ogp/posts'
   CACHE_CONTROL = 'max-age=604800, public'
 
-  def initialize(post_id, s3_client:)
-    @post = Post.find(post_id)
+  # Postオブジェクトまたはpost_idを受け取る
+  # DynamoDBの結果的整合性問題を回避するため、Postオブジェクトを直接渡すことを推奨
+  def initialize(post_or_id, s3_client:)
+    @post = post_or_id.is_a?(Post) ? post_or_id : fetch_post(post_or_id)
     @s3_client = s3_client
+  end
+
+  def fetch_post(post_id)
+    Post.find(post_id)
   rescue Dynamoid::Errors::RecordNotFound, Dynamoid::Errors::MissingHashKey
     Rails.logger.warn("[UploadOgpImageService] Post not found: #{post_id}")
-    @post = nil
+    nil
   end
 
   def execute
@@ -39,10 +45,12 @@ class UploadOgpImageService
   end
 
   class << self
-    def call(post_id, s3_client: nil)
+    # Postオブジェクトまたはpost_idを受け取る
+    # DynamoDBの結果的整合性問題を回避するため、Postオブジェクトを直接渡すことを推奨
+    def call(post_or_id, s3_client: nil)
       return false if bucket_name.empty?
 
-      new(post_id, s3_client: s3_client || build_s3_client).execute
+      new(post_or_id, s3_client: s3_client || build_s3_client).execute
     end
 
     private

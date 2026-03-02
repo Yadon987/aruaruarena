@@ -70,28 +70,28 @@ RSpec.describe JudgePostService do
       # 何を検証するか: 3人全員成功時にstatus: scoredになること
       it '3人全員成功時にstatus: scoredになること' do
         mock_all_adapters_success
-        allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(true)
+        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
 
         service.execute
 
         post.reload
         expect(post.status).to eq('scored')
         expect(post.judges_count).to eq(3)
-        expect(UploadOgpImageService).to have_received(:call).with(post.id)
+        expect(UploadOgpImageService).to have_received(:call).with(instance_of(Post))
       end
 
       # 何を検証するか: 2人成功時にstatus: scoredになること
       it '2人成功時にstatus: scoredになること' do
         mock_all_adapters_success
         mock_adapter_failure(OpenAiAdapter)
-        allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(true)
+        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
 
         service.execute
 
         post.reload
         expect(post.status).to eq('scored')
         expect(post.judges_count).to eq(2)
-        expect(UploadOgpImageService).to have_received(:call).with(post.id)
+        expect(UploadOgpImageService).to have_received(:call).with(instance_of(Post))
       end
 
       # 何を検証するか: 平均点が小数第1位に丸められること
@@ -109,7 +109,7 @@ RSpec.describe JudgePostService do
           create_success_response(scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
                                   comment: 'test')
         )
-        allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(true)
+        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
 
         service.execute
 
@@ -218,7 +218,7 @@ RSpec.describe JudgePostService do
 
       it 'OGP生成に失敗しても審査結果はscoredのまま継続すること' do
         mock_all_adapters_success
-        allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(false)
+        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(false)
         expect(Rails.logger).to receive(:warn).with(/\[JudgePostService\] OGP画像の事前生成に失敗: post_id=#{post.id}/)
 
         service.execute
