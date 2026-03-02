@@ -239,7 +239,12 @@ module Api
       html = OgpMetaTagService.generate_html(post:, base_url:)
 
       response.headers['Cache-Control'] = CACHE_CONTROL_POST_DETAIL
-      render html: html.html_safe, content_type: 'text/html', status: :ok
+      # HEADリクエストでもbodyを含める（クローラー対応）
+      if request.head?
+        render body: html, content_type: 'text/html', status: :ok
+      else
+        render html: html.html_safe, content_type: 'text/html', status: :ok
+      end
     end
 
     # 通常ユーザー向けJSONをレンダリング

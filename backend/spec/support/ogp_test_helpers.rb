@@ -42,6 +42,9 @@ module OgpTestHelpers
     allow(mock_draw).to receive(:gravity).and_return(nil)
     allow(mock_draw).to receive(:draw).and_return(nil)
     allow(mock_draw).to receive(:annotate).and_return(nil)
+    # PNG圧縮用モック
+    allow(mock_draw).to receive(:quality).and_return(nil)
+    allow(mock_draw).to receive(:define).and_return(nil)
   end
   # rubocop:enable Metrics/AbcSize
 

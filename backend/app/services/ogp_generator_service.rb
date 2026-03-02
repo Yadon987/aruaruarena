@@ -61,6 +61,9 @@ class OgpGeneratorService
 
     draw_post_info(image)
 
+    # PNG圧縮を適用してファイルサイズを削減
+    compress_png(image)
+
     log_success
     image.to_blob
   rescue MiniMagick::Error => e
@@ -190,6 +193,17 @@ class OgpGeneratorService
     # まずバックスラッシュをエスケープし、その後シングルクォートをエスケープ
     # ImageMagick MVGパーサーではバックスラッシュも特殊文字として扱われるため
     text.gsub('\\') { '\\\\' }.gsub("'") { "\\'" }
+  end
+
+  # PNG画像の圧縮を行う
+  # ファイルサイズを削減して、SNSでの読み込み速度を向上させる
+  def compress_png(image)
+    image.combine_options do |config|
+      config.quality 85
+      config.define 'png:compression-level=9'
+      config.define 'png:compression-filter=5'
+      config.define 'png:compression-strategy=1'
+    end
   end
 end
 # rubocop:enable Metrics/ClassLength
