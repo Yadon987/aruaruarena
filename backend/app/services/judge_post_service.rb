@@ -100,11 +100,18 @@ class JudgePostService
     if result.succeeded
       Rails.logger.info("[JudgePostService] 審査成功: persona=#{persona}")
     else
-      Rails.logger.warn("[JudgePostService] 審査失敗: persona=#{persona}, error_code=#{result.error_code}")
+      Rails.logger.warn(
+        "[JudgePostService] 審査失敗: persona=#{persona}, " \
+        "error_code=#{result.error_code}, adapter=#{adapter_class.name}"
+      )
     end
 
     { persona: persona, result: result }
   rescue StandardError => e
+    Rails.logger.error(
+      "[JudgePostService] 例外発生: persona=#{persona}, " \
+      "adapter=#{adapter_class.name}, error_class=#{e.class}, message=#{e.message}"
+    )
     handle_thread_error(persona, e)
   end
 

@@ -76,13 +76,13 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
 
       # 失敗した審査結果の検証
       dewi = json['judgments'].find { |j| j['persona'] == 'dewi' }
-      expect(dewi['succeeded']).to be false
+      expect(dewi['success']).to be false
       expect(dewi['error_code']).to eq('timeout')
       expect(dewi['empathy']).to be_nil
       expect(dewi['total_score']).to be_nil
     end
 
-    it '一部の審査員のみ成功した投稿（succeeded混在）の詳細を取得できる' do
+    it '一部の審査員のみ成功した投稿（success混在）の詳細を取得できる' do
       post = create(:post, status: 'failed', judges_count: 2)
       create(:judgment, :hiroyuki, post_id: post.id, succeeded: true, total_score: 80)
       create(:judgment, :dewi, :failed, post_id: post.id, error_code: 'timeout')
@@ -95,13 +95,13 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
 
       # 成功した審査員の検証
       hiroyuki = json['judgments'].find { |j| j['persona'] == 'hiroyuki' }
-      expect(hiroyuki['succeeded']).to be true
+      expect(hiroyuki['success']).to be true
       expect(hiroyuki['total_score']).to eq(80)
       expect(hiroyuki['error_code']).to be_nil
 
       # 失敗した審査員の検証
       dewi = json['judgments'].find { |j| j['persona'] == 'dewi' }
-      expect(dewi['succeeded']).to be false
+      expect(dewi['success']).to be false
       expect(dewi['error_code']).to eq('timeout')
       expect(dewi['total_score']).to be_nil
     end
@@ -249,13 +249,13 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
       # Judgmentフィールドの存在チェック
       judgment = json['judgments'].first
       expect(judgment).to include(
-        'persona', 'succeeded', 'empathy', 'humor',
+        'persona', 'success', 'empathy', 'humor',
         'brevity', 'originality', 'expression', 'total_score',
         'comment', 'error_code'
       )
     end
 
-    it 'succeeded=trueの審査結果にerror_codeがnilであること' do
+    it 'success=trueの審査結果にerror_codeがnilであること' do
       post = create(:post, :scored, judges_count: 3)
       create(:judgment, :hiroyuki, post_id: post.id, succeeded: true)
       create(:judgment, :dewi, post_id: post.id, succeeded: true)
@@ -265,7 +265,7 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
       json = response.parsed_body
 
       json['judgments'].each do |j|
-        expect(j['succeeded']).to be true
+        expect(j['success']).to be true
         expect(j['error_code']).to be_nil
       end
     end

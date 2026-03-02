@@ -109,7 +109,7 @@ export function ResultModal({
 
     // 失敗した審査員を抽出
     const extractedFailedPersonas = post.judgments
-      ?.filter((j) => !j.success)
+      ?.filter((j) => !(j.success ?? false))
       .map((j) => j.persona)
     const failedPersonas = extractedFailedPersonas?.length
       ? extractedFailedPersonas

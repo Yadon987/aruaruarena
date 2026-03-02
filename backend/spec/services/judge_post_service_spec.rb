@@ -133,6 +133,10 @@ RSpec.describe JudgePostService do
 
       # 何を検証するか: 全員失敗時にstatus: failedになること
       it '全員失敗時にstatus: failedになること' do
+        allow(Rails.logger).to receive(:warn)
+        expect(Rails.logger).to receive(:warn).with(
+          /\[JudgePostService\] 審査失敗: persona=hiroyuki, error_code=timeout, adapter=GeminiAdapter/
+        )
         mock_adapter_failure(GeminiAdapter)
         mock_adapter_failure(DewiAdapter)
         mock_adapter_failure(OpenAiAdapter)
@@ -172,6 +176,10 @@ RSpec.describe JudgePostService do
 
       # 何を検証するか: Thread内で例外発生時に失敗として記録されること
       it 'Thread内で例外発生時に失敗として記録されること' do
+        allow(Rails.logger).to receive(:error)
+        expect(Rails.logger).to receive(:error).with(
+          /\[JudgePostService\] 例外発生: persona=hiroyuki, adapter=GeminiAdapter, error_class=StandardError, message=test error/
+        )
         expect(service).to receive(:handle_thread_error).with('hiroyuki', instance_of(StandardError)).and_call_original
         allow_any_instance_of(GeminiAdapter).to receive(:judge).and_raise(StandardError.new('test error'))
         mock_adapter_judge(DewiAdapter, success: true)

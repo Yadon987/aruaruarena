@@ -147,4 +147,29 @@ RSpec.describe Judgment, type: :model do
       expect(described_class.calculate_total_score(scores)).to eq(81)
     end
   end
+
+  describe '#to_judgment_json' do
+    context '成功した審査の場合' do
+      it 'successキーにtrueを設定すること' do
+        judgment = build(:judgment, succeeded: true)
+
+        json = judgment.to_judgment_json
+
+        expect(json[:success]).to be true
+        expect(json).not_to have_key(:succeeded)
+      end
+    end
+
+    context '失敗した審査の場合' do
+      it 'successキーにfalseとerror_codeを設定すること' do
+        judgment = build(:judgment, :failed, error_code: 'timeout')
+
+        json = judgment.to_judgment_json
+
+        expect(json[:success]).to be false
+        expect(json[:error_code]).to eq('timeout')
+        expect(json).not_to have_key(:succeeded)
+      end
+    end
+  end
 end
