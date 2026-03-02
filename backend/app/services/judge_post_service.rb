@@ -7,6 +7,8 @@ require 'concurrent'
 # 3人のAI審査員（ひろゆき風/デヴィ婦人風/中尾彬風）による
 # 並列審査を実行し、その結果をDynamoDBに保存します。
 class JudgePostService
+  include JudgeCommonConcern
+
   # 審査員の設定
   JUDGES = [
     { persona: 'hiroyuki', adapter: GeminiAdapter },
@@ -71,7 +73,7 @@ class JudgePostService
     end
 
     save_judgments!(results)
-    update_post_status!
+    update_post_status!(@post, @successful_judgments)
   ensure
     shutdown_executor
   end
@@ -178,14 +180,6 @@ class JudgePostService
     adapter_setting
   end
 
-  def dewi_adapter_class
-    # テスト環境は既存spec互換のため従来アダプターを固定利用する
-    return DewiAdapter if Rails.env.test?
-    return CerebrasAdapter if ENV['CEREBRAS_API_KEY'].to_s.strip != ''
-
-    DewiAdapter
-  end
-
   # 審査結果を保存する
   def save_judgments!(results)
     @successful_judgments = []
@@ -250,40 +244,8 @@ class JudgePostService
     )
   end
 
-  # ステータスを更新する
-  def update_post_status!
-    succeeded_count = @successful_judgments.size
-    @post.judges_count = succeeded_count
-
-    if succeeded_count >= 2
-      calculate_average_score!
-      @post.update_status!(:scored)
-      upload_ogp_image
-      Rails.logger.info("[JudgePostService] 審査完了: status=scored, post_id=#{@post.id}, judges_count=#{succeeded_count}")
-    else
-      @post.update_status!(:failed)
-      Rails.logger.info("[JudgePostService] 審査失敗: status=failed, post_id=#{@post.id}, judges_count=#{succeeded_count}")
-    end
-  end
-
-  # 平均点を計算する
-  def calculate_average_score!
-    return if @successful_judgments.empty?
-
-    total = @successful_judgments.sum(&:total_score)
-    @post.average_score = (total.to_f / @successful_judgments.size).round(1)
-  end
-
   def skip_processed_post
     Rails.logger.info("[JudgePostService] スキップ(処理済み): post_id=#{@post.id}, status=#{@post.status}")
     nil
-  end
-
-  def upload_ogp_image
-    return if UploadOgpImageService.call(@post.id)
-
-    Rails.logger.warn("[JudgePostService] OGP画像の事前生成に失敗: post_id=#{@post.id}")
-  rescue StandardError => e
-    Rails.logger.warn("[JudgePostService] OGP画像の事前生成で例外: post_id=#{@post.id} error=#{e.class} - #{e.message}")
   end
 end

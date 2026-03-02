@@ -2,10 +2,8 @@
 
 # RejudgePostService - failed投稿の指定審査員のみ再審査するサービス
 class RejudgePostService
-  # 成功審査員が2人以上ならscored
-  SCORING_THRESHOLD = 2
-  # average_scoreは小数第1位で丸める
-  ROUND_PRECISION = 1
+  include JudgeCommonConcern
+
   ERROR_CODE_THREAD_EXCEPTION = 'thread_exception'
 
   VALID_PERSONAS = %w[hiroyuki dewi nakao].freeze
@@ -24,7 +22,7 @@ class RejudgePostService
 
     post_snapshot, judgments_snapshot, existing_judgments = prepare_snapshots
     run_rejudge_for_targets(existing_judgments)
-    update_post_status!
+    update_post_status!(post_from_database, successful_judgments)
   rescue StandardError
     # Judgment更新後にPost更新が失敗した場合でも、実行前の整合状態に戻す
     rollback_rejudge!(judgments_snapshot:, post_snapshot:)
@@ -50,15 +48,6 @@ class RejudgePostService
     else
       raise ArgumentError, 'invalid persona included'
     end
-  end
-
-  def dewi_adapter_class
-    # テスト環境は既存spec互換のため従来アダプターを固定利用する
-    return DewiAdapter if Rails.env.test?
-
-    return CerebrasAdapter if ENV['CEREBRAS_API_KEY'].to_s.strip != ''
-
-    DewiAdapter
   end
 
   def validate_personas!(failed_personas)
@@ -190,28 +179,11 @@ class RejudgePostService
     judgment.save!
   end
 
-  def update_post_status!
-    successful_judgments = Judgment.where(post_id: @post.id).to_a.select(&:succeeded)
-    succeeded_count = successful_judgments.size
-
-    @post.judges_count = succeeded_count
-
-    if succeeded_count >= SCORING_THRESHOLD
-      total = successful_judgments.sum(&:total_score)
-      @post.average_score = (total.to_f / succeeded_count).round(ROUND_PRECISION)
-      @post.update_status!(Post::STATUS_SCORED)
-      upload_ogp_image
-    else
-      @post.average_score = nil
-      @post.update_status!(Post::STATUS_FAILED)
-    end
+  def successful_judgments
+    Judgment.where(post_id: @post.id).to_a.select(&:succeeded)
   end
 
-  def upload_ogp_image
-    return if UploadOgpImageService.call(@post.id)
-
-    Rails.logger.warn("[RejudgePostService] OGP画像の事前生成に失敗: post_id=#{@post.id}")
-  rescue StandardError => e
-    Rails.logger.warn("[RejudgePostService] OGP画像の事前生成で例外: post_id=#{@post.id} error=#{e.class} - #{e.message}")
+  def post_from_database
+    @post
   end
 end
