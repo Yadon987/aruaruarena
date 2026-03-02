@@ -42,8 +42,14 @@ module JudgeCommonConcern
   def update_scored_post!(post, successful_judgments, succeeded_count)
     total = successful_judgments.sum(&:total_score)
     post.average_score = (total.to_f / succeeded_count).round(ROUND_PRECISION)
-    post.update_status!(Post::STATUS_SCORED)
+    post.status = Post::STATUS_SCORED
     upload_ogp_image(post)
+    post.update_status!(Post::STATUS_SCORED)
+    LogOgpGenerationEventService.call(
+      event: 'post_scored_saved',
+      post:,
+      successful_judges_count: succeeded_count
+    )
   end
 
   def update_failed_post!(post)

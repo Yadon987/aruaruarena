@@ -17,7 +17,9 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
 
   before do
     allow(Post).to receive(:find).with('post-id').and_return(post)
-    allow(OgpGeneratorService).to receive(:call).with('post-id').and_return(mock_png_binary)
+    allow(OgpGeneratorService).to receive(:call).with(post).and_return(mock_png_binary)
+    allow(CreateCloudFrontInvalidationService).to receive(:call).and_return(true)
+    allow(LogOgpGenerationEventService).to receive(:call)
     ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
   end
 
@@ -45,13 +47,34 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
     expect(request.dig(:params, :key)).to eq('ogp/posts/post-id.png')
     expect(request.dig(:params, :content_type)).to eq('image/png')
     expect(request.dig(:params, :cache_control)).to eq('max-age=604800, public')
+    expect(CreateCloudFrontInvalidationService).to have_received(:call).with(
+      path: '/ogp/posts/post-id.png',
+      post_id: 'post-id'
+    )
+    expect(LogOgpGenerationEventService).to have_received(:call).with(
+      event: 'ogp_generation_started',
+      post:
+    )
+    expect(LogOgpGenerationEventService).to have_received(:call).with(
+      event: 'ogp_s3_upload_succeeded',
+      post:,
+      bucket_name: 'test-ogp-bucket',
+      object_key: 'ogp/posts/post-id.png'
+    )
+  end
+
+  it 'invalidation に失敗しても S3保存成功なら true を返すこと' do
+    allow(CreateCloudFrontInvalidationService).to receive(:call).and_return(false)
+
+    expect(described_class.call('post-id', s3_client:)).to be true
   end
 
   it '画像生成に失敗した場合はS3保存しないこと' do
-    allow(OgpGeneratorService).to receive(:call).with('post-id').and_return(nil)
+    allow(OgpGeneratorService).to receive(:call).with(post).and_return(nil)
 
     expect(described_class.call('post-id', s3_client:)).to be false
     expect(s3_client.api_requests).to be_empty
+    expect(CreateCloudFrontInvalidationService).not_to have_received(:call)
   end
 
   it 'スコア未確定の投稿はS3保存しないこと' do
@@ -59,6 +82,7 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
 
     expect(described_class.call('post-id', s3_client:)).to be false
     expect(s3_client.api_requests).to be_empty
+    expect(CreateCloudFrontInvalidationService).not_to have_received(:call)
   end
 
   it 'S3クライアント生成時にHTTPタイムアウトを設定すること' do
@@ -70,6 +94,20 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
       region: aws_region,
       http_open_timeout: 5,
       http_read_timeout: 5
+    )
+  end
+
+  it 'S3アップロード失敗時にエラーログを出力しfalseを返すこと' do
+    s3_client.stub_responses(:put_object, Aws::S3::Errors::ServiceError.new(nil, 'upload failed'))
+
+    allow(Rails.logger).to receive(:error)
+
+    expect(described_class.call('post-id', s3_client:)).to be false
+    expect(Rails.logger).to have_received(:error).with(/S3 upload failed/)
+    expect(CreateCloudFrontInvalidationService).not_to have_received(:call)
+    # S3アップロード失敗時はogp_s3_upload_succeededログを出力しないこと
+    expect(LogOgpGenerationEventService).not_to have_received(:call).with(
+      hash_including(event: 'ogp_s3_upload_succeeded')
     )
   end
 end

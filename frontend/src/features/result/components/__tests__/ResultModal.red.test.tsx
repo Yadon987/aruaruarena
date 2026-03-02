@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../../App'
 import { useRankings } from '../../../../shared/hooks/useRankings'
@@ -79,6 +79,8 @@ describe('E15-01 RED: ResultModal Component', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
 
@@ -212,5 +214,92 @@ describe('E15-01 RED: ResultModal Component', () => {
     await waitFor(() => {
       expect(screen.getByText('AI審査員が採点中...')).toBeInTheDocument()
     })
+  })
+
+  it('共有画像が未準備のままならリトライ失敗メッセージを表示する', async () => {
+    // 何を検証するか: OGP画像確認が3回失敗した場合に共有を中断し、再試行メッセージを表示すること
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: false } as Response)
+    vi.stubGlobal('fetch', fetchSpy)
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+
+    await moveToResultScreen({
+      status: 'scored',
+      average_score: 95.1,
+      rank: 1,
+      total_count: 50,
+      judgments: [],
+    })
+
+    const shareButton = await screen.findByRole('button', { name: 'Xでシェア' })
+    await waitFor(() => {
+      expect(shareButton).not.toBeDisabled()
+    })
+
+    vi.useFakeTimers()
+    fireEvent.click(shareButton)
+
+    expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.runAllTimersAsync()
+    })
+
+    expect(screen.getByText('画像の準備が終わってから、もう一度お試しください')).toBeInTheDocument()
+    expect(shareButton).not.toBeDisabled()
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+    expect(openSpy).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
+  })
+
+  it('OGP画像確認成功時にシェアウィンドウを開きプレビューを表示する', async () => {
+    // 何を検証するか: OGP画像確認が成功した場合にXのシェアウィンドウを開き、OGPプレビューを表示すること
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true } as Response)
+    vi.stubGlobal('fetch', fetchSpy)
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+
+    await moveToResultScreen({
+      status: 'scored',
+      average_score: 92.5,
+      rank: 5,
+      total_count: 30,
+      judgments: [],
+    })
+
+    const shareButton = await screen.findByRole('button', { name: 'Xでシェア' })
+    await waitFor(() => {
+      expect(shareButton).not.toBeDisabled()
+    })
+
+    vi.useFakeTimers()
+    fireEvent.click(shareButton)
+
+    expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.runAllTimersAsync()
+    })
+
+    // OGP画像確認のHEADリクエストが1回だけ呼ばれること
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/ogp/posts/result-post-id.png'),
+      expect.objectContaining({ method: 'HEAD', cache: 'no-store' })
+    )
+
+    // シェアウィンドウが開かれること
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringContaining('https://x.com/intent/tweet'),
+      '_blank',
+      'noopener,noreferrer'
+    )
+
+    // OGPプレビューが表示されること
+    const ogpPreview = screen.getByTestId('ogp-preview')
+    expect(ogpPreview).toBeInTheDocument()
+    expect(ogpPreview).toHaveTextContent('結果本文')
+
+    // エラーメッセージが表示されないこと
+    expect(screen.queryByText('画像の準備が終わってから、もう一度お試しください')).not.toBeInTheDocument()
   })
 })

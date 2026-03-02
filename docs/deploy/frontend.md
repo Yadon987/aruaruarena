@@ -28,6 +28,9 @@
 - `403 -> 200` は正規のアクセス拒否を隠す可能性があるため、適用前にバケットポリシーとWAFルールを確認すること
 - CloudFront の Default behavior に Lambda@Edge (`origin-request`) が関連付いていること
 - CloudFront の Default behavior で `User-Agent` を origin request policy 経由で転送していること（クローラー判定用）
+- Terraform 適用後に `access_log_bucket_name` 出力が得られること
+- CloudFront standard logs が `s3://<access_log_bucket_name>/cloudfront/frontend/` に出力されること
+- frontend S3 access logs が `s3://<access_log_bucket_name>/s3/frontend/` に出力されること
 
 ## OGP本番確認
 
@@ -87,6 +90,24 @@ curl -I \
 # CloudFront / API Gateway の両方が失敗する場合
 # Rails 側の OGP HTML 生成と投稿ステータス(scored)を確認する
 ```
+
+## アクセスログ確認
+
+OGP 画像の初回取得タイミングを追う場合は、CloudFront standard logs を優先して確認する。
+`/ogp/posts/<POST_ID>.png` への到達時刻を見たい場合は、以下のプレフィックス配下を確認する。
+
+```bash
+# CloudFront standard logs
+aws s3 ls s3://<access_log_bucket_name>/cloudfront/frontend/ --recursive | tail
+
+# frontend S3 access logs
+aws s3 ls s3://<access_log_bucket_name>/s3/frontend/ --recursive | tail
+```
+
+確認ポイント:
+- CloudFront logs に `/ogp/posts/<POST_ID>.png` が出ていれば、X などのクローラーが CDN まで到達している
+- S3 access logs に同キーが出ていれば、CloudFront キャッシュ未命中で S3 origin まで到達している
+- CloudFront logs の時刻と Rails の `UploadOgpImageService` 完了ログを比較し、共有導線の待機秒数を調整する
 
 ## ロールバック手順
 

@@ -42,6 +42,25 @@ RSpec.describe 'API::Posts', type: :request do
         expect(response).to have_http_status(:created)
       end
 
+      it '投稿作成時に計測用structured logを出力すること' do
+        info_messages = []
+        allow(Rails.logger).to receive(:info) do |message|
+          info_messages << message if message.present?
+        end
+
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+
+        structured_log = info_messages.find { |message| message.include?('"event":"post_created"') }
+        payload = JSON.parse(structured_log)
+
+        expect(payload).to include(
+          'event' => 'post_created',
+          'post_status' => 'judging'
+        )
+        expect(payload['post_id']).to be_present
+        expect(payload['post_created_at']).to be_present
+      end
+
       # 検証: 境界値下限（nickname:1, body:3）
       it 'ニックネーム1文字・本文3文字（境界値下限）で投稿成功' do
         params = { post: { nickname: 'a', body: 'abc' } }

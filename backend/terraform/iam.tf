@@ -102,6 +102,25 @@ resource "aws_iam_role_policy" "s3_ogp_access" {
   })
 }
 
+resource "aws_iam_role_policy" "cloudfront_ogp_invalidation" {
+  name = "cloudfront_ogp_invalidation"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation"
+        ]
+        Resource = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${var.cloudfront_distribution_id}"
+      }
+    ]
+  })
+}
+
 # =============================================================================
 # Lambda@Edge用IAMロール（OGPメタタグ配信用）
 # =============================================================================

@@ -22,6 +22,7 @@ resource "aws_lambda_function" "app" {
       GROQ_API_KEY             = var.groq_api_key
       SQS_QUEUE_URL            = aws_sqs_queue.judgment_queue.url
       OGP_S3_BUCKET            = var.frontend_s3_bucket_name
+      CLOUDFRONT_DISTRIBUTION_ID = var.cloudfront_distribution_id
     }
   }
 

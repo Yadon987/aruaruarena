@@ -44,21 +44,18 @@ variable "gemini_api_key" {
   description = "Gemini API key"
   type        = string
   sensitive   = true
-  default     = ""
 }
 
 variable "cerebras_api_key" {
   description = "Cerebras API key"
   type        = string
   sensitive   = true
-  default     = ""
 }
 
 variable "groq_api_key" {
   description = "Groq API key"
   type        = string
   sensitive   = true
-  default     = ""
 }
 
 variable "github_repository" {
@@ -107,4 +104,10 @@ variable "ogp_cache_policy_id" {
   description = "Cache policy ID for the /ogp/* behavior"
   type        = string
   default     = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+}
+
+variable "access_log_retention_days" {
+  description = "Retention days for CloudFront and S3 access logs."
+  type        = number
+  default     = 90
 }

@@ -70,6 +70,8 @@ module Api
       post = Post.new(post_params.merge(id: SecureRandom.uuid))
 
       if post.save
+        LogOgpGenerationEventService.call(event: 'post_created', post:)
+
         # 投稿成功後にレート制限を設定
         begin
           RateLimiterService.set_limit!(ip: request.remote_ip, nickname: post_params[:nickname])

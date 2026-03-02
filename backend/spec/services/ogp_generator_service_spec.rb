@@ -51,6 +51,15 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
 
       described_class.new('post-id')
     end
+
+    it 'Postオブジェクトを直接受け取る場合は再取得しないこと' do
+      post = double('Post')
+      allow(post).to receive(:is_a?).with(Post).and_return(true)
+
+      expect(Post).not_to receive(:find)
+
+      described_class.new(post)
+    end
   end
 
   describe 'E20 RED: execute' do
@@ -68,6 +77,7 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
 
     before do
       allow(Post).to receive(:find).with('post-id').and_return(post)
+      allow(LogOgpGenerationEventService).to receive(:call)
 
       setup_image_mocks
       setup_draw_mocks
@@ -77,6 +87,10 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     # 何を検証するか: スコア済み投稿ならPNGバイナリを返すこと
     it 'スコア済み投稿ではPNGバイナリを返すこと' do
       expect(service.execute).to start_with("\x89PNG")
+      expect(LogOgpGenerationEventService).to have_received(:call).with(
+        event: 'ogp_generation_succeeded',
+        post:
+      )
     end
 
     # 何を検証するか: 審査員描画を廃止した後はdraw_judgmentsメソッド自体が削除されていること
@@ -202,6 +216,28 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       allow(File).to receive(:exist?).with(described_class::FONT_PATH.to_s).and_return(false)
 
       expect(service.execute).to be_nil
+    end
+
+    # 何を検証するか: ベース画像欠損時に成功ログを出力しないこと
+    it 'ベース画像が存在しない場合は成功ログを出力しないこと' do
+      post = instance_double(
+        Post,
+        id: 'post-id',
+        status: Post::STATUS_SCORED,
+        nickname: '太郎',
+        body: 'あるある本文',
+        average_score: 85.5
+      )
+      allow(Post).to receive(:find).with('post-id').and_return(post)
+      allow(LogOgpGenerationEventService).to receive(:call)
+      setup_file_exist_mocks
+      allow(File).to receive(:exist?).with(described_class::BASE_IMAGE_PATH.to_s).and_return(false)
+
+      described_class.call('post-id')
+
+      expect(LogOgpGenerationEventService).not_to have_received(:call).with(
+        hash_including(event: 'ogp_generation_succeeded')
+      )
     end
   end
 end

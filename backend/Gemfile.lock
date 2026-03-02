@@ -40,6 +40,9 @@ GEM
     ast (2.4.3)
     aws-eventstream (1.4.0)
     aws-partitions (1.1213.0)
+    aws-sdk-cloudfront (1.141.0)
+      aws-sdk-core (~> 3, >= 3.241.4)
+      aws-sigv4 (~> 1.5)
     aws-sdk-core (3.242.0)
       aws-eventstream (~> 1, >= 1.3.0)
       aws-partitions (~> 1, >= 1.992.0)
@@ -268,6 +271,7 @@ DEPENDENCIES
   actionview (~> 8.0.0)
   activejob (~> 8.0.0)
   activemodel (~> 8.0.0)
+  aws-sdk-cloudfront
   aws-sdk-dynamodb
   aws-sdk-s3
   aws_lambda_ric
