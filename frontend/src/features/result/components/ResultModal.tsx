@@ -81,7 +81,7 @@ function buildOgpImageUrl(postId: string): string {
   return `${FRONTEND_BASE_URL}/ogp/posts/${postId}.png`
 }
 
-function parseCreatedAtMs(createdAt: Post['created_at']): number | null {
+function parseCreatedAtMs(createdAt: Post['created_at'] | undefined): number | null {
   if (!createdAt) return null
 
   // 純粋な数字文字列のみをUnixタイムスタンプとして扱う
@@ -95,7 +95,10 @@ function parseCreatedAtMs(createdAt: Post['created_at']): number | null {
   return Number.isNaN(parsedMs) ? null : parsedMs
 }
 
-function resolveInitialShareDelayMs(createdAt: Post['created_at'], canShowShare: boolean): number {
+function resolveInitialShareDelayMs(
+  createdAt: Post['created_at'] | undefined,
+  canShowShare: boolean
+): number {
   if (!canShowShare) return 0
 
   const createdAtMs = parseCreatedAtMs(createdAt)
