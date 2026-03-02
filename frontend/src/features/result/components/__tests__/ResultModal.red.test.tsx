@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../../App'
 import { useRankings } from '../../../../shared/hooks/useRankings'
 import { api, ApiClientError } from '../../../../shared/services/api'
+import type { Post } from '../../../../shared/types/domain'
+import { ResultModal } from '../ResultModal'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -12,6 +14,21 @@ vi.mock('../../../../shared/hooks/useRankings', () => ({
 }))
 
 const mockedUseRankings = vi.mocked(useRankings)
+
+function buildModalPost(overrides: Partial<Post> = {}): Post {
+  return {
+    id: 'modal-post-id',
+    nickname: '検証太郎',
+    body: '検証本文',
+    status: 'scored',
+    created_at: '2026-03-02T00:00:00Z',
+    average_score: 91.2,
+    rank: 1,
+    total_count: 10,
+    judgments: [],
+    ...overrides,
+  }
+}
 
 function setupRanking() {
   mockedUseRankings.mockReturnValue({
@@ -300,6 +317,93 @@ describe('E15-01 RED: ResultModal Component', () => {
     expect(ogpPreview).toHaveTextContent('結果本文')
 
     // エラーメッセージが表示されないこと
-    expect(screen.queryByText('画像の準備が終わってから、もう一度お試しください')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('画像の準備が終わってから、もう一度お試しください')
+    ).not.toBeInTheDocument()
+  })
+
+  it('同一投稿の再レンダーでは共有準備タイマーを延長しない', async () => {
+    // 何を検証するか: post の参照だけ変わっても同じ id と created_at なら既存タイマーを維持すること
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-02T00:00:00Z'))
+
+    const post = buildModalPost()
+    const { rerender } = render(
+      <ResultModal
+        isOpen
+        post={post}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    const shareButton = screen.getByRole('button', { name: 'Xでシェア' })
+    expect(shareButton).toBeDisabled()
+    expect(screen.getByText('画像を準備しています。数秒お待ちください')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
+
+    rerender(
+      <ResultModal
+        isOpen
+        post={{ ...post }}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+
+    expect(shareButton).not.toBeDisabled()
+    expect(screen.queryByText('画像を準備しています。数秒お待ちください')).not.toBeInTheDocument()
+  })
+
+  it('即時共有可能になったら準備メッセージを消し、live region として通知する', () => {
+    // 何を検証するか: delayMs=0 では準備メッセージが残らず、表示中メッセージは支援技術に通知されること
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-02T00:00:00Z'))
+
+    const { rerender } = render(
+      <ResultModal
+        isOpen
+        post={buildModalPost()}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    const statusMessage = screen.getByRole('status')
+    expect(statusMessage).toHaveAttribute('aria-live', 'polite')
+    expect(statusMessage).toHaveAttribute('aria-atomic', 'true')
+    expect(statusMessage).toHaveTextContent('画像を準備しています。数秒お待ちください')
+
+    rerender(
+      <ResultModal
+        isOpen
+        post={buildModalPost({ created_at: '2026-03-01T23:59:50Z' })}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Xでシェア' })).not.toBeDisabled()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText('画像を準備しています。数秒お待ちください')).not.toBeInTheDocument()
   })
 })

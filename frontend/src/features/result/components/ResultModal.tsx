@@ -95,10 +95,10 @@ function parseCreatedAtMs(createdAt: Post['created_at']): number | null {
   return Number.isNaN(parsedMs) ? null : parsedMs
 }
 
-function resolveInitialShareDelayMs(post: Post | null): number {
-  if (!post || !canShowShareButton(post)) return 0
+function resolveInitialShareDelayMs(createdAt: Post['created_at'], canShowShare: boolean): number {
+  if (!canShowShare) return 0
 
-  const createdAtMs = parseCreatedAtMs(post.created_at)
+  const createdAtMs = parseCreatedAtMs(createdAt)
   if (createdAtMs === null) return 0
 
   const elapsedMs = Date.now() - createdAtMs
@@ -203,7 +203,7 @@ export function ResultModal({
   }, [post?.id, isOpen])
 
   useEffect(() => {
-    const delayMs = resolveInitialShareDelayMs(post)
+    const delayMs = resolveInitialShareDelayMs(post?.created_at, canShowShare)
 
     if (!isOpen || !canShowShare) {
       setIsShareReady(false)
@@ -212,6 +212,7 @@ export function ResultModal({
 
     if (delayMs === 0) {
       setIsShareReady(true)
+      setShareStatusMessage('')
       return undefined
     }
 
@@ -226,7 +227,7 @@ export function ResultModal({
     return () => {
       window.clearTimeout(timerId)
     }
-  }, [canShowShare, isOpen, post])
+  }, [canShowShare, isOpen, post?.created_at, post?.id])
 
   if (!isOpen) return null
 
@@ -420,7 +421,9 @@ export function ResultModal({
                     )}
                   </div>
                   {canShowShare && shareStatusMessage && (
-                    <p className="mt-2 text-sm">{shareStatusMessage}</p>
+                    <p className="mt-2 text-sm" role="status" aria-live="polite" aria-atomic="true">
+                      {shareStatusMessage}
+                    </p>
                   )}
                   {rejudgeErrorMessage && (
                     <p className="mt-2 text-red-600">{rejudgeErrorMessage}</p>
