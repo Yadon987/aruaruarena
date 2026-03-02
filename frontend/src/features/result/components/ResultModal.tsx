@@ -31,12 +31,20 @@ const SHARE_HASHTAG = '#あるあるアリーナ'
 const SHARE_TARGET = '_blank'
 const SHARE_WINDOW_FEATURES = 'noopener,noreferrer'
 const SHARE_TOP_RANK_THRESHOLD = 20
+const SHARE_READY_DELAY_MS = 5000
+const SHARE_IMAGE_CHECK_RETRY_COUNT = 3
+const SHARE_IMAGE_CHECK_RETRY_DELAY_MS = 1000
 const X_SHARE_BASE_URL = 'https://x.com/intent/tweet?text='
 const MESSAGE_REJUDGE_FAILED = '再審査に失敗しました。時間をおいて再度お試しください'
+const MESSAGE_SHARE_PREPARING = '画像を準備しています。数秒お待ちください'
+const MESSAGE_SHARE_CHECKING = '共有前に画像を確認しています...'
+const MESSAGE_SHARE_NOT_READY = '画像の準備が終わってから、もう一度お試しください'
 
 // フロントエンドのベースURL（シェアURL生成用）
 // 末尾スラッシュを除去して二重スラッシュを防止
-const FRONTEND_BASE_URL = (import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173').replace(/\/$/, '')
+const FRONTEND_BASE_URL = (
+  import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'
+).replace(/\/$/, '')
 
 function resolveErrorMessage(errorCode: string | null): string {
   if (errorCode === ERROR_CODE_NOT_FOUND) {
@@ -69,6 +77,87 @@ function buildShareUrl(postBody: string, postId: string): string {
   return `${X_SHARE_BASE_URL}${encodeURIComponent(shareText)}`
 }
 
+function buildOgpImageUrl(postId: string): string {
+  return `${FRONTEND_BASE_URL}/ogp/posts/${postId}.png`
+}
+
+function parseCreatedAtMs(createdAt: Post['created_at']): number | null {
+  if (!createdAt) return null
+
+  // 純粋な数字文字列のみをUnixタイムスタンプとして扱う
+  // （ISO文字列 "2026-02-17..." もNumberに変換されるとNaNにならない場合があるため）
+  const unixSeconds = Number(createdAt)
+  if (Number.isFinite(unixSeconds) && /^\d+$/.test(String(createdAt))) {
+    return unixSeconds * 1000
+  }
+
+  const parsedMs = Date.parse(createdAt)
+  return Number.isNaN(parsedMs) ? null : parsedMs
+}
+
+function resolveInitialShareDelayMs(createdAt: Post['created_at'], canShowShare: boolean): number {
+  if (!canShowShare) return 0
+
+  const createdAtMs = parseCreatedAtMs(createdAt)
+  if (createdAtMs === null) return 0
+
+  const elapsedMs = Date.now() - createdAtMs
+  if (elapsedMs < 0) return 0
+
+  return Math.max(0, SHARE_READY_DELAY_MS - elapsedMs)
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
+}
+
+async function isOgpImageReady(postId: string, signal?: AbortSignal): Promise<boolean> {
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), 3000)
+
+  const handleAbort = () => controller.abort()
+  if (signal) {
+    if (signal.aborted) return false
+    signal.addEventListener('abort', handleAbort)
+  }
+
+  try {
+    const response = await fetch(buildOgpImageUrl(postId), {
+      method: 'HEAD',
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+
+    return response.ok
+  } catch {
+    return false
+  } finally {
+    window.clearTimeout(timeoutId)
+    if (signal) {
+      signal.removeEventListener('abort', handleAbort)
+    }
+  }
+}
+
+async function waitUntilOgpImageReady(postId: string, signal?: AbortSignal): Promise<boolean> {
+  for (let attempt = 0; attempt < SHARE_IMAGE_CHECK_RETRY_COUNT; attempt += 1) {
+    if (signal?.aborted) return false
+
+    if (await isOgpImageReady(postId, signal)) {
+      return true
+    }
+
+    if (attempt < SHARE_IMAGE_CHECK_RETRY_COUNT - 1) {
+      if (signal?.aborted) return false
+      await sleep(SHARE_IMAGE_CHECK_RETRY_DELAY_MS)
+    }
+  }
+
+  return false
+}
+
 export function ResultModal({
   isOpen,
   post,
@@ -83,7 +172,11 @@ export function ResultModal({
   const prefersReducedMotion = useReducedMotion()
   const [isRejudging, setIsRejudging] = useState(false)
   const [isSharePreviewVisible, setIsSharePreviewVisible] = useState(false)
+  const [isShareSubmitting, setIsShareSubmitting] = useState(false)
+  const [isShareReady, setIsShareReady] = useState(false)
+  const [shareStatusMessage, setShareStatusMessage] = useState('')
   const [rejudgeErrorMessage, setRejudgeErrorMessage] = useState('')
+  const shareAbortControllerRef = useRef<AbortController | null>(null)
 
   const hasRankInfo = isRankInfoAvailable(post)
   const shouldShowScoredFallback = post?.status === 'scored' && !hasRankInfo
@@ -99,8 +192,42 @@ export function ResultModal({
 
   useEffect(() => {
     setIsSharePreviewVisible(false)
+    setIsShareSubmitting(false)
+    setShareStatusMessage('')
     setRejudgeErrorMessage('')
+
+    return () => {
+      shareAbortControllerRef.current?.abort()
+      shareAbortControllerRef.current = null
+    }
   }, [post?.id, isOpen])
+
+  useEffect(() => {
+    const delayMs = resolveInitialShareDelayMs(post?.created_at, canShowShare)
+
+    if (!isOpen || !canShowShare) {
+      setIsShareReady(false)
+      return undefined
+    }
+
+    if (delayMs === 0) {
+      setIsShareReady(true)
+      setShareStatusMessage('')
+      return undefined
+    }
+
+    setIsShareReady(false)
+    setShareStatusMessage(MESSAGE_SHARE_PREPARING)
+
+    const timerId = window.setTimeout(() => {
+      setIsShareReady(true)
+      setShareStatusMessage('')
+    }, delayMs)
+
+    return () => {
+      window.clearTimeout(timerId)
+    }
+  }, [canShowShare, isOpen, post?.created_at, post?.id])
 
   if (!isOpen) return null
 
@@ -129,11 +256,35 @@ export function ResultModal({
     }
   }
 
-  const handleShare = () => {
-    if (!post) return
+  const handleShare = async () => {
+    if (!post || isShareSubmitting || !isShareReady) return
+
+    shareAbortControllerRef.current?.abort()
+    const controller = new AbortController()
+    shareAbortControllerRef.current = controller
+    const signal = controller.signal
+
+    setIsShareSubmitting(true)
+    setShareStatusMessage(MESSAGE_SHARE_CHECKING)
+
+    const isImageReady = await waitUntilOgpImageReady(post.id, signal)
+    if (signal.aborted) return
+
+    if (!isImageReady) {
+      setShareStatusMessage(MESSAGE_SHARE_NOT_READY)
+      setIsShareSubmitting(false)
+      return
+    }
+
     const shareUrl = buildShareUrl(post.body, post.id)
     setIsSharePreviewVisible(true)
-    window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
+    setShareStatusMessage('')
+    const openedWindow = window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
+    if (!openedWindow) {
+      // ポップアップがブロックされた場合、同じタブで開く
+      window.location.assign(shareUrl)
+    }
+    setIsShareSubmitting(false)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -191,90 +342,101 @@ export function ResultModal({
           onKeyDown={handleKeyDown}
           style={prefersReducedMotion ? { transitionDuration: '0ms' } : undefined}
         >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">審査結果</h2>
-          <button ref={closeButtonRef} type="button" onClick={onClose}>
-            閉じる
-          </button>
-        </div>
-
-        {isLoading && !post && <p>{MESSAGE_LOADING}</p>}
-
-        {!isLoading && errorCode && (
-          <div>
-            <p>{resolveErrorMessage(errorCode)}</p>
-            <button type="button" onClick={onRetry} className="mt-2">
-              再試行
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">審査結果</h2>
+            <button ref={closeButtonRef} type="button" onClick={onClose}>
+              閉じる
             </button>
           </div>
-        )}
 
-        {!isLoading && !errorCode && post && (
-          <div>
-            <dl className="space-y-2">
-              <div>
-                <dt className="font-semibold">ニックネーム</dt>
-                <dd>{post.nickname}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold">本文</dt>
-                <dd>{post.body}</dd>
-              </div>
-              {typeof post.average_score === 'number' && (
+          {isLoading && !post && <p>{MESSAGE_LOADING}</p>}
+
+          {!isLoading && errorCode && (
+            <div>
+              <p>{resolveErrorMessage(errorCode)}</p>
+              <button type="button" onClick={onRetry} className="mt-2">
+                再試行
+              </button>
+            </div>
+          )}
+
+          {!isLoading && !errorCode && post && (
+            <div>
+              <dl className="space-y-2">
                 <div>
-                  <dt className="font-semibold">平均点</dt>
-                  <dd>平均点: {post.average_score.toFixed(1)}</dd>
+                  <dt className="font-semibold">ニックネーム</dt>
+                  <dd>{post.nickname}</dd>
                 </div>
-              )}
-              {post.status === 'scored' && hasRankInfo && (
                 <div>
-                  <dt className="font-semibold">順位</dt>
-                  <dd>
-                    {post.rank}位 / {post.total_count}件中
-                  </dd>
+                  <dt className="font-semibold">本文</dt>
+                  <dd>{post.body}</dd>
                 </div>
-              )}
-            </dl>
-            {shouldShowScoredFallback && <p>{MESSAGE_RANK_FALLBACK}</p>}
-            {shouldShowFailedRank && <p>{MESSAGE_FAILED_RANK}</p>}
-
-            <section className="mt-4">
-              <h3 className="mb-2 font-semibold">審査員コメント</h3>
-              {hasJudgments ? (
-                <div className="space-y-2">
-                  {post.judgments!.map((judgment) => (
-                    <JudgeResultCard key={judgment.persona} judgment={judgment} />
-                  ))}
-                </div>
-              ) : (
-                <p>{MESSAGE_NO_JUDGMENTS}</p>
-              )}
-            </section>
-
-            {(canShowRejudge || canShowShare) && (
-              <section className="mt-4">
-                <div className="flex gap-2">
-                  {canShowRejudge && (
-                    <button type="button" onClick={handleRejudge} disabled={isRejudging}>
-                      {REJUDGE_BUTTON_LABEL}
-                    </button>
-                  )}
-                  {canShowShare && (
-                    <button type="button" onClick={handleShare}>
-                      {SHARE_BUTTON_LABEL}
-                    </button>
-                  )}
-                </div>
-                {rejudgeErrorMessage && <p className="mt-2 text-red-600">{rejudgeErrorMessage}</p>}
-                {isSharePreviewVisible && (
-                  <div data-testid="ogp-preview" className="mt-2 rounded border p-2">
-                    <p>{post.body}</p>
+                {typeof post.average_score === 'number' && (
+                  <div>
+                    <dt className="font-semibold">平均点</dt>
+                    <dd>平均点: {post.average_score.toFixed(1)}</dd>
                   </div>
                 )}
+                {post.status === 'scored' && hasRankInfo && (
+                  <div>
+                    <dt className="font-semibold">順位</dt>
+                    <dd>
+                      {post.rank}位 / {post.total_count}件中
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {shouldShowScoredFallback && <p>{MESSAGE_RANK_FALLBACK}</p>}
+              {shouldShowFailedRank && <p>{MESSAGE_FAILED_RANK}</p>}
+
+              <section className="mt-4">
+                <h3 className="mb-2 font-semibold">審査員コメント</h3>
+                {hasJudgments ? (
+                  <div className="space-y-2">
+                    {post.judgments!.map((judgment) => (
+                      <JudgeResultCard key={judgment.persona} judgment={judgment} />
+                    ))}
+                  </div>
+                ) : (
+                  <p>{MESSAGE_NO_JUDGMENTS}</p>
+                )}
               </section>
-            )}
-          </div>
-        )}
+
+              {(canShowRejudge || canShowShare) && (
+                <section className="mt-4">
+                  <div className="flex gap-2">
+                    {canShowRejudge && (
+                      <button type="button" onClick={handleRejudge} disabled={isRejudging}>
+                        {REJUDGE_BUTTON_LABEL}
+                      </button>
+                    )}
+                    {canShowShare && (
+                      <button
+                        type="button"
+                        onClick={handleShare}
+                        disabled={!isShareReady || isShareSubmitting}
+                      >
+                        {SHARE_BUTTON_LABEL}
+                      </button>
+                    )}
+                  </div>
+                  {canShowShare && shareStatusMessage && (
+                    <p className="mt-2 text-sm" role="status" aria-live="polite" aria-atomic="true">
+                      {shareStatusMessage}
+                    </p>
+                  )}
+                  {rejudgeErrorMessage && (
+                    <p className="mt-2 text-red-600">{rejudgeErrorMessage}</p>
+                  )}
+                  {isSharePreviewVisible && (
+                    <div data-testid="ogp-preview" className="mt-2 rounded border p-2">
+                      <p>{post.body}</p>
+                    </div>
+                  )}
+                </section>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

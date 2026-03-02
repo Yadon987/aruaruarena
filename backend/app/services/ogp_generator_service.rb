@@ -44,10 +44,10 @@ class OgpGeneratorService
     score_suffix: '点'
   }.freeze
 
-  def initialize(post_id)
-    @post = Post.find(post_id)
+  def initialize(post_or_id)
+    @post = post_or_id.is_a?(Post) ? post_or_id : Post.find(post_or_id)
   rescue Dynamoid::Errors::RecordNotFound, Dynamoid::Errors::MissingHashKey
-    Rails.logger.warn("[OgpGeneratorService] Post not found: #{post_id}")
+    Rails.logger.warn("[OgpGeneratorService] Post not found: #{post_or_id}")
     @post = nil
   end
 
@@ -76,8 +76,8 @@ class OgpGeneratorService
   # rubocop:enable Metrics/MethodLength
 
   class << self
-    def call(post_id)
-      new(post_id).execute
+    def call(post_or_id)
+      new(post_or_id).execute
     end
   end
 
@@ -160,6 +160,7 @@ class OgpGeneratorService
 
   # ログ出力メソッド
   def log_success
+    LogOgpGenerationEventService.call(event: 'ogp_generation_succeeded', post: @post)
     Rails.logger.info("[OgpGeneratorService] OGP画像生成成功: post_id=#{@post.id}")
   end
 

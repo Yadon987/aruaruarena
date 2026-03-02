@@ -49,6 +49,13 @@ RSpec.describe GeminiAdapter do
         expect(config[:temperature]).to eq(0.7)
         expect(config[:maxOutputTokens]).to eq(1000)
       end
+
+      it 'generationConfigにresponseMimeTypeがapplication/jsonで設定されていること' do
+        request = adapter.send(:build_request, post_content, persona)
+
+        config = request[:generationConfig]
+        expect(config[:responseMimeType]).to eq('application/json')
+      end
     end
 
     it_behaves_like 'adapter build_request boundary', ->(req) { req[:contents][0][:parts][0][:text] }

@@ -199,7 +199,8 @@ class GeminiAdapter < BaseAiAdapter
   def generation_config
     {
       temperature: TEMPERATURE, # 創造性のバランス（0.0-1.0）
-      maxOutputTokens: MAX_OUTPUT_TOKENS # 最大出力トークン数
+      maxOutputTokens: MAX_OUTPUT_TOKENS, # 最大出力トークン数
+      responseMimeType: 'application/json' # JSONモードを強制
     }
   end
 
@@ -236,6 +237,7 @@ class GeminiAdapter < BaseAiAdapter
     { scores: convert_scores_to_integers(data), comment: truncate_comment(data[:comment]) }
   rescue JSON::ParserError => e
     Rails.logger.error("JSONパースエラー: #{e.class} - #{e.message}")
+    Rails.logger.error("元のレスポンステキスト(先頭200文字): #{text.to_s.truncate(200)}")
     invalid_response_error
   rescue ArgumentError => e
     Rails.logger.error("スコア変換エラー: #{e.message}")

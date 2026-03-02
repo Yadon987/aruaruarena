@@ -1,8 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../../App'
 import { useRankings } from '../../../../shared/hooks/useRankings'
 import { api, ApiClientError } from '../../../../shared/services/api'
+import type { Post } from '../../../../shared/types/domain'
+import { ResultModal } from '../ResultModal'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -12,6 +14,21 @@ vi.mock('../../../../shared/hooks/useRankings', () => ({
 }))
 
 const mockedUseRankings = vi.mocked(useRankings)
+
+function buildModalPost(overrides: Partial<Post> = {}): Post {
+  return {
+    id: 'modal-post-id',
+    nickname: '検証太郎',
+    body: '検証本文',
+    status: 'scored',
+    created_at: '2026-03-02T00:00:00Z',
+    average_score: 91.2,
+    rank: 1,
+    total_count: 10,
+    judgments: [],
+    ...overrides,
+  }
+}
 
 function setupRanking() {
   mockedUseRankings.mockReturnValue({
@@ -79,6 +96,8 @@ describe('E15-01 RED: ResultModal Component', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
 
@@ -212,5 +231,179 @@ describe('E15-01 RED: ResultModal Component', () => {
     await waitFor(() => {
       expect(screen.getByText('AI審査員が採点中...')).toBeInTheDocument()
     })
+  })
+
+  it('共有画像が未準備のままならリトライ失敗メッセージを表示する', async () => {
+    // 何を検証するか: OGP画像確認が3回失敗した場合に共有を中断し、再試行メッセージを表示すること
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: false } as Response)
+    vi.stubGlobal('fetch', fetchSpy)
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+
+    await moveToResultScreen({
+      status: 'scored',
+      average_score: 95.1,
+      rank: 1,
+      total_count: 50,
+      judgments: [],
+    })
+
+    const shareButton = await screen.findByRole('button', { name: 'Xでシェア' })
+    await waitFor(() => {
+      expect(shareButton).not.toBeDisabled()
+    })
+
+    vi.useFakeTimers()
+    fireEvent.click(shareButton)
+
+    expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.runAllTimersAsync()
+    })
+
+    expect(screen.getByText('画像の準備が終わってから、もう一度お試しください')).toBeInTheDocument()
+    expect(shareButton).not.toBeDisabled()
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+    expect(openSpy).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
+  })
+
+  it('OGP画像確認成功時にシェアウィンドウを開きプレビューを表示する', async () => {
+    // 何を検証するか: OGP画像確認が成功した場合にXのシェアウィンドウを開き、OGPプレビューを表示すること
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true } as Response)
+    vi.stubGlobal('fetch', fetchSpy)
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+
+    await moveToResultScreen({
+      status: 'scored',
+      average_score: 92.5,
+      rank: 5,
+      total_count: 30,
+      judgments: [],
+    })
+
+    const shareButton = await screen.findByRole('button', { name: 'Xでシェア' })
+    await waitFor(() => {
+      expect(shareButton).not.toBeDisabled()
+    })
+
+    vi.useFakeTimers()
+    fireEvent.click(shareButton)
+
+    expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.runAllTimersAsync()
+    })
+
+    // OGP画像確認のHEADリクエストが1回だけ呼ばれること
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/ogp/posts/result-post-id.png'),
+      expect.objectContaining({ method: 'HEAD', cache: 'no-store' })
+    )
+
+    // シェアウィンドウが開かれること
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringContaining('https://x.com/intent/tweet'),
+      '_blank',
+      'noopener,noreferrer'
+    )
+
+    // OGPプレビューが表示されること
+    const ogpPreview = screen.getByTestId('ogp-preview')
+    expect(ogpPreview).toBeInTheDocument()
+    expect(ogpPreview).toHaveTextContent('結果本文')
+
+    // エラーメッセージが表示されないこと
+    expect(
+      screen.queryByText('画像の準備が終わってから、もう一度お試しください')
+    ).not.toBeInTheDocument()
+  })
+
+  it('同一投稿の再レンダーでは共有準備タイマーを延長しない', async () => {
+    // 何を検証するか: post の参照だけ変わっても同じ id と created_at なら既存タイマーを維持すること
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-02T00:00:00Z'))
+
+    const post = buildModalPost()
+    const { rerender } = render(
+      <ResultModal
+        isOpen
+        post={post}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    const shareButton = screen.getByRole('button', { name: 'Xでシェア' })
+    expect(shareButton).toBeDisabled()
+    expect(screen.getByText('画像を準備しています。数秒お待ちください')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
+
+    rerender(
+      <ResultModal
+        isOpen
+        post={{ ...post }}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+
+    expect(shareButton).not.toBeDisabled()
+    expect(screen.queryByText('画像を準備しています。数秒お待ちください')).not.toBeInTheDocument()
+  })
+
+  it('即時共有可能になったら準備メッセージを消し、live region として通知する', () => {
+    // 何を検証するか: delayMs=0 では準備メッセージが残らず、表示中メッセージは支援技術に通知されること
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-02T00:00:00Z'))
+
+    const { rerender } = render(
+      <ResultModal
+        isOpen
+        post={buildModalPost()}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    const statusMessage = screen.getByRole('status')
+    expect(statusMessage).toHaveAttribute('aria-live', 'polite')
+    expect(statusMessage).toHaveAttribute('aria-atomic', 'true')
+    expect(statusMessage).toHaveTextContent('画像を準備しています。数秒お待ちください')
+
+    rerender(
+      <ResultModal
+        isOpen
+        post={buildModalPost({ created_at: '2026-03-01T23:59:50Z' })}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Xでシェア' })).not.toBeDisabled()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText('画像を準備しています。数秒お待ちください')).not.toBeInTheDocument()
   })
 })

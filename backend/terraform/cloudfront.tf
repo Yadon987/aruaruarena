@@ -129,4 +129,10 @@ resource "aws_cloudfront_distribution" "frontend" {
     cloudfront_default_certificate = true
     minimum_protocol_version       = "TLSv1"
   }
+
+  logging_config {
+    bucket          = aws_s3_bucket.access_logs.bucket_domain_name
+    include_cookies = false
+    prefix          = "cloudfront/frontend/"
+  }
 }

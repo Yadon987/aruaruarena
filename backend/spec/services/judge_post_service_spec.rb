@@ -71,6 +71,7 @@ RSpec.describe JudgePostService do
       it '3人全員成功時にstatus: scoredになること' do
         mock_all_adapters_success
         allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
+        allow(LogOgpGenerationEventService).to receive(:call)
 
         service.execute
 
@@ -78,6 +79,25 @@ RSpec.describe JudgePostService do
         expect(post.status).to eq('scored')
         expect(post.judges_count).to eq(3)
         expect(UploadOgpImageService).to have_received(:call).with(instance_of(Post))
+        expect(LogOgpGenerationEventService).to have_received(:call).with(
+          event: 'post_scored_saved',
+          post: instance_of(Post),
+          successful_judges_count: 3
+        )
+      end
+
+      it 'OGP画像生成が完了するまでscoredを保存しないこと' do
+        mock_all_adapters_success
+        allow(UploadOgpImageService).to receive(:call) do |post_for_upload|
+          expect(post_for_upload.status).to eq('scored')
+          expect(Post.find(post.id).status).to eq('judging')
+          true
+        end
+
+        service.execute
+
+        post.reload
+        expect(post.status).to eq('scored')
       end
 
       # 何を検証するか: 2人成功時にstatus: scoredになること
@@ -177,9 +197,11 @@ RSpec.describe JudgePostService do
       # 何を検証するか: Thread内で例外発生時に失敗として記録されること
       it 'Thread内で例外発生時に失敗として記録されること' do
         allow(Rails.logger).to receive(:error)
-        expect(Rails.logger).to receive(:error).with(
-          /\[JudgePostService\] 例外発生: persona=hiroyuki, adapter=GeminiAdapter, error_class=StandardError, message=test error/
+        error_log_pattern = Regexp.new(
+          '\[JudgePostService\] 例外発生: persona=hiroyuki, adapter=GeminiAdapter, ' \
+          'error_class=StandardError, message=test error'
         )
+        expect(Rails.logger).to receive(:error).with(error_log_pattern)
         expect(service).to receive(:handle_thread_error).with('hiroyuki', instance_of(StandardError)).and_call_original
         allow_any_instance_of(GeminiAdapter).to receive(:judge).and_raise(StandardError.new('test error'))
         mock_adapter_judge(DewiAdapter, success: true)

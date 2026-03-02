@@ -26,3 +26,8 @@ output "cloudfront_domain_name" {
   description = "Domain name of the frontend CloudFront distribution."
   value       = aws_cloudfront_distribution.frontend.domain_name
 }
+
+output "access_log_bucket_name" {
+  description = "S3 bucket name storing CloudFront and frontend S3 access logs."
+  value       = aws_s3_bucket.access_logs.bucket
+}

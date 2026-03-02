@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
 import { mockRankings, selectMyPost } from '../../../test/appTestHelpers'
@@ -15,9 +15,15 @@ describe('E15-01 RED: ResultModal Flow', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true } as Response))
     mockRankings([
       { rank: 1, id: 'rank-post-1', nickname: 'ランク太郎', body: '本文', average_score: 90.1 },
     ])
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it('ランキング項目クリックで結果モーダルが開く', async () => {
@@ -52,7 +58,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     render(<App />)
 
     fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '遷移太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '遷移テスト本文です' } })
+    fireEvent.change(screen.getByLabelText('あるある本文'), {
+      target: { value: '遷移テスト本文です' },
+    })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
 
     await waitFor(() => {
@@ -105,7 +113,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     render(<App />)
 
     fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '閉じる太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '閉じるテスト本文です' } })
+    fireEvent.change(screen.getByLabelText('あるある本文'), {
+      target: { value: '閉じるテスト本文です' },
+    })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
 
     const modal = await screen.findByRole('dialog', { name: '審査結果モーダル' })
@@ -137,7 +147,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     render(<App />)
 
     fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '範囲太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '範囲テスト本文です' } })
+    fireEvent.change(screen.getByLabelText('あるある本文'), {
+      target: { value: '範囲テスト本文です' },
+    })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
 
     await waitFor(() => {
@@ -284,8 +296,8 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     expect(rejudgeSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('SNSシェア押下でOGPプレビュー表示後に安全な新規タブ起動を行う', async () => {
-    // 何を検証するか: Xシェア押下時にOGPプレビューを表示し、noopener,noreferrer付きでwindow.openすること
+  it('SNSシェア押下で画像確認を開始しボタンを一時無効化する', async () => {
+    // 何を検証するか: Xシェア押下時に画像確認メッセージを表示し、二重押下を防ぐこと
     vi.spyOn(api.posts, 'get').mockResolvedValue({
       id: 'share-post-id',
       nickname: 'シェア太郎',
@@ -297,17 +309,20 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
       total_count: 100,
       judgments: [],
     })
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
 
     render(<App />)
     fireEvent.click(screen.getByTestId('ranking-item'))
-    fireEvent.click(await screen.findByRole('button', { name: 'Xでシェア' }))
+    const shareButton = await screen.findByRole('button', { name: 'Xでシェア' })
 
-    expect(screen.getByTestId('ogp-preview')).toBeInTheDocument()
-    expect(openSpy.mock.calls[0]?.[0]).toContain('https://x.com/intent/tweet?text=')
-    // シェアURLに投稿URLが含まれていることを確認（OGP表示のため）
-    expect(String(openSpy.mock.calls[0]?.[0])).toContain('share-post-id')
-    expect(openSpy).toHaveBeenCalledWith(expect.any(String), '_blank', 'noopener,noreferrer')
+    await waitFor(() => {
+      expect(shareButton).not.toBeDisabled()
+    })
+    fireEvent.click(shareButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
+      expect(shareButton).toBeDisabled()
+    })
   })
 
   it('再審査API失敗時はjudgingへ遷移せずボタンが再押下可能になる', async () => {

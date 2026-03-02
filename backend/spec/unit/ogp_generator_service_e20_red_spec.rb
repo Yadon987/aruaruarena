@@ -62,7 +62,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         nickname: '太郎',
         body: 'あるある本文',
         average_score: 85.5,
-        calculate_rank: 1
+        calculate_rank: 1,
+        created_at: Time.current
       )
     end
     let(:service) { described_class.new('post-id') }
@@ -142,7 +143,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         nickname: "太郎\r\n次郎",
         body: "本文\n続き",
         average_score: nil,
-        calculate_rank: 1
+        calculate_rank: 1,
+        created_at: Time.current
       )
     end
     let(:service) { described_class.new('post-id') }

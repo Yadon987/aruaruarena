@@ -20,22 +20,7 @@ class UploadOgpImageService
   end
 
   def execute
-    return false unless valid_post?
-    return false if bucket_name.empty?
-
-    image_data = OgpGeneratorService.call(@post.id)
-    return false if image_data.nil?
-
-    @s3_client.put_object(
-      bucket: bucket_name,
-      key: object_key,
-      body: image_data,
-      content_type: 'image/png',
-      cache_control: CACHE_CONTROL
-    )
-
-    Rails.logger.info("[UploadOgpImageService] OGP画像アップロード成功: post_id=#{@post.id}, key=#{object_key}")
-    true
+    upload?
   rescue Aws::S3::Errors::ServiceError => e
     Rails.logger.error("[UploadOgpImageService] S3 upload failed: post_id=#{@post&.id} error=#{e.class} - #{e.message}")
     false
@@ -78,11 +63,57 @@ class UploadOgpImageService
     @post.present? && @post.status == Post::STATUS_SCORED
   end
 
+  def upload?
+    return false unless valid_post?
+    return false if bucket_name.empty?
+
+    image_data = generate_ogp_image
+    return false if image_data.nil?
+
+    upload_image(image_data)
+    log_upload_metrics
+    log_upload_success
+    CreateCloudFrontInvalidationService.call(path: invalidation_path, post_id: @post.id)
+    true
+  end
+
   def bucket_name
     ENV.fetch('OGP_S3_BUCKET', '').strip
   end
 
   def object_key
     "#{OGP_S3_PREFIX}/#{@post.id}.png"
+  end
+
+  def invalidation_path
+    "/#{object_key}"
+  end
+
+  def upload_image(image_data)
+    @s3_client.put_object(
+      bucket: bucket_name,
+      key: object_key,
+      body: image_data,
+      content_type: 'image/png',
+      cache_control: CACHE_CONTROL
+    )
+  end
+
+  def generate_ogp_image
+    LogOgpGenerationEventService.call(event: 'ogp_generation_started', post: @post)
+    OgpGeneratorService.call(@post)
+  end
+
+  def log_upload_metrics
+    LogOgpGenerationEventService.call(
+      event: 'ogp_s3_upload_succeeded',
+      post: @post,
+      bucket_name:,
+      object_key:
+    )
+  end
+
+  def log_upload_success
+    Rails.logger.info("[UploadOgpImageService] OGP画像アップロード成功: post_id=#{@post.id}, key=#{object_key}")
   end
 end

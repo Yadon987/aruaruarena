@@ -451,6 +451,10 @@ npm run test:e2e  # Playwright E2E
 ```bash
 cd backend/terraform
 terraform init
+export TF_VAR_secret_key_base="..."
+export TF_VAR_gemini_api_key="..."
+export TF_VAR_cerebras_api_key="..."
+export TF_VAR_groq_api_key="..."
 terraform plan
 terraform apply
 ```
