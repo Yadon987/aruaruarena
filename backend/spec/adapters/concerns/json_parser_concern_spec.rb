@@ -29,8 +29,8 @@ RSpec.describe JsonParserConcern do
 
     context '```のみパターン（json指定なし）' do
       it '```のみのブロックからJSONを抽出すること' do
-        text = "結果:\n```\n{\"empathy\": 15}\n```"
-        expect(instance.extract_json_from_codeblock(text)).to eq('{"empathy": 15}')
+        text = "結果:\n```\n{\"empathy\": 10}\n```"
+        expect(instance.extract_json_from_codeblock(text)).to eq('{"empathy": 10}')
       end
 
       it '複数行のJSONを正しく抽出すること' do
@@ -134,6 +134,20 @@ RSpec.describe JsonParserConcern do
       expect(result['comment'] || result[:comment]).to eq('文字列キー')
     end
 
+    it '壊れたJSON片を飛ばして後続の有効JSONを返すこと' do
+      text = <<~TEXT
+        途中経過:
+        {"thought":"未完了"
+        最終結果:
+        {"empathy":15,"humor":9,"brevity":8,"originality":7,"expression":6,"comment":"再探索成功"}
+      TEXT
+
+      result = instance.parse_json_payload(text)
+
+      expect(result[:empathy]).to eq(15)
+      expect(result[:comment]).to eq('再探索成功')
+    end
+
     it '有効なJSONが見つからない場合はJSON::ParserErrorを発生させること' do
       text = <<~TEXT
         こんにちは！
@@ -201,6 +215,20 @@ RSpec.describe JsonParserConcern do
         expect(result[:originality]).to eq(20)
         expect(result[:expression]).to eq(20)
       end
+
+      it 'スラッシュ形式を分子として解釈すること' do
+        data = { empathy: '8/10', humor: 9, brevity: 8, originality: 7, expression: 6 }
+        result = instance.convert_scores_to_integers(data)
+
+        expect(result[:empathy]).to eq(8)
+      end
+
+      it '日本語の点数表記を整数に変換すること' do
+        data = { empathy: '8点', humor: 9, brevity: 8, originality: 7, expression: 6 }
+        result = instance.convert_scores_to_integers(data)
+
+        expect(result[:empathy]).to eq(8)
+      end
     end
 
     context '無効な値' do
@@ -212,6 +240,16 @@ RSpec.describe JsonParserConcern do
       it '無効な文字列の場合はArgumentErrorを発生させること' do
         data = { empathy: 'invalid', humor: 10, brevity: 10, originality: 10, expression: 10 }
         expect { instance.convert_scores_to_integers(data) }.to raise_error(ArgumentError, /Invalid score value/)
+      end
+
+      it '負の値の場合はArgumentErrorを発生させること' do
+        data = { empathy: -5, humor: 10, brevity: 10, originality: 10, expression: 10 }
+        expect { instance.convert_scores_to_integers(data) }.to raise_error(ArgumentError, /Score out of range/)
+      end
+
+      it '20を超える値の場合はArgumentErrorを発生させること' do
+        data = { empathy: 21, humor: 10, brevity: 10, originality: 10, expression: 10 }
+        expect { instance.convert_scores_to_integers(data) }.to raise_error(ArgumentError, /Score out of range/)
       end
 
       it 'Float::INFINITYの場合はArgumentErrorを発生させること' do

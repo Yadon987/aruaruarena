@@ -138,7 +138,7 @@ RSpec.shared_examples 'openai style parse response' do
       expect(result.respond_to?(:error_code) ? result.error_code : result[:error]).to eq('invalid_response')
     end
 
-    it 'スコアが範囲外（-1）の場合はそのままの値を返すこと（親クラスでバリデーション）' do
+    it 'スコアが範囲外（-1）の場合はinvalid_responseエラーを返すこと' do
       json_content = JSON.generate(
         empathy: -1, humor: 10, brevity: 10, originality: 10, expression: 10, comment: 'test'
       )
@@ -147,11 +147,10 @@ RSpec.shared_examples 'openai style parse response' do
 
       result = adapter.send(:parse_response, resp)
 
-      scores = result.respond_to?(:scores) ? result.scores : result[:scores]
-      expect(scores[:empathy]).to eq(-1)
+      expect(result.respond_to?(:error_code) ? result.error_code : result[:error]).to eq('invalid_response')
     end
 
-    it 'スコアが範囲外（21）の場合はそのままの値を返すこと（親クラスでバリデーション）' do
+    it 'スコアが範囲外（21）の場合はinvalid_responseエラーを返すこと' do
       json_content = JSON.generate(
         empathy: 21, humor: 10, brevity: 10, originality: 10, expression: 10, comment: 'test'
       )
@@ -160,8 +159,7 @@ RSpec.shared_examples 'openai style parse response' do
 
       result = adapter.send(:parse_response, resp)
 
-      scores = result.respond_to?(:scores) ? result.scores : result[:scores]
-      expect(scores[:empathy]).to eq(21)
+      expect(result.respond_to?(:error_code) ? result.error_code : result[:error]).to eq('invalid_response')
     end
   end
 end

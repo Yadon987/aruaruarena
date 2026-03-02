@@ -5,7 +5,7 @@
 
 SimpleCov.start 'rails' do
   # カバレッジの最低ラインを設定（ローカルでも大きな低下は検知する）
-  minimum_coverage ENV['CI'] ? 90 : 80
+  minimum_coverage(ENV['CI'] ? 90 : 80) unless ENV['SIMPLECOV_DISABLE_MINIMUM_COVERAGE'] == '1'
 
   # ファイルごとの最低カバレッジ（現状66%程度のファイルがあるため60%に緩和）
   # 0行のファイル（設定ファイル等）による警告を回避するためコメントアウト

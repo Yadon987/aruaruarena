@@ -709,7 +709,7 @@ RSpec.describe GeminiAdapter do
     end
 
     context '境界値' do
-      it 'スコアが-1の場合にパースできること（親クラスでバリデーション）' do
+      it 'スコアが-1の場合はinvalid_responseエラーコードを返すこと' do
         invalid_scores = base_scores.merge(empathy: -1)
         response_hash = {
           candidates: [
@@ -726,11 +726,11 @@ RSpec.describe GeminiAdapter do
 
         result = adapter.send(:parse_response, faraday_response)
 
-        expect(result).to be_a(Hash)
-        expect(result[:scores][:empathy]).to eq(-1)
+        expect(result).to be_a(BaseAiAdapter::JudgmentResult)
+        expect(result.error_code).to eq('invalid_response')
       end
 
-      it 'スコアが21の場合にパースできること（親クラスでバリデーション）' do
+      it 'スコアが21の場合はinvalid_responseエラーコードを返すこと' do
         invalid_scores = base_scores.merge(empathy: 21)
         response_hash = {
           candidates: [
@@ -747,8 +747,8 @@ RSpec.describe GeminiAdapter do
 
         result = adapter.send(:parse_response, faraday_response)
 
-        expect(result).to be_a(Hash)
-        expect(result[:scores][:empathy]).to eq(21)
+        expect(result).to be_a(BaseAiAdapter::JudgmentResult)
+        expect(result.error_code).to eq('invalid_response')
       end
 
       it 'commentが30文字を超える場合はtruncateされること' do
