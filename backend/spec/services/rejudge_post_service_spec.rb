@@ -69,7 +69,7 @@ RSpec.describe 'RejudgePostService', type: :service do
 
         allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(
           create_success_response(
-            scores: { empathy: 16, humor: 15, brevity: 14, originality: 15, expression: 16 },
+            scores: default_scores.merge(empathy: 16, brevity: 14, expression: 16),
             comment: '再審査成功'
           )
         )
@@ -95,13 +95,13 @@ RSpec.describe 'RejudgePostService', type: :service do
 
         allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(
           create_success_response(
-            scores: { empathy: 15, humor: 16, brevity: 14, originality: 15, expression: 16 },
+            scores: default_scores.merge(humor: 16, brevity: 14, expression: 16),
             comment: '再審査成功'
           )
         )
         allow_any_instance_of(OpenAiAdapter).to receive(:judge).and_return(
           create_success_response(
-            scores: { empathy: 14, humor: 15, brevity: 16, originality: 15, expression: 16 },
+            scores: default_scores.merge(empathy: 14, brevity: 16, expression: 16),
             comment: '再審査成功'
           )
         )
@@ -146,7 +146,7 @@ RSpec.describe 'RejudgePostService', type: :service do
 
         allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(
           create_success_response(
-            scores: { empathy: 16, humor: 15, brevity: 14, originality: 15, expression: 16 },
+            scores: default_scores.merge(empathy: 16, brevity: 14, expression: 16),
             comment: '再審査成功'
           )
         )
@@ -172,7 +172,7 @@ RSpec.describe 'RejudgePostService', type: :service do
         create(:judgment, :hiroyuki, post_id: post_record.id, succeeded: true, total_score: 80)
         allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(
           create_success_response(
-            scores: { empathy: 15, humor: 16, brevity: 14, originality: 15, expression: 16 },
+            scores: default_scores.merge(humor: 16, brevity: 14, expression: 16),
             comment: '再審査成功'
           )
         )

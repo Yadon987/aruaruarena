@@ -69,9 +69,7 @@ RSpec.describe JudgePostService do
     context '正常系' do
       # 何を検証するか: 3人全員成功時にstatus: scoredになること
       it '3人全員成功時にstatus: scoredになること' do
-        mock_adapter_judge(GeminiAdapter, success: true)
-        mock_adapter_judge(DewiAdapter, success: true)
-        mock_adapter_judge(OpenAiAdapter, success: true)
+        mock_all_adapters_success
         allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(true)
 
         service.execute
@@ -84,9 +82,8 @@ RSpec.describe JudgePostService do
 
       # 何を検証するか: 2人成功時にstatus: scoredになること
       it '2人成功時にstatus: scoredになること' do
-        mock_adapter_judge(GeminiAdapter, success: true)
-        mock_adapter_judge(DewiAdapter, success: true)
-        mock_adapter_judge(OpenAiAdapter, success: false)
+        mock_all_adapters_success
+        mock_adapter_failure(OpenAiAdapter)
         allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(true)
 
         service.execute
@@ -136,9 +133,9 @@ RSpec.describe JudgePostService do
 
       # 何を検証するか: 全員失敗時にstatus: failedになること
       it '全員失敗時にstatus: failedになること' do
-        mock_adapter_judge(GeminiAdapter, success: false)
-        mock_adapter_judge(DewiAdapter, success: false)
-        mock_adapter_judge(OpenAiAdapter, success: false)
+        mock_adapter_failure(GeminiAdapter)
+        mock_adapter_failure(DewiAdapter)
+        mock_adapter_failure(OpenAiAdapter)
         allow(UploadOgpImageService).to receive(:call)
 
         service.execute
@@ -151,9 +148,9 @@ RSpec.describe JudgePostService do
 
       # 何を検証するか: 1人成功時にstatus: failedになること
       it '1人成功時にstatus: failedになること' do
-        mock_adapter_judge(GeminiAdapter, success: true)
-        mock_adapter_judge(DewiAdapter, success: false)
-        mock_adapter_judge(OpenAiAdapter, success: false)
+        mock_all_adapters_success
+        mock_adapter_failure(DewiAdapter)
+        mock_adapter_failure(OpenAiAdapter)
         allow(UploadOgpImageService).to receive(:call)
 
         service.execute
@@ -212,9 +209,7 @@ RSpec.describe JudgePostService do
       end
 
       it 'OGP生成に失敗しても審査結果はscoredのまま継続すること' do
-        mock_adapter_judge(GeminiAdapter, success: true)
-        mock_adapter_judge(DewiAdapter, success: true)
-        mock_adapter_judge(OpenAiAdapter, success: true)
+        mock_all_adapters_success
         allow(UploadOgpImageService).to receive(:call).with(post.id).and_return(false)
         expect(Rails.logger).to receive(:warn).with(/\[JudgePostService\] OGP画像の事前生成に失敗: post_id=#{post.id}/)
 
@@ -227,10 +222,8 @@ RSpec.describe JudgePostService do
 
       # 何を検証するか: 混合パターンで正しくステータスが決まること
       it '混合パターンで正しくステータスが決まること' do
-        mock_adapter_judge(GeminiAdapter, success: true)
-        allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(
-          create_api_error_response(error_code: 'provider_error')
-        )
+        mock_all_adapters_success
+        mock_adapter_failure(DewiAdapter, error_code: 'provider_error')
         allow_any_instance_of(OpenAiAdapter).to receive(:judge).and_raise(StandardError.new('test'))
 
         service.execute

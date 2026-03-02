@@ -4,6 +4,19 @@
 #
 # @note このモジュールは spec/support/ に配置され、rails_helper.rb で自動的に読み込まれます
 module AdapterTestHelpers
+  # テストで共通利用する標準スコア
+  #
+  # @return [Hash]
+  def default_scores
+    {
+      empathy: 15,
+      humor: 15,
+      brevity: 15,
+      originality: 15,
+      expression: 15
+    }
+  end
+
   # 環境変数をモックするヘルパーメソッド
   #
   # @param key [String] 環境変数名
@@ -86,10 +99,37 @@ module AdapterTestHelpers
   def mock_adapter_judge(adapter_class, success: true)
     allow_any_instance_of(adapter_class).to receive(:judge).and_return(
       success ? create_success_response(
-        scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
+        scores: default_scores,
         comment: 'テストコメント'
       ) : create_timeout_response
     )
+  end
+
+  # 主要アダプターをすべて成功モックにする
+  #
+  # @param scores [Hash] 返却するスコア
+  # @return [void]
+  def mock_all_adapters_success(scores: default_scores)
+    [GeminiAdapter, OpenAiAdapter, DewiAdapter, CerebrasAdapter].each do |adapter_class|
+      allow_any_instance_of(adapter_class).to receive(:judge).and_return(
+        create_success_response(scores: scores, comment: "#{adapter_class} comment")
+      )
+    end
+  end
+
+  # 特定アダプターのみ失敗モックにする
+  #
+  # @param adapter_class [Class] 対象アダプター
+  # @param error_code [String] エラーコード
+  # @return [void]
+  def mock_adapter_failure(adapter_class, error_code: 'timeout')
+    response = if error_code == 'timeout'
+                 create_timeout_response
+               else
+                 create_api_error_response(error_code: error_code)
+               end
+
+    allow_any_instance_of(adapter_class).to receive(:judge).and_return(response)
   end
 
   # adapter_classを文字列キーとして使用してモックを取得する

@@ -7,6 +7,10 @@ RSpec.describe 'API::Posts', type: :request do
     before do
       Post.delete_all
       allow(JudgmentQueueService).to receive(:enqueue)
+      allow(RateLimiterService).to receive(:limited?).and_return(false)
+      allow(RateLimiterService).to receive(:set_limit!)
+      allow(DuplicateCheckService).to receive(:duplicate?).and_return(false)
+      allow(DuplicateCheckService).to receive(:register!)
     end
 
     let(:valid_headers) { { 'Content-Type' => 'application/json' } }
@@ -251,6 +255,10 @@ RSpec.describe 'API::Posts', type: :request do
     context 'レート制限 (E09-01)' do
       # rails_helper.rbで各テスト前にPost.delete_all, RateLimit.delete_allが実行されるため
       # ここでのdelete_allは不要
+      before do
+        allow(RateLimiterService).to receive(:limited?).and_call_original
+        allow(RateLimiterService).to receive(:set_limit!).and_call_original
+      end
 
       let(:valid_headers) do
         { 'Content-Type' => 'application/json', 'REMOTE_ADDR' => '192.168.1.1' }
@@ -447,6 +455,11 @@ RSpec.describe 'API::Posts', type: :request do
     end
 
     context '重複チェック (E09-02)' do
+      before do
+        allow(DuplicateCheckService).to receive(:duplicate?).and_call_original
+        allow(DuplicateCheckService).to receive(:register!).and_call_original
+      end
+
       let(:valid_headers) do
         { 'Content-Type' => 'application/json', 'REMOTE_ADDR' => '192.168.1.1' }
       end
