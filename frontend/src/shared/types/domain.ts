@@ -28,6 +28,7 @@ export type PostStatus = (typeof POST_STATUS.VALUES)[number]
  * @property expression - 表現力 (0-20)
  * @property comment - 審査員コメント
  * @property success - 審査成功フラグ
+ * @property error_code - 失敗時のエラーコード
  */
 export interface Judgment {
   persona: JudgePersona
@@ -38,7 +39,8 @@ export interface Judgment {
   originality: number
   expression: number
   comment: string
-  success: boolean
+  success?: boolean
+  error_code?: string | null
 }
 
 /**

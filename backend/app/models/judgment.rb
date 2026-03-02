@@ -156,7 +156,7 @@ class Judgment
   #
   # @return [Hash] JSON形式の審査結果
   def to_judgment_json
-    base = { persona: persona, succeeded: succeeded }
+    base = { persona: persona, success: succeeded }
     scores = SCORE_FIELDS.index_with { |field| send(field) }
     base.merge(scores).merge(total_score: total_score, comment: comment, error_code: error_code)
   end

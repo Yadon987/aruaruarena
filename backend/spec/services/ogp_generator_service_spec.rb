@@ -114,7 +114,6 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
 
       service.execute
     end
-
   end
 
   describe 'sanitize_text' do
