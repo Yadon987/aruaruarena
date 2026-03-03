@@ -6,6 +6,7 @@ import { queryClient } from '../shared/config/queryClient'
 const ROOT_PATH = '/'
 const SUPPRESSED_ERROR_MESSAGES = Object.freeze([
   '再審査API呼び出しに失敗しました',
+  '再審査SEの再生に失敗しました',
 ])
 const originalConsoleError = console.error.bind(console)
 let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null

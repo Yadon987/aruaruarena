@@ -577,7 +577,7 @@
 
 **ファイル**:
 - BGM: `radetzky_march.mp3`（ラデツキー行進曲）
-- BGM: `galop_des_clown.mp3`（道化師のギャロップ）
+- BGM: `CanCan.mp3`（天国と地獄）
 - BGM: `pomp_and_circumstance.mp3`（威風堂々）
 - BGM: `fate_theme.mp3`（運命）
 - SE: `se_submit.mp3`（投稿）
@@ -663,7 +663,7 @@
 **ファイル**: `frontend/src/hooks/useSound.ts`
 
 **詳細**:
-- BGM: ラデツキー行進曲（トップ）、道化師のギャロップ（審査中）、威風堂々（成功）、運命（失敗）
+- BGM: ラデツキー行進曲（トップ）、天国と地獄（審査中）、威風堂々（成功）、運命（失敗）
 - 効果音: se_submit, se_result_open, se_retry
 - クロスフェード（0.5秒、等化率カーブ）
 - ミュートトグル（LocalStorage保存）
@@ -690,7 +690,7 @@
 
    const BGM_MAP = {
      top: '/sounds/radetzky_march.mp3',
-     judging: '/sounds/galop_des_clown.mp3',
+     judging: '/sounds/CanCan.mp3',
      success: '/sounds/pomp_and_circumstance.mp3',
      failed: '/sounds/fate_theme.mp3',
    } as const
@@ -1140,7 +1140,7 @@ terraform apply tfplan
 
 1. **OGPベース画像の作成**（P1）- OGP生成に必要
 2. **DockerfileへのImageMagick追加**（P1）- OGP生成に必要
-3. **音声ファイルの用意**（P1）- 音声再生実装に必要
+3. **音声ファイルの用意**（P1）- 音声再生実装に必要（完了）
 4. **Framer Motionアニメーション**（P1）- ユーザー体験への影響が大きい
 5. **S3 + CloudFront（Terraform）**（P1）- 本番環境構築に必要
 6. **AI APIキーのSecrets Manager統合**（P1）- セキュリティ向上

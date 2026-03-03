@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
@@ -73,5 +73,19 @@ describe('E18 RED: SoundToggle integration', () => {
     const debugEvents = (globalThis as { __AUDIO_DEBUG__?: unknown[] }).__AUDIO_DEBUG__
     expect(Array.isArray(debugEvents)).toBe(true)
     expect(debugEvents).toHaveLength(0)
+  })
+
+  it('保存済みの音声ON状態では初回操作で現在シーンのBGMを再生する', async () => {
+    // 何を検証するか: localStorageで音声ONのユーザーは初回アンロック操作だけで現在シーンのBGMが流れ始めること
+    localStorage.setItem('aruaru_sound_muted', 'false')
+
+    render(<App />)
+    fireEvent.pointerDown(document)
+
+    await waitFor(() => {
+      const debugEvents = (globalThis as { __AUDIO_DEBUG__?: Array<{ type: string; scene?: string }> })
+        .__AUDIO_DEBUG__ ?? []
+      expect(debugEvents).toContainEqual({ type: 'bgm', scene: 'top' })
+    })
   })
 })
