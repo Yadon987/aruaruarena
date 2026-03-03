@@ -27,6 +27,12 @@ module AdapterTestHelpers
   #   stub_env('OPENAI_API_KEY', 'test_key')
   #   stub_env('GLM_API_KEY', nil)
   def stub_env(key, value)
+    unless defined?(@env_default_stubbed) && @env_default_stubbed
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:fetch).and_call_original
+      @env_default_stubbed = true
+    end
+
     allow(ENV).to receive(:[]).with(key).and_return(value)
     allow(ENV).to receive(:fetch).with(key, anything).and_return(value)
   end

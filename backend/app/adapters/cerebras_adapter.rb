@@ -26,6 +26,13 @@ class CerebrasAdapter < BaseOpenAiCompatAdapter
   end
 
   def api_key
+    if ENV.fetch('SECRETS_MANAGER_ENABLED', 'false') == 'true'
+      return SecretsManagerClient.get_api_key(
+        secret_arn: ENV.fetch('CEREBRAS_SECRET_ARN', nil),
+        env_key: 'CEREBRAS_API_KEY'
+      )
+    end
+
     key = ENV.fetch('CEREBRAS_API_KEY', nil)
     raise ArgumentError, 'CEREBRAS_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
 
