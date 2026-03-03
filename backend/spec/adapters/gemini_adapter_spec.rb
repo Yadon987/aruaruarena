@@ -14,7 +14,7 @@ RSpec.describe GeminiAdapter do
   end
 
   describe '初期化' do
-    it_behaves_like 'adapter initialization', 'ひろゆき風'
+    it_behaves_like 'adapter initialization', 'ひろゆき風', false
   end
 
   describe '#client' do
@@ -30,16 +30,20 @@ RSpec.describe GeminiAdapter do
         request = adapter.send(:build_request, post_content, persona)
 
         expect(request).to be_a(Hash)
+        expect(request[:systemInstruction]).to be_present
         expect(request[:contents]).to be_present
         expect(request[:generationConfig]).to be_present
       end
 
-      it 'プロンプトが{post_content}に置換されていること' do
+      it 'systemInstructionと投稿内容が分離されていること' do
         request = adapter.send(:build_request, post_content, persona)
 
-        text_content = request[:contents].first[:parts].first[:text]
-        expect(text_content).to include(post_content)
-        expect(text_content).not_to include('{post_content}')
+        system_text = request[:systemInstruction][:parts].first[:text]
+        user_text = request[:contents].first[:parts].first[:text]
+
+        expect(system_text).to include('ひろゆき風')
+        expect(system_text).not_to include(post_content)
+        expect(user_text).to eq(post_content)
       end
 
       it 'generationConfigが正しく設定されていること' do
@@ -51,6 +55,7 @@ RSpec.describe GeminiAdapter do
         expect(config[:topK]).to eq(1)
         expect(config[:candidateCount]).to eq(1)
         expect(config[:maxOutputTokens]).to eq(192)
+        expect(config[:thinkingConfig]).to eq(thinkingBudget: 0)
       end
 
       it 'generationConfigにresponseMimeTypeがapplication/jsonで設定されていること' do
@@ -73,8 +78,8 @@ RSpec.describe GeminiAdapter do
         request = adapter.send(:build_fallback_request, post_content, persona)
 
         expect(request[:generationConfig][:responseMimeType]).to eq('application/json')
-        expect(request[:contents].first[:parts].first[:text]).to include('JSONオブジェクトを1つだけ返してください')
-        expect(request[:contents].first[:parts].first[:text]).to include(post_content)
+        expect(request[:systemInstruction][:parts].first[:text]).to include('JSONオブジェクトを1つだけ返してください')
+        expect(request[:contents].first[:parts].first[:text]).to eq(post_content)
       end
     end
 
@@ -162,6 +167,27 @@ RSpec.describe GeminiAdapter do
 
         expect(result[:scores]).to eq(base_scores.transform_keys(&:to_sym))
         expect(result[:comment]).to eq('ノイズ耐性テスト')
+      end
+
+      it 'thoughtパーツを除外してテキストを結合できること' do
+        response_hash = {
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { thought: true, text: '内部思考' },
+                  { text: JSON.generate(base_scores.merge(comment: 'thought除外')) }
+                ]
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores]).to eq(base_scores.transform_keys(&:to_sym))
+        expect(result[:comment]).to eq('thought除外')
       end
 
       it '末尾が途中で切れたJSONでも主要項目を補完して解析できること' do

@@ -137,19 +137,20 @@ class GeminiAdapter < BaseAiAdapter
 
   # Gemini API用のリクエストを構築する
   #
-  # プロンプト内の{post_content}プレースホルダーを実際の投稿内容で置換します。
-  # Gemini APIはgenerateContentエンドポイントを使用し、
-  # contents配列に会話のターンを含めます。
-  #
   # @param post_content [String] 投稿本文
   # @param persona [String] 審査員ID（現状はhiroyukiのみ対応）
   # @return [Hash] APIリクエストボディ
   def build_request(post_content, _persona)
     {
+      systemInstruction: {
+        parts: [
+          { text: system_instruction_text }
+        ]
+      },
       contents: [
         {
           parts: [
-            { text: prompt_text(post_content) }
+            { text: user_content_text(post_content) }
           ]
         }
       ],
@@ -159,10 +160,15 @@ class GeminiAdapter < BaseAiAdapter
 
   def build_fallback_request(post_content, _persona)
     {
+      systemInstruction: {
+        parts: [
+          { text: fallback_system_instruction_text }
+        ]
+      },
       contents: [
         {
           parts: [
-            { text: fallback_prompt_text(post_content) }
+            { text: user_content_text(post_content) }
           ]
         }
       ],
@@ -241,11 +247,15 @@ class GeminiAdapter < BaseAiAdapter
     raise
   end
 
-  def prompt_text(post_content)
-    @prompt.gsub('{post_content}', post_content)
+  def system_instruction_text
+    @prompt
   end
 
-  def fallback_prompt_text(post_content)
+  def user_content_text(post_content)
+    post_content
+  end
+
+  def fallback_system_instruction_text
     <<~PROMPT
       あなたは採点専用の整形器です。
       次の投稿を採点し、指定のJSONオブジェクトを1つだけ返してください。
@@ -254,9 +264,6 @@ class GeminiAdapter < BaseAiAdapter
 
       出力形式:
       {"empathy":0,"humor":0,"brevity":0,"originality":0,"expression":0,"comment":"30文字以内"}
-
-      投稿:
-      #{post_content}
     PROMPT
   end
 
@@ -268,7 +275,8 @@ class GeminiAdapter < BaseAiAdapter
       maxOutputTokens: MAX_OUTPUT_TOKENS, # 最大出力トークン数
       candidateCount: 1,
       responseMimeType: 'application/json', # JSONモードを強制
-      responseSchema: RESPONSE_SCHEMA
+      responseSchema: RESPONSE_SCHEMA,
+      thinkingConfig: { thinkingBudget: 0 }
     }
   end
 
@@ -292,11 +300,17 @@ class GeminiAdapter < BaseAiAdapter
   end
 
   def valid_parts?(parts)
-    parts.is_a?(Array) && parts.any? { |part| part[:text].present? }
+    return false unless parts.is_a?(Array)
+
+    non_thought = parts.reject { |part| part[:thought] == true }
+    non_thought.is_a?(Array) && non_thought.any? { |part| part[:text].present? }
   end
 
   def join_part_texts(parts)
-    parts.filter_map { |part| part[:text] }.join
+    parts
+      .reject { |part| part[:thought] == true }
+      .filter_map { |part| part[:text] }
+      .join
   end
 
   def extract_response_text(response)
