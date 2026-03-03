@@ -72,6 +72,7 @@ class BaseAiAdapter
   # @attr [Hash, nil] scores 5項目のスコア（成功時）
   # @attr [String, nil] comment AI審査員のコメント（成功時）
   JudgmentResult = Struct.new(:succeeded, :error_code, :scores, :comment, keyword_init: true)
+  RetryableResultError = Class.new(StandardError)
 
   # 投稿を審査して結果を返す
   #
@@ -146,7 +147,14 @@ class BaseAiAdapter
         return apply_persona_bias!(result, persona)
       end
 
+      raise RetryableResultError, result.error_code if retryable_result?(result) && retries < MAX_RETRIES
+
       result
+    rescue RetryableResultError => e
+      retries += 1
+      Rails.logger.warn("リトライ #{retries}/#{MAX_RETRIES}: error_code=#{e.message}")
+      retry_sleep(RETRY_DELAY * (2**(retries - 1)))
+      retry
     rescue Timeout::Error, Faraday::TimeoutError, Faraday::ConnectionFailed,
            Faraday::ClientError, Faraday::ServerError, JSON::ParserError => e
       retries += 1
@@ -267,6 +275,10 @@ class BaseAiAdapter
   # @param duration [Float] sleep時間（秒）
   def retry_sleep(duration)
     sleep(duration)
+  end
+
+  def retryable_result?(result)
+    result.is_a?(JudgmentResult) && result.error_code == 'invalid_response'
   end
 
   # 例外をエラーコードにマッピングする

@@ -31,6 +31,19 @@ class GeminiAdapter < BaseAiAdapter
   # エラーコード
   ERROR_CODE_INVALID_RESPONSE = 'invalid_response'
 
+  RESPONSE_SCHEMA = {
+    type: 'OBJECT',
+    required: %w[empathy humor brevity originality expression comment],
+    properties: {
+      empathy: { type: 'INTEGER' },
+      humor: { type: 'INTEGER' },
+      brevity: { type: 'INTEGER' },
+      originality: { type: 'INTEGER' },
+      expression: { type: 'INTEGER' },
+      comment: { type: 'STRING' }
+    }
+  }.freeze
+
   # プロンプトのキャッシュ（スレッドセーフ）
   @prompt_cache = nil
   @prompt_mutex = Mutex.new
@@ -205,7 +218,8 @@ class GeminiAdapter < BaseAiAdapter
     {
       temperature: TEMPERATURE, # 創造性のバランス（0.0-1.0）
       maxOutputTokens: MAX_OUTPUT_TOKENS, # 最大出力トークン数
-      responseMimeType: 'application/json' # JSONモードを強制
+      responseMimeType: 'application/json', # JSONモードを強制
+      responseSchema: RESPONSE_SCHEMA
     }
   end
 

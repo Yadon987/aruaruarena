@@ -56,6 +56,15 @@ RSpec.describe GeminiAdapter do
         config = request[:generationConfig]
         expect(config[:responseMimeType]).to eq('application/json')
       end
+
+      it 'generationConfigにresponseSchemaが設定されていること' do
+        request = adapter.send(:build_request, post_content, persona)
+
+        schema = request[:generationConfig][:responseSchema]
+        expect(schema[:type]).to eq('OBJECT')
+        expect(schema[:required]).to include('empathy', 'humor', 'brevity', 'originality', 'expression', 'comment')
+        expect(schema[:properties][:comment][:type]).to eq('STRING')
+      end
     end
 
     it_behaves_like 'adapter build_request boundary', ->(req) { req[:contents][0][:parts][0][:text] }
@@ -130,6 +139,32 @@ RSpec.describe GeminiAdapter do
 
         expect(result[:scores]).to eq(base_scores.transform_keys(&:to_sym))
         expect(result[:comment]).to eq('ノイズ耐性テスト')
+      end
+
+      it '末尾が途中で切れたJSONでも主要項目を補完して解析できること' do
+        response_hash = {
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { text: '{"empathy":5,"humor":5,"brevity":18,"originality":5,"expression":5,"comment":"途中' }
+                ]
+              }
+            }
+          ]
+        }
+        faraday_response = build_faraday_response(response_hash)
+
+        result = adapter.send(:parse_response, faraday_response)
+
+        expect(result[:scores]).to eq(
+          empathy: 5,
+          humor: 5,
+          brevity: 18,
+          originality: 5,
+          expression: 5
+        )
+        expect(result[:comment]).to eq('途中')
       end
     end
 

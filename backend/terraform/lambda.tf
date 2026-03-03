@@ -10,18 +10,22 @@ resource "aws_lambda_function" "app" {
 
   environment {
     variables = {
-      RAILS_ENV                = "production"
-      RAILS_SERVE_STATIC_FILES = "true"
-      RAILS_LOG_TO_STDOUT      = "true"
-      RAILS_LOG_LEVEL          = "info" # debug -> info to save CloudWatch costs
-      SECRET_KEY_BASE          = var.secret_key_base
-      DYNAMODB_TABLE_POSTS     = aws_dynamodb_table.posts.name
-      BASE_URL                 = var.base_url
-      GEMINI_API_KEY           = var.gemini_api_key
-      CEREBRAS_API_KEY         = var.cerebras_api_key
-      GROQ_API_KEY             = var.groq_api_key
-      SQS_QUEUE_URL            = aws_sqs_queue.judgment_queue.url
-      OGP_S3_BUCKET            = var.frontend_s3_bucket_name
+      RAILS_ENV                  = "production"
+      RAILS_SERVE_STATIC_FILES   = "true"
+      RAILS_LOG_TO_STDOUT        = "true"
+      RAILS_LOG_LEVEL            = "info" # debug -> info to save CloudWatch costs
+      SECRET_KEY_BASE            = var.secret_key_base
+      DYNAMODB_TABLE_POSTS       = aws_dynamodb_table.posts.name
+      BASE_URL                   = var.base_url
+      SECRETS_MANAGER_ENABLED    = var.secrets_manager_enabled ? "true" : "false"
+      GEMINI_SECRET_ARN          = var.secrets_manager_enabled ? aws_secretsmanager_secret.gemini_api_key.arn : ""
+      CEREBRAS_SECRET_ARN        = var.secrets_manager_enabled ? aws_secretsmanager_secret.cerebras_api_key.arn : ""
+      GROQ_SECRET_ARN            = var.secrets_manager_enabled ? aws_secretsmanager_secret.groq_api_key.arn : ""
+      GEMINI_API_KEY             = var.secrets_manager_enabled ? "" : var.gemini_api_key
+      CEREBRAS_API_KEY           = var.secrets_manager_enabled ? "" : var.cerebras_api_key
+      GROQ_API_KEY               = var.secrets_manager_enabled ? "" : var.groq_api_key
+      SQS_QUEUE_URL              = aws_sqs_queue.judgment_queue.url
+      OGP_S3_BUCKET              = var.frontend_s3_bucket_name
       CLOUDFRONT_DISTRIBUTION_ID = var.cloudfront_distribution_id
     }
   }

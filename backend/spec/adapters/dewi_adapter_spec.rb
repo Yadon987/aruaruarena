@@ -18,7 +18,7 @@ RSpec.describe DewiAdapter, type: :model do
                     {
                       PROMPT_PATH: 'app/prompts/dewi.txt',
                       BASE_URL: 'https://api.cerebras.ai/v1',
-                      MODEL_NAME: 'llama-3.3-70b'
+                      MODEL_NAME: 'gpt-oss-120b'
                     }
   end
 
@@ -33,7 +33,7 @@ RSpec.describe DewiAdapter, type: :model do
   describe '#build_request' do
     let(:post_content) { 'テスト投稿' }
 
-    it_behaves_like 'openai compatible build request', 'llama-3.3-70b', 'dewi'
+    it_behaves_like 'openai compatible build request', 'gpt-oss-120b', 'dewi'
   end
 
   describe '#parse_response' do
@@ -41,6 +41,9 @@ RSpec.describe DewiAdapter, type: :model do
   end
 
   it_behaves_like 'adapter api key validation', 'CEREBRAS_API_KEY'
+  it_behaves_like 'secrets manager api key resolution',
+                  secret_env_key: 'CEREBRAS_SECRET_ARN',
+                  legacy_env_key: 'CEREBRAS_API_KEY'
 
   describe '.reset_prompt_cache!' do
     it_behaves_like 'prompt cache reset'

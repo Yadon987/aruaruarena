@@ -16,6 +16,10 @@ module JsonParserConcern
     valid_data = find_valid_json_in_candidates(extract_all_json_objects(text))
     return valid_data if valid_data
 
+    # 候補3: 末尾切れしたJSONの簡易補完
+    valid_data = parse_repaired_json_candidate(text)
+    return valid_data if valid_data
+
     Rails.logger.warn("[JsonParserConcern] Valid JSON not found in text: #{text.to_s.truncate(100)}")
     raise JSON::ParserError, 'No valid score JSON found in response'
   end
@@ -165,6 +169,29 @@ module JsonParserConcern
     JSON.parse(candidate, symbolize_names: true)
   rescue JSON::ParserError
     nil
+  end
+
+  def parse_repaired_json_candidate(text)
+    candidate = repair_truncated_json_candidate(text)
+    return nil if candidate.nil?
+
+    json = parse_candidate_json(candidate)
+    valid_score_json?(json) ? json : nil
+  end
+
+  def repair_truncated_json_candidate(text)
+    return nil unless text.is_a?(String)
+
+    candidate = text.strip
+    return nil unless candidate.start_with?('{')
+
+    state = initial_json_scan_state
+    candidate.each_char { |char| advance_json_scan_state(state, char) }
+
+    repaired = candidate.dup
+    repaired << '"' if state[:in_string]
+    repaired << ('}' * state[:depth]) if state[:depth].positive?
+    repaired
   end
 
   def valid_score_json?(json)

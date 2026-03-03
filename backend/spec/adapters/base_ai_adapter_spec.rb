@@ -288,6 +288,32 @@ RSpec.describe BaseAiAdapter do
 
         expect(sleep_calls).to eq([1.0, 2.0])
       end
+
+      it 'invalid_response時もMAX_RETRIESまで再試行すること' do
+        adapter.reset_call_count!
+        adapter.mock_response_proc = lambda { |attempt|
+          if attempt <= 2
+            described_class::JudgmentResult.new(
+              succeeded: false,
+              error_code: 'invalid_response',
+              scores: nil,
+              comment: nil
+            )
+          else
+            described_class::JudgmentResult.new(
+              succeeded: true,
+              error_code: nil,
+              scores: base_scores,
+              comment: '成功'
+            )
+          end
+        }
+
+        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+
+        expect(adapter.call_count).to eq(3)
+        expect(result.succeeded).to be(true)
+      end
     end
 
     context 'ペルソナバイアス適用' do

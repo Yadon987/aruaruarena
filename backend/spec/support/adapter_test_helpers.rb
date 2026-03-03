@@ -185,30 +185,26 @@ module AdapterTestHelpers
 
   # Secrets Manager APIレスポンスをモックする
   #
-  # @param body [Hash, String] レスポンスボディ
-  # @param status [Integer] HTTPステータス
-  # @return [WebMock::RequestStub]
-  def stub_secrets_manager_response(body:, status: 200)
-    payload = body.is_a?(String) ? body : JSON.generate(body)
-
-    stub_request(:post, 'https://secretsmanager.ap-northeast-1.amazonaws.com/')
-      .to_return(
-        status: status,
-        body: payload,
-        headers: { 'Content-Type' => 'application/x-amz-json-1.1' }
-      )
+  # @param responses [Array<Hash, Symbol>] AWS SDKのstub_responses用定義
+  # @return [Aws::SecretsManager::Client]
+  def stub_secrets_manager_response(*responses)
+    client = Aws::SecretsManager::Client.new(stub_responses: true)
+    client.stub_responses(:get_secret_value, responses)
+    allow(SecretsManagerClient).to receive(:client).and_return(client)
+    client
   end
 
   # Secrets Managerの成功レスポンスをモックする
   #
   # @param arn [String] シークレットARN
   # @param api_key [String] APIキー
-  # @return [WebMock::RequestStub]
+  # @return [Aws::SecretsManager::Client]
   def stub_secrets_manager_success(arn:, api_key:)
     stub_secrets_manager_response(
-      body: {
-        ARN: arn,
-        SecretString: { api_key: api_key }.to_json
+      {
+        arn: arn,
+        name: arn.split(':secret:').last,
+        secret_string: { api_key: api_key }.to_json
       }
     )
   end
@@ -217,21 +213,24 @@ module AdapterTestHelpers
   #
   # @param arn [String] シークレットARN
   # @param error_type [Symbol] エラー種別
-  # @return [WebMock::RequestStub]
+  # @return [Aws::SecretsManager::Client]
   def stub_secrets_manager_error(arn:, error_type:)
-    error_body = case error_type
-                 when :not_found
-                   { '__type' => 'ResourceNotFoundException', 'message' => "#{arn} は存在しません" }
-                 when :access_denied
-                   { '__type' => 'AccessDeniedException', 'message' => "#{arn} へのアクセスが拒否されました" }
-                 when :parse_error
-                   { ARN: arn, SecretString: '{invalid-json' }
-                 else
-                   { '__type' => 'ServiceUnavailableException', 'message' => "#{arn} の取得に失敗しました" }
-                 end
+    response = case error_type
+               when :not_found
+                 'ResourceNotFoundException'
+               when :access_denied
+                 'AccessDeniedException'
+               when :parse_error
+                 {
+                   arn: arn,
+                   name: arn.split(':secret:').last,
+                   secret_string: '{invalid-json'
+                 }
+               else
+                 'InternalServiceError'
+               end
 
-    status = error_type == :parse_error ? 200 : 400
-    stub_secrets_manager_response(body: error_body, status: status)
+    stub_secrets_manager_response(response)
   end
 
   # Secrets Managerのローテーションをモックする
@@ -239,21 +238,20 @@ module AdapterTestHelpers
   # @param arn [String] シークレットARN
   # @param old_api_key [String] 旧APIキー
   # @param new_api_key [String] 新APIキー
-  # @return [WebMock::RequestStub]
+  # @return [Aws::SecretsManager::Client]
   def stub_secrets_manager_rotation(arn:, old_api_key:, new_api_key:)
-    stub_request(:post, 'https://secretsmanager.ap-northeast-1.amazonaws.com/')
-      .to_return(
-        {
-          status: 200,
-          body: JSON.generate({ ARN: arn, SecretString: { api_key: old_api_key }.to_json }),
-          headers: { 'Content-Type' => 'application/x-amz-json-1.1' }
-        },
-        {
-          status: 200,
-          body: JSON.generate({ ARN: arn, SecretString: { api_key: new_api_key }.to_json }),
-          headers: { 'Content-Type' => 'application/x-amz-json-1.1' }
-        }
-      )
+    stub_secrets_manager_response(
+      {
+        arn: arn,
+        name: arn.split(':secret:').last,
+        secret_string: { api_key: old_api_key }.to_json
+      },
+      {
+        arn: arn,
+        name: arn.split(':secret:').last,
+        secret_string: { api_key: new_api_key }.to_json
+      }
+    )
   end
 end
 
