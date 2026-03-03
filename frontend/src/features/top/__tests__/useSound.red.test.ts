@@ -75,7 +75,7 @@ describe('E18 RED: useSound', () => {
     sound.playSceneBgm('judging')
     vi.runAllTimers()
 
-    expect(fadeSpy).toHaveBeenCalledWith(1, 0, 500)
+    expect(fadeSpy).toHaveBeenCalledWith(0.5, 0, 500)
     const debugEvents = (globalThis as { __AUDIO_DEBUG__?: unknown[] }).__AUDIO_DEBUG__ ?? []
     expect(debugEvents).toContainEqual({ type: 'bgm', scene: 'judging' })
   })

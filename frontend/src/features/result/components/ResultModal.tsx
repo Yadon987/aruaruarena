@@ -10,6 +10,7 @@ type Props = {
   isLoading: boolean
   errorCode: string | null
   onRetry: () => void
+  onPlayRetrySound: () => void
   onRejudgeSuccess: (post: Post) => void
   onClose: () => void
 }
@@ -167,6 +168,7 @@ export function ResultModal({
   isLoading,
   errorCode,
   onRetry,
+  onPlayRetrySound,
   onRejudgeSuccess,
   onClose,
 }: Props) {
@@ -236,6 +238,8 @@ export function ResultModal({
 
   const handleRejudge = async () => {
     if (!post || isRejudging) return
+
+    onPlayRetrySound()
 
     // 失敗した審査員を抽出
     const extractedFailedPersonas = post.judgments

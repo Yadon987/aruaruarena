@@ -26,8 +26,7 @@ describe('E18-01 RED: soundController', () => {
 
   it('setMuted(true)で再生中BGMをフェードアウトして停止する', () => {
     // 何を検証するか: ミュート化した瞬間に再生中BGMへフェードアウト停止処理が走ること
-    const fadeSpy = vi.fn()
-    vi.stubGlobal('__HOWLER_FADE_SPY__', fadeSpy)
+    const fadeSpy = globalThis.__HOWLER_FADE_SPY__ as ReturnType<typeof vi.fn>
     const sound = createSoundController()
 
     sound.unlockAudio()
@@ -38,7 +37,7 @@ describe('E18-01 RED: soundController', () => {
     sound.setMuted(true)
     vi.runAllTimers()
 
-    expect(fadeSpy).toHaveBeenCalledWith(1, 0, 500)
+    expect(fadeSpy).toHaveBeenCalledWith(0.5, 0, 500)
   })
 
   it('stopBgm()で現在BGMを停止して同一シーンを再生し直せる', () => {
@@ -50,6 +49,7 @@ describe('E18-01 RED: soundController', () => {
     sound.playSceneBgm('top')
 
     expect(typeof sound.stopBgm).toBe('function')
+    expect(sound.stopBgm).toBeDefined()
     if (typeof sound.stopBgm !== 'function') return
 
     sound.stopBgm()
@@ -72,6 +72,6 @@ describe('E18-01 RED: soundController', () => {
     expect(typeof sound.dispose).toBe('function')
     if (typeof sound.dispose !== 'function') return
 
-    expect(() => sound.dispose?.()).not.toThrow()
+    expect(() => sound.dispose()).not.toThrow()
   })
 })

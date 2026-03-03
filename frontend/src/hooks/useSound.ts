@@ -1,8 +1,12 @@
+import { Howl } from 'howler'
+
 const SOUND_STORAGE_KEY = 'aruaru_sound_muted'
 const DEFAULT_MUTED = true
 const FADE_DURATION_MS = 500
+const BGM_VOLUME = 0.5
+const SE_VOLUME = 0.7
 
-type Scene = 'top' | 'judging'
+type Scene = 'top' | 'judging' | 'success' | 'failed'
 type SeId = 'se_submit' | 'se_result_open' | 'se_retry'
 
 type DebugEvent =
@@ -10,6 +14,19 @@ type DebugEvent =
   | { type: 'se'; id: SeId }
 
 type FadeSpy = (from: number, to: number, durationMs: number) => void
+
+const BGM_FILES: Record<Scene, string> = {
+  top: '/sounds/radetzky_march.mp3',
+  judging: '/sounds/CanCan.mp3',
+  success: '/sounds/pomp_and_circumstance.mp3',
+  failed: '/sounds/fate_theme.mp3',
+}
+
+const SE_FILES: Record<SeId, string> = {
+  se_submit: '/sounds/se_submit.mp3',
+  se_result_open: '/sounds/se_result_open.mp3',
+  se_retry: '/sounds/se_retry.mp3',
+}
 
 function getOrInitMutedState(): boolean {
   try {
@@ -40,18 +57,43 @@ function pushAudioDebugEvent(event: DebugEvent) {
   debugEvents.push(event)
 }
 
-function runFade(from: number, to: number, durationMs: number) {
+function runFade(howl: Howl | null, from: number, to: number, durationMs: number) {
   const fadeSpy = (globalThis as { __HOWLER_FADE_SPY__?: FadeSpy }).__HOWLER_FADE_SPY__
   if (typeof fadeSpy === 'function') {
     fadeSpy(from, to, durationMs)
   }
+  if (howl) {
+    howl.fade(from, to, durationMs)
+  }
 }
 
 export function createSoundController() {
-  // 現在はE18段階の最小実装として、音声実再生ではなく状態管理とイベント通知に限定している。
   let isMuted = getOrInitMutedState()
   let audioUnlocked = false
   let currentScene: Scene | null = null
+  let currentBgm: Howl | null = null
+  let pendingTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+  const clearPendingTimeout = () => {
+    if (pendingTimeoutId !== null) {
+      clearTimeout(pendingTimeoutId)
+      pendingTimeoutId = null
+    }
+  }
+
+  const stopBgm = () => {
+    clearPendingTimeout()
+    if (currentBgm) {
+      currentBgm.stop()
+      currentBgm.unload()
+      currentBgm = null
+    }
+    currentScene = null
+  }
+
+  const dispose = () => {
+    stopBgm()
+  }
 
   return {
     get isMuted() {
@@ -63,26 +105,83 @@ export function createSoundController() {
     setMuted(nextMuted: boolean) {
       isMuted = nextMuted
       writeMutedState(nextMuted)
-      if (nextMuted) {
-        // ミュート中は現在シーンを破棄し、解除後の同一シーン再生を許可する。
+
+      if (nextMuted && currentBgm) {
+        runFade(currentBgm, BGM_VOLUME, 0, FADE_DURATION_MS)
+        clearPendingTimeout()
+        pendingTimeoutId = setTimeout(() => {
+          stopBgm()
+        }, FADE_DURATION_MS)
+      }
+
+      if (!nextMuted) {
+        clearPendingTimeout()
+      }
+
+      if (nextMuted && !currentBgm) {
         currentScene = null
       }
     },
     unlockAudio() {
       audioUnlocked = true
     },
+    stopBgm,
+    dispose,
     playSceneBgm(scene: Scene) {
       if (!audioUnlocked || isMuted) return
       if (currentScene === scene) return
 
-      if (currentScene) {
-        runFade(1, 0, FADE_DURATION_MS)
+      clearPendingTimeout()
+
+      if (currentBgm) {
+        const previousBgm = currentBgm
+        runFade(previousBgm, BGM_VOLUME, 0, FADE_DURATION_MS)
+        setTimeout(() => {
+          previousBgm.unload()
+        }, FADE_DURATION_MS)
+        currentBgm = null
       }
+
       currentScene = scene
+      currentBgm = new Howl({
+        src: [BGM_FILES[scene]],
+        loop: scene !== 'success' && scene !== 'failed',
+        volume: BGM_VOLUME,
+        onloaderror: () => {
+          console.error('[Sound] BGM load error:', scene)
+        },
+        onplayerror: () => {
+          console.error('[Sound] BGM play error:', scene)
+        },
+        onend: () => {
+          if (scene !== 'success' && scene !== 'failed') return
+          if (currentBgm) {
+            currentBgm.unload()
+            currentBgm = null
+          }
+          currentScene = null
+        },
+      })
+      currentBgm.play()
       pushAudioDebugEvent({ type: 'bgm', scene })
     },
     playSe(id: SeId) {
       if (!audioUnlocked || isMuted) return
+
+      const se = new Howl({
+        src: [SE_FILES[id]],
+        volume: SE_VOLUME,
+        onloaderror: () => {
+          console.error('[Sound] SE load error:', id)
+        },
+        onplayerror: () => {
+          console.error('[Sound] SE play error:', id)
+        },
+        onend: () => {
+          se.unload()
+        },
+      })
+      se.play()
       pushAudioDebugEvent({ type: 'se', id })
     },
   }

@@ -335,6 +335,7 @@ describe('E15-01 RED: ResultModal Component', () => {
         isLoading={false}
         errorCode={null}
         onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
         onRejudgeSuccess={() => undefined}
         onClose={() => undefined}
       />
@@ -355,6 +356,7 @@ describe('E15-01 RED: ResultModal Component', () => {
         isLoading={false}
         errorCode={null}
         onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
         onRejudgeSuccess={() => undefined}
         onClose={() => undefined}
       />
@@ -380,6 +382,7 @@ describe('E15-01 RED: ResultModal Component', () => {
         isLoading={false}
         errorCode={null}
         onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
         onRejudgeSuccess={() => undefined}
         onClose={() => undefined}
       />
@@ -397,6 +400,7 @@ describe('E15-01 RED: ResultModal Component', () => {
         isLoading={false}
         errorCode={null}
         onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
         onRejudgeSuccess={() => undefined}
         onClose={() => undefined}
       />
@@ -405,5 +409,49 @@ describe('E15-01 RED: ResultModal Component', () => {
     expect(screen.getByRole('button', { name: 'Xでシェア' })).not.toBeDisabled()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(screen.queryByText('画像を準備しています。数秒お待ちください')).not.toBeInTheDocument()
+  })
+
+  it('再審査ボタン押下でonPlayRetrySoundを呼び出す', async () => {
+    // 何を検証するか: 再審査開始時にSE再生コールバックが先に呼ばれること
+    const onPlayRetrySound = vi.fn()
+    vi.spyOn(api.posts, 'rejudge').mockResolvedValue({
+      id: 'failed-post-id',
+      status: 'judging',
+    })
+
+    render(
+      <ResultModal
+        isOpen
+        post={buildModalPost({
+          id: 'failed-post-id',
+          status: 'failed',
+          judgments: [
+            {
+              persona: 'hiroyuki',
+              total_score: 20,
+              empathy: 4,
+              humor: 4,
+              brevity: 4,
+              originality: 4,
+              expression: 4,
+              comment: '失敗',
+              success: false,
+            },
+          ],
+        })}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onPlayRetrySound={onPlayRetrySound}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '再審査する' }))
+
+    await waitFor(() => {
+      expect(onPlayRetrySound).toHaveBeenCalledTimes(1)
+    })
   })
 })

@@ -316,6 +316,11 @@ function App() {
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
   const activeResultErrorCode = resultModalErrorCode
+  const resultAudioScene = useMemo(() => {
+    if (!isResultModalOpen || !activeResultPost) return null
+    return activeResultPost.status === 'scored' ? 'success' : 'failed'
+  }, [activeResultPost, isResultModalOpen])
+  const audioScene = resultAudioScene ?? viewMode
   const syncMyPostIds = useCallback(() => setMyPostIds(readPostIds()), [])
   const setMyPostLoading = useCallback((postId: string, isLoading: boolean) => {
     setLoadingMyPostIds((prev) => {
@@ -425,6 +430,9 @@ function App() {
     if (!activeResultPostId) return
     void fetchResultPost(activeResultPostId, true)
   }, [activeResultPostId, fetchResultPost])
+  const handlePlayRetrySound = useCallback(() => {
+    sound.playSe('se_retry')
+  }, [sound])
 
   const handleSoundToggle = useCallback(() => {
     sound.unlockAudio()
@@ -432,13 +440,32 @@ function App() {
     sound.setMuted(nextMuted)
     setIsMuted(nextMuted)
     if (!nextMuted) {
-      sound.playSceneBgm(viewMode)
+      sound.playSceneBgm(audioScene)
     }
-  }, [isMuted, sound, viewMode])
+  }, [audioScene, isMuted, sound])
 
   useEffect(() => {
-    sound.playSceneBgm(viewMode)
-  }, [sound, viewMode])
+    const handleUnlock = () => {
+      sound.unlockAudio()
+      document.removeEventListener('pointerdown', handleUnlock)
+      document.removeEventListener('touchend', handleUnlock)
+      document.removeEventListener('keydown', handleUnlock)
+    }
+
+    document.addEventListener('pointerdown', handleUnlock, { once: true })
+    document.addEventListener('touchend', handleUnlock, { once: true })
+    document.addEventListener('keydown', handleUnlock, { once: true })
+
+    return () => {
+      document.removeEventListener('pointerdown', handleUnlock)
+      document.removeEventListener('touchend', handleUnlock)
+      document.removeEventListener('keydown', handleUnlock)
+    }
+  }, [sound])
+
+  useEffect(() => {
+    sound.playSceneBgm(audioScene)
+  }, [audioScene, sound])
 
   useEffect(() => {
     if (!previousResultModalOpenRef.current && isResultModalOpen) {
@@ -465,6 +492,12 @@ function App() {
       document.body.style.overflow = previousOverflow
     }
   }, [isPrivacyPolicyOpen])
+
+  useEffect(() => {
+    return () => {
+      sound.dispose()
+    }
+  }, [sound])
 
   const clearJudgingPolling = useCallback(() => {
     if (pollingTimerRef.current) {
@@ -617,6 +650,7 @@ function App() {
     setIsSubmitting(true)
     try {
       const response = await api.posts.create({ nickname: trimmedNickname, body: trimmedBody })
+      sound.playSe('se_submit')
       savePostId(response.id)
       syncMyPostIds()
       setNickname('')
@@ -978,6 +1012,7 @@ function App() {
           isLoading={isResultModalLoading}
           errorCode={activeResultErrorCode}
           onRetry={retryResultModal}
+          onPlayRetrySound={handlePlayRetrySound}
           onRejudgeSuccess={handleResultRejudgeSuccess}
           onClose={closeResultModal}
         />

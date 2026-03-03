@@ -81,12 +81,14 @@ describe('E18-01 RED: BGM scene integration', () => {
       judgments: [],
     })
 
-    expect(getAudioDebugEvents()).toEqual(
-      expect.arrayContaining([
-        { type: 'bgm', scene: 'success' },
-        { type: 'se', id: 'se_result_open' },
-      ])
-    )
+    await waitFor(() => {
+      expect(getAudioDebugEvents()).toEqual(
+        expect.arrayContaining([
+          { type: 'bgm', scene: 'success' },
+          { type: 'se', id: 'se_result_open' },
+        ])
+      )
+    })
   })
 
   it('結果モーダル表示時にfailed BGMとSEを同時に再生する', async () => {
@@ -104,12 +106,14 @@ describe('E18-01 RED: BGM scene integration', () => {
       judgments: [],
     })
 
-    expect(getAudioDebugEvents()).toEqual(
-      expect.arrayContaining([
-        { type: 'bgm', scene: 'failed' },
-        { type: 'se', id: 'se_result_open' },
-      ])
-    )
+    await waitFor(() => {
+      expect(getAudioDebugEvents()).toEqual(
+        expect.arrayContaining([
+          { type: 'bgm', scene: 'failed' },
+          { type: 'se', id: 'se_result_open' },
+        ])
+      )
+    })
   })
 
   it('結果モーダルを閉じるとtop BGMを再開する', async () => {
@@ -147,10 +151,8 @@ describe('E18-01 RED: BGM scene integration', () => {
       status: 'judging',
     })
     vi.spyOn(api.posts, 'get').mockImplementation(
-      () =>
-        new Promise(() => {
-          return undefined
-        })
+      // 意図的に未解決のままにして審査中画面を維持する。
+      () => new Promise(() => {})
     )
 
     render(<App />)
