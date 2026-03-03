@@ -159,6 +159,24 @@ module AdapterTestHelpers
   # @param legacy_env_key [String] 従来のAPIキー環境変数名
   # @param legacy_api_key [String, nil] 従来のAPIキー
   # @return [void]
+  #
+  # @example Secrets Manager有効時
+  #   stub_secrets_manager_env(
+  #     enabled: 'true',
+  #     secret_env_key: 'GEMINI_SECRET_ARN',
+  #     secret_arn: valid_arn,
+  #     legacy_env_key: 'GEMINI_API_KEY',
+  #     legacy_api_key: nil
+  #   )
+  #
+  # @example Secrets Manager無効時
+  #   stub_secrets_manager_env(
+  #     enabled: 'false',
+  #     secret_env_key: 'GEMINI_SECRET_ARN',
+  #     secret_arn: nil,
+  #     legacy_env_key: 'GEMINI_API_KEY',
+  #     legacy_api_key: 'test-api-key'
+  #   )
   def stub_secrets_manager_env(enabled:, secret_env_key:, secret_arn:, legacy_env_key:, legacy_api_key: nil)
     stub_env('SECRETS_MANAGER_ENABLED', enabled)
     stub_env(secret_env_key, secret_arn)

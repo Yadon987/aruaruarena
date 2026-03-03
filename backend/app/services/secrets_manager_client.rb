@@ -1,13 +1,36 @@
 # frozen_string_literal: true
 
-# Secrets ManagerからAI用APIキーを取得する最小実装
+# Secrets ManagerからAI用APIキーを取得するクライアント
+#
+# 環境変数 SECRETS_MANAGER_ENABLED によって動作を切り替える:
+# - "true" の場合: Secrets Manager からAPIキーを取得
+# - それ以外の場合: 従来の環境変数から直接取得
+#
+# キャッシュ機能:
+# - 同一ARNへの2回目以降のアクセスはキャッシュから返す
+# - clear_cache! でキャッシュをクリアできる
+# - テスト環境ではテスト例ごとにキャッシュキーを分離する
+#
+# エラーハンドリング:
+# - ARN不正: ArgumentError ("ARNが不正です")
+# - シークレット不存在: ArgumentError ("シークレットが見つかりません")
+# - 権限エラー: ArgumentError ("アクセス権限がありません")
+# - ネットワークエラー: 3回リトライ後に ArgumentError ("secrets_fetch_failed")
+# - JSONパースエラー: ArgumentError ("secrets_parse_error")
 class SecretsManagerClient
   SECRETS_MANAGER_ENDPOINT = 'https://secretsmanager.ap-northeast-1.amazonaws.com/'
+  # 有効なARNパターン:
+  # - サービス: secretsmanager
+  # - リージョン: ap-northeast-1
+  # - アカウントID: 12桁
+  # - シークレット名: aruaruarena/ai-keys/{サービス名}-{ランダム文字列}
   VALID_ARN_PATTERN = %r{
     \Aarn:aws:secretsmanager:ap-northeast-1:\d{12}:secret:
     aruaruarena/ai-keys/[a-z0-9_-]+-[A-Za-z0-9]+\z
   }x
   MAX_RETRIES = 3
+  HTTP_SUCCESS_MIN = 200
+  HTTP_SUCCESS_MAX = 299
 
   class << self
     def get_api_key(secret_arn:, env_key:)
@@ -85,7 +108,7 @@ class SecretsManagerClient
     def parse_response(response, env_key)
       body = JSON.parse(response.body)
 
-      return parse_success_body(body, env_key) if response.status.between?(200, 299)
+      return parse_success_body(body, env_key) if success_status?(response.status)
 
       error_type = body['__type'].to_s
       raise ArgumentError, 'シークレットが見つかりません' if error_type.include?('ResourceNotFoundException')
@@ -109,6 +132,10 @@ class SecretsManagerClient
       @client ||= Faraday.new(url: SECRETS_MANAGER_ENDPOINT, proxy: nil) do |faraday|
         faraday.adapter Faraday.default_adapter
       end
+    end
+
+    def success_status?(status)
+      status.between?(HTTP_SUCCESS_MIN, HTTP_SUCCESS_MAX)
     end
   end
 end

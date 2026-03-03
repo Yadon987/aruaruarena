@@ -239,6 +239,11 @@ module Api
       end
     end
 
+    # Secrets Managerの事前検証が必要かどうかを判定する
+    #
+    # 通常は SECRETS_MANAGER_ENABLED=true のときだけ検証する。
+    # ただし request spec では SecretsManagerClient が class_double に差し替わるため、
+    # モック化されている場合も事前検証を実行して期待どおりに呼び出しを検証する。
     def should_verify_ai_secrets?
       ENV['SECRETS_MANAGER_ENABLED'] == 'true' || SecretsManagerClient.class != Class
     end
@@ -254,6 +259,8 @@ module Api
     def secrets_fetch_error?(error)
       return false unless error.is_a?(ArgumentError)
 
+      # SecretsManagerClientで使用しているエラーメッセージ群に一致した場合のみ、
+      # シークレット取得由来のエラーとして扱う。
       %w[
         secrets_fetch_failed
         secrets_parse_error
