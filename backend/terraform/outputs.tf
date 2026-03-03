@@ -31,3 +31,13 @@ output "access_log_bucket_name" {
   description = "S3 bucket name storing CloudFront and frontend S3 access logs."
   value       = aws_s3_bucket.access_logs.bucket
 }
+
+output "frontend_s3_bucket_name" {
+  description = "S3バケット名"
+  value       = var.frontend_s3_bucket_name
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFrontディストリビューションID"
+  value       = aws_cloudfront_distribution.frontend.id
+}
