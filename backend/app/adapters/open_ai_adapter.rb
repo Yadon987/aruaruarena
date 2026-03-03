@@ -31,6 +31,13 @@ class OpenAiAdapter < BaseOpenAiCompatAdapter
   end
 
   def api_key
+    if ENV.fetch('SECRETS_MANAGER_ENABLED', 'false') == 'true'
+      return SecretsManagerClient.get_api_key(
+        secret_arn: ENV.fetch('GROQ_SECRET_ARN', nil),
+        env_key: 'GROQ_API_KEY'
+      )
+    end
+
     key = ENV.fetch('GROQ_API_KEY', nil)
     raise ArgumentError, 'GROQ_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
 

@@ -566,4 +566,8 @@ RSpec.describe GeminiAdapter do
       adapter.judge('テスト投稿', persona: 'hiroyuki')
     end
   end
+
+  it_behaves_like 'secrets manager api key resolution',
+                  secret_env_key: 'GEMINI_SECRET_ARN',
+                  legacy_env_key: 'GEMINI_API_KEY'
 end

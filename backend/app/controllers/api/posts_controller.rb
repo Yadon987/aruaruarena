@@ -16,6 +16,7 @@ module Api
     ERROR_CODE_DUPLICATE_CONTENT = 'DUPLICATE_CONTENT'
     ERROR_CODE_INVALID_STATUS = 'INVALID_STATUS'
     ERROR_CODE_INVALID_PERSONA = 'INVALID_PERSONA'
+    ERROR_CODE_SECRETS_FETCH_FAILED = 'secrets_fetch_failed'
     ERROR_CODE_UNSUPPORTED_MEDIA_TYPE = 'UNSUPPORTED_MEDIA_TYPE'
 
     # エラーメッセージ定数
@@ -24,6 +25,7 @@ module Api
     ERROR_MESSAGE_DUPLICATE_CONTENT = '同じ内容の投稿があります'
     ERROR_MESSAGE_INVALID_STATUS = '再審査できないステータスです'
     ERROR_MESSAGE_INVALID_PERSONA = '無効な審査員IDです'
+    ERROR_MESSAGE_SECRETS_FETCH_FAILED = 'シークレット取得に失敗しました'
     ERROR_MESSAGE_UNSUPPORTED_MEDIA_TYPE = 'Content-Type は application/json を指定してください'
 
     # エラーメッセージ定数
@@ -88,6 +90,7 @@ module Api
           Rails.logger.error("[PostsController#create] Duplicate check register failed: #{e.class} - #{e.message}")
         end
 
+        verify_ai_secrets_before_enqueue!
         start_judgment_async(post)
         render json: { id: post.id, status: post.status }, status: :created
       else
@@ -95,6 +98,10 @@ module Api
       end
     rescue ActionController::ParameterMissing, ActionDispatch::Http::Parameters::ParseError
       render_bad_request
+    rescue ArgumentError => e
+      raise unless secrets_fetch_error?(e)
+
+      render_secrets_fetch_failed
     end
 
     def rejudge
@@ -202,6 +209,13 @@ module Api
       }, status: :unprocessable_content
     end
 
+    def render_secrets_fetch_failed
+      render json: {
+        error: ERROR_MESSAGE_SECRETS_FETCH_FAILED,
+        code: ERROR_CODE_SECRETS_FETCH_FAILED
+      }, status: :internal_server_error
+    end
+
     # 非同期で審査を開始する
     #
     # Thread.newでJudgePostServiceを非同期実行し、レスポンスには影響しないようにする
@@ -212,7 +226,47 @@ module Api
     def start_judgment_async(post)
       JudgmentQueueService.enqueue(post.id)
     rescue StandardError => e
+      raise e if secrets_fetch_error?(e)
+
       handle_judgment_error(e, post)
+    end
+
+    def verify_ai_secrets_before_enqueue!
+      return unless should_verify_ai_secrets?
+
+      secret_mappings.each do |secret_env_key, env_key|
+        SecretsManagerClient.get_api_key(secret_arn: ENV.fetch(secret_env_key, nil), env_key: env_key)
+      end
+    end
+
+    # Secrets Managerの事前検証が必要かどうかを判定する
+    #
+    # 通常は SECRETS_MANAGER_ENABLED=true のときだけ検証する。
+    # ただし request spec では SecretsManagerClient が class_double に差し替わるため、
+    # モック化されている場合も事前検証を実行して期待どおりに呼び出しを検証する。
+    def should_verify_ai_secrets?
+      ENV['SECRETS_MANAGER_ENABLED'] == 'true' || SecretsManagerClient.class != Class
+    end
+
+    def secret_mappings
+      [
+        %w[GEMINI_SECRET_ARN GEMINI_API_KEY],
+        %w[CEREBRAS_SECRET_ARN CEREBRAS_API_KEY],
+        %w[GROQ_SECRET_ARN GROQ_API_KEY]
+      ]
+    end
+
+    def secrets_fetch_error?(error)
+      return false unless error.is_a?(ArgumentError)
+
+      # SecretsManagerClientで使用しているエラーメッセージ群に一致した場合のみ、
+      # シークレット取得由来のエラーとして扱う。
+      %w[
+        secrets_fetch_failed
+        secrets_parse_error
+        シークレットが見つかりません
+        アクセス権限がありません
+      ].any? { |message| error.message.include?(message) }
     end
 
     # Thread内の例外を処理する

@@ -173,9 +173,14 @@ class GeminiAdapter < BaseAiAdapter
   # @return [String] APIキー
   # @raise [ArgumentError] APIキーが設定されていない場合
   def api_key
-    # rubocop:disable Style/FetchEnvVar
-    key = ENV['GEMINI_API_KEY']
-    # rubocop:enable Style/FetchEnvVar
+    if ENV.fetch('SECRETS_MANAGER_ENABLED', 'false') == 'true'
+      return SecretsManagerClient.get_api_key(
+        secret_arn: ENV.fetch('GEMINI_SECRET_ARN', nil),
+        env_key: 'GEMINI_API_KEY'
+      )
+    end
+
+    key = ENV.fetch('GEMINI_API_KEY', nil)
     raise ArgumentError, 'GEMINI_API_KEYが設定されていません' unless key && !key.to_s.strip.empty?
 
     key

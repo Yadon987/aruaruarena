@@ -32,4 +32,7 @@ RSpec.describe CerebrasAdapter do
   end
 
   it_behaves_like 'adapter api key validation', 'CEREBRAS_API_KEY'
+  it_behaves_like 'secrets manager api key resolution',
+                  secret_env_key: 'CEREBRAS_SECRET_ARN',
+                  legacy_env_key: 'CEREBRAS_API_KEY'
 end
