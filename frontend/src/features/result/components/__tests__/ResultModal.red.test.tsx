@@ -454,4 +454,49 @@ describe('E15-01 RED: ResultModal Component', () => {
       expect(onPlayRetrySound).toHaveBeenCalledTimes(1)
     })
   })
+
+  it('再審査SE再生で例外が出ても再審査API呼び出しは継続する', async () => {
+    // 何を検証するか: SE再生失敗を握りつぶしても再審査本処理は止めないこと
+    const rejudgeSpy = vi.spyOn(api.posts, 'rejudge').mockResolvedValue({
+      id: 'failed-post-id',
+      status: 'judging',
+    })
+
+    render(
+      <ResultModal
+        isOpen
+        post={buildModalPost({
+          id: 'failed-post-id',
+          status: 'failed',
+          judgments: [
+            {
+              persona: 'hiroyuki',
+              total_score: 20,
+              empathy: 4,
+              humor: 4,
+              brevity: 4,
+              originality: 4,
+              expression: 4,
+              comment: '失敗',
+              success: false,
+            },
+          ],
+        })}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onPlayRetrySound={() => {
+          throw new Error('se failed')
+        }}
+        onRejudgeSuccess={() => undefined}
+        onClose={() => undefined}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '再審査する' }))
+
+    await waitFor(() => {
+      expect(rejudgeSpy).toHaveBeenCalledTimes(1)
+    })
+  })
 })

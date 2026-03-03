@@ -1140,7 +1140,7 @@ terraform apply tfplan
 
 1. **OGPベース画像の作成**（P1）- OGP生成に必要
 2. **DockerfileへのImageMagick追加**（P1）- OGP生成に必要
-[x] 3. **音声ファイルの用意**（P1）- 音声再生実装に必要
+3. **音声ファイルの用意**（P1）- 音声再生実装に必要（完了）
 4. **Framer Motionアニメーション**（P1）- ユーザー体験への影響が大きい
 5. **S3 + CloudFront（Terraform）**（P1）- 本番環境構築に必要
 6. **AI APIキーのSecrets Manager統合**（P1）- セキュリティ向上

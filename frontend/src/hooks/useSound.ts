@@ -74,6 +74,11 @@ export function createSoundController() {
   let currentBgm: Howl | null = null
   let pendingTimeoutId: ReturnType<typeof setTimeout> | null = null
 
+  const restoreBgmVolume = () => {
+    if (!currentBgm) return
+    currentBgm.fade(currentBgm.volume(), BGM_VOLUME, 0)
+  }
+
   const clearPendingTimeout = () => {
     if (pendingTimeoutId !== null) {
       clearTimeout(pendingTimeoutId)
@@ -116,6 +121,7 @@ export function createSoundController() {
 
       if (!nextMuted) {
         clearPendingTimeout()
+        restoreBgmVolume()
       }
 
       if (nextMuted && !currentBgm) {
@@ -143,26 +149,34 @@ export function createSoundController() {
       }
 
       currentScene = scene
-      currentBgm = new Howl({
+      const nextBgm = new Howl({
         src: [BGM_FILES[scene]],
         loop: scene !== 'success' && scene !== 'failed',
         volume: BGM_VOLUME,
         onloaderror: () => {
           console.error('[Sound] BGM load error:', scene)
+          if (currentBgm !== nextBgm) return
+          nextBgm.unload()
+          currentBgm = null
+          currentScene = null
         },
         onplayerror: () => {
           console.error('[Sound] BGM play error:', scene)
+          if (currentBgm !== nextBgm) return
+          nextBgm.unload()
+          currentBgm = null
+          currentScene = null
         },
         onend: () => {
           if (scene !== 'success' && scene !== 'failed') return
-          if (currentBgm) {
-            currentBgm.unload()
-            currentBgm = null
-          }
+          if (currentBgm !== nextBgm) return
+          nextBgm.unload()
+          currentBgm = null
           currentScene = null
         },
       })
-      currentBgm.play()
+      currentBgm = nextBgm
+      nextBgm.play()
       pushAudioDebugEvent({ type: 'bgm', scene })
     },
     playSe(id: SeId) {

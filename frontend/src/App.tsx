@@ -445,8 +445,13 @@ function App() {
   }, [audioScene, isMuted, sound])
 
   useEffect(() => {
+    if (sound.audioUnlocked) return
+
     const handleUnlock = () => {
       sound.unlockAudio()
+      if (!sound.isMuted) {
+        sound.playSceneBgm(audioScene)
+      }
       document.removeEventListener('pointerdown', handleUnlock)
       document.removeEventListener('touchend', handleUnlock)
       document.removeEventListener('keydown', handleUnlock)
@@ -461,7 +466,7 @@ function App() {
       document.removeEventListener('touchend', handleUnlock)
       document.removeEventListener('keydown', handleUnlock)
     }
-  }, [sound])
+  }, [audioScene, sound])
 
   useEffect(() => {
     sound.playSceneBgm(audioScene)

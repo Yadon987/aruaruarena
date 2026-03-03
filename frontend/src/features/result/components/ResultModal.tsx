@@ -239,7 +239,11 @@ export function ResultModal({
   const handleRejudge = async () => {
     if (!post || isRejudging) return
 
-    onPlayRetrySound()
+    try {
+      onPlayRetrySound()
+    } catch (error) {
+      console.error('再審査SEの再生に失敗しました', error)
+    }
 
     // 失敗した審査員を抽出
     const extractedFailedPersonas = post.judgments
