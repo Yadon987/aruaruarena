@@ -26,7 +26,7 @@ describe('E18-01 RED: soundController', () => {
 
   it('setMuted(true)で再生中BGMをフェードアウトして停止する', () => {
     // 何を検証するか: ミュート化した瞬間に再生中BGMへフェードアウト停止処理が走ること
-    const fadeSpy = globalThis.__HOWLER_FADE_SPY__ as ReturnType<typeof vi.fn>
+    const fadeSpy = (globalThis as any).__HOWLER_FADE_SPY__ as ReturnType<typeof vi.fn>
     const sound = createSoundController()
 
     sound.unlockAudio()
