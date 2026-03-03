@@ -59,6 +59,21 @@ RSpec.describe 'RejudgePostService', type: :service do
     end
   end
 
+  describe 'hiroyukiアダプター選択' do
+    let!(:post_record) { create(:post, :failed, judges_count: 1) }
+    let(:service) { service_class.new(post_record.id, failed_personas: ['hiroyuki']) }
+
+    it 'sync_rejudge文脈でGeminiAdapterを初期化すること' do
+      adapter = instance_double(GeminiAdapter, judge: create_timeout_response)
+
+      allow(GeminiAdapter).to receive(:new).with(context: :sync_rejudge).and_return(adapter)
+
+      service.send(:rejudge_persona!, 'hiroyuki')
+
+      expect(GeminiAdapter).to have_received(:new).with(context: :sync_rejudge)
+    end
+  end
+
   describe '#execute' do
     context '正常系' do
       # 何を検証するか: 指定personaのみ再審査し、既存の成功Judgmentを保持すること

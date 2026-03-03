@@ -381,6 +381,10 @@ cp .env.example .env
 # .envを編集してAPI Keyを設定
 ```
 
+注意:
+`.env` に `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` を置いても、これはアプリ実行用の環境変数です。
+AWS CLI や Terraform を実行するシェルでは `.env` を丸ごと `source` せず、AWS 認証は `aws configure` / `AWS_PROFILE` / シェルの認証済み環境変数で別管理してください。
+
 **.env.example**
 ```env
 # Common
@@ -458,6 +462,10 @@ export TF_VAR_groq_api_key="..."
 terraform plan
 terraform apply
 ```
+
+運用メモ:
+`terraform apply` 前に `.env` をそのまま `source` すると、AWS CLI 用の認証情報まで上書きして意図しない認証エラーになることがあります。
+Terraform に渡す値は `TF_VAR_*` だけを個別に export してください。
 
 ### 2. GitHub Actions 設定（フロントエンド配信）
 

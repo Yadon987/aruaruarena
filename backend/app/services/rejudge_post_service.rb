@@ -71,7 +71,7 @@ class RejudgePostService
   end
 
   def rejudge_persona!(persona, existing_judgment = nil)
-    result = adapter_for(persona).new.judge(@post.body, persona: persona)
+    result = build_adapter(persona).judge(@post.body, persona: persona)
     attrs = base_attrs(result)
     attrs.merge!(score_attrs(result)) if result.succeeded
     save_judgment!(persona, attrs, existing_judgment)
@@ -87,6 +87,12 @@ class RejudgePostService
       scores: nil,
       comment: nil
     )
+  end
+
+  def build_adapter(persona)
+    return GeminiAdapter.new(context: :sync_rejudge) if persona == 'hiroyuki'
+
+    adapter_for(persona).new
   end
 
   def base_attrs(result)

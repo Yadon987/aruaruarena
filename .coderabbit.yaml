@@ -23,17 +23,17 @@ reviews:
   # パスフィルタ：レビュー対象を明確化し、誤検知を削減
   path_filters:
     - ".coderabbit.yaml"
-    - "app/**/*"
+    - "backend/app/**/*"
     - "frontend/**/*"
-    - "lib/**/*"
-    - "spec/**/*"
-    - "config/**/*"
-    - "db/**/*"
-    - "test/**/*"
+    - "backend/lib/**/*"
+    - "backend/spec/**/*"
+    - "backend/config/**/*"
+    - "backend/db/**/*"
+    - "backend/test/**/*"
     - "docs/**/*.md"
     - "README.md"
     - "!vendor/**/*"
-    - "!db/schema.rb"
+    - "!backend/db/schema.rb"
     - "!node_modules/**/*"
     - "!public/**/*"
     - "!**/CHANGELOG*"
@@ -46,9 +46,9 @@ reviews:
     include:
       - "docs/**/*.md"
       - "README.md"
-      - ".rubocop.yml"
-      - "Gemfile"
-      - ".ruby-version"
+      - "backend/.rubocop.yml"
+      - "backend/Gemfile"
+      - "backend/.ruby-version"
 
   tools:
     rubocop:

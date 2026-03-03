@@ -58,6 +58,12 @@ variable "groq_api_key" {
   sensitive   = true
 }
 
+variable "secrets_manager_enabled" {
+  description = "Secrets ManagerからAPIキーを取得するかどうか"
+  type        = bool
+  default     = false
+}
+
 variable "github_repository" {
   description = "GitHub repository slug allowed to assume deploy roles"
   type        = string

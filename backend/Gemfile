@@ -30,6 +30,7 @@ gem 'rack-cors'
 gem 'aws-sdk-cloudfront'
 gem 'aws-sdk-dynamodb'
 gem 'aws-sdk-s3'
+gem 'aws-sdk-secretsmanager'
 gem 'dynamoid', '~> 3.11'
 
 # =============================================================================

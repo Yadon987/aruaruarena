@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.shared_examples 'adapter initialization' do |prompt_keyword|
+RSpec.shared_examples 'adapter initialization' do |prompt_keyword, include_post_content_placeholder = true|
   let(:adapter) { described_class.new }
 
   it 'BaseAiAdapterを継承していること' do
@@ -14,7 +14,11 @@ RSpec.shared_examples 'adapter initialization' do |prompt_keyword|
       end
 
       it 'プロンプトに{post_content}プレースホルダーが含まれていること' do
-        expect(adapter.instance_variable_get(:@prompt)).to include('{post_content}')
+        if include_post_content_placeholder
+          expect(adapter.instance_variable_get(:@prompt)).to include('{post_content}')
+        else
+          expect(adapter.instance_variable_get(:@prompt)).not_to include('{post_content}')
+        end
       end
 
       it 'プロンプトがキャッシュされること' do

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
-require 'webmock/rspec'
 
 RSpec.describe 'SecretsManagerClient', dynamodb: false do
   include AdapterTestHelpers
@@ -15,6 +14,10 @@ RSpec.describe 'SecretsManagerClient', dynamodb: false do
   let(:valid_api_key) { 'test-api-key-12345' }
 
   describe '.get_api_key' do
+    before do
+      stub_env('SECRETS_MANAGER_ENABLED', 'true')
+    end
+
     # 何を検証するか: 有効なARNからAPIキーを取得できること
     it '有効なARNからAPIキーを取得できること' do
       stub_secrets_manager_env(
@@ -31,12 +34,12 @@ RSpec.describe 'SecretsManagerClient', dynamodb: false do
 
     # 何を検証するか: 2回目の呼び出しはキャッシュから返ること
     it '2回目の呼び出しがキャッシュから返ること' do
-      stub_secrets_manager_success(arn: valid_arn, api_key: valid_api_key)
+      client = stub_secrets_manager_success(arn: valid_arn, api_key: valid_api_key)
 
       client_class.get_api_key(secret_arn: valid_arn, env_key: env_key)
       client_class.get_api_key(secret_arn: valid_arn, env_key: env_key)
 
-      expect(a_request(:post, 'https://secretsmanager.ap-northeast-1.amazonaws.com/')).to have_been_made.once
+      expect(client.api_requests.count { |request| request[:operation_name] == :get_secret_value }).to eq(1)
     end
 
     # 何を検証するか: ローカル開発では環境変数フォールバックが使われること
@@ -48,6 +51,14 @@ RSpec.describe 'SecretsManagerClient', dynamodb: false do
         legacy_env_key: env_key,
         legacy_api_key: valid_api_key
       )
+
+      expect(client_class.get_api_key(secret_arn: valid_arn, env_key: env_key)).to eq(valid_api_key)
+    end
+
+    # 何を検証するか: 未設定時は安全側で環境変数フォールバックを使うこと
+    it 'SECRETS_MANAGER_ENABLED未設定時は環境変数を使用すること' do
+      stub_env('SECRETS_MANAGER_ENABLED', nil)
+      stub_env(env_key, valid_api_key)
 
       expect(client_class.get_api_key(secret_arn: valid_arn, env_key: env_key)).to eq(valid_api_key)
     end
@@ -99,13 +110,14 @@ RSpec.describe 'SecretsManagerClient', dynamodb: false do
 
     # 何を検証するか: 一時障害時は3回リトライ後に失敗すること
     it 'ネットワークエラー時に3回リトライしてからエラーを発生させること' do
-      stub_secrets_manager_error(arn: valid_arn, error_type: :service_error)
+      client = stub_secrets_manager_error(arn: valid_arn, error_type: :service_error)
 
       expect do
         client_class.get_api_key(secret_arn: valid_arn, env_key: env_key)
       end.to raise_error(ArgumentError, /secrets_fetch_failed/)
 
-      expect(a_request(:post, 'https://secretsmanager.ap-northeast-1.amazonaws.com/')).to have_been_made.times(4)
+      request_count = client.api_requests.count { |request| request[:operation_name] == :get_secret_value }
+      expect(request_count).to eq(4)
     end
   end
 

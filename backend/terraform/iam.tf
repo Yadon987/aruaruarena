@@ -121,6 +121,28 @@ resource "aws_iam_role_policy" "cloudfront_ogp_invalidation" {
   })
 }
 
+resource "aws_iam_role_policy" "secrets_manager_access" {
+  name = "secrets_manager_access"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          aws_secretsmanager_secret.gemini_api_key.arn,
+          aws_secretsmanager_secret.cerebras_api_key.arn,
+          aws_secretsmanager_secret.groq_api_key.arn
+        ]
+      }
+    ]
+  })
+}
+
 # =============================================================================
 # Lambda@Edge用IAMロール（OGPメタタグ配信用）
 # =============================================================================
