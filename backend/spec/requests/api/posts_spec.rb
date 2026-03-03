@@ -596,5 +596,31 @@ RSpec.describe 'API::Posts', type: :request do
         expect(json['id']).to be_present
       end
     end
+
+    context 'E21 RED: Secrets Manager統合' do
+      # 何を検証するか: シークレット取得成功時は投稿作成フローがSecrets Manager連携込みで成立すること
+      it 'シークレット取得成功時に投稿が正常に作成されること' do
+        secrets_manager_client = class_double('SecretsManagerClient').as_stubbed_const
+        allow(secrets_manager_client).to receive(:get_api_key).and_return('test-api-key-from-secrets')
+
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+
+        expect(response).to have_http_status(:created)
+        expect(secrets_manager_client).to have_received(:get_api_key).at_least(:once)
+      end
+
+      # 何を検証するか: シークレット取得失敗時は500と専用エラーコードを返すこと
+      it 'シークレット取得失敗時に500エラーとsecrets_fetch_failedを返すこと' do
+        allow(JudgmentQueueService).to receive(:enqueue).and_raise(ArgumentError, 'secrets_fetch_failed')
+
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+
+        expect(response).to have_http_status(:internal_server_error)
+        expect(response.parsed_body).to include(
+          'error' => include('シークレット取得に失敗しました'),
+          'code' => 'secrets_fetch_failed'
+        )
+      end
+    end
   end
 end

@@ -39,4 +39,7 @@ RSpec.describe OpenAiAdapter do
   end
 
   it_behaves_like 'adapter api key validation', 'GROQ_API_KEY'
+  it_behaves_like 'secrets manager api key resolution',
+                  secret_env_key: 'GROQ_SECRET_ARN',
+                  legacy_env_key: 'GROQ_API_KEY'
 end

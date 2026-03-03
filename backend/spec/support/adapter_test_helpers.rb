@@ -144,6 +144,93 @@ module AdapterTestHelpers
     @adapter_mocks ||= {}
     @adapter_mocks[adapter_name.to_sym] = mock
   end
+
+  # Secrets Manager統合テスト向けの環境変数をモックする
+  #
+  # @param enabled [String] 機能フラグ
+  # @param secret_env_key [String] ARNを保持する環境変数名
+  # @param secret_arn [String, nil] Secrets ManagerのARN
+  # @param legacy_env_key [String] 従来のAPIキー環境変数名
+  # @param legacy_api_key [String, nil] 従来のAPIキー
+  # @return [void]
+  def stub_secrets_manager_env(enabled:, secret_env_key:, secret_arn:, legacy_env_key:, legacy_api_key: nil)
+    stub_env('SECRETS_MANAGER_ENABLED', enabled)
+    stub_env(secret_env_key, secret_arn)
+    stub_env(legacy_env_key, legacy_api_key)
+  end
+
+  # Secrets Manager APIレスポンスをモックする
+  #
+  # @param body [Hash, String] レスポンスボディ
+  # @param status [Integer] HTTPステータス
+  # @return [WebMock::RequestStub]
+  def stub_secrets_manager_response(body:, status: 200)
+    payload = body.is_a?(String) ? body : JSON.generate(body)
+
+    stub_request(:post, 'https://secretsmanager.ap-northeast-1.amazonaws.com/')
+      .to_return(
+        status: status,
+        body: payload,
+        headers: { 'Content-Type' => 'application/x-amz-json-1.1' }
+      )
+  end
+
+  # Secrets Managerの成功レスポンスをモックする
+  #
+  # @param arn [String] シークレットARN
+  # @param api_key [String] APIキー
+  # @return [WebMock::RequestStub]
+  def stub_secrets_manager_success(arn:, api_key:)
+    stub_secrets_manager_response(
+      body: {
+        ARN: arn,
+        SecretString: { api_key: api_key }.to_json
+      }
+    )
+  end
+
+  # Secrets Managerのエラーレスポンスをモックする
+  #
+  # @param arn [String] シークレットARN
+  # @param error_type [Symbol] エラー種別
+  # @return [WebMock::RequestStub]
+  def stub_secrets_manager_error(arn:, error_type:)
+    error_body = case error_type
+                 when :not_found
+                   { '__type' => 'ResourceNotFoundException', 'message' => "#{arn} は存在しません" }
+                 when :access_denied
+                   { '__type' => 'AccessDeniedException', 'message' => "#{arn} へのアクセスが拒否されました" }
+                 when :parse_error
+                   { ARN: arn, SecretString: '{invalid-json' }
+                 else
+                   { '__type' => 'ServiceUnavailableException', 'message' => "#{arn} の取得に失敗しました" }
+                 end
+
+    status = error_type == :parse_error ? 200 : 400
+    stub_secrets_manager_response(body: error_body, status: status)
+  end
+
+  # Secrets Managerのローテーションをモックする
+  #
+  # @param arn [String] シークレットARN
+  # @param old_api_key [String] 旧APIキー
+  # @param new_api_key [String] 新APIキー
+  # @return [WebMock::RequestStub]
+  def stub_secrets_manager_rotation(arn:, old_api_key:, new_api_key:)
+    stub_request(:post, 'https://secretsmanager.ap-northeast-1.amazonaws.com/')
+      .to_return(
+        {
+          status: 200,
+          body: JSON.generate({ ARN: arn, SecretString: { api_key: old_api_key }.to_json }),
+          headers: { 'Content-Type' => 'application/x-amz-json-1.1' }
+        },
+        {
+          status: 200,
+          body: JSON.generate({ ARN: arn, SecretString: { api_key: new_api_key }.to_json }),
+          headers: { 'Content-Type' => 'application/x-amz-json-1.1' }
+        }
+      )
+  end
 end
 
 RSpec.configure do |config|
