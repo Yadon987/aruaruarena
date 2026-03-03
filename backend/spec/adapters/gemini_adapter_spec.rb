@@ -46,8 +46,11 @@ RSpec.describe GeminiAdapter do
         request = adapter.send(:build_request, post_content, persona)
 
         config = request[:generationConfig]
-        expect(config[:temperature]).to eq(0.7)
-        expect(config[:maxOutputTokens]).to eq(1000)
+        expect(config[:temperature]).to eq(0.0)
+        expect(config[:topP]).to eq(0.1)
+        expect(config[:topK]).to eq(1)
+        expect(config[:candidateCount]).to eq(1)
+        expect(config[:maxOutputTokens]).to eq(192)
       end
 
       it 'generationConfigにresponseMimeTypeがapplication/jsonで設定されていること' do
@@ -65,6 +68,14 @@ RSpec.describe GeminiAdapter do
         expect(schema[:required]).to include('empathy', 'humor', 'brevity', 'originality', 'expression', 'comment')
         expect(schema[:properties][:comment][:type]).to eq('STRING')
       end
+
+      it '簡易フォールバック用リクエストもJSON固定で構築されること' do
+        request = adapter.send(:build_fallback_request, post_content, persona)
+
+        expect(request[:generationConfig][:responseMimeType]).to eq('application/json')
+        expect(request[:contents].first[:parts].first[:text]).to include('JSONオブジェクトを1つだけ返してください')
+        expect(request[:contents].first[:parts].first[:text]).to include(post_content)
+      end
     end
 
     it_behaves_like 'adapter build_request boundary', ->(req) { req[:contents][0][:parts][0][:text] }
@@ -79,6 +90,18 @@ RSpec.describe GeminiAdapter do
         text_content = request[:contents].first[:parts].first[:text]
         expect(text_content).to include(path_traversal_content)
       end
+    end
+  end
+
+  describe '#retryable_result_max_retries' do
+    it 'invalid_response時の再試行回数を増やしていること' do
+      expect(adapter.send(:retryable_result_max_retries)).to eq(2)
+    end
+
+    it 'sync_rejudge文脈ではinvalid_responseの外側リトライを無効にすること' do
+      sync_adapter = described_class.new(context: :sync_rejudge)
+
+      expect(sync_adapter.send(:retryable_result_max_retries)).to eq(0)
     end
   end
 
@@ -439,7 +462,120 @@ RSpec.describe GeminiAdapter do
           expect(result[:scores]).to be_present
           expect(result[:comment]).to eq('あるあるですね')
         end
+
+        it '壊れたJSON時に分類ログを出力すること' do
+          response_hash = {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: '審査結果です {"empathy":12,' }
+                  ]
+                }
+              }
+            ]
+          }
+          faraday_response = build_faraday_response(response_hash)
+
+          allow(Rails.logger).to receive(:warn)
+          expect(Rails.logger).to receive(:warn).with(include('reason=truncated_json')).at_least(:once)
+
+          result = adapter.send(:parse_response, faraday_response, allow_fallback: false)
+
+          expect(result).to be_a(BaseAiAdapter::JudgmentResult)
+          expect(result.error_code).to eq('invalid_response')
+        end
       end
+    end
+  end
+
+  describe '#call_ai_api' do
+    it 'invalid_response時は簡易プロンプトで再実行すること' do
+      primary_request = { mode: 'primary' }
+      fallback_request = { mode: 'fallback' }
+      invalid_response = build_faraday_response(
+        candidates: [
+          {
+            content: {
+              parts: [
+                { text: '説明文です {"empathy":10,' }
+              ]
+            }
+          }
+        ]
+      )
+      valid_response = build_faraday_response(
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.generate(
+                    empathy: 10,
+                    humor: 11,
+                    brevity: 12,
+                    originality: 13,
+                    expression: 14,
+                    comment: '再整形成功'
+                  )
+                }
+              ]
+            }
+          }
+        ]
+      )
+
+      allow(adapter).to receive(:build_request).and_return(primary_request)
+      allow(adapter).to receive(:build_fallback_request).and_return(fallback_request)
+      allow(adapter).to receive(:execute_request).with(primary_request).and_return(invalid_response)
+      allow(adapter).to receive(:execute_request).with(fallback_request).and_return(valid_response)
+
+      result = adapter.send(:call_ai_api, 'テスト投稿', 'hiroyuki')
+
+      expect(result).to be_a(BaseAiAdapter::JudgmentResult)
+      expect(result.succeeded).to be true
+      expect(result.comment).to eq('再整形成功')
+    end
+
+    it 'Geminiが連続失敗した場合はGroq互換へフォールバックすること' do
+      primary_request = { mode: 'primary' }
+      fallback_request = { mode: 'fallback' }
+      invalid_response = build_faraday_response(
+        candidates: [
+          {
+            content: {
+              parts: [
+                { text: 'Here is the JSON requested:' }
+              ]
+            }
+          }
+        ]
+      )
+      fallback_adapter = instance_double(HiroyukiFallbackAdapter)
+      fallback_result = BaseAiAdapter::JudgmentResult.new(
+        succeeded: true,
+        error_code: nil,
+        scores: {
+          empathy: 11,
+          humor: 12,
+          brevity: 13,
+          originality: 14,
+          expression: 15
+        },
+        comment: '代替成功'
+      )
+
+      allow(adapter).to receive(:build_request).and_return(primary_request)
+      allow(adapter).to receive(:build_fallback_request).and_return(fallback_request)
+      allow(adapter).to receive(:execute_request).with(primary_request).and_return(invalid_response)
+      allow(adapter).to receive(:execute_request).with(fallback_request).and_return(invalid_response)
+      allow(HiroyukiFallbackAdapter).to receive(:new).with(context: :default).and_return(fallback_adapter)
+      allow(fallback_adapter).to receive(:judge).with('テスト投稿', persona: 'hiroyuki').and_return(fallback_result)
+
+      result = adapter.send(:call_ai_api, 'テスト投稿', 'hiroyuki')
+
+      expect(result.succeeded).to be true
+      expect(result.comment).to eq('代替成功')
     end
   end
 

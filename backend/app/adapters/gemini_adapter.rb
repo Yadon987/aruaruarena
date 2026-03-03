@@ -25,8 +25,13 @@ class GeminiAdapter < BaseAiAdapter
   MAX_COMMENT_LENGTH = 30
 
   # 生成パラメータ
-  TEMPERATURE = 0.7
-  MAX_OUTPUT_TOKENS = 1000
+  TEMPERATURE = 0.0
+  TOP_P = 0.1
+  TOP_K = 1
+  MAX_OUTPUT_TOKENS = 192
+  INVALID_RESPONSE_MAX_RETRIES = 2
+  SYNC_REJUDGE_INVALID_RESPONSE_MAX_RETRIES = 0
+  INVALID_RESPONSE_LOG_LENGTH = 160
 
   # エラーコード
   ERROR_CODE_INVALID_RESPONSE = 'invalid_response'
@@ -82,7 +87,7 @@ class GeminiAdapter < BaseAiAdapter
   # プロンプトファイルを読み込み、キャッシュします。
   #
   # @raise [ArgumentError] プロンプトファイルが見つからない場合
-  def initialize
+  def initialize(context: :default)
     super
     @prompt = load_prompt
   end
@@ -92,9 +97,7 @@ class GeminiAdapter < BaseAiAdapter
   # 無効なレスポンスエラーを返す
   #
   # @return [JudgmentResult] 失敗結果
-  def invalid_response_error
-    JudgmentResult.new(succeeded: false, error_code: ERROR_CODE_INVALID_RESPONSE, scores: nil, comment: nil)
-  end
+  def invalid_response_error = invalid_response_result
 
   # プロンプトファイルを読み込む
   #
@@ -154,6 +157,19 @@ class GeminiAdapter < BaseAiAdapter
     }
   end
 
+  def build_fallback_request(post_content, _persona)
+    {
+      contents: [
+        {
+          parts: [
+            { text: fallback_prompt_text(post_content) }
+          ]
+        }
+      ],
+      generationConfig: generation_config
+    }
+  end
+
   # Gemini APIレスポンスからテキストを抽出する
   #
   # @param response [Faraday::Response] APIレスポンス
@@ -174,11 +190,26 @@ class GeminiAdapter < BaseAiAdapter
   #
   # @param response [Faraday::Response] APIレスポンス
   # @return [Hash, JudgmentResult] パース結果 {scores: Hash, comment: String} または エラー結果
-  def parse_response(response)
+  def parse_response(response, allow_fallback: true)
     text = extract_response_text(response)
     return invalid_response_error unless text
 
-    build_result_from_text(text)
+    result = build_result_from_text(text)
+    return result unless allow_fallback && invalid_response_result?(result)
+
+    log_invalid_response(reason: classify_invalid_text(text), text: text, source: 'primary')
+    result
+  end
+
+  def call_ai_api(post_content, persona)
+    result = perform_gemini_request(build_request(post_content, persona), allow_fallback: true)
+    return result unless invalid_response_result?(result)
+
+    Rails.logger.warn('Gemini invalid_responseのため簡易プロンプトで再実行します')
+    result = perform_gemini_request(build_fallback_request(post_content, persona), allow_fallback: false)
+    return result unless invalid_response_result?(result)
+
+    provider_fallback_result(post_content, persona)
   end
 
   # Gemini APIキーを返す
@@ -214,13 +245,37 @@ class GeminiAdapter < BaseAiAdapter
     @prompt.gsub('{post_content}', post_content)
   end
 
+  def fallback_prompt_text(post_content)
+    <<~PROMPT
+      あなたは採点専用の整形器です。
+      次の投稿を採点し、指定のJSONオブジェクトを1つだけ返してください。
+      説明文、前置き、後書き、コードブロック、改行だけの行、配列は出力禁止です。
+      comment にはダブルクォーテーション、改行、中括弧を含めないでください。
+
+      出力形式:
+      {"empathy":0,"humor":0,"brevity":0,"originality":0,"expression":0,"comment":"30文字以内"}
+
+      投稿:
+      #{post_content}
+    PROMPT
+  end
+
   def generation_config
     {
       temperature: TEMPERATURE, # 創造性のバランス（0.0-1.0）
+      topP: TOP_P,
+      topK: TOP_K,
       maxOutputTokens: MAX_OUTPUT_TOKENS, # 最大出力トークン数
+      candidateCount: 1,
       responseMimeType: 'application/json', # JSONモードを強制
       responseSchema: RESPONSE_SCHEMA
     }
+  end
+
+  def retryable_result_max_retries
+    return SYNC_REJUDGE_INVALID_RESPONSE_MAX_RETRIES if sync_rejudge_context?
+
+    INVALID_RESPONSE_MAX_RETRIES
   end
 
   def valid_response_parts(response)
@@ -248,6 +303,7 @@ class GeminiAdapter < BaseAiAdapter
     extract_text_from_response(response)
   rescue ArgumentError, JSON::ParserError => e
     Rails.logger.error("テキスト抽出エラー: #{e.class} - #{e.message}")
+    log_invalid_response(reason: 'text_extraction_error', source: 'response_body')
     nil
   end
 
@@ -256,11 +312,61 @@ class GeminiAdapter < BaseAiAdapter
     { scores: convert_scores_to_integers(data), comment: truncate_comment(data[:comment]) }
   rescue JSON::ParserError => e
     Rails.logger.error("JSONパースエラー: #{e.class} - #{e.message}")
-    Rails.logger.error("元のレスポンステキスト(先頭200文字): #{text.to_s.truncate(200)}")
+    log_invalid_response(reason: classify_invalid_text(text), text: text, source: 'json_parse')
     invalid_response_error
   rescue ArgumentError => e
     Rails.logger.error("スコア変換エラー: #{e.message}")
+    log_invalid_response(reason: 'score_conversion_error', text: text, source: 'score_parse')
     invalid_response_error
+  end
+
+  def perform_gemini_request(request_body, allow_fallback:)
+    response = execute_request(request_body)
+    parse_result = parse_response(response, allow_fallback: allow_fallback)
+    return parse_result if parse_result.is_a?(JudgmentResult)
+
+    build_judgment_result(parse_result)
+  end
+
+  def provider_fallback_result(post_content, persona)
+    Rails.logger.warn('Gemini invalid_response継続のためGroq互換へフォールバックします')
+    HiroyukiFallbackAdapter.new(context: request_context).judge(post_content, persona: persona)
+  rescue StandardError => e
+    Rails.logger.error("Gemini代替プロバイダ失敗: #{e.class} - #{e.message}")
+    invalid_response_error
+  end
+
+  def invalid_response_result?(result)
+    result.is_a?(JudgmentResult) && result.error_code == ERROR_CODE_INVALID_RESPONSE
+  end
+
+  def classify_invalid_text(text)
+    normalized = text.to_s
+    return 'blank_text' if normalized.blank?
+    return 'no_json_object' unless normalized.include?('{')
+    return 'truncated_json' if likely_truncated_json?(normalized)
+    return 'prose_wrapped_json' if prose_wrapped_json?(normalized)
+
+    'schema_mismatch'
+  end
+
+  def likely_truncated_json?(text)
+    text.count('{') > text.count('}') || text.rstrip.end_with?(':', ',', '"')
+  end
+
+  def prose_wrapped_json?(text)
+    stripped = text.strip
+    stripped !~ /\A\{.*\}\z/m
+  end
+
+  def log_invalid_response(reason:, source:, text: nil)
+    Rails.logger.warn(
+      "[GeminiAdapter] invalid_response分類: reason=#{reason}, source=#{source}, sample=#{safe_response_excerpt(text)}"
+    )
+  end
+
+  def safe_response_excerpt(text)
+    text.to_s.gsub(/\s+/, ' ').strip.truncate(INVALID_RESPONSE_LOG_LENGTH)
   end
 
   def send_request(request_body)

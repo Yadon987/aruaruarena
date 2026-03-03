@@ -16,7 +16,7 @@ class BaseOpenAiCompatAdapter < BaseAiAdapter
   # エラーコード
   ERROR_CODE_INVALID_RESPONSE = 'invalid_response'
 
-  def initialize
+  def initialize(context: :default)
     super
     @prompt = load_prompt
   end

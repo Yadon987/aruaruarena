@@ -72,7 +72,11 @@ class BaseAiAdapter
   # @attr [Hash, nil] scores 5項目のスコア（成功時）
   # @attr [String, nil] comment AI審査員のコメント（成功時）
   JudgmentResult = Struct.new(:succeeded, :error_code, :scores, :comment, keyword_init: true)
-  RetryableResultError = Class.new(StandardError)
+  class RetryableResultError < StandardError; end
+
+  def initialize(context: :default)
+    @request_context = context
+  end
 
   # 投稿を審査して結果を返す
   #
@@ -89,6 +93,8 @@ class BaseAiAdapter
   end
 
   private
+
+  attr_reader :request_context
 
   # 入力バリデーションを実行する
   #
@@ -147,12 +153,14 @@ class BaseAiAdapter
         return apply_persona_bias!(result, persona)
       end
 
-      raise RetryableResultError, result.error_code if retryable_result?(result) && retries < MAX_RETRIES
+      if retryable_result?(result) && retries < retryable_result_max_retries
+        raise RetryableResultError, result.error_code
+      end
 
       result
     rescue RetryableResultError => e
       retries += 1
-      Rails.logger.warn("リトライ #{retries}/#{MAX_RETRIES}: error_code=#{e.message}")
+      Rails.logger.warn("リトライ #{retries}/#{retryable_result_max_retries}: error_code=#{e.message}")
       retry_sleep(RETRY_DELAY * (2**(retries - 1)))
       retry
     rescue Timeout::Error, Faraday::TimeoutError, Faraday::ConnectionFailed,
@@ -185,33 +193,7 @@ class BaseAiAdapter
 
     return parse_result if parse_result.is_a?(JudgmentResult)
 
-    # スコアのバリデーション
-    scores = parse_result['scores'] || parse_result[:scores]
-
-    # 必須キーの完全性チェック
-    if scores && !valid_score_keys?(scores)
-      return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
-    end
-
-    # スコア範囲チェック
-    if scores && !scores_within_range?(scores)
-      return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
-    end
-
-    # コメントチェック
-    comment = parse_result['comment'] || parse_result[:comment]
-    unless valid_comment?(comment)
-      return JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
-    end
-
-    # HashをJudgmentResultに変換
-    scores_sym = scores.transform_keys(&:to_sym) if scores
-    JudgmentResult.new(
-      succeeded: true,
-      error_code: nil,
-      scores: scores_sym,
-      comment: comment
-    )
+    build_judgment_result(parse_result)
   end
 
   # スコアが有効範囲内かチェックする
@@ -279,6 +261,34 @@ class BaseAiAdapter
 
   def retryable_result?(result)
     result.is_a?(JudgmentResult) && result.error_code == 'invalid_response'
+  end
+
+  def retryable_result_max_retries
+    MAX_RETRIES
+  end
+
+  def sync_rejudge_context?
+    request_context == :sync_rejudge
+  end
+
+  def build_judgment_result(parse_result)
+    scores = parse_result['scores'] || parse_result[:scores]
+    return invalid_response_result unless scores.nil? || valid_score_keys?(scores)
+    return invalid_response_result unless scores.nil? || scores_within_range?(scores)
+
+    comment = parse_result['comment'] || parse_result[:comment]
+    return invalid_response_result unless valid_comment?(comment)
+
+    JudgmentResult.new(
+      succeeded: true,
+      error_code: nil,
+      scores: scores&.transform_keys(&:to_sym),
+      comment: comment
+    )
+  end
+
+  def invalid_response_result
+    JudgmentResult.new(succeeded: false, error_code: 'invalid_response', scores: nil, comment: nil)
   end
 
   # 例外をエラーコードにマッピングする
