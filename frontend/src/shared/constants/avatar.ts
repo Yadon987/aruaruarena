@@ -34,7 +34,7 @@ export const AVATAR_ANIMATION = {
 } as const
 
 /** アバター画像のベースパス */
-export const AVATAR_BASE_PATH = '/images/avatars' as const
+export const AVATAR_BASE_PATH = '/images' as const
 
 /** アバターの全状態一覧 */
 const AVATAR_STATES: AvatarState[] = ['base', 'mouth_open', 'eye_closed']
@@ -47,7 +47,7 @@ const AVATAR_STATES: AvatarState[] = ['base', 'mouth_open', 'eye_closed']
  * @returns 画像パス
  */
 export function getAvatarImagePath(persona: JudgePersona, state: AvatarState): string {
-  return `${AVATAR_BASE_PATH}/${persona}/${state}.png`
+  return `${AVATAR_BASE_PATH}/${persona}_${state}.png`
 }
 
 /**

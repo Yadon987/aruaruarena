@@ -43,7 +43,7 @@ describe('E23-01 RED: useJudgeAvatar', () => {
     const { result } = renderHook(() => useJudgeAvatar('hiroyuki', false))
 
     expect(result.current.currentState).toBe('base')
-    expect(result.current.currentImage).toBe('/images/avatars/hiroyuki/base.png')
+    expect(result.current.currentImage).toBe('/images/hiroyuki_base.png')
   })
 
   it('isSpeaking=true のときに口パクが始まり終了後に base に戻る', async () => {

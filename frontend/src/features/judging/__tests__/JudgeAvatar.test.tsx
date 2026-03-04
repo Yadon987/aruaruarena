@@ -23,7 +23,7 @@ describe('E23-01 RED: JudgeAvatar', () => {
     render(<JudgeAvatar persona="hiroyuki" isSpeaking={false} />)
 
     const image = screen.getByRole('img', { name: /ひろゆき風/ })
-    expect(image).toHaveAttribute('src', '/images/avatars/hiroyuki/base.png')
+    expect(image).toHaveAttribute('src', '/images/hiroyuki_base.png')
   })
 
   it('isSpeaking=true のとき mouth_open 表示へ切り替わる', async () => {
@@ -38,7 +38,7 @@ describe('E23-01 RED: JudgeAvatar', () => {
 
     expect(screen.getByRole('img', { hidden: true })).toHaveAttribute(
       'src',
-      '/images/avatars/dewi/mouth_open.png'
+      '/images/dewi_mouth_open.png'
     )
   })
 
@@ -54,7 +54,7 @@ describe('E23-01 RED: JudgeAvatar', () => {
 
     expect(screen.getByRole('img', { hidden: true })).toHaveAttribute(
       'src',
-      '/images/avatars/nakao/eye_closed.png'
+      '/images/nakao_eye_closed.png'
     )
   })
 })

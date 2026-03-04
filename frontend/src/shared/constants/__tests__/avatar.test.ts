@@ -20,11 +20,11 @@ describe('E23-01 RED: アバター定数', () => {
     const { AVATAR_BASE_PATH, getAllAvatarImagePaths } = await loadAvatarModule()
     const avatarPaths = getAllAvatarImagePaths()
 
-    expect(AVATAR_BASE_PATH).toBe('/images/avatars')
+    expect(AVATAR_BASE_PATH).toBe('/images')
     expect(avatarPaths).toHaveLength(9)
-    expect(avatarPaths).toContain('/images/avatars/hiroyuki/base.png')
-    expect(avatarPaths).toContain('/images/avatars/dewi/mouth_open.png')
-    expect(avatarPaths).toContain('/images/avatars/nakao/eye_closed.png')
+    expect(avatarPaths).toContain('/images/hiroyuki_base.png')
+    expect(avatarPaths).toContain('/images/dewi_mouth_open.png')
+    expect(avatarPaths).toContain('/images/nakao_eye_closed.png')
   })
 
   it('審査員ラベルとアクセシビリティ用ラベルを返せる', async () => {
