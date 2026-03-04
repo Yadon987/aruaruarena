@@ -49,7 +49,7 @@ describe("useRankings", () => {
 			rankings: [{ id: "1", nickname: "test" }],
 			total_count: 1,
 		};
-		rankingsListMock.mockResolvedValue(mockData);
+		rankingsListMock.mockResolvedValue(mockData as any);
 
 		const { result } = renderHook(() => useRankings(10), { wrapper });
 
@@ -144,6 +144,7 @@ describe("useRankings", () => {
 
 	describe("limit normalization", () => {
 		it.each([
+			[-5, 1], // 負数値の最小値1への丸め
 			[0, 1], // 最小値1への丸め
 			[99, 20], // 最大値20への丸め
 		])(
