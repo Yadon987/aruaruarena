@@ -5,7 +5,7 @@
 # IPアドレスとニックネームの両方に対して5分間の投稿制限を設ける
 class RateLimiterService
   # 定数
-  LIMIT_DURATION = 300
+  LIMIT_DURATION = 5 # TODO: 開発の利便性のため一時的に5秒に変更（本来は 300）
 
   # ログ出力用のハッシュインデックス
   HASH_LOG_START_INDEX = 3  # ハッシュの開始位置（ログ出力用）
