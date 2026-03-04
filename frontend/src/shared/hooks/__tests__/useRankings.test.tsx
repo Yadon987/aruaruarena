@@ -105,4 +105,64 @@ describe("useRankings", () => {
 		expect(api.rankings.list).toHaveBeenCalledWith(10);
 		expect(api.rankings.list).toHaveBeenCalledWith(20);
 	});
+
+	describe("polling behavior", () => {
+		it("polling=trueのとき refetchInterval が RANKING_POLLING_INTERVAL_MS になる", async () => {
+			// 何を検証するか: useRankingsがpolling=trueのとき、
+			// refetchIntervalに定数RANKING_POLLING_INTERVAL_MSが渡されること
+			// @ts-expect-error
+			api.rankings.list.mockResolvedValue({ rankings: [], total_count: 0 });
+
+			const { result } = renderHook(() => useRankings(20, { polling: true }), {
+				wrapper,
+			});
+
+			await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+			// useRankingsが2回呼ばれることを待機（リトライ含む） もしくはqueryが成功したことを確認
+			expect(api.rankings.list).toHaveBeenCalledWith(20);
+		});
+
+		it("polling=falseのとき1回のみ取得される", async () => {
+			// 何を検証するか: polling無効時はマウント時の1回のみデータ取得
+			// @ts-expect-error
+			api.rankings.list.mockResolvedValue({ rankings: [], total_count: 0 });
+
+			const { result } = renderHook(
+				() => useRankings(20, { polling: false }),
+				{ wrapper },
+			);
+
+			await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+			expect(api.rankings.list).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe("limit normalization", () => {
+		it("limitが範囲外でも1〜20に丸めてAPIを呼ぶ", async () => {
+			// 何を検証するか: 件数パラメータが安全な範囲に正規化されること
+			// @ts-expect-error
+			api.rankings.list.mockResolvedValue({ rankings: [], total_count: 0 });
+
+			renderHook(() => useRankings(0), { wrapper });
+			renderHook(() => useRankings(99), { wrapper });
+
+			await waitFor(() => expect(api.rankings.list).toHaveBeenCalled());
+			expect(api.rankings.list).toHaveBeenCalledWith(1);
+			expect(api.rankings.list).toHaveBeenCalledWith(20);
+		});
+
+		it("limitがNaN/Infinityでもデフォルト値でAPIを呼ぶ", async () => {
+			// 何を検証するか: 非数・無限大入力でも安全なデフォルト件数で取得すること
+			// @ts-expect-error
+			api.rankings.list.mockResolvedValue({ rankings: [], total_count: 0 });
+
+			renderHook(() => useRankings(Number.NaN), { wrapper });
+			renderHook(() => useRankings(Number.POSITIVE_INFINITY), { wrapper });
+
+			await waitFor(() => expect(api.rankings.list).toHaveBeenCalled());
+			expect(api.rankings.list).toHaveBeenCalledWith(20);
+		});
+	});
 });

@@ -4,6 +4,7 @@ import { useReducedMotion } from "../useReducedMotion";
 
 describe("useReducedMotion", () => {
 	let mediaQueryListMock: any;
+	const originalMatchMedia = window.matchMedia;
 
 	beforeEach(() => {
 		// MediaQueryList のモックを作成
@@ -23,6 +24,7 @@ describe("useReducedMotion", () => {
 	});
 
 	afterEach(() => {
+		window.matchMedia = originalMatchMedia;
 		vi.restoreAllMocks();
 	});
 
