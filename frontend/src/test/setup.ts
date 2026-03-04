@@ -15,7 +15,7 @@ vi.mock("howler", () => {
 	class HowlMock {
 		private currentVolume: number;
 
-		constructor(private readonly options: { volume?: number } = {}) {
+		constructor(options: { volume?: number } = {}) {
 			this.currentVolume = options.volume ?? 1;
 		}
 
