@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { JUDGE } from '../validation.ts'
 
 const loadAvatarModule = () => import('../avatar.ts')
 
@@ -19,9 +20,10 @@ describe('E23-01 RED: アバター定数', () => {
     // 何を検証するか: 3人 x 3表情の全9枚をプリロードできるパス一覧が生成されること
     const { AVATAR_BASE_PATH, getAllAvatarImagePaths } = await loadAvatarModule()
     const avatarPaths = getAllAvatarImagePaths()
+    const avatarStates = ['base', 'mouth_open', 'eye_closed']
 
     expect(AVATAR_BASE_PATH).toBe('/images')
-    expect(avatarPaths).toHaveLength(9)
+    expect(avatarPaths).toHaveLength(JUDGE.PERSONAS.length * avatarStates.length)
     expect(avatarPaths).toContain('/images/hiroyuki_base.png')
     expect(avatarPaths).toContain('/images/dewi_mouth_open.png')
     expect(avatarPaths).toContain('/images/nakao_eye_closed.png')

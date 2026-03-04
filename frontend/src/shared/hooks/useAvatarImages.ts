@@ -36,6 +36,15 @@ export function useAvatarImages(): AvatarImagesState {
     mountedRef.current = true
     const images: HTMLImageElement[] = []
 
+    if (TOTAL_IMAGE_COUNT === 0) {
+      setState({
+        status: 'loaded',
+        loadedCount: 0,
+        totalCount: 0,
+      })
+      return
+    }
+
     AVATAR_IMAGE_PATHS.forEach((path) => {
       const image = new Image()
       images.push(image)

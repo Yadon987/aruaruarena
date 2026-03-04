@@ -1,5 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { JUDGE } from '../../constants/validation.ts'
 
 const loadUseAvatarImages = async () => {
   const modulePath = '../useAvatarImages'
@@ -43,10 +44,12 @@ describe('E23-01 RED: useAvatarImages', () => {
     const { useAvatarImages } = await loadUseAvatarImages()
     const { result } = renderHook(() => useAvatarImages())
 
+    const expectedCount = JUDGE.PERSONAS.length * 3
+
     expect(result.current.status).toBe('idle')
     expect(result.current.loadedCount).toBe(0)
-    expect(result.current.totalCount).toBe(9)
-    expect(createdImages).toHaveLength(9)
+    expect(result.current.totalCount).toBe(expectedCount)
+    expect(createdImages).toHaveLength(expectedCount)
   })
 
   it('全画像の読み込み成功後に loaded になる', async () => {
@@ -54,11 +57,17 @@ describe('E23-01 RED: useAvatarImages', () => {
     const { useAvatarImages } = await loadUseAvatarImages()
     const { result } = renderHook(() => useAvatarImages())
 
-    createdImages.forEach((image) => image.onload?.())
+    act(() => {
+      createdImages.forEach(function (image) {
+        image.onload?.()
+      })
+    })
+
+    const expectedCount = JUDGE.PERSONAS.length * 3
 
     await waitFor(() => {
       expect(result.current.status).toBe('loaded')
-      expect(result.current.loadedCount).toBe(9)
+      expect(result.current.loadedCount).toBe(expectedCount)
     })
   })
 
@@ -67,7 +76,9 @@ describe('E23-01 RED: useAvatarImages', () => {
     const { useAvatarImages } = await loadUseAvatarImages()
     const { result } = renderHook(() => useAvatarImages())
 
-    createdImages[0]?.onerror?.()
+    act(() => {
+      createdImages[0]?.onerror?.()
+    })
 
     await waitFor(() => {
       expect(result.current.status).toBe('error')

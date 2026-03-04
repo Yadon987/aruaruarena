@@ -29,15 +29,20 @@ export function useJudgeAvatar(persona: JudgePersona, isSpeaking: boolean): Judg
   useEffect(() => {
     if (prefersReducedMotion) return
 
-    blinkTimerRef.current = setTimeout(() => {
-      setCurrentState('eye_closed')
+    const scheduleBlink = () => {
+      blinkTimerRef.current = setTimeout(() => {
+        setCurrentState('eye_closed')
 
-      blinkEndTimerRef.current = setTimeout(() => {
-        setCurrentState((previousState) =>
-          previousState === 'eye_closed' ? 'base' : previousState
-        )
-      }, AVATAR_ANIMATION.BLINK_DURATION_MS)
-    }, AVATAR_ANIMATION.BLINK_INTERVAL_MIN_MS)
+        blinkEndTimerRef.current = setTimeout(() => {
+          setCurrentState((previousState) =>
+            previousState === 'eye_closed' ? 'base' : previousState
+          )
+          scheduleBlink()
+        }, AVATAR_ANIMATION.BLINK_DURATION_MS)
+      }, AVATAR_ANIMATION.BLINK_INTERVAL_MIN_MS)
+    }
+
+    scheduleBlink()
 
     return () => {
       if (blinkTimerRef.current) {
@@ -51,17 +56,29 @@ export function useJudgeAvatar(persona: JudgePersona, isSpeaking: boolean): Judg
   }, [prefersReducedMotion])
 
   useEffect(() => {
-    if (prefersReducedMotion || !isSpeaking) return
-
-    mouthStartTimerRef.current = setTimeout(() => {
+    if (prefersReducedMotion || !isSpeaking) {
       setCurrentState((previousState) =>
-        previousState === 'eye_closed' ? previousState : 'mouth_open'
+        previousState === 'mouth_open' ? 'base' : previousState
       )
-    }, AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS)
+      return
+    }
 
-    mouthEndTimerRef.current = setTimeout(() => {
-      setCurrentState((previousState) => (previousState === 'mouth_open' ? 'base' : previousState))
-    }, AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS + AVATAR_ANIMATION.MOUTH_DURATION_MS)
+    const scheduleMouth = () => {
+      mouthStartTimerRef.current = setTimeout(() => {
+        setCurrentState((previousState) =>
+          previousState === 'eye_closed' ? previousState : 'mouth_open'
+        )
+
+        mouthEndTimerRef.current = setTimeout(() => {
+          setCurrentState((previousState) =>
+            previousState === 'mouth_open' ? 'base' : previousState
+          )
+          scheduleMouth()
+        }, AVATAR_ANIMATION.MOUTH_DURATION_MS)
+      }, AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS)
+    }
+
+    scheduleMouth()
 
     return () => {
       if (mouthStartTimerRef.current) {
