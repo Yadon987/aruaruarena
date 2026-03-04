@@ -143,27 +143,37 @@ describe("useRankings", () => {
 	});
 
 	describe("limit normalization", () => {
-		it("limitが範囲外でも1〜20に丸めてAPIを呼ぶ", async () => {
-			// 何を検証するか: 件数パラメータが安全な範囲に正規化されること
-			rankingsListMock.mockResolvedValue({ rankings: [], total_count: 0 });
+		it.each([
+			[0, 1], // 最小値1への丸め
+			[99, 20], // 最大値20への丸め
+		])(
+			"limit=%i のとき、安全な範囲(%i)に丸めてAPIを呼ぶ",
+			async (inputLimit, expectedLimit) => {
+				rankingsListMock.mockResolvedValue({
+					rankings: [],
+					total_count: 0,
+				} as any);
 
-			renderHook(() => useRankings(0), { wrapper });
-			renderHook(() => useRankings(99), { wrapper });
+				renderHook(() => useRankings(inputLimit), { wrapper });
 
-			await waitFor(() => expect(api.rankings.list).toHaveBeenCalled());
-			expect(api.rankings.list).toHaveBeenCalledWith(1);
-			expect(api.rankings.list).toHaveBeenCalledWith(20);
-		});
+				await waitFor(() => expect(rankingsListMock).toHaveBeenCalled());
+				expect(rankingsListMock).toHaveBeenCalledWith(expectedLimit);
+			},
+		);
 
-		it("limitがNaN/Infinityでもデフォルト値でAPIを呼ぶ", async () => {
-			// 何を検証するか: 非数・無限大入力でも安全なデフォルト件数で取得すること
-			rankingsListMock.mockResolvedValue({ rankings: [], total_count: 0 });
+		it.each([Number.NaN, Number.POSITIVE_INFINITY])(
+			"limit=%p のときデフォルト値(20)でAPIを呼ぶ",
+			async (invalidLimit) => {
+				rankingsListMock.mockResolvedValue({
+					rankings: [],
+					total_count: 0,
+				} as any);
 
-			renderHook(() => useRankings(Number.NaN), { wrapper });
-			renderHook(() => useRankings(Number.POSITIVE_INFINITY), { wrapper });
+				renderHook(() => useRankings(invalidLimit), { wrapper });
 
-			await waitFor(() => expect(api.rankings.list).toHaveBeenCalled());
-			expect(api.rankings.list).toHaveBeenCalledWith(20);
-		});
+				await waitFor(() => expect(rankingsListMock).toHaveBeenCalledTimes(1));
+				expect(rankingsListMock).toHaveBeenCalledWith(20);
+			},
+		);
 	});
 });
