@@ -36,7 +36,10 @@ describe('E23-01 RED: JudgeAvatar', () => {
       vi.advanceTimersByTime(2000)
     })
 
-    expect(screen.getByRole('img')).toHaveAttribute('src', '/images/avatars/dewi/mouth_open.png')
+    expect(screen.getByRole('img', { hidden: true })).toHaveAttribute(
+      'src',
+      '/images/avatars/dewi/mouth_open.png'
+    )
   })
 
   it('瞬き時は eye_closed が優先表示される', async () => {
@@ -49,6 +52,9 @@ describe('E23-01 RED: JudgeAvatar', () => {
       vi.advanceTimersByTime(3000)
     })
 
-    expect(screen.getByRole('img')).toHaveAttribute('src', '/images/avatars/nakao/eye_closed.png')
+    expect(screen.getByRole('img', { hidden: true })).toHaveAttribute(
+      'src',
+      '/images/avatars/nakao/eye_closed.png'
+    )
   })
 })

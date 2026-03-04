@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-const loadAvatarModule = async () => {
-  const modulePath = '../avatar'
-  return import(modulePath)
-}
+const loadAvatarModule = () => import('../avatar.ts')
 
 describe('E23-01 RED: アバター定数', () => {
   it('アニメーション定数が仕様どおりに定義されている', async () => {
@@ -21,12 +18,13 @@ describe('E23-01 RED: アバター定数', () => {
   it('アバター画像パス関連の定数と一覧を返せる', async () => {
     // 何を検証するか: 3人 x 3表情の全9枚をプリロードできるパス一覧が生成されること
     const { AVATAR_BASE_PATH, getAllAvatarImagePaths } = await loadAvatarModule()
+    const avatarPaths = getAllAvatarImagePaths()
 
     expect(AVATAR_BASE_PATH).toBe('/images/avatars')
-    expect(getAllAvatarImagePaths()).toHaveLength(9)
-    expect(getAllAvatarImagePaths()).toContain('/images/avatars/hiroyuki/base.png')
-    expect(getAllAvatarImagePaths()).toContain('/images/avatars/dewi/mouth_open.png')
-    expect(getAllAvatarImagePaths()).toContain('/images/avatars/nakao/eye_closed.png')
+    expect(avatarPaths).toHaveLength(9)
+    expect(avatarPaths).toContain('/images/avatars/hiroyuki/base.png')
+    expect(avatarPaths).toContain('/images/avatars/dewi/mouth_open.png')
+    expect(avatarPaths).toContain('/images/avatars/nakao/eye_closed.png')
   })
 
   it('審査員ラベルとアクセシビリティ用ラベルを返せる', async () => {

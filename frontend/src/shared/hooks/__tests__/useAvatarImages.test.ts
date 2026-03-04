@@ -28,6 +28,7 @@ class MockImage {
 
 describe('E23-01 RED: useAvatarImages', () => {
   beforeEach(() => {
+    vi.resetModules()
     createdImages.length = 0
     vi.stubGlobal('Image', MockImage)
   })

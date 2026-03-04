@@ -5,17 +5,24 @@ import type { JudgePersona } from '../types/domain.ts'
 import { useReducedMotion } from './useReducedMotion.ts'
 
 interface JudgeAvatarState {
+  /** 現在の画像パス */
   currentImage: string
+  /** 現在のアバター状態 */
   currentState: AvatarState
 }
 
 /**
  * 審査員アバターのアニメーションを制御する
+ *
+ * @param persona 審査員ペルソナ
+ * @param isSpeaking 発話中フラグ
+ * @returns アバター状態
  */
 export function useJudgeAvatar(persona: JudgePersona, isSpeaking: boolean): JudgeAvatarState {
   const prefersReducedMotion = useReducedMotion()
   const [currentState, setCurrentState] = useState<AvatarState>('base')
   const blinkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const blinkEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mouthStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mouthEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -24,11 +31,21 @@ export function useJudgeAvatar(persona: JudgePersona, isSpeaking: boolean): Judg
 
     blinkTimerRef.current = setTimeout(() => {
       setCurrentState('eye_closed')
+
+      blinkEndTimerRef.current = setTimeout(() => {
+        setCurrentState((previousState) =>
+          previousState === 'eye_closed' ? 'base' : previousState
+        )
+      }, AVATAR_ANIMATION.BLINK_DURATION_MS)
     }, AVATAR_ANIMATION.BLINK_INTERVAL_MIN_MS)
 
     return () => {
       if (blinkTimerRef.current) {
         clearTimeout(blinkTimerRef.current)
+      }
+
+      if (blinkEndTimerRef.current) {
+        clearTimeout(blinkEndTimerRef.current)
       }
     }
   }, [prefersReducedMotion])

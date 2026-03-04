@@ -7,10 +7,7 @@ vi.mock('../useReducedMotion', () => ({
   useReducedMotion: useReducedMotionMock,
 }))
 
-const loadUseJudgeAvatar = async () => {
-  const modulePath = '../useJudgeAvatar'
-  return import(modulePath)
-}
+const loadUseJudgeAvatar = () => import('../useJudgeAvatar.ts')
 
 class MockImage {
   public onload: null | (() => void) = null
@@ -28,6 +25,7 @@ class MockImage {
 
 describe('E23-01 RED: useJudgeAvatar', () => {
   beforeEach(() => {
+    vi.resetModules()
     vi.useFakeTimers()
     useReducedMotionMock.mockReturnValue(false)
     vi.stubGlobal('Image', MockImage)
@@ -74,16 +72,13 @@ describe('E23-01 RED: useJudgeAvatar', () => {
   it('瞬きが口パクより優先される', async () => {
     // 何を検証するか: 瞬きタイミングと発話が重なっても eye_closed が優先されること
     const { useJudgeAvatar } = await loadUseJudgeAvatar()
-    const { result, rerender } = renderHook(
-      ({ isSpeaking }) => useJudgeAvatar('dewi', isSpeaking),
-      { initialProps: { isSpeaking: true } }
-    )
+    const { result } = renderHook(({ isSpeaking }) => useJudgeAvatar('dewi', isSpeaking), {
+      initialProps: { isSpeaking: true },
+    })
 
     await act(async () => {
       vi.advanceTimersByTime(3000)
     })
-
-    rerender({ isSpeaking: true })
 
     expect(result.current.currentState).toBe('eye_closed')
   })
