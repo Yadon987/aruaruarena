@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError, api } from "../../services/api";
 import { useRankings } from "../useRankings";
+import { RANKING_POLLING_INTERVAL_MS } from "../../constants/query";
 
 // api モジュールのモック化
 vi.mock("../../services/api", () => ({
@@ -104,24 +105,30 @@ describe("useRankings", () => {
 	});
 
 	describe("polling behavior", () => {
-		it("polling=trueのとき refetchInterval が RANKING_POLLING_INTERVAL_MS になる", async () => {
-			// 何を検証するか: useRankingsがpolling=trueのとき、
-			// refetchIntervalに定数RANKING_POLLING_INTERVAL_MSが渡されること
-			rankingsListMock.mockResolvedValue({ rankings: [], total_count: 0 });
+		afterEach(() => {
+			vi.clearAllTimers();
+			vi.useRealTimers();
+		});
+
+		it("polling=trueのとき定期的に再取得される", async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			rankingsListMock.mockResolvedValue({ rankings: [], total_count: 0 } as any);
 
 			const { result } = renderHook(() => useRankings(20, { polling: true }), {
 				wrapper,
 			});
 
 			await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-			// useRankingsが2回呼ばれることを待機（リトライ含む） もしくはqueryが成功したことを確認
-			expect(api.rankings.list).toHaveBeenCalledWith(20);
+			expect(rankingsListMock).toHaveBeenCalledTimes(1);
+			
+			// advanceTimersByTimeAsync を使用して非同期処理を解決させる
+			await vi.advanceTimersByTimeAsync(RANKING_POLLING_INTERVAL_MS);
+			await waitFor(() => expect(rankingsListMock).toHaveBeenCalledTimes(2));
 		});
 
-		it("polling=falseのとき1回のみ取得される", async () => {
-			// 何を検証するか: polling無効時はマウント時の1回のみデータ取得
-			rankingsListMock.mockResolvedValue({ rankings: [], total_count: 0 });
+		it("polling=falseのとき一定時間後も1回のみ取得される", async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			rankingsListMock.mockResolvedValue({ rankings: [], total_count: 0 } as any);
 
 			const { result } = renderHook(
 				() => useRankings(20, { polling: false }),
@@ -129,8 +136,9 @@ describe("useRankings", () => {
 			);
 
 			await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-			expect(api.rankings.list).toHaveBeenCalledTimes(1);
+			
+			await vi.advanceTimersByTimeAsync(RANKING_POLLING_INTERVAL_MS * 2);
+			expect(rankingsListMock).toHaveBeenCalledTimes(1);
 		});
 	});
 
