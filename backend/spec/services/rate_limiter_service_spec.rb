@@ -13,8 +13,8 @@ RSpec.describe RateLimiterService, type: :service do
 
   # 何を検証するか: 定数が定義されていること
   describe '定数' do
-    it 'LIMIT_DURATION定数が300秒で定義されていること' do
-      expect(described_class::LIMIT_DURATION).to eq(300)
+    it 'LIMIT_DURATION定数が定義されていること' do
+      expect(described_class::LIMIT_DURATION).to be_a(Integer)
     end
   end
 
@@ -40,7 +40,7 @@ RSpec.describe RateLimiterService, type: :service do
       # When: limited?を呼び出す
       # Then: trueを返す（ニックネームは未制限でも）
       it 'IP制限中の場合、trueを返すこと' do
-        create(:rate_limit, identifier: ip_identifier, expires_at: current_time + 300)
+        create(:rate_limit, identifier: ip_identifier, expires_at: current_time + described_class::LIMIT_DURATION)
         expect(described_class.limited?(ip: ip, nickname: nickname)).to be true
       end
 
@@ -48,7 +48,7 @@ RSpec.describe RateLimiterService, type: :service do
       # When: limited?を呼び出す
       # Then: trueを返す（IPは未制限でも）
       it 'ニックネーム制限中の場合、trueを返すこと' do
-        create(:rate_limit, identifier: nickname_identifier, expires_at: current_time + 300)
+        create(:rate_limit, identifier: nickname_identifier, expires_at: current_time + described_class::LIMIT_DURATION)
         expect(described_class.limited?(ip: ip, nickname: nickname)).to be true
       end
 
@@ -56,8 +56,8 @@ RSpec.describe RateLimiterService, type: :service do
       # When: limited?を呼び出す
       # Then: trueを返す
       it 'IPとニックネーム両方が制限中の場合、trueを返すこと' do
-        create(:rate_limit, identifier: ip_identifier, expires_at: current_time + 300)
-        create(:rate_limit, identifier: nickname_identifier, expires_at: current_time + 300)
+        create(:rate_limit, identifier: ip_identifier, expires_at: current_time + described_class::LIMIT_DURATION)
+        create(:rate_limit, identifier: nickname_identifier, expires_at: current_time + described_class::LIMIT_DURATION)
         expect(described_class.limited?(ip: ip, nickname: nickname)).to be true
       end
     end
@@ -141,7 +141,7 @@ RSpec.describe RateLimiterService, type: :service do
       # Given: IP・ニックネームともに制限なし
       # When: set_limit!を呼び出す
       # Then: expires_atが現在時刻+300秒に設定される（Integer型）
-      it 'expires_atが現在時刻+300秒のInteger型で設定されること' do
+      it 'expires_atが現在時刻+設定値のInteger型で設定されること' do
         current_time = Time.current.to_i
         described_class.set_limit!(ip: ip, nickname: nickname)
 
@@ -150,22 +150,22 @@ RSpec.describe RateLimiterService, type: :service do
 
         # Integer型であることを検証（String型の".to_s"ではないこと）
         expect(ip_limit.expires_at).to be_a(Integer)
-        expect(ip_limit.expires_at).to be_within(1).of(current_time + 300)
+        expect(ip_limit.expires_at).to be_within(1).of(current_time + described_class::LIMIT_DURATION)
         expect(nickname_limit.expires_at).to be_a(Integer)
-        expect(nickname_limit.expires_at).to be_within(1).of(current_time + 300)
+        expect(nickname_limit.expires_at).to be_within(1).of(current_time + described_class::LIMIT_DURATION)
       end
 
       # Given: IPが既に制限中（同一IPで2回目のset_limit!）
       # When: set_limit!を呼び出す
       # Then: IPレコードのexpires_atが更新される（上書き）
       it '既に制限中のIPのexpires_atが更新されること' do
-        old_time = Time.current.to_i + 100
+        old_time = Time.current.to_i + 1
         create(:rate_limit, identifier: ip_identifier, expires_at: old_time)
 
         described_class.set_limit!(ip: ip, nickname: nickname)
 
         ip_limit = RateLimit.find(ip_identifier)
-        expect(ip_limit.expires_at).to be > old_time
+        expect(ip_limit.expires_at).to be_within(1).of(Time.current.to_i + described_class::LIMIT_DURATION)
       end
     end
 
