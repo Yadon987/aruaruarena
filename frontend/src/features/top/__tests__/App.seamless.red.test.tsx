@@ -1,6 +1,7 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
+import { fillAndSubmitPostForm, openPostDialog } from '../../../test/helpers'
 
 vi.mock('../../mocks/browser', () => ({
   worker: {
@@ -21,16 +22,7 @@ vi.mock('../../../shared/hooks/useRankings', () => ({
 }))
 
 const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿') => {
-  fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-  await screen.findByRole('dialog', { name: '投稿フォーム' })
-
-  fireEvent.change(screen.getByLabelText('ニックネーム'), {
-    target: { value: nickname },
-  })
-  fireEvent.change(screen.getByLabelText('あるある'), {
-    target: { value: body },
-  })
-  fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+  await fillAndSubmitPostForm({ nickname, body })
   await waitFor(() => {
     expect(api.posts.create).toHaveBeenCalledTimes(1)
     expect(api.posts.create).toHaveBeenCalledWith({ nickname, body })
@@ -78,8 +70,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
   it('投稿ボタンでモーダルが開く', async () => {
     // 何を検証するか: FR-04 - 投稿フォームがモーダルとして表示されること
     render(<App />)
-
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await openPostDialog()
 
     expect(await screen.findByRole('dialog', { name: '投稿フォーム' })).toBeInTheDocument()
   })
@@ -87,7 +78,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
   it('モーダル中は口癖が表示されない', async () => {
     // 何を検証するか: FR-09 - モーダルオープン中は口癖表示を停止すること
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await openPostDialog()
 
     expect(await screen.findByRole('dialog', { name: '投稿フォーム' })).toBeInTheDocument()
 
@@ -141,6 +132,9 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
       body: 'テスト本文',
       status: 'judging',
       created_at: '2026-03-01T00:00:00Z',
+      average_score: 0,
+      rank: 0,
+      total_count: 10,
       judgments: [],
     })
 

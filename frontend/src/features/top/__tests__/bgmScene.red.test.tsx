@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
 import { api } from '../../../shared/services/api'
+import { fillAndSubmitPostForm } from '../../../test/helpers'
 import { mockRankings } from '../../../test/appTestHelpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
@@ -165,15 +166,10 @@ describe('E18-01 RED: BGM scene integration', () => {
     await enableSound()
     clearAudioDebugEvents()
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: '投稿太郎' },
+    await fillAndSubmitPostForm({
+      nickname: '投稿太郎',
+      body: 'これは投稿時効果音のREDテスト本文です',
     })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: 'これは投稿時効果音のREDテスト本文です' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(api.posts.create).toHaveBeenCalled()

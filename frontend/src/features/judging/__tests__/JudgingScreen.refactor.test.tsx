@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
+import { fillAndSubmitPostForm } from '../../../test/helpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -14,15 +15,7 @@ describe('E13-01 REFACTOR: JudgingScreen edge cases', () => {
   })
 
   async function submitValidPost() {
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await screen.findByRole('dialog')
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: '太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: 'スヌーズ押して二度寝' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: '太郎', body: 'スヌーズ押して二度寝' })
 
     await waitFor(() => {
       expect(api.posts.create).toHaveBeenCalledTimes(1)

@@ -1,9 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { mswServer } from '../../../mocks/server'
 import { api } from '../../../shared/services/api'
+import { fillAndSubmitPostForm } from '../../../test/helpers'
 
 describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
   const getPostSpy = vi.spyOn(api.posts, 'get')
@@ -45,16 +46,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => currentTime)
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: '境界太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: '境界値テスト本文です' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: '境界太郎', body: '境界値テスト本文です' })
 
     await waitFor(() => {
       expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
@@ -83,16 +75,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => currentTime)
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: '境界太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: '境界値テスト本文です' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: '境界太郎', body: '境界値テスト本文です' })
 
     await waitFor(() => {
       expect(screen.getByTestId('judging-screen')).toBeInTheDocument()

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
 import { mockRankings, selectMyPost } from '../../../test/appTestHelpers'
+import { fillAndSubmitPostForm } from '../../../test/helpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -63,15 +64,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: '遷移太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: '遷移テスト本文です' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: '遷移太郎', body: '遷移テスト本文です' })
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -122,15 +115,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: '閉じる太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: '閉じるテスト本文です' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: '閉じる太郎', body: '閉じるテスト本文です' })
 
     const modal = await screen.findByRole('dialog', {
       name: '審査結果モーダル',
@@ -162,15 +147,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: '範囲太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: '範囲テスト本文です' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: '範囲太郎', body: '範囲テスト本文です' })
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()

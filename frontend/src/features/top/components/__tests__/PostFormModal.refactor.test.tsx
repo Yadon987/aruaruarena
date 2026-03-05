@@ -1,26 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { loadComponent } from '../../../../test/mocks/framerMotion'
 
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({
-      children,
-      initial,
-      animate,
-      exit,
-      variants,
-      transition,
-      whileHover,
-      whileTap,
-      ...props
-    }: any) => <div {...props}>{children}</div>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}))
-
-const loadPostFormModal = async () => {
-  return import('../PostFormModal')
-}
+const loadPostFormModal = () => loadComponent(() => import('../PostFormModal'))
 
 describe('PostFormModal Refactor', () => {
   it('モーダルオープン時に閉じるボタンへフォーカスする', async () => {

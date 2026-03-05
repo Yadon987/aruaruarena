@@ -1,13 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    img: ({ src, alt, ...props }: any) => <img src={src} alt={alt} {...props} />,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}))
+import { loadComponent } from '../../../../test/mocks/framerMotion'
 
 const useJudgeEntranceMock = vi.fn()
 const useJudgeSpeechMock = vi.fn()
@@ -23,9 +16,7 @@ vi.mock('../../../../shared/hooks/useJudgeAvatarState', () => ({
   useJudgeAvatarState: (...args: unknown[]) => useJudgeAvatarStateMock(...args),
 }))
 
-const loadJudgeAvatars = async () => {
-  return import('../JudgeAvatars')
-}
+const loadJudgeAvatars = () => loadComponent(() => import('../JudgeAvatars'))
 
 describe('E24-04 RED: JudgeAvatars', () => {
   beforeEach(() => {

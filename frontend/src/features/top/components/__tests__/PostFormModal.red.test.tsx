@@ -1,16 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { loadComponent } from '../../../../test/mocks/framerMotion'
 
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}))
-
-const loadPostFormModal = async () => {
-  return import('../PostFormModal')
-}
+const loadPostFormModal = () => loadComponent(() => import('../PostFormModal'))
 
 describe('E24-06 RED: PostFormModal', () => {
   const mockOnClose = vi.fn()
