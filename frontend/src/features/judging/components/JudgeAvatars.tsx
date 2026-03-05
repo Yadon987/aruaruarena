@@ -40,12 +40,15 @@ function resolveSpeechText({
   isJudging,
   isPostModalOpen,
 }: ResolveSpeechTextOptions): string | null {
+  if (!isJudging || isPostModalOpen) {
+    return null
+  }
+
   if (speakingJudge === judgeId) {
     return currentSpeech ?? FALLBACK_SPEECH
   }
 
-  const shouldShowDefaultCatchphrase =
-    judgeId === 'hiroyuki' && isJudging && !isPostModalOpen && speakingJudge === null
+  const shouldShowDefaultCatchphrase = judgeId === 'hiroyuki' && speakingJudge === null
 
   return shouldShowDefaultCatchphrase ? HIROYUKI_CATCHPHRASE : null
 }

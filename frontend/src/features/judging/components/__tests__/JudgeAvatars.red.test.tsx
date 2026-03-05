@@ -17,10 +17,10 @@ vi.mock('../../../../shared/hooks/useJudgeEntrance', () => ({
   useJudgeEntrance: () => useJudgeEntranceMock(),
 }))
 vi.mock('../../../../shared/hooks/useJudgeSpeech', () => ({
-  useJudgeSpeech: () => useJudgeSpeechMock(),
+  useJudgeSpeech: (...args: unknown[]) => useJudgeSpeechMock(...args),
 }))
 vi.mock('../../../../shared/hooks/useJudgeAvatarState', () => ({
-  useJudgeAvatarState: () => useJudgeAvatarStateMock(),
+  useJudgeAvatarState: (...args: unknown[]) => useJudgeAvatarStateMock(...args),
 }))
 
 const loadJudgeAvatars = async () => {

@@ -64,6 +64,27 @@ describe('useJudgeAvatarState', () => {
     expect(result.current.avatarStates.dewi).toBe('base')
   })
 
+  it('話者切り替え時に旧話者はbaseへ戻る', async () => {
+    const { useJudgeAvatarState } = await loadUseJudgeAvatarState()
+    const { result, rerender } = renderHook(
+      ({ speakingJudge }) =>
+        useJudgeAvatarState({
+          isJudging: true,
+          isPostModalOpen: false,
+          speakingJudge,
+        }),
+      { initialProps: { speakingJudge: 'dewi' as const } }
+    )
+
+    await act(async () => {
+      vi.advanceTimersByTime(AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS)
+    })
+    expect(result.current.avatarStates.dewi).toBe('mouth_open')
+
+    rerender({ speakingJudge: 'hiroyuki' as const })
+    expect(result.current.avatarStates.dewi).toBe('base')
+  })
+
   it('瞬きタイミングでeye_closedになり継続時間後にbaseへ戻る', async () => {
     const { useJudgeAvatarState } = await loadUseJudgeAvatarState()
     const { result } = renderHook(() =>

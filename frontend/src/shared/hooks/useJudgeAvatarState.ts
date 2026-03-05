@@ -114,16 +114,17 @@ export function useJudgeAvatarState({
     mouthStartTimerRef.current = clearTimer(mouthStartTimerRef.current)
     mouthEndTimerRef.current = clearTimer(mouthEndTimerRef.current)
 
-    if (!isAnimationEnabled || !speakingJudge) {
-      setAvatarStates((previous) => {
-        const next = { ...previous }
-        JUDGE.PERSONAS.forEach((judge) => {
-          if (next[judge] === 'mouth_open') {
-            next[judge] = 'base'
-          }
-        })
-        return next
+    setAvatarStates((previous) => {
+      const next = { ...previous }
+      JUDGE.PERSONAS.forEach((judge) => {
+        if (judge !== speakingJudge && next[judge] === 'mouth_open') {
+          next[judge] = 'base'
+        }
       })
+      return next
+    })
+
+    if (!isAnimationEnabled || !speakingJudge) {
       return
     }
 
