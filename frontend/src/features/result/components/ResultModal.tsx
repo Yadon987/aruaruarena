@@ -1,4 +1,4 @@
-import { KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 import { api } from '../../../shared/services/api'
 import type { Post } from '../../../shared/types/domain'

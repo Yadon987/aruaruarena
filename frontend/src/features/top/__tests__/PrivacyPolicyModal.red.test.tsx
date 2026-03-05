@@ -16,7 +16,15 @@ const mockedUseRankings = vi.mocked(useRankings)
 function setupRanking() {
   mockedUseRankings.mockReturnValue({
     data: {
-      rankings: [{ rank: 1, id: 'rank-post-1', nickname: 'ランク太郎', body: '本文', average_score: 90.1 }],
+      rankings: [
+        {
+          rank: 1,
+          id: 'rank-post-1',
+          nickname: 'ランク太郎',
+          body: '本文',
+          average_score: 90.1,
+        },
+      ],
       total_count: 1,
     },
     isLoading: false,
@@ -74,9 +82,13 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     // 何を検証するか: モーダルを閉じると起動ボタンへフォーカス復帰すること
     render(<App />)
 
-    const trigger = screen.getByRole('button', { name: 'プライバシーポリシー' })
+    const trigger = screen.getByRole('button', {
+      name: 'プライバシーポリシー',
+    })
     fireEvent.click(trigger)
-    fireEvent.keyDown(screen.getByRole('dialog', { name: 'プライバシーポリシー' }), { key: 'Escape' })
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'プライバシーポリシー' }), {
+      key: 'Escape',
+    })
 
     expect(trigger).toHaveFocus()
   })
@@ -113,7 +125,9 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     // 何を検証するか: 背景クリックで閉じる操作でも起動ボタンへフォーカス復帰すること
     render(<App />)
 
-    const trigger = screen.getByRole('button', { name: 'プライバシーポリシー' })
+    const trigger = screen.getByRole('button', {
+      name: 'プライバシーポリシー',
+    })
     fireEvent.click(trigger)
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシーモーダル背景' }))
 
@@ -130,7 +144,10 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     const dialog = screen.getByRole('dialog', { name: 'プライバシーポリシー' })
     expect(within(dialog).getByRole('heading', { level: 3, name: '利用規約' })).toBeInTheDocument()
     expect(
-      within(dialog).getByRole('heading', { level: 3, name: 'プライバシーポリシー' })
+      within(dialog).getByRole('heading', {
+        level: 3,
+        name: 'プライバシーポリシー',
+      })
     ).toBeInTheDocument()
 
     const scrollArea = within(dialog).getByTestId('privacy-policy-scroll-area')

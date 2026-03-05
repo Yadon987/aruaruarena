@@ -3,7 +3,7 @@
  *
  * ランキング取得のハンドラーを定義します。
  */
-import { http, HttpResponse } from 'msw'
+import { HttpResponse, http } from 'msw'
 import { RANKING } from './constants'
 import { createMockRankings } from './helpers'
 

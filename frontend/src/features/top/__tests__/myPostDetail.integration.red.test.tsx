@@ -21,7 +21,15 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     mockedUseRankings.mockReturnValue({
       data: {
-        rankings: [{ rank: 1, id: 'id-1', nickname: '太郎', body: '本文1', average_score: 95.3 }],
+        rankings: [
+          {
+            rank: 1,
+            id: 'id-1',
+            nickname: '太郎',
+            body: '本文1',
+            average_score: 95.3,
+          },
+        ],
         total_count: 1,
       },
       isLoading: false,

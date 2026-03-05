@@ -13,9 +13,9 @@ export const QUERY_CONFIG = {
   /** ネットワークエラー時のリトライ回数 */
   MAX_RETRY_COUNT: 1,
   /** キャッシュの有効期限（ミリ秒） */
-  STALE_TIME: 5 * 60 * 1000 as number, // 5分
+  STALE_TIME: (5 * 60 * 1000) as number, // 5分
   /** キャッシュ保持時間（ミリ秒） */
-  GC_TIME: 10 * 60 * 1000 as number, // 10分
+  GC_TIME: (10 * 60 * 1000) as number, // 10分
 } as const
 
 /** デフォルトのランキング取得件数（数値型） */

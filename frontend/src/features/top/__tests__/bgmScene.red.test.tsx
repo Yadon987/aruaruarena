@@ -18,7 +18,7 @@ const mockedUseRankings = vi.mocked(useRankings)
 type AudioDebugEvent = { type: string; scene?: string; id?: string }
 
 function getAudioDebugEvents(): AudioDebugEvent[] {
-  return ((globalThis as { __AUDIO_DEBUG__?: AudioDebugEvent[] }).__AUDIO_DEBUG__ ?? [])
+  return (globalThis as { __AUDIO_DEBUG__?: AudioDebugEvent[] }).__AUDIO_DEBUG__ ?? []
 }
 
 function clearAudioDebugEvents() {
@@ -28,7 +28,13 @@ function clearAudioDebugEvents() {
 
 function setupRanking() {
   mockRankings([
-    { rank: 1, id: 'rank-post-1', nickname: 'ランク太郎', body: '本文', average_score: 90.1 },
+    {
+      rank: 1,
+      id: 'rank-post-1',
+      nickname: 'ランク太郎',
+      body: '本文',
+      average_score: 90.1,
+    },
   ])
 }
 
@@ -159,17 +165,24 @@ describe('E18-01 RED: BGM scene integration', () => {
     await enableSound()
     clearAudioDebugEvents()
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '投稿太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), {
+    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '投稿太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
       target: { value: 'これは投稿時効果音のREDテスト本文です' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(api.posts.create).toHaveBeenCalled()
     })
 
-    expect(getAudioDebugEvents()).toContainEqual({ type: 'se', id: 'se_submit' })
+    expect(getAudioDebugEvents()).toContainEqual({
+      type: 'se',
+      id: 'se_submit',
+    })
   })
 
   it('再審査ボタン押下でse_retryを再生する', async () => {
@@ -211,6 +224,9 @@ describe('E18-01 RED: BGM scene integration', () => {
       expect(api.posts.rejudge).toHaveBeenCalled()
     })
 
-    expect(getAudioDebugEvents()).toContainEqual({ type: 'se', id: 'se_retry' })
+    expect(getAudioDebugEvents()).toContainEqual({
+      type: 'se',
+      id: 'se_retry',
+    })
   })
 })

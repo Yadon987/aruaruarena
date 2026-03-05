@@ -9,9 +9,7 @@ const SE_VOLUME = 0.7
 type Scene = 'top' | 'judging' | 'success' | 'failed'
 type SeId = 'se_submit' | 'se_result_open' | 'se_retry'
 
-type DebugEvent =
-  | { type: 'bgm'; scene: Scene }
-  | { type: 'se'; id: SeId }
+type DebugEvent = { type: 'bgm'; scene: Scene } | { type: 'se'; id: SeId }
 
 type FadeSpy = (from: number, to: number, durationMs: number) => void
 

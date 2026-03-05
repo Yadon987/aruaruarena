@@ -1,11 +1,11 @@
 import type { Page } from '@playwright/test'
-import { test, expect } from './fixtures/test-fixtures'
+import { expect, test } from './fixtures/test-fixtures'
 
 type AudioDebugEvent = { type: string; scene?: string; id?: string }
 
 async function getAudioDebugEvents(page: Page): Promise<AudioDebugEvent[]> {
   return page.evaluate(
-    () => ((window as { __AUDIO_DEBUG__?: AudioDebugEvent[] }).__AUDIO_DEBUG__ ?? [])
+    () => (window as { __AUDIO_DEBUG__?: AudioDebugEvent[] }).__AUDIO_DEBUG__ ?? []
   )
 }
 
@@ -46,10 +46,13 @@ test.describe('E18 RED: BGM・SE再生 E2E', () => {
 
     await expect(page).toHaveURL(/\/judging\//)
     await expect
-      .poll(async () => {
-        const events = await getAudioDebugEvents(page)
-        return events.filter((event) => event.type === 'bgm' && event.scene === 'judging').length
-      }, { timeout: 10000 })
+      .poll(
+        async () => {
+          const events = await getAudioDebugEvents(page)
+          return events.filter((event) => event.type === 'bgm' && event.scene === 'judging').length
+        },
+        { timeout: 10000 }
+      )
       .toBe(1)
   })
 
@@ -61,10 +64,14 @@ test.describe('E18 RED: BGM・SE再生 E2E', () => {
     await page.getByTestId('ranking-item').first().click()
     await expect(page.getByRole('dialog').first()).toBeVisible()
     await expect
-      .poll(async () => {
-        const events = await getAudioDebugEvents(page)
-        return events.filter((event) => event.type === 'se' && event.id === 'se_result_open').length
-      }, { timeout: 10000 })
+      .poll(
+        async () => {
+          const events = await getAudioDebugEvents(page)
+          return events.filter((event) => event.type === 'se' && event.id === 'se_result_open')
+            .length
+        },
+        { timeout: 10000 }
+      )
       .toBe(1)
   })
 })

@@ -1,6 +1,4 @@
 // Domain Models
-export type { JudgePersona, PostStatus } from './domain'
-export type { Judgment, Post, RankingItem } from './domain'
 
 // API Types
 export type {
@@ -10,3 +8,4 @@ export type {
   GetPostResponse,
   GetRankingResponse,
 } from './api'
+export type { JudgePersona, Judgment, Post, PostStatus, RankingItem } from './domain'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DOC_PATH, REQUIRED_DOC_KEYS, docExists, readDoc } from './helpers/workflowTestUtils'
+import { DOC_PATH, docExists, REQUIRED_DOC_KEYS, readDoc } from './helpers/workflowTestUtils'
 
 describe('E14-01: deploy frontend docs', () => {
   // 何を検証するか: デプロイ手順ドキュメントが存在すること

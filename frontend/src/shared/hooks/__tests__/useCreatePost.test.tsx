@@ -1,16 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
-import { ReactNode } from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ReactNode } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '../../constants/queryKeys'
-import { api } from '../../services/api'
 import { useCreatePost } from '../useCreatePost'
+
+const { mockPostsCreate } = vi.hoisted(() => ({
+  mockPostsCreate: vi.fn(),
+}))
 
 // api モジュールのモック化
 vi.mock('../../services/api', () => ({
   api: {
     posts: {
-      create: vi.fn(),
+      create: mockPostsCreate,
     },
   },
 }))
@@ -34,8 +37,7 @@ describe('useCreatePost', () => {
   it('useCreatePost が useMutation を正しく呼び出し、投稿を作成できる', async () => {
     // 検証内容: 正常系投稿作成
     const mockResponse = { id: 'new-id', status: 'judging' }
-    // @ts-ignore
-    api.posts.create.mockResolvedValue(mockResponse)
+    mockPostsCreate.mockResolvedValue(mockResponse)
 
     const { result } = renderHook(() => useCreatePost(), { wrapper })
 
@@ -45,13 +47,12 @@ describe('useCreatePost', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(result.current.data).toEqual(mockResponse)
-    expect(api.posts.create).toHaveBeenCalledWith(newPost)
+    expect(mockPostsCreate).toHaveBeenCalledWith(newPost)
   })
 
   it('投稿失敗時に isError が true になる', async () => {
     // 検証内容: 投稿失敗時のエラーハンドリング
-    // @ts-ignore
-    api.posts.create.mockRejectedValue(new Error('Failed'))
+    mockPostsCreate.mockRejectedValue(new Error('Failed'))
 
     const { result } = renderHook(() => useCreatePost(), { wrapper })
 
@@ -65,8 +66,7 @@ describe('useCreatePost', () => {
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
 
     const mockResponse = { id: 'new-id', status: 'judging' }
-    // @ts-ignore
-    api.posts.create.mockResolvedValue(mockResponse)
+    mockPostsCreate.mockResolvedValue(mockResponse)
 
     const { result } = renderHook(() => useCreatePost(), { wrapper })
 

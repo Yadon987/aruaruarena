@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../../App'
 import { useRankings } from '../../../../shared/hooks/useRankings'
-import { api, ApiClientError } from '../../../../shared/services/api'
+import { ApiClientError, api } from '../../../../shared/services/api'
 import type { Post } from '../../../../shared/types/domain'
 import { ResultModal } from '../ResultModal'
 
@@ -33,7 +33,15 @@ function buildModalPost(overrides: Partial<Post> = {}): Post {
 function setupRanking() {
   mockedUseRankings.mockReturnValue({
     data: {
-      rankings: [{ rank: 1, id: 'rank-1', nickname: '太郎', body: '本文', average_score: 91.2 }],
+      rankings: [
+        {
+          rank: 1,
+          id: 'rank-1',
+          nickname: '太郎',
+          body: '本文',
+          average_score: 91.2,
+        },
+      ],
       total_count: 1,
     },
     isLoading: false,
@@ -79,9 +87,15 @@ async function moveToResultScreen(postResponse: {
 
   render(<App />)
 
-  fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '結果太郎' } })
-  fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '結果表示テスト本文です' } })
   fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+  await waitFor(() => screen.getByRole('dialog'))
+  fireEvent.change(screen.getByLabelText('ニックネーム'), {
+    target: { value: '結果太郎' },
+  })
+  fireEvent.change(screen.getByLabelText('あるある'), {
+    target: { value: '結果表示テスト本文です' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
   await waitFor(() => {
     expect(screen.getByRole('heading', { name: '審査結果' })).toBeInTheDocument()
@@ -173,9 +187,24 @@ describe('E15-01 RED: ResultModal Component', () => {
       rank: 10,
       total_count: 30,
       judgments: [
-        { persona: 'hiroyuki', total_score: 20, comment: '失敗ケース', success: false },
-        { persona: 'dewi', total_score: 60, comment: '成功ケース', success: true },
-        { persona: 'nakao', total_score: 80, comment: '成功ケース', success: true },
+        {
+          persona: 'hiroyuki',
+          total_score: 20,
+          comment: '失敗ケース',
+          success: false,
+        },
+        {
+          persona: 'dewi',
+          total_score: 60,
+          comment: '成功ケース',
+          success: true,
+        },
+        {
+          persona: 'nakao',
+          total_score: 80,
+          comment: '成功ケース',
+          success: true,
+        },
       ],
     })
 
@@ -224,9 +253,15 @@ describe('E15-01 RED: ResultModal Component', () => {
     )
 
     render(<App />)
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '読込太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '読込テスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '読込太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '読込テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByText('AI審査員が採点中...')).toBeInTheDocument()
@@ -247,7 +282,9 @@ describe('E15-01 RED: ResultModal Component', () => {
       judgments: [],
     })
 
-    const shareButton = await screen.findByRole('button', { name: 'Xでシェア' })
+    const shareButton = await screen.findByRole('button', {
+      name: 'Xでシェア',
+    })
     await waitFor(() => {
       expect(shareButton).not.toBeDisabled()
     })
@@ -283,7 +320,9 @@ describe('E15-01 RED: ResultModal Component', () => {
       judgments: [],
     })
 
-    const shareButton = await screen.findByRole('button', { name: 'Xでシェア' })
+    const shareButton = await screen.findByRole('button', {
+      name: 'Xでシェア',
+    })
     await waitFor(() => {
       expect(shareButton).not.toBeDisabled()
     })

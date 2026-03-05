@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { STEP_NAMES, getWorkflowStep, loadWorkflowOrFail } from './helpers/workflowTestUtils'
+import { getWorkflowStep, loadWorkflowOrFail, STEP_NAMES } from './helpers/workflowTestUtils'
 
 describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () => {
   // 何を検証するか: デプロイ先設定をジョブenvへ明示しステップ間で一貫参照すること
@@ -9,8 +9,10 @@ describe('E14-02 RED: deploy frontend runtime assumptions (S3/CloudFront)', () =
     const deployJob = (jobs['deploy-frontend'] ?? {}) as Record<string, unknown>
     const env = (deployJob.env ?? {}) as Record<string, string>
 
-    expect(env.AWS_REGION).toBe('${{ vars.AWS_REGION || secrets.AWS_REGION || \'ap-northeast-1\' }}')
-    expect(env.S3_BUCKET_FRONTEND).toBe('${{ vars.S3_BUCKET_FRONTEND || secrets.S3_BUCKET_FRONTEND }}')
+    expect(env.AWS_REGION).toBe("${{ vars.AWS_REGION || secrets.AWS_REGION || 'ap-northeast-1' }}")
+    expect(env.S3_BUCKET_FRONTEND).toBe(
+      '${{ vars.S3_BUCKET_FRONTEND || secrets.S3_BUCKET_FRONTEND }}'
+    )
     expect(env.CLOUDFRONT_DISTRIBUTION_ID).toBe(
       '${{ vars.CLOUDFRONT_DISTRIBUTION_ID || secrets.CLOUDFRONT_DISTRIBUTION_ID }}'
     )

@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
   DOC_PATH,
+  docExists,
   REQUIRED_IAM_PERMISSIONS,
   REQUIRED_ROLLBACK_DOC_KEYS,
-  docExists,
   readDoc,
 } from './helpers/workflowTestUtils'
 

@@ -17,7 +17,13 @@ describe('E15-01 RED: ResultModal Flow', () => {
     vi.clearAllMocks()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true } as Response))
     mockRankings([
-      { rank: 1, id: 'rank-post-1', nickname: 'ランク太郎', body: '本文', average_score: 90.1 },
+      {
+        rank: 1,
+        id: 'rank-post-1',
+        nickname: 'ランク太郎',
+        body: '本文',
+        average_score: 90.1,
+      },
     ])
   })
 
@@ -57,11 +63,15 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '遷移太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), {
+    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '遷移太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
       target: { value: '遷移テスト本文です' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -112,13 +122,19 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '閉じる太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), {
+    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '閉じる太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
       target: { value: '閉じるテスト本文です' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
-    const modal = await screen.findByRole('dialog', { name: '審査結果モーダル' })
+    const modal = await screen.findByRole('dialog', {
+      name: '審査結果モーダル',
+    })
     fireEvent.keyDown(modal, { key: 'Escape' })
 
     await waitFor(() => {
@@ -146,11 +162,15 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '範囲太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), {
+    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '範囲太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
       target: { value: '範囲テスト本文です' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -196,7 +216,13 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     localStorage.clear()
     vi.clearAllMocks()
     mockRankings([
-      { rank: 1, id: 'rank-post-1', nickname: 'ランク太郎', body: '本文', average_score: 90.1 },
+      {
+        rank: 1,
+        id: 'rank-post-1',
+        nickname: 'ランク太郎',
+        body: '本文',
+        average_score: 90.1,
+      },
     ])
   })
 
@@ -287,7 +313,9 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     render(<App />)
     fireEvent.click(screen.getByTestId('ranking-item'))
 
-    const rejudgeButton = await screen.findByRole('button', { name: '再審査する' })
+    const rejudgeButton = await screen.findByRole('button', {
+      name: '再審査する',
+    })
     fireEvent.click(rejudgeButton)
 
     await waitFor(() => {
@@ -312,7 +340,9 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
 
     render(<App />)
     fireEvent.click(screen.getByTestId('ranking-item'))
-    const shareButton = await screen.findByRole('button', { name: 'Xでシェア' })
+    const shareButton = await screen.findByRole('button', {
+      name: 'Xでシェア',
+    })
 
     await waitFor(() => {
       expect(shareButton).not.toBeDisabled()
@@ -340,7 +370,9 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     render(<App />)
     fireEvent.click(screen.getByTestId('ranking-item'))
 
-    const rejudgeButton = await screen.findByRole('button', { name: '再審査する' })
+    const rejudgeButton = await screen.findByRole('button', {
+      name: '再審査する',
+    })
     fireEvent.click(rejudgeButton)
 
     await waitFor(() => {

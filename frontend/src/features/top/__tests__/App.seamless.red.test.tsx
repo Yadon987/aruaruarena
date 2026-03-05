@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import App from '../../../App'
 
 vi.mock('../../mocks/browser', () => ({
   worker: {
@@ -18,10 +19,6 @@ vi.mock('../../../shared/hooks/useRankings', () => ({
     error: null,
   })),
 }))
-
-const loadApp = async () => {
-  return import('../../../App')
-}
 
 const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿') => {
   fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
@@ -64,13 +61,12 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
   })
 
   afterEach(() => {
+    cleanup()
     vi.clearAllMocks()
   })
 
   it('初期表示で審査員が背景に表示される', async () => {
     // 何を検証するか: FR-01 - 審査員3名が常に背景に表示されること
-    const { default: App } = await loadApp()
-
     render(<App />)
 
     const avatars = screen
@@ -81,8 +77,6 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
   it('投稿ボタンでモーダルが開く', async () => {
     // 何を検証するか: FR-04 - 投稿フォームがモーダルとして表示されること
-    const { default: App } = await loadApp()
-
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
@@ -92,8 +86,6 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
   it('モーダル中は口癖が表示されない', async () => {
     // 何を検証するか: FR-09 - モーダルオープン中は口癖表示を停止すること
-    const { default: App } = await loadApp()
-
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
 
@@ -104,8 +96,6 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
   it('投稿完了でモーダルが閉じ、審査中になる', async () => {
     // 何を検証するか: FR-05 - 投稿完了時、モーダルが閉じ審査員が口癖発話を開始すること
-    const { default: App } = await loadApp()
-
     render(<App />)
     await fillAndSubmitPost()
 
@@ -116,8 +106,6 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
   it('審査中に投稿内容（ニックネーム・本文）が表示される', async () => {
     // 何を検証するか: FR-07 - 審査中の投稿内容が画面表示されること
-    const { default: App } = await loadApp()
-
     // モックデータ（テスト太郎等）と被らない意図的な別データ
     const inputNickname = '独自のニックネーム'
     const inputBody = '独自のあるある投稿内容'
@@ -147,7 +135,6 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
   it('審査中に口癖が表示される', async () => {
     // 何を検証するか: FR-06 - 審査中に口癖発話が表示されること
-    const { default: App } = await loadApp()
     vi.mocked(api.posts.get).mockResolvedValueOnce({
       id: 'seamless-post-id',
       nickname: 'テスト太郎',
@@ -166,8 +153,6 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
   it('審査完了で結果モーダルが表示される', async () => {
     // 何を検証するか: FR-08 - 審査完了時、結果モーダルが表示されること
-    const { default: App } = await loadApp()
-
     render(<App />)
     await fillAndSubmitPost()
 
@@ -178,8 +163,6 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
   it('結果モーダル表示後、審査員は待機状態に戻る', async () => {
     // 何を検証するか: FR-08 - 審査完了時、審査員は待機状態に戻ること
-    const { default: App } = await loadApp()
-
     render(<App />)
     await fillAndSubmitPost()
 

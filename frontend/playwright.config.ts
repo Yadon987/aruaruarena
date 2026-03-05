@@ -1,26 +1,26 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 // ============================================================================
 // 定数定義
 // ============================================================================
 
 /** CI環境でのリトライ回数 */
-const CI_RETRY_COUNT = 2;
+const CI_RETRY_COUNT = 2
 
 /** CI環境でのワーカー数 */
-const CI_WORKER_COUNT = 1;
+const CI_WORKER_COUNT = 1
 
 /** アクションタイムアウト（ミリ秒） */
-const TIMEOUT_ACTION = 10 * 1000;
+const TIMEOUT_ACTION = 10 * 1000
 
 /** ナビゲーションタイムアウト（ミリ秒） */
-const TIMEOUT_NAVIGATION = 30 * 1000;
+const TIMEOUT_NAVIGATION = 30 * 1000
 
 /** WebServer起動待ちタイムアウト（ミリ秒） */
-const TIMEOUT_WEB_SERVER = 120 * 1000;
+const TIMEOUT_WEB_SERVER = 120 * 1000
 
 /** Vite dev serverのURL */
-const VITE_DEV_SERVER_URL = 'http://localhost:5173';
+const VITE_DEV_SERVER_URL = 'http://localhost:5173'
 
 /**
  * Playwright E2Eテスト設定
@@ -65,10 +65,7 @@ export default defineConfig({
    * - html: ブラウザで閲覧可能なHTMLレポート
    * - blob: CI連携用のバイナリレポート
    */
-  reporter: [
-    ['html'],
-    ['blob', { outputFile: 'blob-report/report.json' }],
-  ],
+  reporter: [['html'], ['blob', { outputFile: 'blob-report/report.json' }]],
 
   // ========================================================================
   // 共通設定
@@ -129,4 +126,4 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-});
+})

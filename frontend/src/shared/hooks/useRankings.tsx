@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { queryKeys } from '../constants/queryKeys'
-import { api } from '../services/api'
 import {
   DEFAULT_RANKING_LIMIT,
   MAX_RANKING_LIMIT,
   MIN_RANKING_LIMIT,
   RANKING_POLLING_INTERVAL_MS,
 } from '../constants/query'
+import { queryKeys } from '../constants/queryKeys'
+import { api } from '../services/api'
 import type { GetRankingResponse } from '../types/api'
 
 interface UseRankingsOptions {

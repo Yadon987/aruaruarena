@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { beforeAll, afterAll, afterEach, describe, it, expect } from 'vitest'
-import { http, HttpResponse } from 'msw'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { HttpResponse, http } from 'msw'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import App from '../../../App'
 import { mswServer } from '../../../mocks/server'
 
@@ -23,9 +23,15 @@ describe('E12-01 RED: TopPage Integration', () => {
     localStorage.setItem('my_post_ids', JSON.stringify([]))
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '統合太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '統合テスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await screen.findByRole('dialog')
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '統合太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '統合テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(localStorage.getItem('my_post_ids')).toContain('post-success-1')
@@ -45,15 +51,21 @@ describe('E12-01 RED: TopPage Integration', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '制限太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '投稿テキストです' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await screen.findByRole('dialog')
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '制限太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '投稿テキストです' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByText('5分後に再投稿してください')).toBeInTheDocument()
     })
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('制限太郎')
-    expect(screen.getByLabelText('あるある本文')).toHaveValue('投稿テキストです')
+    expect(screen.getByLabelText('あるある')).toHaveValue('投稿テキストです')
   })
 
   it('500エラー時に汎用メッセージを表示し入力を保持する', async () => {
@@ -69,15 +81,23 @@ describe('E12-01 RED: TopPage Integration', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '障害太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '障害テスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await screen.findByRole('dialog')
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '障害太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '障害テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
-      expect(screen.getByText('一時的なエラーです。時間をおいて再試行してください')).toBeInTheDocument()
+      expect(
+        screen.getByText('一時的なエラーです。時間をおいて再試行してください')
+      ).toBeInTheDocument()
     })
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('障害太郎')
-    expect(screen.getByLabelText('あるある本文')).toHaveValue('障害テスト本文です')
+    expect(screen.getByLabelText('あるある')).toHaveValue('障害テスト本文です')
   })
 
   it('my_post_idsが不正JSONでも投稿成功時に保存できる', async () => {
@@ -91,9 +111,15 @@ describe('E12-01 RED: TopPage Integration', () => {
     localStorage.setItem('my_post_ids', '{not-json')
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '復旧太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '復旧テスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await screen.findByRole('dialog')
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '復旧太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '復旧テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(localStorage.getItem('my_post_ids')).toContain('post-malformed-1')
@@ -110,14 +136,20 @@ describe('E12-01 RED: TopPage Integration', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '通信太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '通信失敗テスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await screen.findByRole('dialog')
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '通信太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '通信失敗テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByText('エラーが発生しました。再試行してください')).toBeInTheDocument()
     })
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('通信太郎')
-    expect(screen.getByLabelText('あるある本文')).toHaveValue('通信失敗テスト本文です')
+    expect(screen.getByLabelText('あるある')).toHaveValue('通信失敗テスト本文です')
   })
 })
