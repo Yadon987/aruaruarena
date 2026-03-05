@@ -28,6 +28,7 @@ export function PostFormModal({ isOpen, onClose, onSubmit, isLoading, error }: P
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const previousActiveElementRef = useRef<HTMLElement | null>(null)
+  const submittingRef = useRef(false)
   const prefersReducedMotion = useReducedMotion()
 
   useFocusTrap({
@@ -49,10 +50,16 @@ export function PostFormModal({ isOpen, onClose, onSubmit, isLoading, error }: P
     previousActiveElementRef.current = null
   }, [isOpen])
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (isLoading) return
-    onSubmit({ nickname, body })
+    if (isLoading || submittingRef.current) return
+
+    submittingRef.current = true
+    try {
+      await onSubmit({ nickname, body })
+    } finally {
+      submittingRef.current = false
+    }
   }
 
   const handleBackdropClick = () => {
@@ -64,7 +71,7 @@ export function PostFormModal({ isOpen, onClose, onSubmit, isLoading, error }: P
   }
 
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    event.stopPropagation()
+    if (event.key === 'Escape') return
   }
 
   return (
