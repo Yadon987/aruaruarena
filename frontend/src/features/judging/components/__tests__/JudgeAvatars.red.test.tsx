@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('framer-motion', () => ({
@@ -43,17 +43,13 @@ describe('E24-04 RED: JudgeAvatars', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
-  it('isJudging=true で口癖が表示される', async () => {
-    // 何を検証するか: 審査中は吹き出しが表示されること
+  it('isJudging=true でひろゆきの口癖が表示される', async () => {
+    // 何を検証するか: 初期表示時に既定のひろゆき口癖が表示されること
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(6000)
-    })
-
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByTestId('catchphrase-hiroyuki')).toBeInTheDocument()
   })
 
   it('横並びレイアウト（flex-row）が適用される', async () => {
