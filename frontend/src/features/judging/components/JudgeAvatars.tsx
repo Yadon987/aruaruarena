@@ -70,7 +70,7 @@ export function JudgeAvatars({ isJudging, isPostModalOpen }: JudgeAvatarsProps) 
               <JudgeSpeechBubble
                 isVisible={true}
                 text={speechText}
-                judgeType={judge.id as JudgePersona}
+                judgeType={judge.id}
                 testId={`catchphrase-${judge.id}`}
               />
             )}

@@ -1,5 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react'
 import { DURATION, SCALE } from '../../../shared/constants/animations'
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
@@ -56,6 +63,10 @@ export function PostFormModal({ isOpen, onClose, onSubmit, isLoading, error }: P
     event.stopPropagation()
   }
 
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    event.stopPropagation()
+  }
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -75,6 +86,7 @@ export function PostFormModal({ isOpen, onClose, onSubmit, isLoading, error }: P
               aria-modal="true"
               aria-label="投稿フォーム"
               onClick={handleDialogClick}
+              onKeyDown={handleDialogKeyDown}
             >
               <motion.div
                 initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
