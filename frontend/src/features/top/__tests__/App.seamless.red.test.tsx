@@ -23,19 +23,20 @@ const loadApp = async () => {
   return import('../../../App')
 }
 
-const fillAndSubmitPost = async () => {
+const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿') => {
   fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
   await screen.findByRole('dialog', { name: '投稿フォーム' })
 
   fireEvent.change(screen.getByLabelText('ニックネーム'), {
-    target: { value: 'テスト' },
+    target: { value: nickname },
   })
   fireEvent.change(screen.getByLabelText('あるある'), {
-    target: { value: 'テスト投稿' },
+    target: { value: body },
   })
   fireEvent.click(screen.getByRole('button', { name: '投稿' }))
   await waitFor(() => {
     expect(api.posts.create).toHaveBeenCalledTimes(1)
+    expect(api.posts.create).toHaveBeenCalledWith({ nickname, body })
   })
 
   await waitFor(() => {
@@ -63,7 +64,6 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
   })
 
   afterEach(() => {
-    vi.useRealTimers()
     vi.clearAllMocks()
   })
 
@@ -118,21 +118,30 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
     // 何を検証するか: FR-07 - 審査中の投稿内容が画面表示されること
     const { default: App } = await loadApp()
 
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await screen.findByRole('dialog', { name: '投稿フォーム' })
+    // モックデータ（テスト太郎等）と被らない意図的な別データ
+    const inputNickname = '独自のニックネーム'
+    const inputBody = '独自のあるある投稿内容'
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: 'テスト太郎' },
+    vi.mocked(api.posts.get).mockResolvedValue({
+      id: 'seamless-post-id',
+      nickname: inputNickname,
+      body: inputBody,
+      status: 'judging',
+      created_at: '2026-03-01T00:00:00Z',
+      average_score: 0,
+      rank: 0,
+      total_count: 10,
+      judgments: [],
     })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: 'テスト本文' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+
+    render(<App />)
+    
+    await fillAndSubmitPost(inputNickname, inputBody)
 
     await waitFor(() => {
-      expect(screen.getByText(/テスト太郎/)).toBeInTheDocument()
-      expect(screen.getByText(/テスト本文/)).toBeInTheDocument()
+      // APIが返した審査中データ（このテストでは入力値と同値）を画面表示できることを確認
+      expect(screen.getByText(inputNickname)).toBeInTheDocument()
+      expect(screen.getByText(inputBody)).toBeInTheDocument()
     })
   })
 
