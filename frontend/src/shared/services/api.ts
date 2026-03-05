@@ -1,10 +1,10 @@
-import { HTTP_STATUS, API_TIMEOUT, API_ERROR_CODE, API_DEFAULTS } from '../constants/api'
-import {
-  type ApiError,
-  type CreatePostRequest,
-  type CreatePostResponse,
-  type GetPostResponse,
-  type GetRankingResponse,
+import { API_DEFAULTS, API_ERROR_CODE, API_TIMEOUT, HTTP_STATUS } from '../constants/api'
+import type {
+  ApiError,
+  CreatePostRequest,
+  CreatePostResponse,
+  GetPostResponse,
+  GetRankingResponse,
 } from '../types/api'
 
 // 環境変数の取得（Vite）
@@ -115,7 +115,9 @@ async function request<T>(path: string, options?: RequestInit & { timeout?: numb
     if (externalSignal.aborted) {
       handleExternalAbort()
     } else {
-      externalSignal.addEventListener('abort', handleExternalAbort, { once: true })
+      externalSignal.addEventListener('abort', handleExternalAbort, {
+        once: true,
+      })
     }
   }
 
@@ -124,7 +126,8 @@ async function request<T>(path: string, options?: RequestInit & { timeout?: numb
     const mergedHeaders = new Headers(customHeaders)
     const body = restOptions.body
     const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
-    const isUrlSearchParams = typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams
+    const isUrlSearchParams =
+      typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams
     const isBlob = typeof Blob !== 'undefined' && body instanceof Blob
     const shouldSetJsonContentType =
       !mergedHeaders.has('Content-Type') && !isFormData && !isUrlSearchParams && !isBlob

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  STEP_NAMES,
   getWorkflowStep,
   getWorkflowSteps,
   loadWorkflowOrFail,
+  STEP_NAMES,
   workflowExists,
   type YamlObject,
 } from './helpers/workflowTestUtils'
@@ -52,8 +52,10 @@ describe('E14-02 RED: deploy-frontend workflow (S3/CloudFront)', () => {
     expect(String(createStep?.run ?? '')).toContain('aws cloudfront create-invalidation')
     expect(String(createStep?.run ?? '')).toContain("--paths '/*'")
     expect(String(waitStep?.run ?? '')).toContain('aws cloudfront wait invalidation-completed')
-    expect(steps.findIndex((step) => step.name === STEP_NAMES.createCloudFrontInvalidation)).toBeLessThan(
-      steps.findIndex((step) => step.name === STEP_NAMES.waitCloudFrontInvalidationCompleted),
+    expect(
+      steps.findIndex((step) => step.name === STEP_NAMES.createCloudFrontInvalidation)
+    ).toBeLessThan(
+      steps.findIndex((step) => step.name === STEP_NAMES.waitCloudFrontInvalidationCompleted)
     )
   })
 

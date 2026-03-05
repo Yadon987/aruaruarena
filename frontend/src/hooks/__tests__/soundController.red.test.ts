@@ -7,8 +7,13 @@ type ExtendedSoundController = ReturnType<typeof createSoundController> & {
 }
 
 function getAudioDebugEvents() {
-  return (globalThis as { __AUDIO_DEBUG__?: Array<{ type: string; scene?: string }> })
-    .__AUDIO_DEBUG__ ?? []
+  return (
+    (
+      globalThis as {
+        __AUDIO_DEBUG__?: Array<{ type: string; scene?: string }>
+      }
+    ).__AUDIO_DEBUG__ ?? []
+  )
 }
 
 describe('E18-01 RED: soundController', () => {

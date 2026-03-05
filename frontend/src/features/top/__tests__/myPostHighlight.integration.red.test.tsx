@@ -16,8 +16,20 @@ describe('MyPostHighlight Integration RED', () => {
     localStorage.clear()
     vi.clearAllMocks()
     mockRankings([
-      { rank: 1, id: 'id-1', nickname: '太郎', body: '本文1', average_score: 95.3 },
-      { rank: 2, id: 'id-2', nickname: '次郎', body: '本文2', average_score: 94.2 },
+      {
+        rank: 1,
+        id: 'id-1',
+        nickname: '太郎',
+        body: '本文1',
+        average_score: 95.3,
+      },
+      {
+        rank: 2,
+        id: 'id-2',
+        nickname: '次郎',
+        body: '本文2',
+        average_score: 94.2,
+      },
     ])
   })
 

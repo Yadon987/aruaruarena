@@ -7,7 +7,10 @@ export type YamlValue = string | number | boolean | null | YamlObject | YamlValu
 export type YamlObject = Record<string, YamlValue>
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
-export const WORKFLOW_PATH = resolve(MODULE_DIR, '../../../../.github/workflows/deploy-frontend.yml')
+export const WORKFLOW_PATH = resolve(
+  MODULE_DIR,
+  '../../../../.github/workflows/deploy-frontend.yml'
+)
 export const DOC_PATH = resolve(MODULE_DIR, '../../../../docs/deploy/frontend.md')
 
 export const STEP_NAMES = {

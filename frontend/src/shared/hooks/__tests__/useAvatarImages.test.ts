@@ -58,7 +58,7 @@ describe('E23-01 RED: useAvatarImages', () => {
     const { result } = renderHook(() => useAvatarImages())
 
     act(() => {
-      createdImages.forEach(function (image) {
+      createdImages.forEach((image) => {
         image.onload?.()
       })
     })

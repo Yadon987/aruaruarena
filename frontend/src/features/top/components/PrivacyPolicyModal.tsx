@@ -1,4 +1,4 @@
-import { KeyboardEvent, RefObject, useEffect, useRef } from 'react'
+import { type KeyboardEvent, type RefObject, useEffect, useRef } from 'react'
 import { PRIVACY_POLICY_TEXT, TERMS_TEXT } from '../constants/privacyPolicy'
 
 type Props = {

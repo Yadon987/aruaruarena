@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest'
-import { api, ApiClientError } from '../../shared/services/api'
-import { mswServer } from '../server'
-import { resetPollingCount } from '../handlers/posts'
+import { HttpResponse, http } from 'msw'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { ApiClientError, api } from '../../shared/services/api'
 import { errorHandlers } from '../handlers'
-import { http, HttpResponse } from 'msw'
+import { resetPollingCount } from '../handlers/posts'
+import { mswServer } from '../server'
 
 describe('E04-09: MSW Integration', () => {
   beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }))
   afterEach(() => {
     mswServer.resetHandlers()
-    resetPollingCount()  // ポーリング状態をリセット
+    resetPollingCount() // ポーリング状態をリセット
   })
   afterAll(() => mswServer.close())
 

@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/test-fixtures'
+import { expect, test } from './fixtures/test-fixtures'
 
 test.describe('E12-03 自分の投稿管理 RED', () => {
   test('ランキング内の自分の投稿がハイライト表示される', async ({ page }) => {

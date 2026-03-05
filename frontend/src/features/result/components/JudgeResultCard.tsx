@@ -23,7 +23,7 @@ export function JudgeResultCard({ judgment }: Props) {
         <li>合計点: {judgment.total_score}</li>
       </ul>
       <p className="mt-2">{judgment.comment}</p>
-      <p className="mt-1 text-sm">{judgment.success ?? false ? '成功' : '失敗'}</p>
+      <p className="mt-1 text-sm">{(judgment.success ?? false) ? '成功' : '失敗'}</p>
     </article>
   )
 }

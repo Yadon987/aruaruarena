@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/test-fixtures'
+import { expect, test } from './fixtures/test-fixtures'
 
 const MODAL_SCROLL_AMOUNT = 200
 const PAGE_WHEEL_DELTA = 1200

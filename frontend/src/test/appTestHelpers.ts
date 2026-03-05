@@ -5,10 +5,7 @@ import type { RankingItem } from '../shared/types/domain'
 
 type RankingsHookResult = ReturnType<typeof useRankings>
 
-export function mockRankings(
-  rankings: RankingItem[],
-  totalCount: number = rankings.length
-) {
+export function mockRankings(rankings: RankingItem[], totalCount: number = rankings.length) {
   vi.mocked(useRankings).mockReturnValue({
     data: {
       rankings,

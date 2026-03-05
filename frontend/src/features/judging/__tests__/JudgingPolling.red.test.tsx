@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { beforeAll, afterAll, afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
-import { http, HttpResponse } from 'msw'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { HttpResponse, http } from 'msw'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { mswServer } from '../../../mocks/server'
 import { api } from '../../../shared/services/api'
@@ -34,9 +34,15 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     // 何を検証するか: 投稿成功後に審査中画面を表示し GET /api/posts/:id を開始すること
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: 'RED太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: 'REDテスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: 'RED太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: 'REDテスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
@@ -69,9 +75,15 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: 'RED太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: 'REDテスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: 'RED太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: 'REDテスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByText('審査結果')).toBeInTheDocument()
@@ -94,9 +106,15 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: 'RED太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: 'REDテスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: 'RED太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: 'REDテスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByText('審査結果')).toBeInTheDocument()
@@ -116,9 +134,15 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: 'RED太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: 'REDテスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: 'RED太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: 'REDテスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(
@@ -131,18 +155,21 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     // 何を検証するか: サーバーエラー時に1回で停止せず次周期で再試行すること
     mswServer.use(
       http.get('/api/posts/:id', () => {
-        return HttpResponse.json(
-          { error: '一時的な障害', code: 'INTERNAL_ERROR' },
-          { status: 500 }
-        )
+        return HttpResponse.json({ error: '一時的な障害', code: 'INTERNAL_ERROR' }, { status: 500 })
       })
     )
 
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: 'RED太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: 'REDテスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: 'RED太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: 'REDテスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(
       () => {

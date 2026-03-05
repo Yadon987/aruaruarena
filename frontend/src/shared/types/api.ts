@@ -1,4 +1,4 @@
-import type { Post, RankingItem, PostStatus } from './domain'
+import type { Post, PostStatus, RankingItem } from './domain'
 
 /**
  * 共通エラーレスポンス

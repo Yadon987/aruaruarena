@@ -16,7 +16,15 @@ const mockedUseRankings = vi.mocked(useRankings)
 function setupRanking() {
   mockedUseRankings.mockReturnValue({
     data: {
-      rankings: [{ rank: 1, id: 'rank-post-1', nickname: 'ランク太郎', body: '本文', average_score: 90.1 }],
+      rankings: [
+        {
+          rank: 1,
+          id: 'rank-post-1',
+          nickname: 'ランク太郎',
+          body: '本文',
+          average_score: 90.1,
+        },
+      ],
       total_count: 1,
     },
     isLoading: false,
@@ -83,8 +91,12 @@ describe('E18 RED: SoundToggle integration', () => {
     fireEvent.pointerDown(document)
 
     await waitFor(() => {
-      const debugEvents = (globalThis as { __AUDIO_DEBUG__?: Array<{ type: string; scene?: string }> })
-        .__AUDIO_DEBUG__ ?? []
+      const debugEvents =
+        (
+          globalThis as {
+            __AUDIO_DEBUG__?: Array<{ type: string; scene?: string }>
+          }
+        ).__AUDIO_DEBUG__ ?? []
       expect(debugEvents).toContainEqual({ type: 'bgm', scene: 'top' })
     })
   })

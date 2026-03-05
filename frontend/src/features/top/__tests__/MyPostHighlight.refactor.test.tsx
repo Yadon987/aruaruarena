@@ -16,15 +16,30 @@ describe('MyPostHighlight Refactor', () => {
     localStorage.clear()
     vi.clearAllMocks()
     mockRankings([
-      { rank: 1, id: 'id-1', nickname: '太郎', body: '本文1', average_score: 95.3 },
-      { rank: 2, id: 'id-2', nickname: '次郎', body: '本文2', average_score: 94.2 },
+      {
+        rank: 1,
+        id: 'id-1',
+        nickname: '太郎',
+        body: '本文1',
+        average_score: 95.3,
+      },
+      {
+        rank: 2,
+        id: 'id-2',
+        nickname: '次郎',
+        body: '本文2',
+        average_score: 94.2,
+      },
     ])
   })
 
   it('404以外の失敗時はmy_post_idsを復元する', async () => {
     // 何を検証するか: 取得失敗が404以外の場合は投稿IDが削除されず維持されること
     localStorage.setItem('my_post_ids', JSON.stringify(['id-1', 'id-2']))
-    vi.spyOn(api.posts, 'get').mockRejectedValue({ status: 429, code: 'RATE_LIMITED' })
+    vi.spyOn(api.posts, 'get').mockRejectedValue({
+      status: 429,
+      code: 'RATE_LIMITED',
+    })
 
     render(<App />)
 

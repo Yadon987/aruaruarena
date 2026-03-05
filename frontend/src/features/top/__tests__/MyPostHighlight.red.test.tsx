@@ -16,9 +16,27 @@ describe('MyPostHighlight RED', () => {
     localStorage.clear()
     vi.clearAllMocks()
     mockRankings([
-      { rank: 1, id: 'id-1', nickname: '太郎', body: '本文1', average_score: 95.3 },
-      { rank: 2, id: 'id-2', nickname: '次郎', body: '本文2', average_score: 94.2 },
-      { rank: 3, id: 'id-3', nickname: '三郎', body: '本文3', average_score: 93.1 },
+      {
+        rank: 1,
+        id: 'id-1',
+        nickname: '太郎',
+        body: '本文1',
+        average_score: 95.3,
+      },
+      {
+        rank: 2,
+        id: 'id-2',
+        nickname: '次郎',
+        body: '本文2',
+        average_score: 94.2,
+      },
+      {
+        rank: 3,
+        id: 'id-3',
+        nickname: '三郎',
+        body: '本文3',
+        average_score: 93.1,
+      },
     ])
   })
 
@@ -56,7 +74,10 @@ describe('MyPostHighlight RED', () => {
 
   it('404時に該当IDをLocalStorageから削除する', async () => {
     // 何を検証するか: 取得失敗(404)した投稿IDが保存一覧からクリーンアップされること
-    vi.spyOn(api.posts, 'get').mockRejectedValue({ status: 404, code: 'NOT_FOUND' })
+    vi.spyOn(api.posts, 'get').mockRejectedValue({
+      status: 404,
+      code: 'NOT_FOUND',
+    })
     localStorage.setItem('my_post_ids', JSON.stringify(['id-1', 'id-2', 'id-1']))
 
     render(<App />)

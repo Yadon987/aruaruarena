@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { HttpResponse, http } from 'msw'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { http, HttpResponse } from 'msw'
 import App from '../../../App'
 import { mswServer } from '../../../mocks/server'
 import { api } from '../../../shared/services/api'
@@ -18,10 +18,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
         return HttpResponse.json({ id: 'polling-test', status: 'judging' })
       }),
       http.get('/api/posts/:id', () => {
-        return HttpResponse.json(
-          { error: '一時的な障害', code: 'INTERNAL_ERROR' },
-          { status: 500 }
-        )
+        return HttpResponse.json({ error: '一時的な障害', code: 'INTERNAL_ERROR' }, { status: 500 })
       })
     )
   })
@@ -48,9 +45,16 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => currentTime)
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '境界太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '境界値テスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '境界太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '境界値テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
@@ -67,7 +71,9 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     })
 
     expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
-    expect(screen.queryByText('投稿情報の取得に失敗しました。トップへ戻って再度お試しください。')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('投稿情報の取得に失敗しました。トップへ戻って再度お試しください。')
+    ).not.toBeInTheDocument()
   }, 10000)
 
   it('60秒到達時にポーリングを停止し固定エラーメッセージを表示する', async () => {
@@ -77,9 +83,16 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => currentTime)
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '境界太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある本文'), { target: { value: '境界値テスト本文です' } })
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    await waitFor(() => screen.getByRole('dialog'))
+
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '境界太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '境界値テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
 
     await waitFor(() => {
       expect(screen.getByTestId('judging-screen')).toBeInTheDocument()

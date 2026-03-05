@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query'
-import { ApiClientError } from '../services/api'
 import { QUERY_CONFIG } from '../constants/query'
+import { ApiClientError } from '../services/api'
 
 /**
  * TanStack Queryのクライアント設定

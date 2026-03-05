@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/test-fixtures'
+import { expect, test } from './fixtures/test-fixtures'
 
 test.describe('E15-01 RED: 結果モーダルUI', () => {
   test('ランキング項目クリックで結果モーダルと審査員3件を表示する', async ({ page }) => {

@@ -3,8 +3,8 @@
  *
  * 投稿作成、取得、ポーリングのハンドラーを定義します。
  */
-import { http, HttpResponse } from 'msw'
-import { POLLING, MOCK } from './constants'
+import { HttpResponse, http } from 'msw'
+import { MOCK, POLLING } from './constants'
 import { createMockPost } from './helpers'
 
 /** ポーリングリクエストカウンター */

@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
-import { ApiClientError } from '../../../shared/services/api'
 import { useRankings } from '../../../shared/hooks/useRankings'
+import { ApiClientError } from '../../../shared/services/api'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -64,7 +64,11 @@ describe('TopPage Ranking Integration RED', () => {
     render(<App />)
 
     expect(
-      await screen.findByText('取得に失敗しました。時間をおいて再度お試しください。', {}, { timeout: 5000 })
+      await screen.findByText(
+        '取得に失敗しました。時間をおいて再度お試しください。',
+        {},
+        { timeout: 5000 }
+      )
     ).toBeInTheDocument()
   })
 

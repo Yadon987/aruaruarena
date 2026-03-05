@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/test-fixtures'
+import { expect, test } from './fixtures/test-fixtures'
 
 test.describe('E12-02 ランキング RED', () => {
   test('トップ画面にランキング領域が表示される', async ({ page }) => {

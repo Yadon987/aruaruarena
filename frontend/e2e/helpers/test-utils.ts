@@ -1,11 +1,11 @@
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test'
 
 /**
  * ページの読み込み完了を待機するヘルパー関数
  * ネットワークのアイドル状態を待機します
  */
 export async function waitForPageLoad(page: Page): Promise<void> {
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('networkidle')
 }
 
 /**
@@ -13,11 +13,11 @@ export async function waitForPageLoad(page: Page): Promise<void> {
  * テスト実行中のJSエラーを検知するために使用します
  */
 export function collectConsoleErrors(page: Page): string[] {
-  const errors: string[] = [];
+  const errors: string[] = []
   page.on('console', (msg) => {
     if (msg.type() === 'error') {
-      errors.push(msg.text());
+      errors.push(msg.text())
     }
-  });
-  return errors;
+  })
+  return errors
 }

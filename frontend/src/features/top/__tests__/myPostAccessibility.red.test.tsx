@@ -14,7 +14,15 @@ describe('E16-01 MyPost Accessibility RED', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
-    mockRankings([{ rank: 1, id: 'id-1', nickname: '太郎', body: '本文1', average_score: 95.3 }])
+    mockRankings([
+      {
+        rank: 1,
+        id: 'id-1',
+        nickname: '太郎',
+        body: '本文1',
+        average_score: 95.3,
+      },
+    ])
   })
 
   it('投稿一覧モーダルを閉じたらトリガーボタンへフォーカスを戻す', async () => {

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { STEP_NAMES, getWorkflowStep, readWorkflow, type YamlObject } from './helpers/workflowTestUtils'
+import {
+  getWorkflowStep,
+  readWorkflow,
+  STEP_NAMES,
+  type YamlObject,
+} from './helpers/workflowTestUtils'
 
 describe('E14-01: deploy frontend runtime assumptions', () => {
   // 何を検証するか: setup-node が frontend/package-lock.json をキャッシュ参照に使用すること

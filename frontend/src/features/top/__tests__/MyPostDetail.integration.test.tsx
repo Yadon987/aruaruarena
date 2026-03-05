@@ -20,7 +20,15 @@ describe('MyPostDetail Integration', () => {
 
     mockedUseRankings.mockReturnValue({
       data: {
-        rankings: [{ rank: 1, id: 'id-1', nickname: '太郎', body: '本文1', average_score: 95.3 }],
+        rankings: [
+          {
+            rank: 1,
+            id: 'id-1',
+            nickname: '太郎',
+            body: '本文1',
+            average_score: 95.3,
+          },
+        ],
         total_count: 1,
       },
       isLoading: false,
@@ -93,10 +101,16 @@ describe('MyPostDetail Integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
     fireEvent.click(await screen.findByRole('button', { name: 'id-1' }))
-    const detailHeading = await screen.findByRole('heading', { name: '投稿詳細' })
+    const detailHeading = await screen.findByRole('heading', {
+      name: '投稿詳細',
+    })
     const detailSection = detailHeading.closest('section')
     expect(detailSection).not.toBeNull()
-    fireEvent.click(within(detailSection as HTMLElement).getByRole('button', { name: '閉じる' }))
+    fireEvent.click(
+      within(detailSection as HTMLElement).getByRole('button', {
+        name: '閉じる',
+      })
+    )
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: '自分の投稿' })).not.toBeInTheDocument()
     )

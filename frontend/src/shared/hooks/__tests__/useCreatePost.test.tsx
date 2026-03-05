@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
-import { ReactNode } from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ReactNode } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '../../constants/queryKeys'
 import { api } from '../../services/api'
 import { useCreatePost } from '../useCreatePost'
@@ -34,7 +34,7 @@ describe('useCreatePost', () => {
   it('useCreatePost が useMutation を正しく呼び出し、投稿を作成できる', async () => {
     // 検証内容: 正常系投稿作成
     const mockResponse = { id: 'new-id', status: 'judging' }
-    // @ts-ignore
+    // @ts-expect-error
     api.posts.create.mockResolvedValue(mockResponse)
 
     const { result } = renderHook(() => useCreatePost(), { wrapper })
@@ -50,7 +50,7 @@ describe('useCreatePost', () => {
 
   it('投稿失敗時に isError が true になる', async () => {
     // 検証内容: 投稿失敗時のエラーハンドリング
-    // @ts-ignore
+    // @ts-expect-error
     api.posts.create.mockRejectedValue(new Error('Failed'))
 
     const { result } = renderHook(() => useCreatePost(), { wrapper })
@@ -65,7 +65,7 @@ describe('useCreatePost', () => {
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
 
     const mockResponse = { id: 'new-id', status: 'judging' }
-    // @ts-ignore
+    // @ts-expect-error
     api.posts.create.mockResolvedValue(mockResponse)
 
     const { result } = renderHook(() => useCreatePost(), { wrapper })

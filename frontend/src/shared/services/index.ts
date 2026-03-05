@@ -1,1 +1,1 @@
-export { api, ApiClientError } from './api'
+export { ApiClientError, api } from './api'

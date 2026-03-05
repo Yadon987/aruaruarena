@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/test-fixtures'
+import { expect, test } from './fixtures/test-fixtures'
 
 test.describe('E12-01 RED: トップ画面と投稿フォーム', () => {
   test('トップ画面の主要要素が表示される', async ({ page }) => {
@@ -46,7 +46,10 @@ test.describe('E12-01 RED: トップ画面と投稿フォーム', () => {
       await route.fulfill({
         status: 429,
         contentType: 'application/json',
-        body: JSON.stringify({ error: '投稿頻度を制限中', code: 'RATE_LIMITED' }),
+        body: JSON.stringify({
+          error: '投稿頻度を制限中',
+          code: 'RATE_LIMITED',
+        }),
       })
     })
 

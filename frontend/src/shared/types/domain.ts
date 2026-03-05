@@ -1,4 +1,4 @@
-import { JUDGE, POST_STATUS } from '@shared/constants/validation'
+import type { JUDGE, POST_STATUS } from '@shared/constants/validation'
 
 /**
  * 審査員ペルソナ

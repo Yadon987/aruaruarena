@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
-  REQUIRED_PERMISSIONS,
-  REQUIRED_PUSH_PATHS,
-  STEP_NAMES,
-  WORKFLOW_PATH,
   getWorkflowStep,
   getWorkflowSteps,
+  REQUIRED_PERMISSIONS,
+  REQUIRED_PUSH_PATHS,
   readWorkflow,
+  STEP_NAMES,
+  WORKFLOW_PATH,
   workflowExists,
   type YamlObject,
 } from './helpers/workflowTestUtils'
@@ -86,7 +86,9 @@ describe('E14-01: deploy-frontend workflow', () => {
 
     expect(runScript).toContain('refs/heads/main|refs/heads/feature/*')
     expect(runScript).toContain('Unsupported deploy ref')
-    expect(runScript).toContain('workflow_dispatch は main または feature/* ブランチから実行してください')
+    expect(runScript).toContain(
+      'workflow_dispatch は main または feature/* ブランチから実行してください'
+    )
   })
 
   // 何を検証するか: AWS認証確認とデプロイ対象検証のステップが存在すること
