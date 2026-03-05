@@ -10,11 +10,7 @@ import { useJudgeSpeech } from '../../../shared/hooks/useJudgeSpeech'
 import type { JudgePersona } from '../../../shared/types/domain'
 import { JudgeSpeechBubble } from './JudgeSpeechBubble'
 
-type ViewMode = 'top' | 'judging' | 'result'
-
 interface JudgeAvatarsProps {
-  /** TODO: 将来の画面別表示制御で利用予定。現時点では仕様により常時表示。 */
-  viewMode: ViewMode
   isJudging: boolean
   isPostModalOpen: boolean
 }
@@ -32,11 +28,7 @@ const FALLBACK_SPEECH = '...'
 /**
  * 審査員アバターを横並びで表示するコンポーネント
  */
-export function JudgeAvatars({
-  viewMode: _viewMode,
-  isJudging,
-  isPostModalOpen,
-}: JudgeAvatarsProps) {
+export function JudgeAvatars({ isJudging, isPostModalOpen }: JudgeAvatarsProps) {
   const { hasEntered, variants: entranceVariants } = useJudgeEntrance()
   const { isBreathing: isBreathingAllowed, variants: breathingVariants } = useJudgeBreathing({
     hasEntered,
