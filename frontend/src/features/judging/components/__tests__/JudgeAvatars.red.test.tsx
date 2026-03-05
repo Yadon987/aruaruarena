@@ -9,18 +9,60 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
+const useJudgeEntranceMock = vi.fn()
+const useJudgeSpeechMock = vi.fn()
+const useJudgeAvatarStateMock = vi.fn()
+
+vi.mock('../../../../shared/hooks/useJudgeEntrance', () => ({
+  useJudgeEntrance: () => useJudgeEntranceMock(),
+}))
+vi.mock('../../../../shared/hooks/useJudgeSpeech', () => ({
+  useJudgeSpeech: () => useJudgeSpeechMock(),
+}))
+vi.mock('../../../../shared/hooks/useJudgeAvatarState', () => ({
+  useJudgeAvatarState: () => useJudgeAvatarStateMock(),
+}))
+
 const loadJudgeAvatars = async () => {
   return import('../JudgeAvatars')
 }
 
 describe('E24-04 RED: JudgeAvatars', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
+    useJudgeEntranceMock.mockReturnValue({
+      hasEntered: true,
+      variants: {
+        hiroyuki: {
+          initial: { opacity: 0 },
+          animate: { opacity: 1 },
+          transition: { duration: 1 },
+        },
+        dewi: {
+          initial: { opacity: 0 },
+          animate: { opacity: 1 },
+          transition: { duration: 1 },
+        },
+        nakao: {
+          initial: { opacity: 0 },
+          animate: { opacity: 1 },
+          transition: { duration: 1 },
+        },
+      },
+    })
+    useJudgeSpeechMock.mockReturnValue({
+      currentSpeech: null,
+      speakingJudge: null,
+    })
+    useJudgeAvatarStateMock.mockReturnValue({
+      avatarStates: {
+        hiroyuki: 'base',
+        dewi: 'base',
+        nakao: 'base',
+      },
+    })
   })
 
   afterEach(() => {
-    vi.runOnlyPendingTimers()
-    vi.useRealTimers()
     vi.clearAllMocks()
   })
   it('表示状態に関係なくレンダリングされる', async () => {

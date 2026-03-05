@@ -20,75 +20,69 @@ vi.mock('framer-motion', () => ({
 }))
 
 const useJudgeEntranceMock = vi.fn()
-const useJudgeBreathingMock = vi.fn()
 const useJudgeSpeechMock = vi.fn()
+const useJudgeAvatarStateMock = vi.fn()
 
 vi.mock('../../../../shared/hooks/useJudgeEntrance', () => ({
   useJudgeEntrance: () => useJudgeEntranceMock(),
 }))
-vi.mock('../../../../shared/hooks/useJudgeBreathing', () => ({
-  useJudgeBreathing: (args: any) => useJudgeBreathingMock(args),
-}))
 vi.mock('../../../../shared/hooks/useJudgeSpeech', () => ({
   useJudgeSpeech: () => useJudgeSpeechMock(),
+}))
+vi.mock('../../../../shared/hooks/useJudgeAvatarState', () => ({
+  useJudgeAvatarState: () => useJudgeAvatarStateMock(),
 }))
 
 const loadJudgeAvatars = async () => {
   return import('../JudgeAvatars')
 }
 
+function setupJudgeAvatarsMocks() {
+  useJudgeEntranceMock.mockReturnValue({
+    hasEntered: true,
+    variants: {
+      hiroyuki: {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        transition: { duration: 1 },
+      },
+      dewi: {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        transition: { duration: 1 },
+      },
+      nakao: {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        transition: { duration: 1 },
+      },
+    },
+  })
+  useJudgeSpeechMock.mockReturnValue({ currentSpeech: 'テスト', speakingJudge: 'dewi' })
+  useJudgeAvatarStateMock.mockReturnValue({
+    avatarStates: {
+      hiroyuki: 'base',
+      dewi: 'base',
+      nakao: 'base',
+    },
+  })
+}
+
 describe('JudgeAvatars Refactor', () => {
   beforeEach(() => {
     capturedImgProps.length = 0
     vi.clearAllMocks()
-    useJudgeEntranceMock.mockReturnValue({
-      hasEntered: true,
-      variants: {
-        hiroyuki: {
-          initial: { opacity: 0 },
-          animate: { opacity: 1 },
-          transition: { duration: 1 },
-        },
-        dewi: {
-          initial: { opacity: 0 },
-          animate: { opacity: 1 },
-          transition: { duration: 1 },
-        },
-        nakao: {
-          initial: { opacity: 0 },
-          animate: { opacity: 1 },
-          transition: { duration: 1 },
-        },
-      },
-    })
-    useJudgeBreathingMock.mockReturnValue({
-      isBreathing: true,
-      variants: {
-        hiroyuki: {
-          keyframes: { scale: [1, 1.02, 1] },
-          transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
-        },
-        dewi: {
-          keyframes: { scale: [1, 1.05, 1] },
-          transition: { duration: 4, repeat: Infinity, ease: 'easeInOut' },
-        },
-        nakao: {
-          keyframes: { scale: [1, 1.01, 1] },
-          transition: { duration: 5, repeat: Infinity, ease: 'easeInOut' },
-        },
-      },
-    })
-    useJudgeSpeechMock.mockReturnValue({ currentSpeech: 'テスト', speakingJudge: 'dewi' })
+    setupJudgeAvatarsMocks()
   })
 
-  it('登場完了後は呼吸アニメーション設定を使う', async () => {
+  it('登場完了後はentrance.animateを使用する（静止状態）', async () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
 
     expect(capturedImgProps.length).toBe(3)
     const nakao = capturedImgProps.find((item) => item.alt === '中尾彬風審査員')
     expect(nakao).toBeDefined()
-    expect(nakao?.animate).toEqual({ scale: [1, 1.01, 1] })
+    expect(nakao?.animate).toEqual({ opacity: 1 })
   })
 
   it('発話中は対象審査員の吹き出しのみ表示する', async () => {
