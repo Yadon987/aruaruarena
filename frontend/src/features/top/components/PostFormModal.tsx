@@ -14,7 +14,7 @@ import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 interface PostFormModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: { nickname: string; body: string }) => void | Promise<void>
+  onSubmit: (data: { nickname: string; body: string }) => Promise<void>
   isLoading: boolean
   error?: string
 }
