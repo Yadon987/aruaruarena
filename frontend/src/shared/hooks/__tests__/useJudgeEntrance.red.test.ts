@@ -67,6 +67,7 @@ describe("E24-01 RED: useJudgeEntrance", () => {
 
 	it("アンマウント時にタイマーがクリアされる", async () => {
 		// 何を検証するか: メモリリーク防止のためクリーンアップ関数が動作すること
+		const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
 		const { useJudgeEntrance } = await loadUseJudgeEntrance();
 		const { unmount } = renderHook(() => useJudgeEntrance());
 
@@ -76,6 +77,7 @@ describe("E24-01 RED: useJudgeEntrance", () => {
 			await vi.advanceTimersByTimeAsync(5000);
 		});
 
-		expect(true).toBe(true);
+		expect(clearTimeoutSpy).toHaveBeenCalled();
+		clearTimeoutSpy.mockRestore();
 	});
 });

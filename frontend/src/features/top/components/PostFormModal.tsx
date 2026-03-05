@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { DURATION, SCALE } from "../../../shared/constants/animations";
+import { useFocusTrap } from "../../../shared/hooks/useFocusTrap";
 import { useReducedMotion } from "../../../shared/hooks/useReducedMotion";
 
 interface PostFormModalProps {
@@ -9,6 +11,9 @@ interface PostFormModalProps {
 	isLoading: boolean;
 }
 
+/**
+ * 投稿フォームモーダル
+ */
 export function PostFormModal({
 	isOpen,
 	onClose,
@@ -19,58 +24,35 @@ export function PostFormModal({
 	const [body, setBody] = useState("");
 	const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 	const dialogRef = useRef<HTMLDivElement | null>(null);
+	const previousActiveElementRef = useRef<HTMLElement | null>(null);
 	const prefersReducedMotion = useReducedMotion();
+
+	useFocusTrap({
+		isActive: isOpen,
+		containerRef: dialogRef,
+		onEscape: onClose,
+	});
 
 	useEffect(() => {
 		if (isOpen) {
+			previousActiveElementRef.current = document.activeElement as HTMLElement;
 			closeButtonRef.current?.focus();
-		}
-	}, [isOpen]);
-
-	useEffect(() => {
-		if (!isOpen) {
 			return;
 		}
 
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Escape") {
-				event.preventDefault();
-				onClose();
-				return;
-			}
-
-			if (event.key !== "Tab" || !dialogRef.current) {
-				return;
-			}
-
-			const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-				'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-			);
-			if (focusableElements.length === 0) {
-				event.preventDefault();
-				return;
-			}
-
-			const firstElement = focusableElements[0];
-			const lastElement = focusableElements[focusableElements.length - 1];
-			const activeElement = document.activeElement;
-
-			if (event.shiftKey && activeElement === firstElement) {
-				event.preventDefault();
-				lastElement.focus();
-			} else if (!event.shiftKey && activeElement === lastElement) {
-				event.preventDefault();
-				firstElement.focus();
-			}
-		};
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, onClose]);
+		setNickname("");
+		setBody("");
+		previousActiveElementRef.current?.focus();
+		previousActiveElementRef.current = null;
+	}, [isOpen]);
 
 	const handleSubmit = (event: FormEvent) => {
 		event.preventDefault();
 		onSubmit({ nickname, body });
+	};
+
+	const handleBackdropClick = () => {
+		onClose();
 	};
 
 	const handleDialogClick = (event: MouseEvent) => {
@@ -86,7 +68,7 @@ export function PostFormModal({
 						data-testid="modal-overlay"
 						aria-label="モーダル背景"
 						className="absolute inset-0 bg-black/60"
-						onClick={onClose}
+						onClick={handleBackdropClick}
 					/>
 
 					<div className="relative flex h-full items-center justify-center p-4">
@@ -95,9 +77,10 @@ export function PostFormModal({
 							role="dialog"
 							aria-modal="true"
 							aria-label="投稿フォーム"
-							initial={prefersReducedMotion ? {} : { opacity: 0, scale: 0.95 }}
-							animate={prefersReducedMotion ? {} : { opacity: 1, scale: 1 }}
-							exit={prefersReducedMotion ? {} : { opacity: 0, scale: 0.95 }}
+							initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
+							animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
+							exit={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
+							transition={{ duration: DURATION.MODAL }}
 							className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
 							onClick={handleDialogClick}
 						>
