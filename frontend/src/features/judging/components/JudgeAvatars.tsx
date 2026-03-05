@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion, type TargetAndTransition } from 'framer-motion'
 import {
   getAvatarImagePath,
   getJudgeAriaLabel,
@@ -84,7 +84,7 @@ export function JudgeAvatars({ isJudging, isPostModalOpen }: JudgeAvatarsProps) 
               animate={
                 hasEntered
                   ? isBreathingAllowed && !isSpeaking
-                    ? mutableBreathingKeyframes
+                    ? (mutableBreathingKeyframes as TargetAndTransition)
                     : entrance.animate
                   : entrance.animate
               }
