@@ -160,9 +160,8 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
     render(<App />)
     await fillAndSubmitPost()
 
-    await waitFor(() => {
-      expect(screen.getByRole('status')).toBeInTheDocument()
-    })
+    // 審査中画面では初期状態でもひろゆきのフォールバック吹き出しが表示される
+    expect(await screen.findByTestId('catchphrase-hiroyuki')).toBeInTheDocument()
   })
 
   it('審査完了で結果モーダルが表示される', async () => {
