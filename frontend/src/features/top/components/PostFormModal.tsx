@@ -70,8 +70,8 @@ export function PostFormModal({ isOpen, onClose, onSubmit, isLoading, error }: P
     event.stopPropagation()
   }
 
-  const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') return
+  const handleDialogKeyDown = (_event: KeyboardEvent<HTMLDivElement>) => {
+    // no-op: onClick を持つ要素に対する a11y lint 要件を満たすために定義
   }
 
   return (
