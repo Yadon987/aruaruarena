@@ -17,6 +17,7 @@ describe('E24-03 RED: useJudgeSpeech', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
     vi.clearAllMocks()
   })
 

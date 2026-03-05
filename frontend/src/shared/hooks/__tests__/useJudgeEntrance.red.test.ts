@@ -1,5 +1,8 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { JUDGE_ENTRANCE } from '../../constants/animations'
+
+const ENTRANCE_DURATION_MS = JUDGE_ENTRANCE.DURATION_MS
 
 const useReducedMotionMock = vi.fn()
 vi.mock('../useReducedMotion', () => ({
@@ -30,7 +33,7 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     expect(result.current.hasEntered).toBe(false)
   })
 
-  it('1200ms 経過で hasEntered=true になる', async () => {
+  it(`${ENTRANCE_DURATION_MS}ms 経過で hasEntered=true になる`, async () => {
     // 何を検証するか: 中尾彬風のアニメーション時間（1.2s）後に登場完了と判定されること
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
@@ -38,7 +41,7 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     expect(result.current.hasEntered).toBe(false)
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1200)
+      await vi.advanceTimersByTimeAsync(ENTRANCE_DURATION_MS)
     })
 
     expect(result.current.hasEntered).toBe(true)

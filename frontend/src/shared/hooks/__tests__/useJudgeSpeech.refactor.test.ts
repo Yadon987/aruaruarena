@@ -67,12 +67,15 @@ describe('useJudgeSpeech Refactor', () => {
     renderHook(() => useJudgeSpeech({ isJudging: true, isPostModalOpen: false }))
 
     expect(setTimeoutSpy.mock.calls.length).toBeGreaterThan(0)
-    expect(setTimeoutSpy.mock.calls[0]).toBeDefined()
-    expect(setTimeoutSpy.mock.calls[0][1]).toBeDefined()
-    const firstDelay = setTimeoutSpy.mock.calls[0][1] as number
-    expect(typeof firstDelay).toBe('number')
-    expect(firstDelay).toBeGreaterThanOrEqual(4000)
-    expect(firstDelay).toBeLessThanOrEqual(6000)
+
+    const delays = setTimeoutSpy.mock.calls
+      .map((call) => call[1])
+      .filter((delay): delay is number => typeof delay === 'number')
+
+    delays.forEach((delay) => {
+      expect(delay).toBeGreaterThanOrEqual(4000)
+      expect(delay).toBeLessThanOrEqual(6000)
+    })
 
     randomSpy.mockRestore()
   })

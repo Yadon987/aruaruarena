@@ -24,7 +24,7 @@ describe('E12-01 RED: TopPage Integration', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
+    await screen.findByRole('dialog')
     fireEvent.change(screen.getByLabelText('ニックネーム'), {
       target: { value: '統合太郎' },
     })
@@ -52,7 +52,7 @@ describe('E12-01 RED: TopPage Integration', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
+    await screen.findByRole('dialog')
     fireEvent.change(screen.getByLabelText('ニックネーム'), {
       target: { value: '制限太郎' },
     })
@@ -82,7 +82,7 @@ describe('E12-01 RED: TopPage Integration', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
+    await screen.findByRole('dialog')
     fireEvent.change(screen.getByLabelText('ニックネーム'), {
       target: { value: '障害太郎' },
     })
@@ -112,7 +112,7 @@ describe('E12-01 RED: TopPage Integration', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
+    await screen.findByRole('dialog')
     fireEvent.change(screen.getByLabelText('ニックネーム'), {
       target: { value: '復旧太郎' },
     })
@@ -137,7 +137,7 @@ describe('E12-01 RED: TopPage Integration', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
+    await screen.findByRole('dialog')
     fireEvent.change(screen.getByLabelText('ニックネーム'), {
       target: { value: '通信太郎' },
     })

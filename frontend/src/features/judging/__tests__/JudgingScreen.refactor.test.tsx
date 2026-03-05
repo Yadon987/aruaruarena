@@ -15,7 +15,7 @@ describe('E13-01 REFACTOR: JudgingScreen edge cases', () => {
 
   async function submitValidPost() {
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
+    await screen.findByRole('dialog')
     fireEvent.change(screen.getByLabelText('ニックネーム'), {
       target: { value: '太郎' },
     })

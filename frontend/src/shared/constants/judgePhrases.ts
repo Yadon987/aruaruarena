@@ -1,5 +1,8 @@
 import type { JudgePersona } from '../types/domain'
 
+const typedKeys = <T extends Record<string, unknown>>(obj: T): readonly (keyof T)[] =>
+  Object.keys(obj) as readonly (keyof T)[]
+
 /** 各審査員の口癖配列 */
 export const JUDGE_PHRASES: Record<JudgePersona, readonly string[]> = {
   hiroyuki: [
@@ -43,6 +46,4 @@ export const JUDGE_PHRASES: Record<JudgePersona, readonly string[]> = {
 } as const
 
 /** 審査員IDの配列 */
-export const JUDGES: readonly JudgePersona[] = Object.keys(
-  JUDGE_PHRASES
-) as unknown as readonly JudgePersona[]
+export const JUDGES: readonly JudgePersona[] = typedKeys(JUDGE_PHRASES)
