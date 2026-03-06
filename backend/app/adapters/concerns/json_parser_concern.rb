@@ -42,8 +42,22 @@ module JsonParserConcern
     BaseAiAdapter::REQUIRED_SCORE_KEYS.index_with { |key| normalize_score_value(fetch_score_value(data, key), key) }
   end
 
+  # commentを検証・サニタイズして切り詰める
+  # 不正な文字（ダブルクォート、改行、タブ、バックスラッシュ、中括弧）を削除
   def truncate_comment(comment, max_length: 30)
-    comment.nil? ? nil : comment.to_s.strip[0...max_length]
+    return nil if comment.nil?
+
+    sanitized = sanitize_comment(comment)
+    sanitized[0...max_length]
+  end
+
+  # commentフィールドから不正な文字を削除する
+  # プロンプト指示に従わない場合の安全策
+  def sanitize_comment(comment)
+    return if comment.nil?
+
+    comment.to_s.strip
+      .gsub(/["\r\n\t\\{}]/, '') # 不正文字を削除
   end
 
   private

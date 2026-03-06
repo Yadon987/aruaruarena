@@ -286,6 +286,11 @@ RSpec.describe JsonParserConcern do
         comment = '  コメント  '
         expect(instance.truncate_comment(comment)).to eq('コメント')
       end
+
+      it '不正文字（改行・タブ・バックスラッシュ・中括弧・ダブルクォート）を削除すること' do
+        comment = " \"改行\r\nタブ\tバックスラッシュ\\\\中括弧{テスト}\" "
+        expect(instance.truncate_comment(comment)).to eq('改行タブバックスラッシュ中括弧テスト')
+      end
     end
 
     context '長いコメント' do
