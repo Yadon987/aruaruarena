@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react'
-import type { ComponentProps } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadComponent } from '../../../../test/mocks/framerMotion'
 
@@ -126,16 +125,14 @@ describe('E24-04 RED: JudgeAvatars', () => {
 
     render(
       <JudgeAvatars
-        {...({
-          isJudging: true,
-          isPostModalOpen: false,
-          judgingPhase: 'scoring',
-          judgments: [
-            { judge: 'nakao', score: 88, success: true },
-            { judge: 'hiroyuki', score: 92, success: true },
-            { judge: 'dewi', score: 95, success: true },
-          ],
-        } as unknown as ComponentProps<typeof JudgeAvatars>)}
+        isJudging={true}
+        isPostModalOpen={false}
+        judgingPhase="scoring"
+        judgments={[
+          { judge: 'nakao', score: 88, success: true },
+          { judge: 'hiroyuki', score: 92, success: true },
+          { judge: 'dewi', score: 95, success: true },
+        ]}
       />
     )
 

@@ -80,13 +80,13 @@ export const JUDGE_ENTRANCE = {
       transition: { type: 'spring', bounce: 0.4, duration: 0.8 },
     },
     dewi: {
-      initial: { x: 200, opacity: 0 },
-      animate: { x: 0, opacity: 1 },
+      initial: { x: 200, y: 100, opacity: 0 },
+      animate: { x: 0, y: 0, opacity: 1 },
       transition: { duration: 1.0, ease: 'easeOut' },
     },
     nakao: {
-      initial: { x: -200, opacity: 0, scale: 0.9 },
-      animate: { x: 0, opacity: 1, scale: 1 },
+      initial: { x: -200, y: 100, opacity: 0, scale: 0.9 },
+      animate: { x: 0, y: 0, opacity: 1, scale: 1 },
       transition: { duration: 1.2, ease: [0.25, 0.1, 0.25, 1] },
     },
   },

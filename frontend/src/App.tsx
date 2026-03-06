@@ -1,6 +1,8 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { BackgroundTitle } from './components/layout/BackgroundTitle'
+import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
 import { ResultModal } from './features/result'
 import { MyPostDetail } from './features/top/components/MyPostDetail'
@@ -232,7 +234,12 @@ function RankingSection({
   const myPostIdSet = new Set(myPostIds)
 
   return (
-    <section role="region" aria-label="ランキング表示エリア" className="mb-4 rounded border p-4">
+    <section
+      id="ranking-section"
+      role="region"
+      aria-label="ランキング表示エリア"
+      className="mb-4 rounded border p-4"
+    >
       <h2 className="mb-4 text-lg font-semibold">ランキング</h2>
 
       {isLoading && <p>ランキングを読み込み中です...</p>}
@@ -864,7 +871,12 @@ function App() {
   const retryMyPostDetail = (postId: string) => {
     void fetchMyPostDetailForList(postId, true)
   }
+  const scrollToRankingSection = () => {
+    document.getElementById('ranking-section')?.scrollIntoView({ behavior: 'smooth' })
+  }
   const isResultModalLoading = isResultPostLoading && !activeResultPost
+  const judgingPhase: 'entrance' | 'speaking' | 'scoring' | 'complete' =
+    viewMode === 'judging' ? 'speaking' : activeResultPost?.status === 'scored' ? 'scoring' : 'complete'
 
   useEffect(() => {
     if (!isMyPostsOpen) return
@@ -874,14 +886,25 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="p-6">
+        <BackgroundTitle />
         <header role="banner" className="mb-4">
           <h1 className="text-2xl font-bold">あるあるアリーナ</h1>
+          <div className="flex items-center gap-2">
+            {viewMode === 'top' && (
+              <NeonButton ariaLabel="投稿する" onClick={() => setIsPostModalOpen(true)}>
+                投稿する
+              </NeonButton>
+            )}
+            <SoundToggleButton isMuted={isMuted} onToggle={handleSoundToggle} />
+          </div>
         </header>
         <div className="mb-4">
-          <SoundToggleButton isMuted={isMuted} onToggle={handleSoundToggle} />
-        </div>
-        <div className="mb-4">
-          <JudgeAvatars isJudging={viewMode === 'judging'} isPostModalOpen={isPostModalOpen} />
+          <JudgeAvatars
+            isJudging={viewMode === 'judging'}
+            isPostModalOpen={isPostModalOpen}
+            judgments={activeResultPost?.judgments}
+            judgingPhase={judgingPhase}
+          />
         </div>
 
         {viewMode === 'judging' && (
@@ -900,13 +923,6 @@ function App() {
 
         {viewMode === 'top' && (
           <>
-            <button
-              type="button"
-              onClick={() => setIsPostModalOpen(true)}
-              className="px-4 py-2 border rounded mb-4"
-            >
-              投稿する
-            </button>
             <PostFormModal
               isOpen={isPostModalOpen}
               onClose={() => setIsPostModalOpen(false)}
@@ -928,12 +944,14 @@ function App() {
                 onClick={openMyPosts}
                 onKeyDown={handleMyPostsTriggerKeyDown}
               >
-                自分の投稿一覧
+                自分の投稿
+              </button>
+              <button type="button" onClick={scrollToRankingSection}>
+                ランキング
               </button>
               <button ref={privacyPolicyTriggerRef} type="button" onClick={openPrivacyPolicy}>
                 プライバシーポリシー
               </button>
-              <p>フッター</p>
             </footer>
           </>
         )}

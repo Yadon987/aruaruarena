@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
 vi.mock('../mocks/browser', () => ({
@@ -20,10 +20,6 @@ vi.mock('../shared/hooks/useRankings', () => ({
 
 describe('E25-01 RED: App Game Show Layout', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  afterEach(() => {
     vi.clearAllMocks()
   })
 
