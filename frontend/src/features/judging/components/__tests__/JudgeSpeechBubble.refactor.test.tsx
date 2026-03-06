@@ -1,16 +1,8 @@
-import { render } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import { loadComponent } from '../../../../test/mocks/framerMotion'
 
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}))
-
-const loadJudgeSpeechBubble = async () => {
-  return import('../JudgeSpeechBubble')
-}
+const loadJudgeSpeechBubble = () => loadComponent(() => import('../JudgeSpeechBubble'))
 
 describe('JudgeSpeechBubble Refactor', () => {
   it('AnimatePresence 配下で表示・非表示を切り替えできる', async () => {
@@ -28,12 +20,18 @@ describe('JudgeSpeechBubble Refactor', () => {
   it('審査員タイプごとに位置クラスが適用される', async () => {
     const { JudgeSpeechBubble } = await loadJudgeSpeechBubble()
 
+    const hiroyuki = render(
+      <JudgeSpeechBubble isVisible={true} text="hiroyuki" judgeType="hiroyuki" />
+    )
+    expect(screen.getByRole('status').parentElement).toHaveClass('justify-center')
+    hiroyuki.unmount()
+
     const dewi = render(<JudgeSpeechBubble isVisible={true} text="dewi" judgeType="dewi" />)
-    expect(dewi.container.firstChild).toHaveClass('justify-center')
+    expect(screen.getByRole('status').parentElement).toHaveClass('justify-center')
     dewi.unmount()
 
     const nakao = render(<JudgeSpeechBubble isVisible={true} text="nakao" judgeType="nakao" />)
-    expect(nakao.container.firstChild).toHaveClass('justify-start')
+    expect(screen.getByRole('status').parentElement).toHaveClass('justify-start')
     nakao.unmount()
   })
 })

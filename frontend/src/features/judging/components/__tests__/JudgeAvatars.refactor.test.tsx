@@ -1,23 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-const capturedImgProps: Array<{
-  src?: string
-  alt?: string
-  animate?: unknown
-  [key: string]: unknown
-}> = []
-
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    img: ({ src, alt, ...props }: any) => {
-      capturedImgProps.push({ src, alt, ...props })
-      return <img src={src} alt={alt} {...props} />
-    },
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}))
+import {
+  capturedMotionImgProps,
+  loadComponent,
+  resetCapturedMotionImgProps,
+} from '../../../../test/mocks/framerMotion'
 
 const useJudgeEntranceMock = vi.fn()
 const useJudgeSpeechMock = vi.fn()
@@ -33,9 +20,7 @@ vi.mock('../../../../shared/hooks/useJudgeAvatarState', () => ({
   useJudgeAvatarState: (...args: unknown[]) => useJudgeAvatarStateMock(...args),
 }))
 
-const loadJudgeAvatars = async () => {
-  return import('../JudgeAvatars')
-}
+const loadJudgeAvatars = () => loadComponent(() => import('../JudgeAvatars'))
 
 function setupJudgeAvatarsMocks() {
   useJudgeEntranceMock.mockReturnValue({
@@ -70,7 +55,7 @@ function setupJudgeAvatarsMocks() {
 
 describe('JudgeAvatars Refactor', () => {
   beforeEach(() => {
-    capturedImgProps.length = 0
+    resetCapturedMotionImgProps()
     vi.clearAllMocks()
     setupJudgeAvatarsMocks()
   })
@@ -79,8 +64,8 @@ describe('JudgeAvatars Refactor', () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
 
-    expect(capturedImgProps.length).toBe(3)
-    const nakao = capturedImgProps.find((item) => item.alt === '中尾彬風審査員')
+    expect(capturedMotionImgProps.length).toBe(3)
+    const nakao = capturedMotionImgProps.find((item) => item.alt === '中尾彬風審査員')
     expect(nakao).toBeDefined()
     expect(nakao?.animate).toEqual({ opacity: 1 })
   })

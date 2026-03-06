@@ -4,6 +4,7 @@ import App from '../../../../App'
 import { useRankings } from '../../../../shared/hooks/useRankings'
 import { ApiClientError, api } from '../../../../shared/services/api'
 import type { Post } from '../../../../shared/types/domain'
+import { fillAndSubmitPostForm } from '../../../../test/helpers'
 import { ResultModal } from '../ResultModal'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
@@ -87,15 +88,7 @@ async function moveToResultScreen(postResponse: {
 
   render(<App />)
 
-  fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-  await waitFor(() => screen.getByRole('dialog'))
-  fireEvent.change(screen.getByLabelText('ニックネーム'), {
-    target: { value: '結果太郎' },
-  })
-  fireEvent.change(screen.getByLabelText('あるある'), {
-    target: { value: '結果表示テスト本文です' },
-  })
-  fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+  await fillAndSubmitPostForm({ nickname: '結果太郎', body: '結果表示テスト本文です' })
 
   await waitFor(() => {
     expect(screen.getByRole('heading', { name: '審査結果' })).toBeInTheDocument()
@@ -253,15 +246,7 @@ describe('E15-01 RED: ResultModal Component', () => {
     )
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: '読込太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: '読込テスト本文です' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: '読込太郎', body: '読込テスト本文です' })
 
     await waitFor(() => {
       expect(screen.getByText('AI審査員が採点中...')).toBeInTheDocument()

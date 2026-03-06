@@ -1,16 +1,8 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import { loadComponent } from '../../../../test/mocks/framerMotion'
 
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}))
-
-const loadJudgeSpeechBubble = async () => {
-  return import('../JudgeSpeechBubble')
-}
+const loadJudgeSpeechBubble = () => loadComponent(() => import('../JudgeSpeechBubble'))
 
 describe('E24-05 RED: JudgeSpeechBubble', () => {
   it('吹き出しが表示される', async () => {
@@ -74,11 +66,9 @@ describe('E24-05 RED: JudgeSpeechBubble', () => {
     // 何を検証するか: 各審査員の位置に合わせて吹き出しが表示されること
     const { JudgeSpeechBubble } = await loadJudgeSpeechBubble()
 
-    const { container } = render(
-      <JudgeSpeechBubble isVisible={true} text="テスト" judgeType="dewi" />
-    )
+    render(<JudgeSpeechBubble isVisible={true} text="テスト" judgeType="dewi" />)
 
-    const bubbleContainer = container.firstChild
-    expect(bubbleContainer).toHaveClass('justify-center')
+    const dewiContainer = screen.getByRole('status').parentElement
+    expect(dewiContainer).toHaveClass('justify-center')
   })
 })

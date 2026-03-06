@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import App from '../../../App'
+import { openPostDialog } from '../../../test/helpers'
 
 describe('E12-01 RED: TopPage レイアウト', () => {
   it('トップ画面に主要セクション・投稿ボタンが表示される', () => {
@@ -16,8 +17,7 @@ describe('E12-01 RED: TopPage レイアウト', () => {
   it('投稿するボタン押下で投稿フォームの必須入力UIを表示する', async () => {
     // 何を検証するか: 投稿するボタン押下でニックネーム・本文・投稿ボタンが表示されること
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
+    await openPostDialog()
 
     expect(screen.getByLabelText('ニックネーム')).toBeInTheDocument()
     expect(screen.getByLabelText('あるある')).toBeInTheDocument()

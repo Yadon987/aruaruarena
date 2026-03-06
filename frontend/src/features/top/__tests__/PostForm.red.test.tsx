@@ -2,6 +2,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
+import {
+  fillAndSubmitPostForm,
+  fillPostForm,
+  openPostDialog,
+  submitPostForm,
+} from '../../../test/helpers'
 
 vi.mock('../../../shared/services/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../shared/services/api')>()
@@ -21,6 +27,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    window.history.replaceState({}, '', '/')
   })
 
   it('有効入力で投稿APIを1回呼び、成功時に審査中画面へ遷移する', async () => {
@@ -31,16 +38,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     })
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: 'てすと太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: 'あるあるネタです' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: 'てすと太郎', body: 'あるあるネタです' })
 
     await waitFor(() => {
       expect(api.posts.create).toHaveBeenCalledTimes(1)
@@ -71,16 +69,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: 'てすと太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: 'あるあるネタです' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: 'てすと太郎', body: 'あるあるネタです' })
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -92,13 +81,9 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     // 何を検証するか: 必須入力バリデーションで未入力を拒否すること
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: 'あるあるネタです' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await openPostDialog()
+    fillPostForm({ nickname: '', body: 'あるあるネタです' })
+    await submitPostForm()
 
     expect(api.posts.create).not.toHaveBeenCalled()
     expect(screen.getByText('ニックネームと本文を正しく入力してください。')).toBeInTheDocument()
@@ -108,16 +93,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     // 何を検証するか: 本文の最小文字数3文字制約を満たすこと
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: 'てすと太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: '短い' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: 'てすと太郎', body: '短い' })
 
     expect(api.posts.create).not.toHaveBeenCalled()
     expect(screen.getByText('ニックネームと本文を正しく入力してください。')).toBeInTheDocument()
@@ -127,16 +103,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     // 何を検証するか: 空白のみニックネーム入力時に送信を拒否すること
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: '   ' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: 'あるあるネタです' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: '   ', body: 'あるあるネタです' })
 
     expect(api.posts.create).not.toHaveBeenCalled()
     expect(screen.getByText('ニックネームと本文を正しく入力してください。')).toBeInTheDocument()
@@ -146,16 +113,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     // 何を検証するか: 空白のみ本文入力時に送信を拒否すること
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: 'てすと太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: '   ' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await fillAndSubmitPostForm({ nickname: 'てすと太郎', body: '   ' })
 
     expect(api.posts.create).not.toHaveBeenCalled()
     expect(screen.getByText('ニックネームと本文を正しく入力してください。')).toBeInTheDocument()
@@ -170,16 +128,9 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     vi.mocked(api.posts.create).mockReturnValueOnce(pendingRequest)
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
-    await waitFor(() => screen.getByRole('dialog'))
-
-    fireEvent.change(screen.getByLabelText('ニックネーム'), {
-      target: { value: 'てすと太郎' },
-    })
-    fireEvent.change(screen.getByLabelText('あるある'), {
-      target: { value: '二重送信テストです' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await openPostDialog()
+    fillPostForm({ nickname: 'てすと太郎', body: '二重送信テストです' })
+    await submitPostForm()
     fireEvent.click(screen.getByRole('button', { name: '投稿中...' }))
 
     expect(api.posts.create).toHaveBeenCalledTimes(1)
