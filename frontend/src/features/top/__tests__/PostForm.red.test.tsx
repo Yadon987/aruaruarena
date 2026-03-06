@@ -82,7 +82,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
 
     await openPostDialog()
     fillPostForm({ nickname: '', body: 'あるあるネタです' })
-    submitPostForm()
+    await submitPostForm()
 
     expect(api.posts.create).not.toHaveBeenCalled()
     expect(screen.getByText('ニックネームと本文を正しく入力してください。')).toBeInTheDocument()
@@ -129,7 +129,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
 
     await openPostDialog()
     fillPostForm({ nickname: 'てすと太郎', body: '二重送信テストです' })
-    submitPostForm()
+    await submitPostForm()
     fireEvent.click(screen.getByRole('button', { name: '投稿中...' }))
 
     expect(api.posts.create).toHaveBeenCalledTimes(1)

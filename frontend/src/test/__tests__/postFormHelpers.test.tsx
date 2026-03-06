@@ -27,6 +27,7 @@ describe('postFormHelpers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    window.history.replaceState({}, '', '/')
   })
 
   it('openPostDialogでダイアログを開く', async () => {
@@ -53,7 +54,7 @@ describe('postFormHelpers', () => {
 
     await openPostDialog()
     fillPostForm({ nickname: 'テスト太郎', body: 'テスト本文です' })
-    submitPostForm()
+    await submitPostForm()
 
     await screen.findByTestId('judging-screen')
     expect(api.posts.create).toHaveBeenCalledTimes(1)

@@ -5,6 +5,10 @@ export interface PostFormOptions {
   body: string
 }
 
+export interface SubmitPostFormOptions {
+  waitForSubmit?: () => Promise<unknown>
+}
+
 export async function openPostDialog(): Promise<HTMLElement> {
   fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
   return screen.findByRole('dialog')
@@ -20,12 +24,16 @@ export function fillPostForm(options: PostFormOptions): void {
   })
 }
 
-export function submitPostForm(): void {
+export async function submitPostForm(options: SubmitPostFormOptions = {}): Promise<void> {
   fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+  await options.waitForSubmit?.()
 }
 
-export async function fillAndSubmitPostForm(options: PostFormOptions): Promise<void> {
+export async function fillAndSubmitPostForm(
+  options: PostFormOptions,
+  submitOptions: SubmitPostFormOptions = {}
+): Promise<void> {
   await openPostDialog()
   fillPostForm(options)
-  submitPostForm()
+  await submitPostForm(submitOptions)
 }

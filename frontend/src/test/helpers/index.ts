@@ -4,4 +4,5 @@ export {
   openPostDialog,
   submitPostForm,
   type PostFormOptions,
+  type SubmitPostFormOptions,
 } from './postFormHelpers'
