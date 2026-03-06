@@ -43,7 +43,7 @@ module JsonParserConcern
   end
 
   # commentを検証・サニタイズして切り詰める
-  # 不正な文字（ダブルクォート、改行、中括弧）を削除
+  # 不正な文字（ダブルクォート、改行、タブ、バックスラッシュ、中括弧）を削除
   def truncate_comment(comment, max_length: 30)
     return nil if comment.nil?
 
@@ -57,9 +57,7 @@ module JsonParserConcern
     return if comment.nil?
 
     comment.to_s.strip
-      .gsub('"', '')     # ダブルクォートを削除
-      .gsub("\n", '')     # 改行を削除
-      .gsub(/[{}]/, '')   # 中括弧を削除
+      .gsub(/["\r\n\t\\{}]/, '') # 不正文字を削除
   end
 
   private
