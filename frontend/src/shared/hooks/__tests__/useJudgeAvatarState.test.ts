@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AVATAR_ANIMATION } from '../../constants/avatar'
+import type { JudgePersona } from '../../types/domain'
 
 const useReducedMotionMock = vi.fn(() => false)
 
@@ -50,7 +51,7 @@ describe('useJudgeAvatarState', () => {
           isPostModalOpen: false,
           speakingJudge,
         }),
-      { initialProps: { speakingJudge: 'dewi' as const } }
+      { initialProps: { speakingJudge: 'dewi' as JudgePersona } }
     )
 
     await act(async () => {
@@ -73,7 +74,7 @@ describe('useJudgeAvatarState', () => {
           isPostModalOpen: false,
           speakingJudge,
         }),
-      { initialProps: { speakingJudge: 'dewi' as const } }
+      { initialProps: { speakingJudge: 'dewi' as JudgePersona } }
     )
 
     await act(async () => {
@@ -81,7 +82,7 @@ describe('useJudgeAvatarState', () => {
     })
     expect(result.current.avatarStates.dewi).toBe('mouth_open')
 
-    rerender({ speakingJudge: 'hiroyuki' as const })
+    rerender({ speakingJudge: 'hiroyuki' as JudgePersona })
     expect(result.current.avatarStates.dewi).toBe('base')
   })
 
