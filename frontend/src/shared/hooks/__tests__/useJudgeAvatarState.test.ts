@@ -115,7 +115,7 @@ describe('useJudgeAvatarState', () => {
       useJudgeAvatarState({
         isJudging: true,
         isPostModalOpen: false,
-        speakingJudge: 'hiroyuki' as JudgePersona,
+        speakingJudge: 'hiroyuki',
       })
     )
 
