@@ -41,18 +41,28 @@ const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間�
 const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
 const MESSAGE_JUDGING_FETCH_FAILED =
   '投稿情報の取得に失敗しました。トップへ戻って再度お試しください。'
+const MESSAGE_JUDGING_NETWORK_ERROR = 'ネットワークに接続できませんでした'
+const MESSAGE_JUDGING_TIMEOUT_ERROR = '通信がタイムアウトしました'
+const MESSAGE_JUDGING_SERVER_ERROR = 'サーバーエラーが発生しました'
+const MESSAGE_JUDGING_CLIENT_ERROR = '投稿に失敗しました'
+const MESSAGE_JUDGING_UNKNOWN_ERROR = '投稿に失敗しました'
 const MESSAGE_JUDGING_LOADING = 'AI審査員が採点中...'
 const MESSAGE_JUDGING_BODY_FALLBACK = '投稿内容を読み込み中です'
 const MESSAGE_JUDGING_NICKNAME_FALLBACK = '名無し'
+const MESSAGE_INVALID_FORM_ERROR = 'ニックネームと本文を正しく入力してください。'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
 const ROOT_PATH = '/'
 const JUDGING_PATH_PREFIX = '/judging/'
+const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
+const SOUND_SE_SUBMIT = 'se_submit'
+const SOUND_SE_RETRY = 'se_retry'
+const SOUND_SE_RESULT_OPEN = 'se_result_open'
 
 type ValidationErrors = {
   nicknameError: string
@@ -76,7 +86,7 @@ function isUuidLike(value: string): boolean {
 }
 
 function readJudgingRoutePostId(pathname: string): string | null {
-  const matched = pathname.match(/^\/judging\/(.+)$/)
+  const matched = pathname.match(JUDGING_PATH_PATTERN)
   return matched?.[1] ?? null
 }
 
@@ -184,6 +194,25 @@ function resolveSubmitErrorMessage(error: unknown): string {
   return MESSAGE_DEFAULT_ERROR
 }
 
+function resolveJudgingSubmitErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    if (error.code === API_ERROR_CODE.NETWORK_ERROR) {
+      return MESSAGE_JUDGING_NETWORK_ERROR
+    }
+    if (error.code === API_ERROR_CODE.TIMEOUT || error.status === HTTP_STATUS.REQUEST_TIMEOUT) {
+      return MESSAGE_JUDGING_TIMEOUT_ERROR
+    }
+    if (SERVER_ERROR_STATUSES.includes(error.status)) {
+      return MESSAGE_JUDGING_SERVER_ERROR
+    }
+    if (error.status >= HTTP_STATUS.BAD_REQUEST && error.status < HTTP_STATUS.INTERNAL_SERVER_ERROR) {
+      return MESSAGE_JUDGING_CLIENT_ERROR
+    }
+  }
+
+  return MESSAGE_JUDGING_UNKNOWN_ERROR
+}
+
 function App() {
   const soundControllerRef = useRef<ReturnType<typeof createSoundController> | null>(null)
   useAvatarImages()
@@ -211,11 +240,15 @@ function App() {
   const [isRankingModalOpen, setIsRankingModalOpen] = useState(false)
   const [judgingPostId, setJudgingPostId] = useState('')
   const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
+  const [pendingFormData, setPendingFormData] = useState<{ nickname: string; body: string } | null>(
+    null
+  )
   const [isResultModalOpen, setIsResultModalOpen] = useState(false)
   const [activeResultPostId, setActiveResultPostId] = useState('')
   const [activeResultPost, setActiveResultPost] = useState<Post | null>(null)
   const [isResultPostLoading, setIsResultPostLoading] = useState(false)
   const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
+  const [isJudgingPollingReady, setIsJudgingPollingReady] = useState(false)
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
   const myPostDetailsRef = useRef<Record<string, Post>>({})
   const myPostsTriggerRef = useRef<HTMLButtonElement | null>(null)
@@ -349,7 +382,7 @@ function App() {
     void fetchResultPost(activeResultPostId, true)
   }, [activeResultPostId, fetchResultPost])
   const handlePlayRetrySound = useCallback(() => {
-    sound.playSe('se_retry')
+    sound.playSe(SOUND_SE_RETRY)
   }, [sound])
 
   const handleSoundToggle = useCallback(() => {
@@ -392,7 +425,7 @@ function App() {
 
   useEffect(() => {
     if (!previousResultModalOpenRef.current && isResultModalOpen) {
-      sound.playSe('se_result_open')
+      sound.playSe(SOUND_SE_RESULT_OPEN)
     }
     previousResultModalOpenRef.current = isResultModalOpen
   }, [isResultModalOpen, sound])
@@ -438,17 +471,67 @@ function App() {
     }
     if (pollingAbortControllerRef.current) {
       pollingAbortControllerRef.current.abort()
-      pollingAbortControllerRef.current = null
+    pollingAbortControllerRef.current = null
     }
     pollingStartedAtRef.current = 0
   }, [])
 
-  const enterJudgingMode = useCallback((postId: string, nickname?: string) => {
-    setJudgingPostId(postId)
-    setJudgingNickname(nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
-    setJudgingBody(MESSAGE_JUDGING_BODY_FALLBACK)
-    setJudgingErrorMessage('')
-    setViewMode('judging')
+  const enterJudgingMode = useCallback(
+    (postId: string, nickname?: string, body?: string, isPollingReady: boolean = true) => {
+      setJudgingPostId(postId)
+      setJudgingNickname(nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
+      setJudgingBody(body || MESSAGE_JUDGING_BODY_FALLBACK)
+      setJudgingErrorMessage('')
+      setViewMode('judging')
+      setIsJudgingPollingReady(isPollingReady)
+    },
+    []
+  )
+
+  const startJudgingSubmission = useCallback(
+    (temporaryPostId: string, nickname: string, body: string) => {
+      // API確定前に審査中画面へ先に遷移し、体感速度を落とさずフィードバックする。
+      setPendingFormData({ nickname, body })
+      sound.playSe(SOUND_SE_SUBMIT)
+      setIsPostModalOpen(false)
+      enterJudgingMode(temporaryPostId, nickname, body, false)
+      syncJudgingPath(temporaryPostId)
+    },
+    [enterJudgingMode, sound, syncJudgingPath]
+  )
+
+  const applyJudgingSubmitSuccess = useCallback(
+    (response: Post, optimisticNickname: string, optimisticBody: string) => {
+      // 正式IDへ差し替えた後、レスポンス状態に応じて画面遷移を確定する。
+      setPendingFormData(null)
+      savePostId(response.id)
+      syncMyPostIds()
+      setJudgingPostId(response.id)
+      syncJudgingPath(response.id)
+      setIsJudgingPollingReady(true)
+
+      if (response.status === 'failed') {
+        // failed応答は結果モーダルへ直接遷移し、ポーリングは中断する。
+        setSuccessMessage('')
+        setJudgingErrorMessage('')
+        openResultModal(response.id)
+        setIsJudgingPollingReady(false)
+        return
+      }
+
+      // 審査中/queued など成功側は、暫定情報を残して審査待ちへ進める。
+      setSuccessMessage(MESSAGE_SUCCESS)
+      enterJudgingMode(response.id, optimisticNickname, optimisticBody, true)
+    },
+    [openResultModal, savePostId, syncJudgingPath, syncMyPostIds, enterJudgingMode]
+  )
+
+  const applyJudgingSubmitFailure = useCallback((error: unknown) => {
+    // API失敗時は入力値を保持したまま、再投稿導線へ戻す。
+    console.error('Post creation failed:', error)
+    setJudgingErrorMessage(resolveJudgingSubmitErrorMessage(error))
+    setIsJudgingPollingReady(false)
+    setSuccessMessage('')
   }, [])
 
   const handleResultRejudgeSuccess = useCallback(
@@ -464,6 +547,7 @@ function App() {
   const exitJudgingWithResult = useCallback(
     (post: Post) => {
       clearJudgingPolling()
+      setIsJudgingPollingReady(false)
       syncTopPath()
       openResultModal(post.id, post)
     },
@@ -473,6 +557,7 @@ function App() {
   const exitJudgingWithError = useCallback(() => {
     clearJudgingPolling()
     setViewMode('top')
+    setIsJudgingPollingReady(false)
     setSuccessMessage('')
     setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
     syncTopPath()
@@ -502,7 +587,7 @@ function App() {
   }, [enterJudgingMode, syncTopPath])
 
   useEffect(() => {
-    if (viewMode !== 'judging' || !judgingPostId) return
+    if (viewMode !== 'judging' || !judgingPostId || !isJudgingPollingReady) return
 
     let isDisposed = false
 
@@ -562,55 +647,52 @@ function App() {
       isDisposed = true
       clearJudgingPolling()
     }
-  }, [viewMode, judgingPostId, clearJudgingPolling])
+  }, [viewMode, judgingPostId, isJudgingPollingReady, clearJudgingPolling])
 
-  const onSubmit = async ({ nickname, body }: { nickname: string; body: string }) => {
-    if (isSubmitting) return
+  const onSubmit = useCallback(
+    async ({ nickname, body }: { nickname: string; body: string }) => {
+      if (isSubmitting) return
 
-    const trimmedNickname = nickname.trim()
-    const trimmedBody = body.trim()
-    const { nicknameError: nextNicknameError, bodyError: nextBodyError } = validateForm(
-      trimmedNickname,
-      trimmedBody
-    )
+      const trimmedNickname = nickname.trim()
+      const trimmedBody = body.trim()
+      const { nicknameError: nextNicknameError, bodyError: nextBodyError } = validateForm(
+        trimmedNickname,
+        trimmedBody
+      )
 
-    setSubmitError('')
-    setSuccessMessage('')
-    setJudgingErrorMessage('')
+      setSubmitError('')
+      setSuccessMessage('')
+      setJudgingErrorMessage('')
 
-    if (nextNicknameError || nextBodyError) {
-      setSubmitError('ニックネームと本文を正しく入力してください。')
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const response = await api.posts.create({
-        nickname: trimmedNickname,
-        body: trimmedBody,
-      })
-      sound.playSe('se_submit')
-      savePostId(response.id)
-      syncMyPostIds()
-      setIsPostModalOpen(false)
-
-      // ステータスに応じた遷移
-      if (response.status === 'failed') {
-        setSuccessMessage('')
-        // キュー投入失敗時は直接結果モーダルを開く
-        openResultModal(response.id)
-      } else {
-        setSuccessMessage(MESSAGE_SUCCESS)
-        // 通常は審査中画面へ
-        enterJudgingMode(response.id, trimmedNickname)
-        syncJudgingPath(response.id)
+      if (nextNicknameError || nextBodyError) {
+        setSubmitError(MESSAGE_INVALID_FORM_ERROR)
+        setPendingFormData(null)
+        return
       }
-    } catch (error) {
-      setSubmitError(resolveSubmitErrorMessage(error))
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+
+      // 楽観的UI: API待機中にフォームを閉じ、審査中画面へ先行遷移する。
+      setIsSubmitting(true)
+      const temporaryPostId = crypto.randomUUID()
+      startJudgingSubmission(temporaryPostId, trimmedNickname, trimmedBody)
+      try {
+        const response = await api.posts.create({
+          nickname: trimmedNickname,
+          body: trimmedBody,
+        })
+        applyJudgingSubmitSuccess(response, trimmedNickname, trimmedBody)
+      } catch (error) {
+        applyJudgingSubmitFailure(error)
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [
+      applyJudgingSubmitFailure,
+      applyJudgingSubmitSuccess,
+      isSubmitting,
+      startJudgingSubmission,
+    ]
+  )
 
   const storeMyPostDetail = useCallback((postId: string, post: Post) => {
     setMyPostDetails((prev) => {
@@ -727,6 +809,16 @@ function App() {
     setIsRankingModalOpen(false)
   }
 
+  const retryPostSubmit = useCallback(() => {
+    // 再投稿は入力復元を前提に、トップの投稿モーダルへ復帰するだけの導線に限定する。
+    clearJudgingPolling()
+    setSuccessMessage('')
+    setSubmitError('')
+    setViewMode('top')
+    setIsPostModalOpen(true)
+    syncTopPath()
+  }, [clearJudgingPolling, syncTopPath])
+
   const handleRankingPostClick = (postId: string) => {
     openResultModal(postId)
   }
@@ -825,7 +917,14 @@ function App() {
           <h1 className="text-2xl font-bold text-cyan-100">あるあるアリーナ</h1>
           <div className="flex items-center gap-2">
             {viewMode === 'top' && (
-              <NeonButton ariaLabel="投稿する" onClick={() => setIsPostModalOpen(true)}>
+              <NeonButton
+                ariaLabel="投稿する"
+                onClick={() => {
+                  setPendingFormData(null)
+                  setSubmitError('')
+                  setIsPostModalOpen(true)
+                }}
+              >
                 投稿する
               </NeonButton>
             )}
@@ -856,6 +955,14 @@ function App() {
             <p className="mb-2">{judgingNickname}</p>
             <p className="mb-4">{judgingBody}</p>
             <p>{MESSAGE_JUDGING_LOADING}</p>
+            {judgingErrorMessage && (
+              <div className="mt-2 space-y-2">
+                <p className="text-red-500">{judgingErrorMessage}</p>
+                <NeonButton ariaLabel="再投稿する" onClick={retryPostSubmit}>
+                  再投稿する
+                </NeonButton>
+              </div>
+            )}
           </section>
         )}
 
@@ -867,10 +974,11 @@ function App() {
               onSubmit={onSubmit}
               isLoading={isSubmitting}
               error={submitError}
+              initialNickname={pendingFormData?.nickname ?? ''}
+              initialBody={pendingFormData?.body ?? ''}
             />
             <div className="mb-4">
               {successMessage && <p className="text-green-500">{successMessage}</p>}
-              {judgingErrorMessage && <p className="text-red-500">{judgingErrorMessage}</p>}
             </div>
 
             <div className="glass-panel relative z-10 rounded p-2">
