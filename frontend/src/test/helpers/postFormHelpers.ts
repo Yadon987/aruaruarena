@@ -24,6 +24,16 @@ export function fillPostForm(options: PostFormOptions): void {
   })
 }
 
+/**
+ * 投稿ボタンのクリックを実行する。
+ *
+ * `waitForSubmit` を指定しない場合、submitPostForm が待つのはクリック完了まで。
+ * 送信後の非同期UI変化まで待機したい場合は `waitForSubmit` を渡す。
+ * 例: `waitForSubmit: () => screen.findByTestId('judging-screen')`
+ *
+ * `fillAndSubmitPostForm` から利用する際も同様に、必要なら submitOptions 経由で
+ * waitForSubmit を渡して送信後の完了条件を明示する。
+ */
 export async function submitPostForm(options: SubmitPostFormOptions = {}): Promise<void> {
   fireEvent.click(screen.getByRole('button', { name: '投稿' }))
   await options.waitForSubmit?.()

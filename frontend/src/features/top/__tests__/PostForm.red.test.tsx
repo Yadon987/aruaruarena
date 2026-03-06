@@ -27,6 +27,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    window.history.replaceState({}, '', '/')
   })
 
   it('有効入力で投稿APIを1回呼び、成功時に審査中画面へ遷移する', async () => {
