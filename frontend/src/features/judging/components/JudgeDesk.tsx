@@ -1,8 +1,8 @@
 import type { JudgePersona } from '../../../shared/types/domain'
 
-type JudgeDeskPhase = 'entrance' | 'speaking' | 'scoring' | 'complete'
+export type JudgeDeskPhase = 'entrance' | 'speaking' | 'scoring' | 'complete'
 
-type JudgeDeskJudgment = {
+export type JudgeDeskJudgment = {
   judge?: JudgePersona
   persona?: JudgePersona
   score?: number
@@ -15,27 +15,37 @@ type JudgeDeskProps = {
   phase: JudgeDeskPhase
 }
 
-const ORDER: JudgePersona[] = ['nakao', 'hiroyuki', 'dewi']
+const JUDGE_DISPLAY_ORDER: readonly JudgePersona[] = ['nakao', 'hiroyuki', 'dewi']
+const SCORE_PLACEHOLDER = '---'
+const SCORE_NOT_AVAILABLE = 'N/A'
+const LIT_ON = 'true'
+const LIT_OFF = 'false'
 
 function resolveScoreLabel(judgment?: JudgeDeskJudgment): string {
-  if (!judgment) return '---'
-  if (judgment.success === false) return 'N/A'
+  if (!judgment) return SCORE_PLACEHOLDER
+  if (judgment.success === false) return SCORE_NOT_AVAILABLE
 
   const score = judgment.score ?? judgment.total_score
-  return typeof score === 'number' ? String(score) : '---'
+  return typeof score === 'number' ? String(score) : SCORE_PLACEHOLDER
 }
 
-export function JudgeDesk({ judgments, phase }: JudgeDeskProps) {
-  const byJudge = (judgments ?? []).reduce<Map<JudgePersona, JudgeDeskJudgment>>((map, judgment) => {
+function buildJudgmentMap(judgments: JudgeDeskJudgment[]): Map<JudgePersona, JudgeDeskJudgment> {
+  return judgments.reduce<Map<JudgePersona, JudgeDeskJudgment>>((map, judgment) => {
     const key = judgment.judge ?? judgment.persona
     if (key) map.set(key, judgment)
     return map
   }, new Map<JudgePersona, JudgeDeskJudgment>())
+}
+
+export function JudgeDesk({ judgments, phase }: JudgeDeskProps) {
+  const byJudge = buildJudgmentMap(judgments ?? [])
+  const litValue = phase === 'scoring' ? LIT_ON : LIT_OFF
 
   return (
     <div data-testid="judge-desk">
-      {ORDER.map((judge) => (
-        <div key={judge} data-testid="judge-desk-score" data-lit={phase === 'scoring' ? 'true' : 'false'}>
+      {/* 仕様上の表示順は左→中央→右（中尾→ひろゆき→デヴィ）で固定する */}
+      {JUDGE_DISPLAY_ORDER.map((judge) => (
+        <div key={judge} data-testid="judge-desk-score" data-lit={litValue}>
           {resolveScoreLabel(byJudge.get(judge))}
         </div>
       ))}

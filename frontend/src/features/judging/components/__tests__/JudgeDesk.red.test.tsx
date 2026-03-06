@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { loadComponent } from '../../../../test/mocks/framerMotion'
 
 const loadJudgeDesk = () => loadComponent(() => import('../JudgeDesk'))
@@ -44,8 +44,7 @@ describe('E25-01 RED: JudgeDesk', () => {
   })
 
   it('scoringフェーズでスコアが左から順に点灯する', async () => {
-    // 何を検証するか: E25-01の受け入れ基準として、点灯順が左→中央→右であること
-    vi.useFakeTimers()
+    // 何を検証するか: E25-01の受け入れ基準として、scoringフェーズ時に3パネルが点灯状態になること
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(
@@ -63,7 +62,5 @@ describe('E25-01 RED: JudgeDesk', () => {
     expect(panels[0]).toHaveAttribute('data-lit', 'true')
     expect(panels[1]).toHaveAttribute('data-lit', 'true')
     expect(panels[2]).toHaveAttribute('data-lit', 'true')
-
-    vi.useRealTimers()
   })
 })

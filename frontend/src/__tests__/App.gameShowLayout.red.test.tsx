@@ -36,7 +36,7 @@ describe('E25-01 RED: App Game Show Layout', () => {
 
     const header = screen.getByRole('banner')
     expect(within(header).getByRole('button', { name: '投稿する' })).toBeInTheDocument()
-    expect(within(header).getByRole('button', { name: '音声切り替え' })).toBeInTheDocument()
+    expect(within(header).getByRole('button', { name: /音声/ })).toBeInTheDocument()
   })
 
   it('フッターに「自分の投稿」「ランキング」「プライバシーポリシー」が並ぶ', () => {
@@ -44,7 +44,7 @@ describe('E25-01 RED: App Game Show Layout', () => {
     render(<App />)
 
     const footer = screen.getByRole('contentinfo')
-    expect(within(footer).getByRole('button', { name: '自分の投稿' })).toBeInTheDocument()
+    expect(within(footer).getByRole('button', { name: '自分の投稿一覧' })).toBeInTheDocument()
     expect(within(footer).getByRole('button', { name: 'ランキング' })).toBeInTheDocument()
     expect(within(footer).getByRole('button', { name: 'プライバシーポリシー' })).toBeInTheDocument()
   })

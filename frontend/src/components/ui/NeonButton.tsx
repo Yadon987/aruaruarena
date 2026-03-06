@@ -1,21 +1,19 @@
-import type { ReactNode } from 'react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
 type NeonButtonProps = {
   children: ReactNode
-  onClick?: () => void
   type?: 'button' | 'submit'
   variant?: 'primary' | 'secondary'
-  disabled?: boolean
   ariaLabel: string
-}
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'aria-label' | 'className'>
 
 export function NeonButton({
   children,
-  onClick,
   type = 'button',
   variant = 'primary',
   disabled = false,
   ariaLabel,
+  ...rest
 }: NeonButtonProps) {
   const variantClass = variant === 'secondary' ? 'neon-glow-pink' : 'neon-glow-blue'
 
@@ -23,9 +21,9 @@ export function NeonButton({
     <button
       type={type}
       aria-label={ariaLabel}
-      onClick={onClick}
       disabled={disabled}
       className={variantClass}
+      {...rest}
     >
       {children}
     </button>

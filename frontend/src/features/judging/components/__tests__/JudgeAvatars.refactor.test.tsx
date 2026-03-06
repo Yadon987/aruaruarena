@@ -84,4 +84,26 @@ describe('JudgeAvatars Refactor', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('...')
   })
+
+  it('scoringフェーズかつjudgmentsが空配列でもJudgeDeskを表示する', async () => {
+    const { JudgeAvatars } = await loadJudgeAvatars()
+    render(
+      <JudgeAvatars
+        isJudging={false}
+        isPostModalOpen={false}
+        judgingPhase="scoring"
+        judgments={[]}
+      />
+    )
+
+    expect(screen.getByTestId('judge-desk')).toBeInTheDocument()
+  })
+
+  it('judgingPhase未指定時でも既存の表示を維持する', async () => {
+    const { JudgeAvatars } = await loadJudgeAvatars()
+    render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
+
+    expect(screen.getByTestId('judge-avatars-container')).toBeInTheDocument()
+    expect(screen.queryByTestId('judge-desk')).not.toBeInTheDocument()
+  })
 })

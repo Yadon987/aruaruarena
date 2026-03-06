@@ -9,18 +9,14 @@ import { useJudgeEntrance } from '../../../shared/hooks/useJudgeEntrance'
 import { useJudgeSpeech } from '../../../shared/hooks/useJudgeSpeech'
 import type { JudgePersona, Judgment } from '../../../shared/types/domain'
 import { JudgeDesk } from './JudgeDesk'
+import type { JudgeDeskJudgment, JudgeDeskPhase } from './JudgeDesk'
 import { JudgeSpeechBubble } from './JudgeSpeechBubble'
 
 interface JudgeAvatarsProps {
   isJudging: boolean
   isPostModalOpen: boolean
-  judgments?: Array<
-    Partial<Judgment> & {
-      judge?: JudgePersona
-      score?: number
-    }
-  >
-  judgingPhase?: 'entrance' | 'speaking' | 'scoring' | 'complete'
+  judgments?: Array<Partial<Judgment> & JudgeDeskJudgment>
+  judgingPhase?: JudgeDeskPhase
 }
 
 /** 審査員設定（表示順: 中尾 -> ひろゆき -> デヴィ） */
@@ -83,6 +79,7 @@ export function JudgeAvatars({
 
   return (
     <>
+      {/* JudgeDesk側では配列前提で処理するため、未定義時は空配列に正規化して渡す */}
       {judgingPhase === 'scoring' && <JudgeDesk judgments={judgments ?? []} phase={judgingPhase} />}
       <ul
         data-testid="judge-avatars-container"

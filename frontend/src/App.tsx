@@ -871,9 +871,10 @@ function App() {
   const retryMyPostDetail = (postId: string) => {
     void fetchMyPostDetailForList(postId, true)
   }
-  const scrollToRankingSection = () => {
+  const scrollToRankingSection = useCallback(() => {
+    // ランキングボタンは同一画面内のランキング領域へ移動する導線として扱う。
     document.getElementById('ranking-section')?.scrollIntoView({ behavior: 'smooth' })
-  }
+  }, [])
   const isResultModalLoading = isResultPostLoading && !activeResultPost
   const judgingPhase: 'entrance' | 'speaking' | 'scoring' | 'complete' =
     viewMode === 'judging' ? 'speaking' : activeResultPost?.status === 'scored' ? 'scoring' : 'complete'
@@ -944,7 +945,7 @@ function App() {
                 onClick={openMyPosts}
                 onKeyDown={handleMyPostsTriggerKeyDown}
               >
-                自分の投稿
+                自分の投稿一覧
               </button>
               <button type="button" onClick={scrollToRankingSection}>
                 ランキング
