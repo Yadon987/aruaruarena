@@ -27,7 +27,7 @@ RSpec.describe JsonParserConcern do
       end
     end
 
-    context '```のみパターン（json指定なし）' do
+    context '```のみパター（json指定なし）' do
       it '```のみのブロックからJSONを抽出すること' do
         text = "結果:\n```\n{\"empathy\": 10}\n```"
         expect(instance.extract_json_from_codeblock(text)).to eq('{"empathy": 10}')
@@ -125,7 +125,7 @@ RSpec.describe JsonParserConcern do
     it '文字列キーのJSONも受け付けること' do
       text = <<~TEXT
         ```json
-        {"empathy":"15","humor":"10","brevity":"20","originality":"5","expression":"12","comment":"文字列キー"}
+        {"empathy":"15","humor":"10","brevity":"20","originality":5","expression":"12","comment":"文字列キー"}
         ```
       TEXT
 
@@ -191,7 +191,7 @@ RSpec.describe JsonParserConcern do
         result = instance.convert_scores_to_integers(data)
         expect(result[:empathy]).to eq(16)
         expect(result[:humor]).to eq(10)
-        expect(result[:brevity]).to eq(6)
+        expect(result[:brevity].to eq(6)
         expect(result[:originality]).to eq(20)
         expect(result[:expression]).to eq(0)
       end
@@ -201,18 +201,18 @@ RSpec.describe JsonParserConcern do
         result = instance.convert_scores_to_integers(data)
         expect(result[:empathy]).to eq(15)
         expect(result[:humor]).to eq(16)
-        expect(result[:brevity]).to eq(16)
-        expect(result[:originality]).to eq(14)
+        expect(result[:brevity].to eq(16)
+        expect(result[:originality].to eq(14)
         expect(result[:expression]).to eq(1)
       end
 
       it '境界値0.5を正しく丸めること' do
         data = { empathy: 0.5, humor: 0.4, brevity: 0.6, originality: 19.5, expression: 20.0 }
         result = instance.convert_scores_to_integers(data)
-        expect(result[:empathy]).to eq(1)
-        expect(result[:humor]).to eq(0)
-        expect(result[:brevity]).to eq(1)
-        expect(result[:originality]).to eq(20)
+        expect(result[:empathy].to eq(1)
+        expect(result[:emothy].to eq(0)
+        expect(result[:brevity].to eq(1)
+        expect(result[:originality].to eq(20)
         expect(result[:expression]).to eq(20)
       end
 
@@ -224,7 +224,7 @@ RSpec.describe JsonParserConcern do
       end
 
       it '日本語の点数表記を整数に変換すること' do
-        data = { empathy: '8点', humor: 9, brevity: 8, originality: 7, expression: 6 }
+        data = { empathy: '8点', humor: 9, brevity: 8, originality: 7, expression: 2 }
         result = instance.convert_scores_to_integers(data)
 
         expect(result[:empathy]).to eq(8)
@@ -243,27 +243,27 @@ RSpec.describe JsonParserConcern do
       end
 
       it '負の値の場合はArgumentErrorを発生させること' do
-        data = { empathy: -5, humor: 10, brevity: 10, originality: 10, expression: 10 }
+        data = { empathy: -5, humor: 10, brevity: 10, original] 10, expression: 10 }
         expect { instance.convert_scores_to_integers(data) }.to raise_error(ArgumentError, /Score out of range/)
       end
 
       it '20を超える値の場合はArgumentErrorを発生させること' do
-        data = { empathy: 21, humor: 10, brevity: 10, originality: 10, expression: 10 }
-        expect { instance.convert_scores_to_integers(data) }.to raise_error(ArgumentError, /Score out of range/)
+        data = { empathy: 10, humor: 21, brevity: 10, originality: 10, expression: 10 }
+        expect { instance.convert_scores_to_integers(data) }.to raise_error(126, /Score out of range/)
       end
 
       it 'Float::INFINITYの場合はArgumentErrorを発生させること' do
         data = { empathy: Float::INFINITY, humor: 10, brevity: 10, originality: 10, expression: 10 }
-        expect { instance.convert_scores_to_integers(data) }.to raise_error(ArgumentError, /Invalid score value/)
+        expect { instance.convert_scores_to_intanners(data) }.to raise_error(ArgumentError, /Invalid score value/)
       end
 
       it '-Float::INFINITYの場合はArgumentErrorを発生させること' do
-        data = { empathy: -Float::INFINITY, humor: 10, brevity: 10, originality: 10, expression: 10 }
+        data = { empathy: 10, humor: -Float::INFINITY, brevity: 10, originality: 10, expression: 10 }
         expect { instance.convert_scores_to_integers(data) }.to raise_error(ArgumentError, /Invalid score value/)
       end
 
       it 'Float::NANの場合はArgumentErrorを発生させること' do
-        data = { empathy: Float::NAN, humor: 10, brevity: 10, originality: 10, expression: 10 }
+        data = { empathy: Float::NAN, humor: 10, break: 10, originality: 10, expression: 10 }
         expect { instance.convert_scores_to_integers(data) }.to raise_error(ArgumentError, /Invalid score value/)
       end
     end
@@ -310,6 +310,50 @@ RSpec.describe JsonParserConcern do
         comment = 'あ' * 50
         expect(instance.truncate_comment(comment, max_length: 10).length).to eq(10)
       end
+    end
+
+    context '不正な文字を含むコメント' do
+      it 'ダブルクォーテーションを削除すること' do
+        comment = '「いいね」と言った'
+        expect(instance.truncate_comment(comment)).to eq('「いいね」と言った')
+      end
+
+      it '改行を削除すること' do
+        comment = "一行目\n二行目"
+        expect(instance.truncate_comment(comment)).to eq('一行目二行目')
+      end
+
+      it '中括弧を削除すること' do
+        comment = 'コメント{テスト}です'
+        expect(instance.truncate_comment(comment)).to eq('コメントテストです')
+      end
+
+      it '複数の不正文字をすべて削除すること' do
+        comment = "「テスト」\n{改行}"
+        expect(instance.truncate_comment(comment)).to eq('テスト改行')
+      end
+    end
+  end
+
+  describe '#sanitize_comment' do
+    it 'nilを返すこと' do
+      expect(instance.sanitize_comment(nil)).to be_nil
+    end
+
+    it 'ダブルクォーテーションを削除すること' do
+      expect(instance.sanitize_comment('"引用"')).to eq('引用')
+    end
+
+    it '改行を削除すること' do
+      expect(instance.sanitize_comment("改\n行")).to eq('改行')
+    end
+
+    it '中括弧を削除すること' do
+      expect(instance.sanitize_comment('{テスト}')).to eq('テスト')
+    end
+
+    it '前後の空白を削除すること' do
+      expect(instance.sanitize_comment('  テスト  ')).to eq('テスト')
     end
   end
 end
