@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadComponent } from '../../../../test/mocks/framerMotion'
 
@@ -117,5 +118,27 @@ describe('E24-04 RED: JudgeAvatars', () => {
     expect(screen.getByAltText('ひろゆき風審査員')).toBeInTheDocument()
     expect(screen.getByAltText('デヴィ夫人風審査員')).toBeInTheDocument()
     expect(screen.getByAltText('中尾彬風審査員')).toBeInTheDocument()
+  })
+
+  it('scoringフェーズでJudgeDeskが表示される', async () => {
+    // 何を検証するか: E25-01の受け入れ基準として、採点フェーズ時にデスクUIが統合表示されること
+    const { JudgeAvatars } = await loadJudgeAvatars()
+
+    render(
+      <JudgeAvatars
+        {...({
+          isJudging: true,
+          isPostModalOpen: false,
+          judgingPhase: 'scoring',
+          judgments: [
+            { judge: 'nakao', score: 88, success: true },
+            { judge: 'hiroyuki', score: 92, success: true },
+            { judge: 'dewi', score: 95, success: true },
+          ],
+        } as unknown as ComponentProps<typeof JudgeAvatars>)}
+      />
+    )
+
+    expect(screen.getByTestId('judge-desk')).toBeInTheDocument()
   })
 })
