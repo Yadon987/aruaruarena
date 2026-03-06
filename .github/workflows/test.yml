@@ -19,6 +19,10 @@ on:
       - 'backend/config/**'
       - 'backend/db/**'
       - 'backend/Gemfile*'
+      - 'frontend/src/**'
+      - 'frontend/tsconfig*'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
       - '.github/workflows/**'
   pull_request:
     branches: [main, dev]
@@ -29,6 +33,10 @@ on:
       - 'backend/config/**'
       - 'backend/db/**'
       - 'backend/Gemfile*'
+      - 'frontend/src/**'
+      - 'frontend/tsconfig*'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
       - '.github/workflows/**'
 
 # セッション中の以前の実行をキャンセル（同一ブランチ・ワークフローの場合）
@@ -281,21 +289,51 @@ jobs:
           check_name: Test Results (Ruby 3.2)
 
   # ==========================================================================
+  # フロントエンド型チェック
+  # ==========================================================================
+  frontend-typecheck:
+    name: Frontend Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+  # ==========================================================================
   # すべてのジョブ成功後に実行
   # ==========================================================================
   final-check:
     name: Final Status Check
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint, test, frontend-typecheck]
     if: always()
 
     steps:
       - name: Check all jobs status
         run: |
-          if [ "${{ needs.lint.result }}" != "success" ] || [ "${{ needs.test.result }}" != "success" ]; then
+          if [ "${{ needs.lint.result }}" != "success" ] || [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.frontend-typecheck.result }}" != "success" ]; then
             echo "❌ Some jobs failed"
             echo "Lint: ${{ needs.lint.result }}"
             echo "Test: ${{ needs.test.result }}"
+            echo "Frontend TypeCheck: ${{ needs.frontend-typecheck.result }}"
             exit 1
           fi
           echo "✅ All jobs passed successfully"

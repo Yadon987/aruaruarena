@@ -6,6 +6,8 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc && vite build",
+		"typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.node.json",
+		"typecheck:watch": "tsc --noEmit --watch",
 		"preview": "vite preview",
 		"lint": "eslint . --ext js,jsx,ts,tsx",
 		"lint:fix": "eslint . --ext js,jsx,ts,tsx --fix",
