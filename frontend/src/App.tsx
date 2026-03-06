@@ -4,6 +4,7 @@ import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState }
 import { BackgroundTitle } from './components/layout/BackgroundTitle'
 import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
+import { RankingModal } from './features/ranking'
 import { ResultModal } from './features/result'
 import { MyPostDetail } from './features/top/components/MyPostDetail'
 import { PostFormModal } from './features/top/components/PostFormModal'
@@ -12,12 +13,10 @@ import { SoundToggleButton } from './features/top/components/SoundToggleButton'
 import { createSoundController } from './hooks/useSound'
 import { queryClient } from './shared/config/queryClient'
 import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
-import { DEFAULT_RANKING_LIMIT, MAX_RANKING_LIMIT } from './shared/constants/query'
 import { queryKeys } from './shared/constants/queryKeys'
 import { useAvatarImages } from './shared/hooks/useAvatarImages'
-import { useRankings } from './shared/hooks/useRankings'
 import { ApiClientError, api } from './shared/services/api'
-import type { Post, RankingItem } from './shared/types/domain'
+import type { Post } from './shared/types/domain'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
@@ -54,12 +53,6 @@ const JUDGING_POLLING_TIMEOUT_MS = 60000
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
-
-const RANKING_ERROR_MESSAGES = {
-  rateLimited: 'アクセスが集中しています。しばらく待ってから再度お試しください。',
-  failed: '取得に失敗しました。時間をおいて再度お試しください。',
-  network: '通信状況を確認して再度お試しください。',
-} as const
 
 type ValidationErrors = {
   nicknameError: string
@@ -191,93 +184,6 @@ function resolveSubmitErrorMessage(error: unknown): string {
   return MESSAGE_DEFAULT_ERROR
 }
 
-/**
- * 表示件数は仕様上TOP20固定。
- * APIが多く返しても描画は20件までに制限する。
- */
-function buildDisplayRankings(rankings: RankingItem[] | undefined): RankingItem[] {
-  if (!Array.isArray(rankings)) {
-    return []
-  }
-
-  return rankings.slice(0, MAX_RANKING_LIMIT)
-}
-
-/**
- * ユーザー向け文言のみ返し、内部エラー詳細は画面に出さない。
- */
-function resolveRankingErrorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    if (error.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
-      return RANKING_ERROR_MESSAGES.rateLimited
-    }
-
-    if (error.status === 0) {
-      return RANKING_ERROR_MESSAGES.network
-    }
-  }
-
-  return RANKING_ERROR_MESSAGES.failed
-}
-
-function RankingSection({
-  myPostIds,
-  onSelectRankingPost,
-}: {
-  myPostIds: string[]
-  onSelectRankingPost: (postId: string) => void
-}) {
-  const { data, isLoading, isError, error } = useRankings(DEFAULT_RANKING_LIMIT, {
-    polling: true,
-  })
-  const displayRankings = buildDisplayRankings(data?.rankings)
-  const myPostIdSet = new Set(myPostIds)
-
-  return (
-    <section
-      id="ranking-section"
-      role="region"
-      aria-label="ランキング表示エリア"
-      className="mb-4 rounded border p-4"
-    >
-      <h2 className="mb-4 text-lg font-semibold">ランキング</h2>
-
-      {isLoading && <p>ランキングを読み込み中です...</p>}
-
-      {isError && <p>{resolveRankingErrorMessage(error)}</p>}
-
-      {!isLoading && !isError && displayRankings.length === 0 && <p>ランキングはまだありません</p>}
-
-      {!isLoading && !isError && displayRankings.length > 0 && (
-        <ol className="space-y-2">
-          {displayRankings.map((item) => {
-            const isMyPost = myPostIdSet.has(item.id)
-            return (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  data-testid="ranking-item"
-                  className={`w-full rounded border p-3 text-left ${isMyPost ? 'bg-yellow-100 border-l-4 border-l-red-500' : ''}`}
-                  onClick={() => onSelectRankingPost(item.id)}
-                >
-                  <p className="font-semibold">
-                    {item.rank}位 {item.nickname}
-                  </p>
-                  <p>{item.body}</p>
-                  <p className="text-sm text-gray-600">
-                    平均スコア: {item.average_score.toFixed(1)}
-                  </p>
-                  {isMyPost && <p className="text-sm font-bold">あなたの投稿</p>}
-                </button>
-              </li>
-            )
-          })}
-        </ol>
-      )}
-    </section>
-  )
-}
-
 function App() {
   const soundControllerRef = useRef<ReturnType<typeof createSoundController> | null>(null)
   useAvatarImages()
@@ -302,6 +208,7 @@ function App() {
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('top')
   const [isMuted, setIsMuted] = useState(() => sound.isMuted)
+  const [isRankingModalOpen, setIsRankingModalOpen] = useState(false)
   const [judgingPostId, setJudgingPostId] = useState('')
   const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
   const [isResultModalOpen, setIsResultModalOpen] = useState(false)
@@ -313,6 +220,7 @@ function App() {
   const myPostDetailsRef = useRef<Record<string, Post>>({})
   const myPostsTriggerRef = useRef<HTMLButtonElement | null>(null)
   const privacyPolicyTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const rankingTriggerRef = useRef<HTMLButtonElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
   const resultRequestSeqRef = useRef(0)
   const previousResultModalOpenRef = useRef(false)
@@ -507,6 +415,15 @@ function App() {
       document.body.style.overflow = previousOverflow
     }
   }, [isPrivacyPolicyOpen])
+
+  useEffect(() => {
+    if (!isRankingModalOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isRankingModalOpen])
 
   useEffect(() => {
     return () => {
@@ -767,6 +684,7 @@ function App() {
     syncMyPostIds()
     setMyPostsError('')
     setIsPrivacyPolicyOpen(false)
+    setIsRankingModalOpen(false)
     setIsMyPostsOpen(true)
     resetMyPostsModalState()
   }
@@ -789,12 +707,24 @@ function App() {
 
   const openPrivacyPolicy = () => {
     setIsMyPostsOpen(false)
+    setIsRankingModalOpen(false)
     resetMyPostsModalState()
     setIsPrivacyPolicyOpen(true)
   }
 
   const closePrivacyPolicy = () => {
     setIsPrivacyPolicyOpen(false)
+  }
+
+  const openRankingModal = () => {
+    setIsMyPostsOpen(false)
+    setIsPrivacyPolicyOpen(false)
+    resetMyPostsModalState()
+    setIsRankingModalOpen(true)
+  }
+
+  const closeRankingModal = () => {
+    setIsRankingModalOpen(false)
   }
 
   const handleRankingPostClick = (postId: string) => {
@@ -871,13 +801,13 @@ function App() {
   const retryMyPostDetail = (postId: string) => {
     void fetchMyPostDetailForList(postId, true)
   }
-  const scrollToRankingSection = useCallback(() => {
-    // ランキングボタンは同一画面内のランキング領域へ移動する導線として扱う。
-    document.getElementById('ranking-section')?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
   const isResultModalLoading = isResultPostLoading && !activeResultPost
   const judgingPhase: 'entrance' | 'speaking' | 'scoring' | 'complete' =
-    viewMode === 'judging' ? 'speaking' : activeResultPost?.status === 'scored' ? 'scoring' : 'complete'
+    viewMode === 'judging'
+      ? 'speaking'
+      : activeResultPost?.status === 'scored'
+        ? 'scoring'
+        : 'complete'
 
   useEffect(() => {
     if (!isMyPostsOpen) return
@@ -886,17 +816,24 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="p-6">
+      <div
+        className="game-show-stage relative min-h-screen overflow-hidden p-6"
+        style={{ isolation: 'isolate' }}
+      >
         <BackgroundTitle />
-        <header role="banner" className="mb-4">
-          <h1 className="text-2xl font-bold">あるあるアリーナ</h1>
+        <header role="banner" className="relative z-10 mb-6 flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-bold text-cyan-100">あるあるアリーナ</h1>
           <div className="flex items-center gap-2">
             {viewMode === 'top' && (
               <NeonButton ariaLabel="投稿する" onClick={() => setIsPostModalOpen(true)}>
                 投稿する
               </NeonButton>
             )}
-            <SoundToggleButton isMuted={isMuted} onToggle={handleSoundToggle} />
+            <SoundToggleButton
+              isMuted={isMuted}
+              onToggle={handleSoundToggle}
+              className="neon-button-base neon-glow-pink"
+            />
           </div>
         </header>
         <div className="mb-4">
@@ -913,7 +850,7 @@ function App() {
             data-testid="judging-screen"
             aria-label="審査中"
             aria-live="polite"
-            className="mb-4 rounded border p-4"
+            className="glass-panel relative z-10 mb-4 rounded p-4"
           >
             <h2 className="mb-2 text-lg font-semibold">審査中</h2>
             <p className="mb-2">{judgingNickname}</p>
@@ -936,23 +873,42 @@ function App() {
               {judgingErrorMessage && <p className="text-red-500">{judgingErrorMessage}</p>}
             </div>
 
-            <RankingSection myPostIds={myPostIds} onSelectRankingPost={handleRankingPostClick} />
+            <div className="glass-panel relative z-10 rounded p-2">
+              <p className="text-sm text-cyan-100">ランキングは「ランキング」ボタンから確認できます</p>
+            </div>
 
-            <footer role="contentinfo">
-              <button
+            <footer
+              role="contentinfo"
+              className="mt-6 flex flex-wrap items-center justify-center gap-3"
+            >
+              <NeonButton
                 ref={myPostsTriggerRef}
                 type="button"
+                variant="primary"
+                ariaLabel="自分の投稿一覧"
                 onClick={openMyPosts}
                 onKeyDown={handleMyPostsTriggerKeyDown}
               >
                 自分の投稿一覧
-              </button>
-              <button type="button" onClick={scrollToRankingSection}>
+              </NeonButton>
+              <NeonButton
+                type="button"
+                variant="secondary"
+                ariaLabel="ランキング"
+                ref={rankingTriggerRef}
+                onClick={openRankingModal}
+              >
                 ランキング
-              </button>
-              <button ref={privacyPolicyTriggerRef} type="button" onClick={openPrivacyPolicy}>
+              </NeonButton>
+              <NeonButton
+                ref={privacyPolicyTriggerRef}
+                type="button"
+                variant="secondary"
+                ariaLabel="プライバシーポリシー"
+                onClick={openPrivacyPolicy}
+              >
                 プライバシーポリシー
-              </button>
+              </NeonButton>
             </footer>
           </>
         )}
@@ -1028,6 +984,15 @@ function App() {
           isOpen={viewMode === 'top' && isPrivacyPolicyOpen}
           onClose={closePrivacyPolicy}
           triggerRef={privacyPolicyTriggerRef}
+        />
+
+        <RankingModal
+          isOpen={viewMode === 'top' && isRankingModalOpen}
+          onClose={closeRankingModal}
+          triggerRef={rankingTriggerRef}
+          myPostIds={myPostIds}
+          polling={isRankingModalOpen}
+          onSelectRankingPost={handleRankingPostClick}
         />
 
         <ResultModal
