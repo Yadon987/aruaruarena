@@ -70,7 +70,7 @@ describe('RankingSection RED', () => {
     const onSelectRankingPost = vi.fn()
     render(<RankingSection myPostIds={[]} onSelectRankingPost={onSelectRankingPost} />)
 
-    fireEvent.click(screen.getByRole('button', { name: '1位 user-1' }))
+    fireEvent.click(screen.getByRole('button', { name: /^1位 user-1/ }))
 
     expect(onSelectRankingPost).toHaveBeenCalledWith('id-1')
   })
@@ -78,7 +78,7 @@ describe('RankingSection RED', () => {
   it('自分の投稿をハイライト表示する', () => {
     render(<RankingSection myPostIds={['id-3']} onSelectRankingPost={vi.fn()} />)
 
-    const myPostItem = screen.getByRole('button', { name: '3位 user-3' })
+    const myPostItem = screen.getByRole('button', { name: /^3位 user-3/ })
     expect(myPostItem).toHaveClass('bg-yellow-100')
     expect(screen.getByText('あなたの投稿')).toBeInTheDocument()
   })

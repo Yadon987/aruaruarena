@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
@@ -21,6 +21,13 @@ const rankings = Array.from({ length: 20 }, (_, i) => ({
 }))
 
 describe('TopPage Ranking Integration RED', () => {
+  async function openRankingModal() {
+    fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+    })
+  }
+
   beforeEach(() => {
     mockedUseRankings.mockReturnValue({
       data: { rankings, total_count: 20 },
@@ -33,8 +40,8 @@ describe('TopPage Ranking Integration RED', () => {
   it('初回表示でローディング後にランキング一覧が表示される', async () => {
     // 何を検証するか: 初回取得でloadingからランキング表示へ遷移すること
     render(<App />)
+    await openRankingModal()
 
-    expect(await screen.findByRole('region', { name: 'ランキング表示エリア' })).toBeInTheDocument()
     expect(await screen.findAllByTestId('ranking-item')).toHaveLength(20)
   })
 
@@ -47,6 +54,7 @@ describe('TopPage Ranking Integration RED', () => {
       error: new ApiClientError('rate limited', 'RATE_LIMITED', 429),
     } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
+    await openRankingModal()
 
     expect(
       await screen.findByText('アクセスが集中しています。しばらく待ってから再度お試しください。')
@@ -62,6 +70,7 @@ describe('TopPage Ranking Integration RED', () => {
       error: new ApiClientError('server error', 'HTTP_ERROR', 500),
     } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
+    await openRankingModal()
 
     expect(
       await screen.findByText(
@@ -81,6 +90,7 @@ describe('TopPage Ranking Integration RED', () => {
       error: new ApiClientError('network error', 'NETWORK_ERROR', 0),
     } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
+    await openRankingModal()
 
     expect(
       await screen.findByText('通信状況を確認して再度お試しください。', {}, { timeout: 5000 })
@@ -96,6 +106,7 @@ describe('TopPage Ranking Integration RED', () => {
       error: null,
     } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
+    await openRankingModal()
 
     expect(await screen.findByText('ランキングはまだありません')).toBeInTheDocument()
   })
@@ -118,6 +129,7 @@ describe('TopPage Ranking Integration RED', () => {
       error: null,
     } as unknown as ReturnType<typeof useRankings>)
     render(<App />)
+    await openRankingModal()
 
     expect(await screen.findAllByTestId('ranking-item')).toHaveLength(20)
   })

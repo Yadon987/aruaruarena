@@ -138,13 +138,12 @@ describe('RankingModal RED', () => {
     const dialog = screen.getByRole('dialog', { name: 'ランキング' })
     const closeButton = screen.getByRole('button', { name: '閉じる' })
 
-    const firstItem = screen.getByRole('button', { name: '1位 user-1' })
-
     closeButton.focus()
     fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true })
-    expect(screen.getByRole('button', { name: '20位 user-20' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /^20位 user-20/ })).toHaveFocus()
 
-    firstItem.focus()
+    const lastItem = screen.getByRole('button', { name: /^20位 user-20/ })
+    lastItem.focus()
     fireEvent.keyDown(dialog, { key: 'Tab' })
     expect(closeButton).toHaveFocus()
   })
@@ -161,6 +160,6 @@ describe('RankingModal RED', () => {
     )
 
     expect(screen.getByRole('region', { name: 'ランキング表示エリア' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '1位 user-1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^1位 user-1/ })).toBeInTheDocument()
   })
 })

@@ -12,6 +12,14 @@ vi.mock('../../../shared/hooks/useRankings', () => ({
   useRankings: vi.fn(),
 }))
 
+async function openRankingResultFromTopRanking() {
+  fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
+  await waitFor(() => {
+    expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+  })
+  fireEvent.click(screen.getByTestId('ranking-item'))
+}
+
 describe('E15-01 RED: ResultModal Flow', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -37,7 +45,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     // 何を検証するか: ランキングクリックを起点に審査結果モーダルが表示されること
     render(<App />)
 
-    fireEvent.click(screen.getByTestId('ranking-item'))
+    await openRankingResultFromTopRanking()
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -176,7 +184,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByTestId('ranking-item'))
+    await openRankingResultFromTopRanking()
     fireEvent.click(await screen.findByRole('button', { name: '再試行' }))
 
     await waitFor(() => {
@@ -216,7 +224,7 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByTestId('ranking-item'))
+    await openRankingResultFromTopRanking()
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -240,7 +248,7 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByTestId('ranking-item'))
+    await openRankingResultFromTopRanking()
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -264,7 +272,7 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByTestId('ranking-item'))
+    await openRankingResultFromTopRanking()
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -288,7 +296,7 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     })
 
     render(<App />)
-    fireEvent.click(screen.getByTestId('ranking-item'))
+    await openRankingResultFromTopRanking()
 
     const rejudgeButton = await screen.findByRole('button', {
       name: '再審査する',
@@ -316,7 +324,7 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     })
 
     render(<App />)
-    fireEvent.click(screen.getByTestId('ranking-item'))
+    await openRankingResultFromTopRanking()
     const shareButton = await screen.findByRole('button', {
       name: 'Xでシェア',
     })
@@ -345,7 +353,7 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     vi.spyOn(api.posts, 'rejudge').mockRejectedValue(new Error('rejudge failed'))
 
     render(<App />)
-    fireEvent.click(screen.getByTestId('ranking-item'))
+    await openRankingResultFromTopRanking()
 
     const rejudgeButton = await screen.findByRole('button', {
       name: '再審査する',

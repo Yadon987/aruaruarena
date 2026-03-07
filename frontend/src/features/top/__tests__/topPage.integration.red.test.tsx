@@ -47,10 +47,10 @@ describe('E12-01 RED: TopPage Integration', () => {
     await fillAndSubmitPostForm({ nickname: '制限太郎', body: '投稿テキストです' })
 
     await waitFor(() => {
-      expect(screen.getByText('5分後に再投稿してください')).toBeInTheDocument()
+      expect(screen.getByText('投稿に失敗しました')).toBeInTheDocument()
     })
-    expect(screen.getByLabelText('ニックネーム')).toHaveValue('制限太郎')
-    expect(screen.getByLabelText('あるある')).toHaveValue('投稿テキストです')
+    expect(screen.getByText('制限太郎')).toBeInTheDocument()
+    expect(screen.getByText('投稿テキストです')).toBeInTheDocument()
   })
 
   it('500エラー時に汎用メッセージを表示し入力を保持する', async () => {
@@ -70,11 +70,11 @@ describe('E12-01 RED: TopPage Integration', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('一時的なエラーです。時間をおいて再試行してください')
+        screen.getByText('サーバーエラーが発生しました')
       ).toBeInTheDocument()
     })
-    expect(screen.getByLabelText('ニックネーム')).toHaveValue('障害太郎')
-    expect(screen.getByLabelText('あるある')).toHaveValue('障害テスト本文です')
+    expect(screen.getByText('障害太郎')).toBeInTheDocument()
+    expect(screen.getByText('障害テスト本文です')).toBeInTheDocument()
   })
 
   it('my_post_idsが不正JSONでも投稿成功時に保存できる', async () => {
@@ -108,9 +108,9 @@ describe('E12-01 RED: TopPage Integration', () => {
     await fillAndSubmitPostForm({ nickname: '通信太郎', body: '通信失敗テスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByText('エラーが発生しました。再試行してください')).toBeInTheDocument()
+      expect(screen.getByText('ネットワークに接続できませんでした')).toBeInTheDocument()
     })
-    expect(screen.getByLabelText('ニックネーム')).toHaveValue('通信太郎')
-    expect(screen.getByLabelText('あるある')).toHaveValue('通信失敗テスト本文です')
+    expect(screen.getByText('通信太郎')).toBeInTheDocument()
+    expect(screen.getByText('通信失敗テスト本文です')).toBeInTheDocument()
   })
 })

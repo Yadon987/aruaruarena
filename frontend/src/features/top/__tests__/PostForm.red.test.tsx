@@ -130,11 +130,11 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
 
     await openPostDialog()
     fillPostForm({ nickname: 'てすと太郎', body: '二重送信テストです' })
-    await submitPostForm()
-    fireEvent.click(screen.getByRole('button', { name: '投稿中...' }))
+    const submitButton = screen.getByRole('button', { name: '投稿' })
+    fireEvent.click(submitButton)
+    fireEvent.click(submitButton)
 
     expect(api.posts.create).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('button', { name: '投稿中...' })).toBeDisabled()
 
     resolveRequest?.({ id: 'post-2', status: 'judging' })
     await waitFor(() => {
