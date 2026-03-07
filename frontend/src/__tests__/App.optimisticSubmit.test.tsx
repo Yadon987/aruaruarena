@@ -1,9 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiClientError } from '../shared/services/api'
 import App from '../App'
+import { ApiClientError, api } from '../shared/services/api'
 import { fillPostForm, openPostDialog, submitPostForm } from '../test/helpers'
-import { api } from '../shared/services/api'
 
 type AudioDebugEvent =
   | { type: 'bgm'; scene: 'top' | 'judging' | 'success' | 'failed' }
@@ -28,11 +27,8 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
   })
 
   it('API通信完了前に投稿モーダルが閉じて審査中画面へ遷移する', async () => {
-    vi.spyOn(api.posts, 'create').mockImplementation(
-      () => new Promise(() => {})
-    )
-    vi.spyOn(api.posts, 'get').mockImplementation(() => new Promise(() => {})
-    )
+    vi.spyOn(api.posts, 'create').mockImplementation(() => new Promise(() => {}))
+    vi.spyOn(api.posts, 'get').mockImplementation(() => new Promise(() => {}))
     localStorage.setItem('aruaru_sound_muted', 'false')
 
     render(<App />)
@@ -52,9 +48,7 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
 
   it('暫定postIdで審査中へ入り、成功時に正式postIdへ置き換える', async () => {
     const tempPostId = '11111111-1111-4111-8111-111111111111'
-    const pushStateSpy = vi
-      .spyOn(window.history, 'pushState')
-      .mockImplementation(() => {})
+    const pushStateSpy = vi.spyOn(window.history, 'pushState').mockImplementation(() => {})
     vi.spyOn(crypto, 'randomUUID').mockReturnValue(tempPostId)
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'official-post-id',
@@ -86,8 +80,7 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
     vi.spyOn(api.posts, 'create').mockRejectedValue(
       new ApiClientError('Network error', 'NETWORK_ERROR', 0)
     )
-    vi.spyOn(api.posts, 'get').mockImplementation(() => new Promise(() => {})
-    )
+    vi.spyOn(api.posts, 'get').mockImplementation(() => new Promise(() => {}))
 
     render(<App />)
     await openPostDialog()
