@@ -54,10 +54,10 @@ module JsonParserConcern
   # commentフィールドから不正な文字を削除する
   # プロンプト指示に従わない場合の安全策
   def sanitize_comment(comment)
-    return if comment.nil?
+    return nil if comment.nil?
 
     comment.to_s.strip
-      .gsub(/["\r\n\t\\{}]/, '') # 不正文字を削除
+           .gsub(/["\r\n\t\\{}]/, '') # 不正文字を削除
   end
 
   private

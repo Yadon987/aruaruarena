@@ -57,7 +57,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
     fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
 
     await waitFor(() => expect(getPostSpy).toHaveBeenCalledWith(MY_POST_ID))
-    expect(await screen.findByText('本文1')).toBeInTheDocument()
+    expect(await screen.findByText(/本文1/)).toBeInTheDocument()
     expect(screen.getByText('95.3')).toBeInTheDocument()
     expect(screen.getByText('1位')).toBeInTheDocument()
     expect(screen.getByText('2026-02-18T00:00:00Z')).toBeInTheDocument()

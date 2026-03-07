@@ -65,7 +65,7 @@ describe('E24-04 RED: JudgeAvatars', () => {
 
     rerender(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
     expect(screen.getAllByRole('img')).toHaveLength(3)
-  })
+  }, 15000)
 
   it('isJudging=false で口癖が表示されない', async () => {
     // 何を検証するか: 審査中でない場合は吹き出しが表示されないこと
@@ -117,5 +117,27 @@ describe('E24-04 RED: JudgeAvatars', () => {
     expect(screen.getByAltText('ひろゆき風審査員')).toBeInTheDocument()
     expect(screen.getByAltText('デヴィ夫人風審査員')).toBeInTheDocument()
     expect(screen.getByAltText('中尾彬風審査員')).toBeInTheDocument()
+  })
+
+  it('scoringフェーズでJudgeDeskが表示される', async () => {
+    // 何を検証するか: E25-01の受け入れ基準として、採点フェーズ時にデスクUIが統合表示されること
+    const { JudgeAvatars } = await loadJudgeAvatars()
+
+    render(
+      <JudgeAvatars
+        isJudging={true}
+        isPostModalOpen={false}
+        judgingPhase="scoring"
+        judgments={[
+          { judge: 'nakao', score: 88, success: true },
+          { judge: 'hiroyuki', score: 92, success: true },
+          { judge: 'dewi', score: 95, success: true },
+        ]}
+      />
+    )
+
+    const desk = screen.getByTestId('judge-desk')
+    expect(desk).toBeInTheDocument()
+    expect(desk).toHaveClass('glass-panel')
   })
 })

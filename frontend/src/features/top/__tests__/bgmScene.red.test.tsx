@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
@@ -49,6 +49,10 @@ async function enableSound() {
 async function openRankingResultModal(postDetail: Awaited<ReturnType<typeof api.posts.get>>) {
   vi.spyOn(api.posts, 'get').mockResolvedValue(postDetail)
 
+  fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
+  await waitFor(() => {
+    expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+  })
   fireEvent.click(screen.getByTestId('ranking-item'))
 
   await waitFor(() => {
@@ -141,7 +145,8 @@ describe('E18-01 RED: BGM scene integration', () => {
     })
 
     clearAudioDebugEvents()
-    fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
+    const resultModal = screen.getByRole('dialog', { name: '審査結果モーダル' })
+    fireEvent.click(within(resultModal).getByRole('button', { name: '閉じる' }))
 
     await waitFor(() => {
       const topEvents = getAudioDebugEvents().filter(

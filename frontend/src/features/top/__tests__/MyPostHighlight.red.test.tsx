@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
@@ -45,6 +45,10 @@ describe('MyPostHighlight RED', () => {
     localStorage.setItem('my_post_ids', JSON.stringify(['id-1', 'id-3']))
 
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+    })
 
     expect(await screen.findAllByText('あなたの投稿')).toHaveLength(2)
   })

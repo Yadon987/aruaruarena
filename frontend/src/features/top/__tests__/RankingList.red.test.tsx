@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
@@ -20,6 +20,13 @@ const rankings = Array.from({ length: 20 }, (_, i) => ({
 }))
 
 describe('RankingList RED', () => {
+  async function openRankingModal() {
+    fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+    })
+  }
+
   beforeEach(() => {
     mockedUseRankings.mockReturnValue({
       data: { rankings, total_count: 20 },
@@ -30,15 +37,16 @@ describe('RankingList RED', () => {
   })
 
   it('トップ画面にランキング領域が表示される', async () => {
-    // 何を検証するか: ランキング表示エリアがトップ画面に存在すること
+    // 何を検証するか: トップ画面にランキングボタンが存在すること
     render(<App />)
 
-    expect(await screen.findByRole('region', { name: 'ランキング表示エリア' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'ランキング' })).toBeInTheDocument()
   })
 
   it('ランキングが20件表示される', async () => {
-    // 何を検証するか: TOP20ランキングが一覧表示されること
+    // 何を検証するか: モーダル開封後にTOP20ランキングが一覧表示されること
     render(<App />)
+    await openRankingModal()
 
     const rankingItems = await screen.findAllByTestId('ranking-item')
     expect(rankingItems).toHaveLength(20)

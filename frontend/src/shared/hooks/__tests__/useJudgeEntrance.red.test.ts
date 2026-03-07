@@ -68,6 +68,16 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     expect(result.current.variants.nakao.transition.duration).toBe(1.2)
   })
 
+  it('3人ともデスク後方からせり上がる入場アニメーションを持つ', async () => {
+    // 何を検証するか: E25-01の受け入れ基準として、全審査員の初期位置が y=100 のせり上がり演出に統一されること
+    const { useJudgeEntrance } = await loadUseJudgeEntrance()
+    const { result } = renderHook(() => useJudgeEntrance())
+
+    expect(result.current.variants.hiroyuki.initial.y).toBe(100)
+    expect(result.current.variants.dewi.initial.y).toBe(100)
+    expect(result.current.variants.nakao.initial.y).toBe(100)
+  })
+
   it('アンマウント時にタイマーがクリアされる', async () => {
     // 何を検証するか: メモリリーク防止のためクリーンアップ関数が動作すること
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')

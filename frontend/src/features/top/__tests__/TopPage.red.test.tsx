@@ -10,7 +10,7 @@ describe('E12-01 RED: TopPage レイアウト', () => {
 
     expect(screen.getByRole('banner')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'ランキング表示エリア' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'ランキング' })).toBeInTheDocument()
     expect(screen.getByRole('contentinfo')).toBeInTheDocument()
   })
 

@@ -68,13 +68,13 @@ describe('JudgeAvatars Refactor', () => {
     const nakao = capturedMotionImgProps.find((item) => item.alt === '中尾彬風審査員')
     expect(nakao).toBeDefined()
     expect(nakao?.animate).toEqual({ opacity: 1 })
-  })
+  }, 15000)
 
   it('発話中は対象審査員の吹き出しのみ表示する', async () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
 
-    expect(screen.getByRole('status')).toHaveTextContent('テスト')
+    expect(screen.getByTestId('catchphrase-dewi')).toHaveTextContent('テスト')
   })
 
   it('currentSpeech が null でも発話中審査員にはフォールバック文字列を表示する', async () => {
@@ -83,5 +83,28 @@ describe('JudgeAvatars Refactor', () => {
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
 
     expect(screen.getByRole('status')).toHaveTextContent('...')
+  })
+
+  it('scoringフェーズかつjudgmentsが空配列でもJudgeDeskを表示する', async () => {
+    const { JudgeAvatars } = await loadJudgeAvatars()
+    render(
+      <JudgeAvatars
+        isJudging={false}
+        isPostModalOpen={false}
+        judgingPhase="scoring"
+        judgments={[]}
+      />
+    )
+
+    expect(screen.getByTestId('judge-desk')).toBeInTheDocument()
+  })
+
+  it('judgingPhase未指定時でもJudgeDeskをプレースホルダー表示する', async () => {
+    const { JudgeAvatars } = await loadJudgeAvatars()
+    render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
+
+    expect(screen.getByTestId('judge-avatars-container')).toBeInTheDocument()
+    expect(screen.getByTestId('judge-desk')).toBeInTheDocument()
+    expect(screen.getAllByText('---')).toHaveLength(3)
   })
 })

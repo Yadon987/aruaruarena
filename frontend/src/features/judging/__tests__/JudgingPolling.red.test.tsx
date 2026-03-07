@@ -99,7 +99,7 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
   })
 
   it('GET /api/posts/:id が404のとき取得失敗モーダルを表示してトップへ戻る', async () => {
-    // 何を検証するか: 404応答時にエラーモーダル文言を表示して待機を終了すること
+    // 何を検証するか: 404応答時に審査待機を停止してトップへ戻ること
     mswServer.use(
       http.get('/api/posts/:id', () => {
         return HttpResponse.json(
@@ -114,9 +114,8 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
 
     await waitFor(() => {
-      expect(
-        screen.getByText('投稿情報の取得に失敗しました。トップへ戻って再度お試しください。')
-      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
+      expect(screen.queryByTestId('judging-screen')).not.toBeInTheDocument()
     })
   })
 
@@ -141,15 +140,14 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
   })
 
   it('不正な投稿IDではポーリングせず取得失敗モーダルを表示する', async () => {
-    // 何を検証するか: 不正IDの場合にGETを呼ばずにエラー表示へ遷移すること
+    // 何を検証するか: 不正IDの場合にGETを呼ばずトップへ戻ること
     window.history.pushState({}, '', '/judging/invalid-id')
 
     render(<App />)
 
     await waitFor(() => {
-      expect(
-        screen.getByText('投稿情報の取得に失敗しました。トップへ戻って再度お試しください。')
-      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
+      expect(screen.queryByTestId('judging-screen')).not.toBeInTheDocument()
     })
 
     expect(getPostSpy).not.toHaveBeenCalled()

@@ -17,18 +17,30 @@ interface PostFormModalProps {
   onSubmit: (data: { nickname: string; body: string }) => Promise<void>
   isLoading: boolean
   error?: string
+  initialNickname?: string
+  initialBody?: string
 }
 
 /**
  * 投稿フォームモーダル
  */
-export function PostFormModal({ isOpen, onClose, onSubmit, isLoading, error }: PostFormModalProps) {
+export function PostFormModal({
+  isOpen,
+  onClose,
+ onSubmit,
+ isLoading,
+ error,
+ initialNickname,
+ initialBody,
+}: PostFormModalProps) {
+  const FALLBACK_FORM_VALUE = ''
   const [nickname, setNickname] = useState('')
   const [body, setBody] = useState('')
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const previousActiveElementRef = useRef<HTMLElement | null>(null)
   const submittingRef = useRef(false)
+  const wasOpenRef = useRef(false)
   const prefersReducedMotion = useReducedMotion()
 
   useFocusTrap({
@@ -39,16 +51,24 @@ export function PostFormModal({ isOpen, onClose, onSubmit, isLoading, error }: P
 
   useEffect(() => {
     if (isOpen) {
+      // モーダルが開いた瞬間だけ初期値を反映し、入力中の内容上書きを防ぐ。
+      if (!wasOpenRef.current) {
+        setNickname(initialNickname ?? FALLBACK_FORM_VALUE)
+        setBody(initialBody ?? FALLBACK_FORM_VALUE)
+      }
       previousActiveElementRef.current = document.activeElement as HTMLElement
       closeButtonRef.current?.focus()
+      wasOpenRef.current = true
       return
     }
 
     setNickname('')
     setBody('')
+    // モーダルを閉じたら元のフォーカス先へ戻し、アクセスビリティ導線を維持する。
     previousActiveElementRef.current?.focus()
     previousActiveElementRef.current = null
-  }, [isOpen])
+    wasOpenRef.current = false
+  }, [isOpen, initialNickname, initialBody])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
