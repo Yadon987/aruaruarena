@@ -95,17 +95,41 @@ describe('E24-04 RED: JudgeAvatars', () => {
     expect(container).toHaveClass('flex-row')
   })
 
-  it('レスポンシブサイズ（w-20 md:w-32）が適用される', async () => {
-    // 何を検証するか: NFR-05 - スマホ幅でも適切なサイズで表示されること
+  it('レスポンシブサイズ（w-28 md:w-48 lg:w-56）が適用される', async () => {
+    // 何を検証するか: Issue #150 のアバター拡大要件を満たすこと
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     render(<JudgeAvatars isJudging={false} isPostModalOpen={false} />)
 
     const avatars = screen.getAllByRole('img')
     avatars.forEach((avatar) => {
-      expect(avatar).toHaveClass('w-20')
-      expect(avatar.className).toMatch(/md:w-32/)
+      expect(avatar).toHaveClass('w-28')
+      expect(avatar.className).toMatch(/md:w-48/)
+      expect(avatar.className).toMatch(/lg:w-56/)
     })
+  })
+
+  it('アバターコンテナのgapが拡張される', async () => {
+    // 何を検証するか: 台座との整合のため gap-6 md:gap-8 lg:gap-10 が適用されること
+    const { JudgeAvatars } = await loadJudgeAvatars()
+
+    render(<JudgeAvatars isJudging={false} isPostModalOpen={false} />)
+
+    const container = screen.getByTestId('judge-avatars-container')
+    expect(container).toHaveClass('gap-6')
+    expect(container.className).toMatch(/md:gap-8/)
+    expect(container.className).toMatch(/lg:gap-10/)
+  })
+
+  it('ステージコンテナのmax-widthとpadding-bottomが拡張される', async () => {
+    // 何を検証するか: 大型アバターに合わせて max-w-6xl と pb-16 が適用されること
+    const { JudgeAvatars } = await loadJudgeAvatars()
+
+    render(<JudgeAvatars isJudging={false} isPostModalOpen={false} />)
+
+    const stage = screen.getByTestId('judge-stage')
+    expect(stage).toHaveClass('max-w-6xl')
+    expect(stage).toHaveClass('pb-16')
   })
 
   it('3人の審査員のalt属性が正しく設定される', async () => {
@@ -138,6 +162,6 @@ describe('E24-04 RED: JudgeAvatars', () => {
 
     const desk = screen.getByTestId('judge-desk')
     expect(desk).toBeInTheDocument()
-    expect(desk).toHaveClass('glass-panel')
+    expect(desk).not.toHaveClass('glass-panel')
   })
 })

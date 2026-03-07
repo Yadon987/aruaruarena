@@ -40,10 +40,20 @@ function buildJudgmentMap(judgments: JudgeDeskJudgment[]): Map<JudgePersona, Jud
   }, new Map<JudgePersona, JudgeDeskJudgment>())
 }
 
+function buildScoreAriaLabel(judge: JudgePersona, scoreLabel: string): string {
+  return `${JUDGE_LABELS[judge]}審査員のスコア: ${scoreLabel}点`
+}
+
 const JUDGE_LABELS: Record<JudgePersona, string> = {
   hiroyuki: 'ひろゆき',
   dewi: 'デヴィ婦人',
   nakao: '中尾彬',
+}
+
+const JUDGE_NEON_CLASS: Record<JudgePersona, { border: string; text: string }> = {
+  nakao: { border: 'neon-border-cyan', text: 'neon-text-cyan' },
+  hiroyuki: { border: 'neon-border-pink', text: 'neon-text-pink' },
+  dewi: { border: 'neon-border-cyan', text: 'neon-text-cyan' },
 }
 
 export function JudgeDesk({ judgments, phase }: JudgeDeskProps) {
@@ -73,20 +83,23 @@ export function JudgeDesk({ judgments, phase }: JudgeDeskProps) {
   }, [phase, prefersReducedMotion])
 
   return (
-    <div data-testid="judge-desk" className="glass-panel judge-desk-shell">
+    <div data-testid="judge-desk" className="judge-desk-shell">
       {/* 仕様上の表示順は左→中央→右（中尾→ひろゆき→デヴィ）で固定する */}
       {JUDGE_DISPLAY_ORDER.map((judge, index) => {
         const litValue = phase === 'scoring' && index < litCount ? LIT_ON : LIT_OFF
+        const neonClass = JUDGE_NEON_CLASS[judge]
+        const scoreLabel = resolveScoreLabel(byJudge.get(judge))
 
         return (
           <div
             key={judge}
             data-testid="judge-desk-score"
             data-lit={litValue}
-            className="judge-desk-panel"
-            aria-label={`${JUDGE_LABELS[judge]}審査員のスコア: ${resolveScoreLabel(byJudge.get(judge))}`}
+            className={`judge-desk-panel glass-panel ${neonClass.border}`}
+            aria-label={buildScoreAriaLabel(judge, scoreLabel)}
           >
-            <span className="digital-score">{resolveScoreLabel(byJudge.get(judge))}</span>
+            <span className={`digital-score ${neonClass.text}`}>{scoreLabel}</span>
+            <span className={`digital-score-unit ${neonClass.text}`}>点</span>
           </div>
         )
       })}
