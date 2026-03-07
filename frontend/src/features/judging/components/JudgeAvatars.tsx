@@ -80,11 +80,11 @@ export function JudgeAvatars({
   return (
     <div
       data-testid="judge-stage"
-      className="relative mx-auto w-full max-w-5xl overflow-hidden pb-14"
+      className="relative mx-auto w-full max-w-6xl overflow-hidden pb-16"
     >
       <ul
         data-testid="judge-avatars-container"
-        className="relative z-0 flex flex-row items-end justify-center gap-4"
+        className="relative z-0 flex flex-row items-end justify-center gap-6 md:gap-8 lg:gap-10"
       >
         {JUDGE_CONFIG.map((judge) => {
           const entrance = entranceVariants[judge.id]
@@ -96,7 +96,7 @@ export function JudgeAvatars({
             isPostModalOpen,
           })
           return (
-              <li key={judge.id} className="relative z-0 flex flex-col items-center list-none">
+            <li key={judge.id} className="relative z-0 flex flex-col items-center list-none">
               {speechText && judgingPhase !== 'scoring' && (
                 <JudgeSpeechBubble
                   isVisible={true}
@@ -110,7 +110,7 @@ export function JudgeAvatars({
                 src={getAvatarImagePath(judge.id, avatarStates[judge.id])}
                 alt={judge.alt}
                 aria-label={getJudgeAriaLabel(judge.id)}
-                className="w-20 md:w-32 h-auto"
+                className="w-28 md:w-48 lg:w-56 h-auto"
                 initial={entrance.initial}
                 animate={entrance.animate}
                 transition={entrance.transition}

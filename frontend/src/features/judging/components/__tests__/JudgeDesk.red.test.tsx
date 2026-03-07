@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadComponent } from '../../../../test/mocks/framerMotion'
 
@@ -81,5 +81,76 @@ describe('E25-01 RED: JudgeDesk', () => {
       await vi.advanceTimersByTimeAsync(300)
     })
     expect(panels[2]).toHaveAttribute('data-lit', 'true')
+  })
+
+  it('審査員ごとにネオンボーダーとネオンテキストが適用される', async () => {
+    // 何を検証するか: Issue #150 のカラー要件（中尾=シアン、ひろゆき=ピンク、デヴィ=シアン）を満たすこと
+    const { JudgeDesk } = await loadJudgeDesk()
+
+    render(
+      <JudgeDesk
+        phase="complete"
+        judgments={[
+          { judge: 'nakao', score: 85, success: true },
+          { judge: 'hiroyuki', score: 92, success: true },
+          { judge: 'dewi', score: 78, success: true },
+        ]}
+      />
+    )
+
+    const panels = screen.getAllByTestId('judge-desk-score')
+    expect(panels[0]).toHaveClass('neon-border-cyan')
+    expect(panels[1]).toHaveClass('neon-border-pink')
+    expect(panels[2]).toHaveClass('neon-border-cyan')
+
+    expect(within(panels[0]).getByText('85')).toHaveClass('neon-text-cyan')
+    expect(within(panels[1]).getByText('92')).toHaveClass('neon-text-pink')
+    expect(within(panels[2]).getByText('78')).toHaveClass('neon-text-cyan')
+  })
+
+  it('スコアの数値と単位「点」を表示しaria-labelにも「点」を含む', async () => {
+    // 何を検証するか: Issue #150 のスコア表示要件（単位表示とアクセシビリティ）を満たすこと
+    const { JudgeDesk } = await loadJudgeDesk()
+
+    render(
+      <JudgeDesk
+        phase="complete"
+        judgments={[
+          { judge: 'nakao', score: 8.5, success: true },
+          { judge: 'hiroyuki', score: 0, success: true },
+          { judge: 'dewi', score: 10, success: true },
+        ]}
+      />
+    )
+
+    expect(screen.getByLabelText('中尾彬審査員のスコア: 8.5点')).toBeInTheDocument()
+    expect(screen.getByLabelText('ひろゆき審査員のスコア: 0点')).toBeInTheDocument()
+    expect(screen.getByLabelText('デヴィ婦人審査員のスコア: 10点')).toBeInTheDocument()
+    expect(screen.getAllByText('点')).toHaveLength(3)
+  })
+
+  it('未確定と失敗でも「点」を表示しルートとパネルのglass-panel適用位置が正しい', async () => {
+    // 何を検証するか: Issue #150 の台座分離要件と境界表示（---/N-A）を満たすこと
+    const { JudgeDesk } = await loadJudgeDesk()
+
+    render(
+      <JudgeDesk
+        phase="speaking"
+        judgments={[{ judge: 'nakao', success: false }, { judge: 'hiroyuki' }]}
+      />
+    )
+
+    const desk = screen.getByTestId('judge-desk')
+    expect(desk).not.toHaveClass('glass-panel')
+
+    const panels = screen.getAllByTestId('judge-desk-score')
+    panels.forEach((panel) => {
+      expect(panel).toHaveClass('glass-panel')
+    })
+
+    expect(within(panels[0]).getByText('N/A')).toBeInTheDocument()
+    expect(within(panels[1]).getByText('---')).toBeInTheDocument()
+    expect(within(panels[2]).getByText('---')).toBeInTheDocument()
+    expect(screen.getAllByText('点')).toHaveLength(3)
   })
 })

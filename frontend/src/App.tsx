@@ -183,7 +183,10 @@ function resolveJudgingSubmitErrorMessage(error: unknown): string {
     if (SERVER_ERROR_STATUSES.includes(error.status)) {
       return MESSAGE_JUDGING_SERVER_ERROR
     }
-    if (error.status >= HTTP_STATUS.BAD_REQUEST && error.status < HTTP_STATUS.INTERNAL_SERVER_ERROR) {
+    if (
+      error.status >= HTTP_STATUS.BAD_REQUEST &&
+      error.status < HTTP_STATUS.INTERNAL_SERVER_ERROR
+    ) {
       return MESSAGE_JUDGING_CLIENT_ERROR
     }
   }
@@ -664,12 +667,7 @@ function App() {
         setIsSubmitting(false)
       }
     },
-    [
-      applyJudgingSubmitFailure,
-      applyJudgingSubmitSuccess,
-      isSubmitting,
-      startJudgingSubmission,
-    ]
+    [applyJudgingSubmitFailure, applyJudgingSubmitSuccess, isSubmitting, startJudgingSubmission]
   )
 
   const storeMyPostDetail = useCallback((postId: string, post: Post) => {
@@ -887,7 +885,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div
-        className="game-show-stage relative min-h-screen overflow-hidden p-6"
+        className="game-show-stage relative min-h-screen overflow-hidden p-6 pb-24"
         style={{ isolation: 'isolate' }}
       >
         <BackgroundTitle />
@@ -960,41 +958,45 @@ function App() {
             </div>
 
             <div className="glass-panel relative z-10 rounded p-2">
-              <p className="text-sm text-cyan-100">ランキングは「ランキング」ボタンから確認できます</p>
+              <p className="text-sm text-cyan-100">
+                ランキングは「ランキング」ボタンから確認できます
+              </p>
             </div>
 
             <footer
               role="contentinfo"
-              className="mt-6 flex flex-wrap items-center justify-center gap-3"
+              className="fixed bottom-6 inset-x-0 w-full flex flex-wrap items-center justify-center gap-3 z-40 pointer-events-none"
             >
-              <NeonButton
-                ref={myPostsTriggerRef}
-                type="button"
-                variant="primary"
-                ariaLabel="自分の投稿一覧"
-                onClick={openMyPosts}
-                onKeyDown={handleMyPostsTriggerKeyDown}
-              >
-                自分の投稿一覧
-              </NeonButton>
-              <NeonButton
-                type="button"
-                variant="secondary"
-                ariaLabel="ランキング"
-                ref={rankingTriggerRef}
-                onClick={openRankingModal}
-              >
-                ランキング
-              </NeonButton>
-              <NeonButton
-                ref={privacyPolicyTriggerRef}
-                type="button"
-                variant="secondary"
-                ariaLabel="プライバシーポリシー"
-                onClick={openPrivacyPolicy}
-              >
-                プライバシーポリシー
-              </NeonButton>
+              <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-3">
+                <NeonButton
+                  ref={myPostsTriggerRef}
+                  type="button"
+                  variant="primary"
+                  ariaLabel="自分の投稿一覧"
+                  onClick={openMyPosts}
+                  onKeyDown={handleMyPostsTriggerKeyDown}
+                >
+                  自分の投稿一覧
+                </NeonButton>
+                <NeonButton
+                  type="button"
+                  variant="secondary"
+                  ariaLabel="ランキング"
+                  ref={rankingTriggerRef}
+                  onClick={openRankingModal}
+                >
+                  ランキング
+                </NeonButton>
+                <NeonButton
+                  ref={privacyPolicyTriggerRef}
+                  type="button"
+                  variant="secondary"
+                  ariaLabel="プライバシーポリシー"
+                  onClick={openPrivacyPolicy}
+                >
+                  プライバシーポリシー
+                </NeonButton>
+              </div>
             </footer>
           </>
         )}
