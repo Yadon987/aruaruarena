@@ -23,11 +23,11 @@ describe('E25-01 RED: App Game Show Layout', () => {
     vi.clearAllMocks()
   })
 
-  it('背景タイトルコンポーネントが表示される', () => {
-    // 何を検証するか: E25-01の受け入れ基準として、背景に「あるあるアリーナ」の専用タイトル要素が存在すること
+  it('トップ画面にヘッダー領域は表示されない', () => {
+    // 何を検証するか: ヘッダー廃止後もトップ画面にbanner領域が残らないこと
     render(<App />)
 
-    expect(screen.getByTestId('background-title')).toBeInTheDocument()
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument()
   })
 
   it('画面右上に「投稿する」「音声切り替え」が並ぶ', () => {

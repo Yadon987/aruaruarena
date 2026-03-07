@@ -1,7 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BackgroundTitle } from './components/layout/BackgroundTitle'
 import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
 import { RankingModal } from './features/ranking'
@@ -951,7 +950,6 @@ function App() {
         className="game-show-stage relative min-h-screen overflow-hidden p-6"
         style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
       >
-        <BackgroundTitle />
         <div className="mb-4">
           <JudgeAvatars
             isJudging={viewMode === 'judging'}
