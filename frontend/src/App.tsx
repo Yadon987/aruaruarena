@@ -947,7 +947,7 @@ function App() {
         />
       </div>
       <div
-        className="game-show-stage relative min-h-screen overflow-hidden p-6"
+        className="game-show-stage relative min-h-screen overflow-hidden px-6 pb-6"
         style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
       >
         <div className="mb-4">
