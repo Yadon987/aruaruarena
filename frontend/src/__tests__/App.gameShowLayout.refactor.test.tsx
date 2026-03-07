@@ -44,6 +44,6 @@ describe('App Game Show Layout Refactor', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
 
-    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'smooth' })
+    expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
   })
 })

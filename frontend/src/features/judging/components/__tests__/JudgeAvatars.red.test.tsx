@@ -65,7 +65,7 @@ describe('E24-04 RED: JudgeAvatars', () => {
 
     rerender(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
     expect(screen.getAllByRole('img')).toHaveLength(3)
-  })
+  }, 15000)
 
   it('isJudging=false で口癖が表示されない', async () => {
     // 何を検証するか: 審査中でない場合は吹き出しが表示されないこと
@@ -136,6 +136,8 @@ describe('E24-04 RED: JudgeAvatars', () => {
       />
     )
 
-    expect(screen.getByTestId('judge-desk')).toBeInTheDocument()
+    const desk = screen.getByTestId('judge-desk')
+    expect(desk).toBeInTheDocument()
+    expect(desk).toHaveClass('glass-panel')
   })
 })

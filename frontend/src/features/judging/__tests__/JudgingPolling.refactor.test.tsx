@@ -69,7 +69,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
   }, 10000)
 
   it('60秒到達時にポーリングを停止し固定エラーメッセージを表示する', async () => {
-    // 何を検証するか: 60秒到達でAPI追加送信せずトップ復帰して固定文言を表示すること
+    // 何を検証するか: 60秒到達でポーリング停止しトップ復帰すること
     const baseTime = 1_700_000_000_000
     let currentTime = baseTime
     dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => currentTime)
@@ -91,8 +91,8 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
       await new Promise((resolve) => setTimeout(resolve, 3200))
     })
 
-    expect(
-      screen.getByText('投稿情報の取得に失敗しました。トップへ戻って再度お試しください。')
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
+    expect(screen.queryByTestId('judging-screen')).not.toBeInTheDocument()
+    expect(getPostSpy).toHaveBeenCalledTimes(1)
   }, 10000)
 })

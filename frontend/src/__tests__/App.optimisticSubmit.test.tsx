@@ -18,10 +18,12 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
     localStorage.clear()
     window.history.replaceState({}, '', '/')
     vi.clearAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.stubGlobal('__AUDIO_DEBUG__', [])
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.unstubAllGlobals()
   })
 

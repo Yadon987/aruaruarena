@@ -35,8 +35,13 @@ describe('E25-01 RED: App Game Show Layout', () => {
     render(<App />)
 
     const header = screen.getByRole('banner')
-    expect(within(header).getByRole('button', { name: '投稿する' })).toBeInTheDocument()
-    expect(within(header).getByRole('button', { name: /音声/ })).toBeInTheDocument()
+    const postButton = within(header).getByRole('button', { name: '投稿する' })
+    const soundButton = within(header).getByRole('button', { name: /音声/ })
+
+    expect(postButton).toBeInTheDocument()
+    expect(soundButton).toBeInTheDocument()
+    expect(postButton).toHaveClass('neon-button-base')
+    expect(soundButton).toHaveClass('neon-button-base')
   })
 
   it('フッターに「自分の投稿」「ランキング」「プライバシーポリシー」が並ぶ', () => {
@@ -44,8 +49,15 @@ describe('E25-01 RED: App Game Show Layout', () => {
     render(<App />)
 
     const footer = screen.getByRole('contentinfo')
-    expect(within(footer).getByRole('button', { name: '自分の投稿一覧' })).toBeInTheDocument()
-    expect(within(footer).getByRole('button', { name: 'ランキング' })).toBeInTheDocument()
-    expect(within(footer).getByRole('button', { name: 'プライバシーポリシー' })).toBeInTheDocument()
+    const myPostsButton = within(footer).getByRole('button', { name: '自分の投稿一覧' })
+    const rankingButton = within(footer).getByRole('button', { name: 'ランキング' })
+    const privacyButton = within(footer).getByRole('button', { name: 'プライバシーポリシー' })
+
+    expect(myPostsButton).toBeInTheDocument()
+    expect(rankingButton).toBeInTheDocument()
+    expect(privacyButton).toBeInTheDocument()
+    expect(myPostsButton).toHaveClass('neon-button-base')
+    expect(rankingButton).toHaveClass('neon-button-base')
+    expect(privacyButton).toHaveClass('neon-button-base')
   })
 })

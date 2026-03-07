@@ -1,10 +1,18 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadComponent } from '../../../../test/mocks/framerMotion'
 
 const loadJudgeDesk = () => loadComponent(() => import('../JudgeDesk'))
 
 describe('E25-01 RED: JudgeDesk', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('scoringフェーズで成功審査員の点数を表示する', async () => {
     // 何を検証するか: E25-01の受け入れ基準として、採点フェーズで成功した審査員の点数が表示されること
     const { JudgeDesk } = await loadJudgeDesk()
@@ -44,7 +52,7 @@ describe('E25-01 RED: JudgeDesk', () => {
   })
 
   it('scoringフェーズでスコアが左から順に点灯する', async () => {
-    // 何を検証するか: E25-01の受け入れ基準として、scoringフェーズ時に3パネルが点灯状態になること
+    // 何を検証するか: E25-01の受け入れ基準として、scoringフェーズ時に300ms間隔で左→中央→右へ点灯が進むこと
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(
@@ -60,7 +68,18 @@ describe('E25-01 RED: JudgeDesk', () => {
 
     const panels = screen.getAllByTestId('judge-desk-score')
     expect(panels[0]).toHaveAttribute('data-lit', 'true')
+    expect(panels[1]).toHaveAttribute('data-lit', 'false')
+    expect(panels[2]).toHaveAttribute('data-lit', 'false')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
     expect(panels[1]).toHaveAttribute('data-lit', 'true')
+    expect(panels[2]).toHaveAttribute('data-lit', 'false')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
     expect(panels[2]).toHaveAttribute('data-lit', 'true')
   })
 })

@@ -78,6 +78,6 @@ describe('E13-01 REFACTOR: JudgingScreen edge cases', () => {
     })
 
     expect(await screen.findByTestId('judging-screen')).toBeInTheDocument()
-    expect(screen.getByText('投稿内容を読み込み中です')).toBeInTheDocument()
+    expect(screen.getByText(/AI審査員が採点中/)).toBeInTheDocument()
   })
 })

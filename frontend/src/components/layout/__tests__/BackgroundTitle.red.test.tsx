@@ -11,7 +11,11 @@ describe('E25-01 RED: BackgroundTitle', () => {
 
     render(<BackgroundTitle />)
 
+    const title = screen.getByTestId('background-title')
+
     expect(screen.getByText('あるあるアリーナ')).toBeInTheDocument()
-    expect(screen.getByTestId('background-title')).toBeInTheDocument()
+    expect(title).toBeInTheDocument()
+    expect(title).toHaveClass('background-title-art')
+    expect(title).toHaveClass('pointer-events-none')
   })
 })

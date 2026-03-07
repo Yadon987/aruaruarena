@@ -15,7 +15,9 @@ describe('E25-01 RED: NeonButton', () => {
       </NeonButton>
     )
 
-    expect(screen.getByRole('button', { name: '投稿する' })).toHaveClass('neon-glow-blue')
+    const button = screen.getByRole('button', { name: '投稿する' })
+    expect(button).toHaveClass('neon-glow-blue')
+    expect(button).toHaveClass('neon-button-base')
   })
 
   it('type未指定時にbuttonとして扱われる', async () => {
