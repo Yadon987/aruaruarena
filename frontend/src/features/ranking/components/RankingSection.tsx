@@ -1,5 +1,5 @@
-import { DEFAULT_RANKING_LIMIT, MAX_RANKING_LIMIT } from '../../../shared/constants/query'
 import { HTTP_STATUS } from '../../../shared/constants/api'
+import { DEFAULT_RANKING_LIMIT, MAX_RANKING_LIMIT } from '../../../shared/constants/query'
 import { useRankings } from '../../../shared/hooks/useRankings'
 import { ApiClientError } from '../../../shared/services/api'
 import type { RankingItem } from '../../../shared/types/domain'
@@ -83,7 +83,9 @@ export function RankingSection({
                     {item.rank}位 {item.nickname}
                   </p>
                   <p>{item.body}</p>
-                  <p className="text-sm text-gray-600">平均スコア: {item.average_score.toFixed(1)}</p>
+                  <p className="text-sm text-gray-600">
+                    平均スコア: {item.average_score.toFixed(1)}
+                  </p>
                   {isMyPost && <p className="text-sm font-bold">あなたの投稿</p>}
                 </button>
               </li>

@@ -96,10 +96,10 @@ export const JUDGE_ENTRANCE = {
  * 審査員発話アニメーション関連の定数
  */
 export const JUDGE_SPEECH = {
-  /** 発話間隔の最小値（ms） */
-  INTERVAL_MIN_MS: 4000,
-  /** 発話間隔の最大値（ms） */
-  INTERVAL_MAX_MS: 6000,
+  /** 発話間隔の最小値（ms） - ほぼ連続で発話させる */
+  INTERVAL_MIN_MS: 0,
+  /** 発話間隔の最大値（ms） - 最大でも0.5秒の間隔 */
+  INTERVAL_MAX_MS: 500,
   /** 発話表示時間（ms） */
   DURATION_MS: 2500,
   /** 吹き出しアニメーション */

@@ -52,14 +52,15 @@ describe('useJudgeSpeech Refactor', () => {
     const { useJudgeSpeech } = await import('../useJudgeSpeech')
     const { result } = renderHook(() => useJudgeSpeech({ isJudging: true, isPostModalOpen: false }))
 
+    // 間隔が0〜500msなので、1000ms進めれば確実に発話が開始される
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(6000)
+      await vi.advanceTimersByTimeAsync(1000)
     })
 
     expect(['A', 'B', 'C']).toContain(result.current.currentSpeech)
   })
 
-  it('発話間隔は最小4000ms〜最大6000msの範囲内になる', async () => {
+  it('発話間隔は最小0ms〜最大500msの範囲内になる', async () => {
     const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.4)
     const { useJudgeSpeech } = await loadUseJudgeSpeech()
@@ -73,8 +74,8 @@ describe('useJudgeSpeech Refactor', () => {
       .filter((delay): delay is number => typeof delay === 'number')
 
     delays.forEach((delay) => {
-      expect(delay).toBeGreaterThanOrEqual(4000)
-      expect(delay).toBeLessThanOrEqual(6000)
+      expect(delay).toBeGreaterThanOrEqual(0)
+      expect(delay).toBeLessThanOrEqual(500)
     })
 
     randomSpy.mockRestore()
@@ -85,9 +86,11 @@ describe('useJudgeSpeech Refactor', () => {
     const { result } = renderHook(() => useJudgeSpeech({ isJudging: true, isPostModalOpen: false }))
     const picked = new Set<string>()
 
-    for (let i = 0; i < 120; i += 1) {
+    // 間隔が0〜500ms + 表示時間2500msなので、1サイクル最大3000ms
+    // 20回ループで60秒分進める（統計的に全員選ばれる可能性が高い）
+    for (let i = 0; i < 20; i += 1) {
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(10000)
+        await vi.advanceTimersByTimeAsync(3500)
       })
       if (result.current.speakingJudge) {
         picked.add(result.current.speakingJudge)

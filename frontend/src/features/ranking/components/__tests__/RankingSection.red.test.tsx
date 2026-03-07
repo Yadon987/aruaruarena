@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { RankingSection } from '../RankingSection'
 import { useRankings } from '../../../../shared/hooks/useRankings'
+import { RankingSection } from '../RankingSection'
 
 vi.mock('../../../../shared/hooks/useRankings', () => ({
   useRankings: vi.fn(),
@@ -56,7 +56,9 @@ describe('RankingSection RED', () => {
     setupRanking({ isError: true, error: new Error('fail') })
     render(<RankingSection myPostIds={[]} onSelectRankingPost={vi.fn()} />)
 
-    expect(screen.getByText('取得に失敗しました。時間をおいて再度お試しください。')).toBeInTheDocument()
+    expect(
+      screen.getByText('取得に失敗しました。時間をおいて再度お試しください。')
+    ).toBeInTheDocument()
   })
 
   it('空状態を表示する', () => {
