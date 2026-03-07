@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { RankingModal } from '../RankingModal'
 import { useRankings } from '../../../../shared/hooks/useRankings'
+import { RankingModal } from '../RankingModal'
 
 vi.mock('../../../../shared/hooks/useRankings', () => ({
   useRankings: vi.fn(),
@@ -36,47 +36,23 @@ describe('RankingModal RED', () => {
   it('モーダルが開閉できる', () => {
     const onClose = vi.fn()
     const { rerender, queryByRole } = render(
-      <RankingModal
-        isOpen={false}
-        onClose={onClose}
-        myPostIds={[]}
-        onSelectRankingPost={vi.fn()}
-      />
+      <RankingModal isOpen={false} onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />
     )
 
     expect(queryByRole('dialog', { name: 'ランキング' })).not.toBeInTheDocument()
 
-    rerender(
-      <RankingModal
-        isOpen
-        onClose={onClose}
-        myPostIds={[]}
-        onSelectRankingPost={vi.fn()}
-      />
-    )
+    rerender(<RankingModal isOpen onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />)
     expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
 
     rerender(
-      <RankingModal
-        isOpen={false}
-        onClose={onClose}
-        myPostIds={[]}
-        onSelectRankingPost={vi.fn()}
-      />
+      <RankingModal isOpen={false} onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />
     )
     expect(queryByRole('dialog', { name: 'ランキング' })).not.toBeInTheDocument()
   })
 
   it('Escキーでモーダルを閉じる', () => {
     const onClose = vi.fn()
-    render(
-      <RankingModal
-        isOpen
-        onClose={onClose}
-        myPostIds={[]}
-        onSelectRankingPost={vi.fn()}
-      />
-    )
+    render(<RankingModal isOpen onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />)
 
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'ランキング' }), { key: 'Escape' })
 
@@ -85,14 +61,7 @@ describe('RankingModal RED', () => {
 
   it('背景クリックでモーダルを閉じる', () => {
     const onClose = vi.fn()
-    render(
-      <RankingModal
-        isOpen
-        onClose={onClose}
-        myPostIds={[]}
-        onSelectRankingPost={vi.fn()}
-      />
-    )
+    render(<RankingModal isOpen onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'ランキングモーダル背景' }))
 
@@ -126,14 +95,7 @@ describe('RankingModal RED', () => {
 
   it('フォーカストラップが機能する', () => {
     const onClose = vi.fn()
-    render(
-      <RankingModal
-        isOpen
-        onClose={onClose}
-        myPostIds={[]}
-        onSelectRankingPost={vi.fn()}
-      />
-    )
+    render(<RankingModal isOpen onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />)
 
     const dialog = screen.getByRole('dialog', { name: 'ランキング' })
     const closeButton = screen.getByRole('button', { name: '閉じる' })
@@ -150,14 +112,7 @@ describe('RankingModal RED', () => {
 
   it('RankingSectionを内包してランキング一覧を表示する', () => {
     const onClose = vi.fn()
-    render(
-      <RankingModal
-        isOpen
-        onClose={onClose}
-        myPostIds={[]}
-        onSelectRankingPost={vi.fn()}
-      />
-    )
+    render(<RankingModal isOpen onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />)
 
     expect(screen.getByRole('region', { name: 'ランキング表示エリア' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^1位 user-1/ })).toBeInTheDocument()

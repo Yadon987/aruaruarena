@@ -69,9 +69,7 @@ describe('E12-01 RED: TopPage Integration', () => {
     await fillAndSubmitPostForm({ nickname: '障害太郎', body: '障害テスト本文です' })
 
     await waitFor(() => {
-      expect(
-        screen.getByText('サーバーエラーが発生しました')
-      ).toBeInTheDocument()
+      expect(screen.getByText('サーバーエラーが発生しました')).toBeInTheDocument()
     })
     expect(screen.getByText('障害太郎')).toBeInTheDocument()
     expect(screen.getByText('障害テスト本文です')).toBeInTheDocument()

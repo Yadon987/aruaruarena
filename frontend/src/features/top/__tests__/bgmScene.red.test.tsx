@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
 import { api } from '../../../shared/services/api'
-import { fillAndSubmitPostForm } from '../../../test/helpers'
 import { mockRankings } from '../../../test/appTestHelpers'
+import { fillAndSubmitPostForm } from '../../../test/helpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,

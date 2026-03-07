@@ -27,11 +27,11 @@ interface PostFormModalProps {
 export function PostFormModal({
   isOpen,
   onClose,
- onSubmit,
- isLoading,
- error,
- initialNickname,
- initialBody,
+  onSubmit,
+  isLoading,
+  error,
+  initialNickname,
+  initialBody,
 }: PostFormModalProps) {
   const FALLBACK_FORM_VALUE = ''
   const [nickname, setNickname] = useState('')
