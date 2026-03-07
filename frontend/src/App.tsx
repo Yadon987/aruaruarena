@@ -31,9 +31,6 @@ const SERVER_ERROR_STATUSES: ReadonlyArray<number> = [
 const MESSAGE_NICKNAME_REQUIRED = 'ニックネームを入力してください'
 const MESSAGE_BODY_REQUIRED = '本文は3文字以上で入力してください'
 const MESSAGE_SUCCESS = '投稿を受け付けました'
-const MESSAGE_RATE_LIMITED = '5分後に再投稿してください'
-const MESSAGE_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
-const MESSAGE_DEFAULT_ERROR = 'エラーが発生しました。再試行してください'
 const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
 const MESSAGE_MY_POST_DETAIL_FETCH_FAILED = '投稿詳細の取得に失敗しました'
 const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
@@ -174,26 +171,6 @@ function validateForm(nickname: string, body: string): ValidationErrors {
 }
 
 // APIクライアントの例外種別をUI文言へ変換する
-function resolveSubmitErrorMessage(error: unknown): string {
-  if (error instanceof ApiClientError && error.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
-    return MESSAGE_RATE_LIMITED
-  }
-  if (error instanceof ApiClientError && SERVER_ERROR_STATUSES.includes(error.status)) {
-    return MESSAGE_SERVER_ERROR
-  }
-  if (
-    error instanceof ApiClientError &&
-    ['NETWORK_ERROR', 'TIMEOUT', 'HTTP_ERROR'].includes(error.code)
-  ) {
-    return MESSAGE_DEFAULT_ERROR
-  }
-  // APIが返した具体的な文言があれば優先し、未知エラー時のみ汎用文言を使う
-  if (error instanceof ApiClientError && error.message && !error.message.startsWith('HTTP ')) {
-    return error.message
-  }
-  return MESSAGE_DEFAULT_ERROR
-}
-
 function resolveJudgingSubmitErrorMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
     if (error.code === API_ERROR_CODE.NETWORK_ERROR) {
@@ -471,7 +448,7 @@ function App() {
     }
     if (pollingAbortControllerRef.current) {
       pollingAbortControllerRef.current.abort()
-    pollingAbortControllerRef.current = null
+      pollingAbortControllerRef.current = null
     }
     pollingStartedAtRef.current = 0
   }, [])

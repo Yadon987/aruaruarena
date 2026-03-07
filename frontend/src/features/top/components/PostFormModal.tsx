@@ -40,6 +40,7 @@ export function PostFormModal({
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const previousActiveElementRef = useRef<HTMLElement | null>(null)
   const submittingRef = useRef(false)
+  const wasOpenRef = useRef(false)
   const prefersReducedMotion = useReducedMotion()
 
   useFocusTrap({
@@ -50,11 +51,14 @@ export function PostFormModal({
 
   useEffect(() => {
     if (isOpen) {
-      // 再投稿時は直前の入力値を復元して、再入力コストを下げる。
-      setNickname(initialNickname ?? FALLBACK_FORM_VALUE)
-      setBody(initialBody ?? FALLBACK_FORM_VALUE)
+      // モーダルが開いた瞬間だけ初期値を反映し、入力中の内容上書きを防ぐ。
+      if (!wasOpenRef.current) {
+        setNickname(initialNickname ?? FALLBACK_FORM_VALUE)
+        setBody(initialBody ?? FALLBACK_FORM_VALUE)
+      }
       previousActiveElementRef.current = document.activeElement as HTMLElement
       closeButtonRef.current?.focus()
+      wasOpenRef.current = true
       return
     }
 
@@ -63,6 +67,7 @@ export function PostFormModal({
     // モーダルを閉じたら元のフォーカス先へ戻し、アクセスビリティ導線を維持する。
     previousActiveElementRef.current?.focus()
     previousActiveElementRef.current = null
+    wasOpenRef.current = false
   }, [isOpen, initialNickname, initialBody])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

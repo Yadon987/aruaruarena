@@ -78,12 +78,13 @@ export function JudgeAvatars({
   })
 
   return (
-    <>
-      {/* JudgeDesk側では配列前提で処理するため、未定義時は空配列に正規化して渡す */}
-      {judgingPhase === 'scoring' && <JudgeDesk judgments={judgments ?? []} phase={judgingPhase} />}
+    <div
+      data-testid="judge-stage"
+      className="relative mx-auto w-full max-w-5xl overflow-hidden pb-14"
+    >
       <ul
         data-testid="judge-avatars-container"
-        className="flex flex-row items-end justify-center gap-4"
+        className="relative z-0 flex flex-row items-end justify-center gap-4"
       >
         {JUDGE_CONFIG.map((judge) => {
           const entrance = entranceVariants[judge.id]
@@ -95,8 +96,8 @@ export function JudgeAvatars({
             isPostModalOpen,
           })
           return (
-            <li key={judge.id} className="relative flex flex-col items-center list-none">
-              {speechText && (
+              <li key={judge.id} className="relative z-0 flex flex-col items-center list-none">
+              {speechText && judgingPhase !== 'scoring' && (
                 <JudgeSpeechBubble
                   isVisible={true}
                   text={speechText}
@@ -119,6 +120,10 @@ export function JudgeAvatars({
           )
         })}
       </ul>
-    </>
+      {/* デスクは常時表示し、phaseに応じてスコア演出だけを切り替える */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-2">
+        <JudgeDesk judgments={judgments ?? []} phase={judgingPhase ?? 'complete'} />
+      </div>
+    </div>
   )
 }
