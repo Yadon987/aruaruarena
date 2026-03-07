@@ -16,6 +16,7 @@ import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
 import { queryKeys } from './shared/constants/queryKeys'
 import { useAvatarImages } from './shared/hooks/useAvatarImages'
 import { ApiClientError, api } from './shared/services/api'
+import type { CreatePostResponse } from './shared/types/api'
 import type { Post } from './shared/types/domain'
 import './App.css'
 
@@ -478,7 +479,7 @@ function App() {
   )
 
   const applyJudgingSubmitSuccess = useCallback(
-    (response: Post, optimisticNickname: string, optimisticBody: string) => {
+    (response: CreatePostResponse, optimisticNickname: string, optimisticBody: string) => {
       // 正式IDへ差し替えた後、レスポンス状態に応じて画面遷移を確定する。
       setPendingFormData(null)
       savePostId(response.id)
