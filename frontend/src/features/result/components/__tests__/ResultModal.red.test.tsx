@@ -225,8 +225,13 @@ describe('E15-01 RED: ResultModal Component', () => {
     )
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'missing-post-id' }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    })
+    const missingPostButton = await screen.findByRole('button', { name: 'missing-post-id' })
+    await act(async () => {
+      fireEvent.click(missingPostButton)
+    })
 
     expect(await screen.findByText('投稿が見つかりません')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
@@ -275,7 +280,9 @@ describe('E15-01 RED: ResultModal Component', () => {
     })
 
     vi.useFakeTimers()
-    fireEvent.click(shareButton)
+    await act(async () => {
+      fireEvent.click(shareButton)
+    })
 
     expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
 
@@ -313,7 +320,9 @@ describe('E15-01 RED: ResultModal Component', () => {
     })
 
     vi.useFakeTimers()
-    fireEvent.click(shareButton)
+    await act(async () => {
+      fireEvent.click(shareButton)
+    })
 
     expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
 
@@ -472,7 +481,9 @@ describe('E15-01 RED: ResultModal Component', () => {
       />
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '再審査する' }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '再審査する' }))
+    })
 
     await waitFor(() => {
       expect(onPlayRetrySound).toHaveBeenCalledTimes(1)
@@ -517,7 +528,9 @@ describe('E15-01 RED: ResultModal Component', () => {
       />
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '再審査する' }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '再審査する' }))
+    })
 
     await waitFor(() => {
       expect(rejudgeSpy).toHaveBeenCalledTimes(1)
