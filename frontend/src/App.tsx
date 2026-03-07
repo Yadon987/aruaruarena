@@ -996,12 +996,6 @@ function App() {
               {successMessage && <p className="text-green-500">{successMessage}</p>}
             </div>
 
-            <div className="glass-panel relative z-10 rounded p-2">
-              <p className="text-sm text-cyan-100">
-                ランキングは「ランキング」ボタンから確認できます
-              </p>
-            </div>
-
             <footer
               ref={footerRef}
               role="contentinfo"
