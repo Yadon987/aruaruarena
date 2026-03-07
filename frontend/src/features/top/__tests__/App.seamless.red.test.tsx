@@ -54,8 +54,6 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
       body: 'テスト本文',
       status: 'judging',
       created_at: '2026-03-01T00:00:00Z',
-      average_score: 0,
-      rank: 0,
       total_count: 10,
       judgments: [],
     })

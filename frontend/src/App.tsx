@@ -61,7 +61,6 @@ const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
 const SOUND_SE_SUBMIT = 'se_submit'
 const SOUND_SE_RETRY = 'se_retry'
 const SOUND_SE_RESULT_OPEN = 'se_result_open'
-const FIXED_FOOTER_BOTTOM_OFFSET_PX = 24
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
 
@@ -898,9 +897,10 @@ function App() {
 
     const updateFooterReservedSpace = () => {
       const footerHeight = Math.ceil(footerElement.getBoundingClientRect().height)
+      const bottomOffset = Math.ceil(parseFloat(getComputedStyle(footerElement).bottom) || 0)
       const nextReservedSpace = Math.max(
         FIXED_FOOTER_MIN_RESERVED_PX,
-        footerHeight + FIXED_FOOTER_BOTTOM_OFFSET_PX + FIXED_FOOTER_EXTRA_GAP_PX
+        footerHeight + bottomOffset + FIXED_FOOTER_EXTRA_GAP_PX
       )
       setFooterReservedSpace((current) =>
         current === nextReservedSpace ? current : nextReservedSpace
