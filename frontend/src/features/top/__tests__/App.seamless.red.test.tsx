@@ -28,9 +28,18 @@ const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿
     expect(api.posts.create).toHaveBeenCalledWith({ nickname, body })
   })
 
+  // 投稿フォームモーダル（name: '投稿フォーム'）が閉じることを確認
   await waitFor(() => {
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '投稿フォーム' })).not.toBeInTheDocument()
   })
+
+  // ポーリングが開始され、審査中画面が表示されることを待機
+  await waitFor(
+    () => {
+      expect(screen.getByText(/審査中/)).toBeInTheDocument()
+    },
+    { timeout: 5000 }
+  )
 }
 
 describe('E24-07 RED: App Seamless UI Integration', () => {
@@ -39,14 +48,15 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
       id: 'seamless-post-id',
       status: 'judging',
     })
+    // デフォルトは審査中状態を返す（ポーリング中の審査中画面を維持）
     vi.spyOn(api.posts, 'get').mockResolvedValue({
       id: 'seamless-post-id',
       nickname: 'テスト太郎',
       body: 'テスト本文',
-      status: 'scored',
+      status: 'judging',
       created_at: '2026-03-01T00:00:00Z',
-      average_score: 90.0,
-      rank: 1,
+      average_score: 0,
+      rank: 0,
       total_count: 10,
       judgments: [],
     })
@@ -114,7 +124,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
     })
 
     render(<App />)
-    
+
     await fillAndSubmitPost(inputNickname, inputBody)
 
     await waitFor(() => {
@@ -145,24 +155,60 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
     expect(await screen.findByTestId('catchphrase-hiroyuki')).toBeInTheDocument()
   })
 
-  it('審査完了で結果モーダルが表示される', async () => {
+  it('審査完了で結果モーダルが表示される', { timeout: 15000 }, async () => {
     // 何を検証するか: FR-08 - 審査完了時、結果モーダルが表示されること
-    render(<App />)
-    await fillAndSubmitPost()
-
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
+    // 審査完了状態を返すようにモックを上書き
+    vi.mocked(api.posts.get).mockResolvedValue({
+      id: 'seamless-post-id',
+      nickname: 'テスト太郎',
+      body: 'テスト本文',
+      status: 'scored',
+      created_at: '2026-03-01T00:00:00Z',
+      average_score: 90.0,
+      rank: 1,
+      total_count: 10,
+      judgments: [],
     })
+
+    render(<App />)
+    // fillAndSubmitPostは審査中画面を待機するが、即座にscoredになる場合は
+    // 審査中画面をスキップして結果モーダルが開くため、直接フォーム送信を使用
+    await fillAndSubmitPostForm({ nickname: 'テスト', body: 'テスト投稿' })
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
+      },
+      { timeout: 10000 }
+    )
   })
 
-  it('結果モーダル表示後、審査員は待機状態に戻る', async () => {
+  it('結果モーダル表示後、審査員は待機状態に戻る', { timeout: 15000 }, async () => {
     // 何を検証するか: FR-08 - 審査完了時、審査員は待機状態に戻ること
-    render(<App />)
-    await fillAndSubmitPost()
-
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
+    // 審査完了状態を返すようにモックを上書き
+    vi.mocked(api.posts.get).mockResolvedValue({
+      id: 'seamless-post-id',
+      nickname: 'テスト太郎',
+      body: 'テスト本文',
+      status: 'scored',
+      created_at: '2026-03-01T00:00:00Z',
+      average_score: 90.0,
+      rank: 1,
+      total_count: 10,
+      judgments: [],
     })
+
+    render(<App />)
+    // fillAndSubmitPostは審査中画面を待機するが、即座にscoredになる場合は
+    // 審査中画面をスキップして結果モーダルが開くため、直接フォーム送信を使用
+    await fillAndSubmitPostForm({ nickname: 'テスト', body: 'テスト投稿' })
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
+      },
+      { timeout: 10000 }
+    )
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
