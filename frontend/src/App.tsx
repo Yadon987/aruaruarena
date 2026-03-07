@@ -926,32 +926,32 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div
+        data-testid="top-action-controls"
+        className="fixed right-4 top-4 z-50 flex items-center gap-2 sm:right-6 sm:top-6"
+      >
+        {viewMode === 'top' && (
+          <NeonButton
+            ariaLabel="投稿する"
+            onClick={() => {
+              setPendingFormData(null)
+              setSubmitError('')
+              setIsPostModalOpen(true)
+            }}
+          >
+            投稿する
+          </NeonButton>
+        )}
+        <SoundToggleButton
+          isMuted={isMuted}
+          onToggle={handleSoundToggle}
+          className="neon-button-base neon-glow-pink"
+        />
+      </div>
+      <div
         className="game-show-stage relative min-h-screen overflow-hidden p-6"
         style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
       >
         <BackgroundTitle />
-        <header role="banner" className="relative z-10 mb-6 flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-bold text-cyan-100">あるあるアリーナ</h1>
-          <div className="flex items-center gap-2">
-            {viewMode === 'top' && (
-              <NeonButton
-                ariaLabel="投稿する"
-                onClick={() => {
-                  setPendingFormData(null)
-                  setSubmitError('')
-                  setIsPostModalOpen(true)
-                }}
-              >
-                投稿する
-              </NeonButton>
-            )}
-            <SoundToggleButton
-              isMuted={isMuted}
-              onToggle={handleSoundToggle}
-              className="neon-button-base neon-glow-pink"
-            />
-          </div>
-        </header>
         <div className="mb-4">
           <JudgeAvatars
             isJudging={viewMode === 'judging'}

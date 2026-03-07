@@ -5,10 +5,11 @@ import { openPostDialog } from '../../../test/helpers'
 
 describe('E12-01 RED: TopPage レイアウト', () => {
   it('トップ画面に主要セクション・投稿ボタンが表示される', () => {
-    // 何を検証するか: ヘッダー・投稿ボタン・ランキング領域・フッターが初期表示されること
+    // 何を検証するか: 右上操作領域・投稿ボタン・ランキング領域・フッターが初期表示されること
     render(<App />)
 
-    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument()
+    expect(screen.getByTestId('top-action-controls')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'ランキング' })).toBeInTheDocument()
     expect(screen.getByRole('contentinfo')).toBeInTheDocument()

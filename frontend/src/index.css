@@ -57,15 +57,16 @@
   left: 50%;
   top: 14%;
   transform: translateX(-50%);
-  font-size: clamp(2.3rem, 9vw, 7rem);
-  font-weight: 800;
-  letter-spacing: 0.11em;
-  color: rgba(212, 244, 255, 0.25);
-  text-shadow:
-    0 0 20px rgba(53, 206, 255, 0.55),
-    0 0 45px rgba(53, 206, 255, 0.35),
-    0 0 90px rgba(53, 206, 255, 0.18);
-  white-space: nowrap;
+  width: min(64vw, 680px);
+  height: min(22vw, 200px);
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(130, 244, 255, 0.28), rgba(15, 74, 115, 0.08) 48%),
+    linear-gradient(120deg, rgba(47, 198, 255, 0.14), rgba(255, 0, 224, 0.14));
+  filter: blur(0.8px);
+  box-shadow:
+    0 0 42px rgba(53, 206, 255, 0.32),
+    0 0 96px rgba(53, 206, 255, 0.2);
 }
 
 .glass-panel {
@@ -166,7 +167,8 @@
 @media (max-width: 640px) {
   .background-title-art {
     top: 12%;
-    letter-spacing: 0.06em;
+    width: 78vw;
+    height: 30vw;
   }
 
   .judge-desk-shell {

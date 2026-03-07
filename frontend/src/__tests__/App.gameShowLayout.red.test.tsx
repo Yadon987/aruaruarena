@@ -30,14 +30,15 @@ describe('E25-01 RED: App Game Show Layout', () => {
     expect(screen.getByTestId('background-title')).toBeInTheDocument()
   })
 
-  it('ヘッダー右上に「投稿する」「音声切り替え」が並ぶ', () => {
-    // 何を検証するか: E25-01の受け入れ基準として、ヘッダー内に2つの操作ボタンが横並びで配置されること
+  it('画面右上に「投稿する」「音声切り替え」が並ぶ', () => {
+    // 何を検証するか: E25-01の受け入れ基準として、画面右上の操作領域に2つのボタンが横並びで配置されること
     render(<App />)
 
-    const header = screen.getByRole('banner')
-    const postButton = within(header).getByRole('button', { name: '投稿する' })
-    const soundButton = within(header).getByRole('button', { name: /音声/ })
+    const actionControls = screen.getByTestId('top-action-controls')
+    const postButton = within(actionControls).getByRole('button', { name: '投稿する' })
+    const soundButton = within(actionControls).getByRole('button', { name: /音声/ })
 
+    expect(actionControls).toHaveClass('fixed')
     expect(postButton).toBeInTheDocument()
     expect(soundButton).toBeInTheDocument()
     expect(postButton).toHaveClass('neon-button-base')
