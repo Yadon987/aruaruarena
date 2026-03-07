@@ -61,6 +61,9 @@ const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
 const SOUND_SE_SUBMIT = 'se_submit'
 const SOUND_SE_RETRY = 'se_retry'
 const SOUND_SE_RESULT_OPEN = 'se_result_open'
+const FIXED_FOOTER_BOTTOM_OFFSET_PX = 24
+const FIXED_FOOTER_MIN_RESERVED_PX = 96
+const FIXED_FOOTER_EXTRA_GAP_PX = 12
 
 type ValidationErrors = {
   nicknameError: string
@@ -230,11 +233,13 @@ function App() {
   const [isResultPostLoading, setIsResultPostLoading] = useState(false)
   const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
   const [isJudgingPollingReady, setIsJudgingPollingReady] = useState(false)
+  const [footerReservedSpace, setFooterReservedSpace] = useState(FIXED_FOOTER_MIN_RESERVED_PX)
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
   const myPostDetailsRef = useRef<Record<string, Post>>({})
   const myPostsTriggerRef = useRef<HTMLButtonElement | null>(null)
   const privacyPolicyTriggerRef = useRef<HTMLButtonElement | null>(null)
   const rankingTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const footerRef = useRef<HTMLElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
   const resultRequestSeqRef = useRef(0)
   const previousResultModalOpenRef = useRef(false)
@@ -882,11 +887,47 @@ function App() {
     void prefetchMyPostsDetails(prefetchTargetPostIds)
   }, [isMyPostsOpen, prefetchMyPostsDetails, prefetchTargetPostIds])
 
+  useEffect(() => {
+    if (viewMode !== 'top') {
+      setFooterReservedSpace(FIXED_FOOTER_MIN_RESERVED_PX)
+      return
+    }
+
+    const footerElement = footerRef.current
+    if (!footerElement) return
+
+    const updateFooterReservedSpace = () => {
+      const footerHeight = Math.ceil(footerElement.getBoundingClientRect().height)
+      const nextReservedSpace = Math.max(
+        FIXED_FOOTER_MIN_RESERVED_PX,
+        footerHeight + FIXED_FOOTER_BOTTOM_OFFSET_PX + FIXED_FOOTER_EXTRA_GAP_PX
+      )
+      setFooterReservedSpace((current) =>
+        current === nextReservedSpace ? current : nextReservedSpace
+      )
+    }
+
+    updateFooterReservedSpace()
+    window.addEventListener('resize', updateFooterReservedSpace)
+
+    if (typeof ResizeObserver === 'undefined') {
+      return () => window.removeEventListener('resize', updateFooterReservedSpace)
+    }
+
+    const observer = new ResizeObserver(updateFooterReservedSpace)
+    observer.observe(footerElement)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updateFooterReservedSpace)
+    }
+  }, [viewMode])
+
   return (
     <QueryClientProvider client={queryClient}>
       <div
-        className="game-show-stage relative min-h-screen overflow-hidden p-6 pb-24"
-        style={{ isolation: 'isolate' }}
+        className="game-show-stage relative min-h-screen overflow-hidden p-6"
+        style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
       >
         <BackgroundTitle />
         <header role="banner" className="relative z-10 mb-6 flex items-start justify-between gap-4">
@@ -964,6 +1005,7 @@ function App() {
             </div>
 
             <footer
+              ref={footerRef}
               role="contentinfo"
               className="fixed bottom-6 inset-x-0 w-full flex flex-wrap items-center justify-center gap-3 z-40 pointer-events-none"
             >

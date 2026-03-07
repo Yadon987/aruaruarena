@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
+import { api } from '../../../shared/services/api'
 import { fillAndSubmitPostForm, openPostDialog } from '../../../test/helpers'
 
 vi.mock('../../mocks/browser', () => ({
@@ -9,8 +10,6 @@ vi.mock('../../mocks/browser', () => ({
     stop: () => Promise.resolve(),
   },
 }))
-
-import { api } from '../../../shared/services/api'
 
 vi.mock('../../../shared/hooks/useRankings', () => ({
   useRankings: vi.fn(() => ({
@@ -177,6 +176,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
     await waitFor(
       () => {
+        expect(screen.queryByRole('dialog', { name: '投稿フォーム' })).not.toBeInTheDocument()
         expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
       },
       { timeout: 10000 }
@@ -205,6 +205,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
     await waitFor(
       () => {
+        expect(screen.queryByRole('dialog', { name: '投稿フォーム' })).not.toBeInTheDocument()
         expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
       },
       { timeout: 10000 }

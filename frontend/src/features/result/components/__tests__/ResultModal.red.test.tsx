@@ -312,7 +312,14 @@ describe('E15-01 RED: ResultModal Component', () => {
       // 何を検証するか: OGP画像確認が成功した場合にXのシェアウィンドウを開き、OGPプレビューを表示すること
       const fetchSpy = vi.fn().mockResolvedValue({ ok: true } as Response)
       vi.stubGlobal('fetch', fetchSpy)
-      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => ({}) as Window)
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(
+        () =>
+          ({
+            focus: vi.fn(),
+            close: vi.fn(),
+            closed: false,
+          }) as unknown as Window
+      )
 
       await moveToResultScreen({
         status: 'scored',

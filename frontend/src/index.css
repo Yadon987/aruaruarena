@@ -204,4 +204,9 @@
   .neon-text-pink {
     text-shadow: none;
   }
+
+  [data-testid='judge-desk-score'][data-lit='true'] .digital-score,
+  [data-testid='judge-desk-score'][data-lit='true'] .digital-score-unit {
+    text-shadow: none;
+  }
 }
