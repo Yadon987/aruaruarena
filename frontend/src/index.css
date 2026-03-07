@@ -3,9 +3,7 @@
 @tailwind utilities;
 
 .game-show-stage {
-  background:
-    radial-gradient(circle at 50% -20%, rgba(14, 116, 144, 0.32), transparent 55%),
-    linear-gradient(180deg, #04111f 0%, #071a2f 45%, #020611 100%);
+  background: linear-gradient(180deg, #04111f 0%, #071a2f 45%, #020611 100%);
 }
 
 .neon-button-base {
