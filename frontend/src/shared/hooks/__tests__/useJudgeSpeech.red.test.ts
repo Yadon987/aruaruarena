@@ -48,8 +48,9 @@ describe('E24-03 RED: useJudgeSpeech', () => {
 
     expect(result.current.currentSpeech).toBeNull()
 
+    // 間隔が0〜500msなので、1000ms進めれば確実に発話が開始される
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(6000)
+      await vi.advanceTimersByTimeAsync(1000)
     })
 
     expect(result.current.speakingJudge).not.toBeNull()
