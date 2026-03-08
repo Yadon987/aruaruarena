@@ -47,7 +47,7 @@ describe('App Game Show Layout Refactor', () => {
     expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
   })
 
-  it('RED: ホーム画面の審査員UIは審査中と同一サイズクラスで表示される', () => {
+  it('ホーム画面の審査員UIは審査中と同一サイズクラスで表示される', () => {
     // 何を検証するか: ホーム下部ドックでも審査中と同じアバターサイズ仕様を使用すること
     render(<App />)
 

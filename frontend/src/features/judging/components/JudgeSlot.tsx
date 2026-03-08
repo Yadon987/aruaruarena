@@ -43,8 +43,6 @@ interface JudgeSlotProps {
   phase: JudgeDeskPhase
   /** スピーチを表示するか */
   showSpeech: boolean
-  /** アバターサイズをコンパクトにするか */
-  compact?: boolean
 }
 
 /**
@@ -78,7 +76,6 @@ export function JudgeSlot({
   judgment,
   phase,
   showSpeech,
-  compact = false,
 }: JudgeSlotProps) {
   const neonClass = JUDGE_NEON_CLASS[judge]
   const scoreLabel = resolveScoreLabel(judgment)
@@ -101,7 +98,7 @@ export function JudgeSlot({
         src={getAvatarImagePath(judge, avatarState)}
         alt={alt}
         aria-label={getJudgeAriaLabel(judge)}
-        className={`h-auto ${compact ? 'w-24 sm:w-28 md:w-40 lg:w-44' : 'w-28 md:w-48 lg:w-56'}`}
+        className="h-auto w-28 md:w-48 lg:w-56"
         initial={entranceVariant.initial}
         animate={entranceVariant.animate}
         transition={entranceVariant.transition}

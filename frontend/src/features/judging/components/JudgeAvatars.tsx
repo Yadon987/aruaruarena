@@ -65,7 +65,6 @@ export function JudgeAvatars({
   judgments,
   judgingPhase,
   compactBottomSpacing = false,
-  compactAvatarSize = false,
 }: JudgeAvatarsProps) {
   const { variants: entranceVariants } = useJudgeEntrance()
   const { currentSpeech, speakingJudge } = useJudgeSpeech({
@@ -101,9 +100,7 @@ export function JudgeAvatars({
     >
       <div
         data-testid="judge-avatars-container"
-        className={`grid grid-cols-3 ${
-          compactAvatarSize ? 'gap-2 sm:gap-4 md:gap-6 lg:gap-8' : 'gap-4 md:gap-6 lg:gap-8'
-        }`}
+        className="grid grid-cols-3 gap-4 md:gap-6 lg:gap-8"
       >
         {JUDGE_CONFIG.map((judge) => {
           const entrance = entranceVariants[judge.id]
@@ -126,7 +123,6 @@ export function JudgeAvatars({
               judgment={judgmentMap.get(judge.id)}
               phase={phase}
               showSpeech={showSpeech}
-              compact={compactAvatarSize}
             />
           )
         })}

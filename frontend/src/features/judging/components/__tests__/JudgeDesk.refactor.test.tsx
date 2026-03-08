@@ -37,17 +37,17 @@ describe('JudgeDesk Refactor', () => {
     })
   })
 
-  it('compact=true の場合はコンパクト用クラスを適用する', async () => {
-    // 何を検証するか: 小型アバター表示時にデスク幅も縮小されること
+  it('compact=true が指定されても単一レイアウトクラスを維持する', async () => {
+    // 何を検証するか: デスクはcompact指定に依存せず単一仕様で描画されること
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(<JudgeDesk phase="complete" compact={true} />)
 
     const desk = screen.getByTestId('judge-desk')
-    expect(desk).toHaveClass('judge-desk-shell-compact')
+    expect(desk).not.toHaveClass('judge-desk-shell-compact')
   })
 
-  it('RED: JudgeDeskはcompact専用クラスなしで単一レイアウトを使用する', async () => {
+  it('JudgeDeskはcompact専用クラスなしで単一レイアウトを使用する', async () => {
     // 何を検証するか: 審査席パネル幅が画面モードに依存せず単一仕様であること
     const { JudgeDesk } = await loadJudgeDesk()
 

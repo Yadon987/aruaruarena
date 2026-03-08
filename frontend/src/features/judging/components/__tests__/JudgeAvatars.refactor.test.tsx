@@ -110,7 +110,7 @@ describe('JudgeAvatars Refactor', () => {
     expect(screen.getAllByText('---')).toHaveLength(3)
   })
 
-  it('compactAvatarSize=true の場合はアバターサイズが縮小される', async () => {
+  it('compactAvatarSize=true でもアバターサイズは共通仕様を維持する', async () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(
       <JudgeAvatars
@@ -121,17 +121,17 @@ describe('JudgeAvatars Refactor', () => {
       />
     )
 
-    // 新しい構造ではアバターのサイズクラスを確認
+    // 何を検証するか: compact指定があってもアバターサイズが共通化されること
     const avatars = screen.getAllByRole('img')
     expect(avatars.length).toBe(3)
     avatars.forEach((avatar) => {
-      expect(avatar).toHaveClass('w-24')
-      expect(avatar.className).toMatch(/sm:w-28/)
-      expect(avatar.className).toMatch(/md:w-40/)
+      expect(avatar).toHaveClass('w-28')
+      expect(avatar.className).toMatch(/md:w-48/)
+      expect(avatar.className).toMatch(/lg:w-56/)
     })
   })
 
-  it('RED: ホーム相当でも審査中と同一のアバターサイズクラスになる', async () => {
+  it('ホーム相当でも審査中と同一のアバターサイズクラスになる', async () => {
     // 何を検証するか: 画面差分を配置のみにし、サイズ仕様を共通化できていること
     const { JudgeAvatars } = await loadJudgeAvatars()
 
@@ -156,7 +156,7 @@ describe('JudgeAvatars Refactor', () => {
     })
   })
 
-  it('RED: compact系props指定有無でアバターサイズが不変である', async () => {
+  it('compact系props指定有無でアバターサイズが不変である', async () => {
     // 何を検証するか: compactAvatarSize/compactBottomSpacingに依存しない単一サイズ仕様であること
     const { JudgeAvatars } = await loadJudgeAvatars()
 
