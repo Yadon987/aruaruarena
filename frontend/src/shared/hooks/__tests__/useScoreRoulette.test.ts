@@ -47,6 +47,7 @@ describe('useScoreRoulette', () => {
   })
 
   it('completeフェーズで最終スコアに停止しrevealedになる', async () => {
+    type ScorePhase = 'entrance' | 'speaking' | 'scoring' | 'complete'
     const { result, rerender } = renderHook(
       ({ phase }) =>
         useScoreRoulette({
@@ -54,10 +55,10 @@ describe('useScoreRoulette', () => {
           finalScoreLabel: '92',
           prefersReducedMotion: false,
         }),
-      { initialProps: { phase: 'scoring' as const } }
+      { initialProps: { phase: 'scoring' as ScorePhase } }
     )
 
-    rerender({ phase: 'complete' })
+    rerender({ phase: 'complete' as ScorePhase })
     expect(result.current.displayValue).toBe('92')
     expect(result.current.isRouletting).toBe(false)
     expect(result.current.isRevealed).toBe(true)
