@@ -36,4 +36,33 @@ describe('JudgeDesk Refactor', () => {
       expect(panel, `panel[${index}]`).toHaveAttribute('data-lit', 'false')
     })
   })
+
+  it('JudgeDeskは単一レイアウトクラスで描画される', async () => {
+    // 何を検証するか: デスクが常に単一のレイアウトクラスで描画されること
+    const { JudgeDesk } = await loadJudgeDesk()
+
+    render(<JudgeDesk phase="complete" />)
+
+    const desk = screen.getByTestId('judge-desk')
+    expect(desk).toHaveClass('judge-desk-shell')
+    expect(desk).not.toHaveClass('judge-desk-shell-compact')
+  })
+
+  it('success=falseならN/Aを表示する', async () => {
+    // 何を検証するか: 審査失敗時（success=false）はスコア有無に関係なくN/A表示になること
+    const { JudgeDesk } = await loadJudgeDesk()
+
+    render(
+      <JudgeDesk
+        phase="complete"
+        judgments={[
+          { judge: 'nakao', success: false },
+          { judge: 'hiroyuki', success: true, score: 80 },
+          { judge: 'dewi', success: true, score: 90 },
+        ]}
+      />
+    )
+
+    expect(screen.getByLabelText('中尾彬審査員のスコア: N/A点')).toBeInTheDocument()
+  })
 })

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
@@ -45,5 +45,17 @@ describe('App Game Show Layout Refactor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
 
     expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+  })
+
+  it('ホーム画面の審査員UIは審査中と同一サイズクラスで表示される', () => {
+    // 何を検証するか: ホーム下部ドックでも審査中と同じアバターサイズ仕様を使用すること
+    render(<App />)
+
+    const dock = screen.getByTestId('top-judge-dock')
+    const avatars = within(dock).getAllByRole('img')
+    expect(avatars.length).toBeGreaterThan(0)
+    avatars.forEach((avatar) => {
+      expect(avatar).toHaveClass('w-28')
+    })
   })
 })

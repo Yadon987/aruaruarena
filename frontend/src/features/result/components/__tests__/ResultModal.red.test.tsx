@@ -284,13 +284,9 @@ describe('E15-01 RED: ResultModal Component', () => {
       fireEvent.click(shareButton)
     })
 
-    // フェイクタイマーを使用しているため、タイマーを進めてから状態を確認
     await act(async () => {
-      // 状態更新のためにタイマーを少し進める
-      await vi.advanceTimersByTimeAsync(100)
+      await vi.advanceTimersByTimeAsync(1)
     })
-
-    // 状態更新後のテキストを確認
     expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
 
     await act(async () => {

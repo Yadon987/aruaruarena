@@ -1,22 +1,17 @@
-import { motion } from 'framer-motion'
-import {
-  getAvatarImagePath,
-  getJudgeAriaLabel,
-  HIROYUKI_CATCHPHRASE,
-} from '../../../shared/constants/avatar'
+import { HIROYUKI_CATCHPHRASE } from '../../../shared/constants/avatar'
 import { useJudgeAvatarState } from '../../../shared/hooks/useJudgeAvatarState'
 import { useJudgeEntrance } from '../../../shared/hooks/useJudgeEntrance'
 import { useJudgeSpeech } from '../../../shared/hooks/useJudgeSpeech'
 import type { JudgePersona, Judgment } from '../../../shared/types/domain'
-import { JudgeDesk } from './JudgeDesk'
 import type { JudgeDeskJudgment, JudgeDeskPhase } from './JudgeDesk'
-import { JudgeSpeechBubble } from './JudgeSpeechBubble'
+import { JudgeSlot } from './JudgeSlot'
 
 interface JudgeAvatarsProps {
   isJudging: boolean
   isPostModalOpen: boolean
   judgments?: Array<Partial<Judgment> & JudgeDeskJudgment>
   judgingPhase?: JudgeDeskPhase
+  compactBottomSpacing?: boolean
 }
 
 /** 審査員設定（表示順: 中尾 -> ひろゆき -> デヴィ） */
@@ -28,6 +23,10 @@ const JUDGE_CONFIG: readonly { id: JudgePersona; alt: string }[] = [
 
 /** フォールバックスピーチ（currentSpeechがnull時の表示） */
 const FALLBACK_SPEECH = '...'
+const STAGE_BASE_CLASS = 'relative mx-auto w-full max-w-6xl'
+const STAGE_COMPACT_BOTTOM_CLASS = 'pb-8'
+const STAGE_DEFAULT_BOTTOM_CLASS = 'pb-16'
+const AVATAR_GRID_CLASS = 'grid grid-cols-3 gap-4 md:gap-6 lg:gap-8'
 
 interface ResolveSpeechTextOptions {
   judgeId: JudgePersona
@@ -57,14 +56,35 @@ function resolveSpeechText({
   return shouldShowDefaultCatchphrase ? HIROYUKI_CATCHPHRASE : null
 }
 
+function buildJudgmentMap(
+  judgments?: Array<Partial<Judgment> & JudgeDeskJudgment>
+): Map<JudgePersona, JudgeDeskJudgment> {
+  if (!judgments) return new Map<JudgePersona, JudgeDeskJudgment>()
+
+  return judgments.reduce<Map<JudgePersona, JudgeDeskJudgment>>((map, judgment) => {
+    const key = judgment.judge ?? judgment.persona
+    if (key) map.set(key, judgment)
+    return map
+  }, new Map<JudgePersona, JudgeDeskJudgment>())
+}
+
+function resolvePhase(isJudging: boolean, judgingPhase?: JudgeDeskPhase): JudgeDeskPhase {
+  // フェーズ未指定時は画面状態に合わせて既定値を補完する
+  return judgingPhase ?? (isJudging ? 'speaking' : 'complete')
+}
+
 /**
- * 審査員アバターを横並びで表示するコンポーネント
+ * 審査員アバターとスコアパネルをGrid配置で表示するコンポーネント
+ *
+ * 各審査員スロット（吹き出し+アバター+パネル）を1カラム単位でカプセル化し、
+ * 3カラムGridで横並びに配置することで、アバターとパネルの位置関係を強固にしている。
  */
 export function JudgeAvatars({
   isJudging,
   isPostModalOpen,
   judgments,
   judgingPhase,
+  compactBottomSpacing = false,
 }: JudgeAvatarsProps) {
   const { variants: entranceVariants } = useJudgeEntrance()
   const { currentSpeech, speakingJudge } = useJudgeSpeech({
@@ -77,15 +97,18 @@ export function JudgeAvatars({
     speakingJudge,
   })
 
+  const judgmentMap = buildJudgmentMap(judgments)
+  const phase = resolvePhase(isJudging, judgingPhase)
+  const showSpeech = phase !== 'scoring' && phase !== 'complete'
+
   return (
     <div
       data-testid="judge-stage"
-      className="relative mx-auto w-full max-w-6xl overflow-hidden pb-16"
+      className={`${STAGE_BASE_CLASS} ${
+        compactBottomSpacing ? STAGE_COMPACT_BOTTOM_CLASS : STAGE_DEFAULT_BOTTOM_CLASS
+      }`}
     >
-      <ul
-        data-testid="judge-avatars-container"
-        className="relative z-0 flex flex-row items-end justify-center gap-6 md:gap-8 lg:gap-10"
-      >
+      <div data-testid="judge-avatars-container" className={AVATAR_GRID_CLASS}>
         {JUDGE_CONFIG.map((judge) => {
           const entrance = entranceVariants[judge.id]
           const speechText = resolveSpeechText({
@@ -95,34 +118,21 @@ export function JudgeAvatars({
             isJudging,
             isPostModalOpen,
           })
-          return (
-            <li key={judge.id} className="relative z-0 flex flex-col items-center list-none">
-              {speechText && judgingPhase !== 'scoring' && (
-                <JudgeSpeechBubble
-                  isVisible={true}
-                  text={speechText}
-                  judgeType={judge.id}
-                  testId={`catchphrase-${judge.id}`}
-                />
-              )}
 
-              <motion.img
-                src={getAvatarImagePath(judge.id, avatarStates[judge.id])}
-                alt={judge.alt}
-                aria-label={getJudgeAriaLabel(judge.id)}
-                className="w-28 md:w-48 lg:w-56 h-auto"
-                initial={entrance.initial}
-                animate={entrance.animate}
-                transition={entrance.transition}
-                draggable={false}
-              />
-            </li>
+          return (
+            <JudgeSlot
+              key={judge.id}
+              judge={judge.id}
+              alt={judge.alt}
+              speechText={speechText}
+              avatarState={avatarStates[judge.id]}
+              entranceVariant={entrance}
+              judgment={judgmentMap.get(judge.id)}
+              phase={phase}
+              showSpeech={showSpeech}
+            />
           )
         })}
-      </ul>
-      {/* デスクは常時表示し、phaseに応じてスコア演出だけを切り替える */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-2">
-        <JudgeDesk judgments={judgments ?? []} phase={judgingPhase ?? 'complete'} />
       </div>
     </div>
   )

@@ -87,7 +87,7 @@ describe('useJudgeSpeech Refactor', () => {
     const picked = new Set<string>()
 
     // 間隔が0〜500ms + 表示時間2500msなので、1サイクル最大3000ms
-    // 20回ループで60秒分進める（統計的に全員選ばれる可能性が高い）
+    // 20回ループで70秒分進める（統計的に全員選ばれる可能性が高い）
     for (let i = 0; i < 20; i += 1) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(3500)
