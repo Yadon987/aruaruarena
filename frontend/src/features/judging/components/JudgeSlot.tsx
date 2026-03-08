@@ -139,7 +139,7 @@ export function JudgeSlot({
   return (
     <div
       data-testid={`judge-slot-${judge}`}
-      className="relative flex flex-col items-center gap-2 overflow-visible"
+      className="relative flex w-full min-w-0 flex-col items-center gap-2 overflow-visible"
     >
       {/* 吹き出し */}
       {speechText && showSpeech && (
@@ -172,7 +172,7 @@ export function JudgeSlot({
       <div
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
-        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} glass-panel relative z-20 -mt-8 w-[110%] max-w-[14rem] md:-mt-12 md:w-[120%] md:max-w-[20rem] lg:-mt-16 lg:max-w-[24rem]`}
+        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} glass-panel relative z-20 -mt-8 w-full max-w-[14rem] md:-mt-12 md:max-w-[20rem] lg:-mt-16 lg:max-w-[24rem]`}
         aria-label={buildScoreAriaLabel(judge, scoreLabel)}
         role="group"
       >
