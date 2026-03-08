@@ -20,6 +20,10 @@ class JudgePostService
   PER_JUDGE_TIMEOUT = 70  # 各審査員のタイムアウト（秒）
   JOIN_TIMEOUT = 90       # 全体のタイムアウト（秒）
   MAX_ERROR_BACKTRACE_LINES = 20
+  # 審査員数と同じスレッド数に揃え、キューを有限にして:caller_runsの背圧を効かせる
+  EXECUTOR_THREAD_COUNT = JUDGES.size
+  EXECUTOR_MAX_QUEUE = JUDGES.size
+  EXECUTOR_SHUTDOWN_WAIT_SECONDS = 5
 
   # 初期化
   #
@@ -163,7 +167,7 @@ class JudgePostService
     return unless @executor
 
     @executor.shutdown
-    unless @executor.wait_for_termination(5)
+    unless @executor.wait_for_termination(EXECUTOR_SHUTDOWN_WAIT_SECONDS)
       @executor.kill
       Rails.logger.warn('[JudgePostService] Executor killed after timeout')
     end
@@ -174,9 +178,9 @@ class JudgePostService
   # ThreadPool executorを取得（遅延初期化）
   def executor
     @executor ||= Concurrent::ThreadPoolExecutor.new(
-      min_threads: 3,
-      max_threads: 3,
-      max_queue: 0,
+      min_threads: EXECUTOR_THREAD_COUNT,
+      max_threads: EXECUTOR_THREAD_COUNT,
+      max_queue: EXECUTOR_MAX_QUEUE,
       fallback_policy: :caller_runs
     )
   end
@@ -197,38 +201,14 @@ class JudgePostService
       persona = data[:persona]
       result = data[:result]
 
-      # 属性を構築
-      attrs = {
-        id: SecureRandom.uuid,
-        succeeded: result.succeeded,
-        error_code: result.error_code,
-        judged_at: Time.now.to_i.to_s
-      }
-
-      if result.succeeded
-        attrs.merge!(
-          empathy: result.scores[:empathy],
-          humor: result.scores[:humor],
-          brevity: result.scores[:brevity],
-          originality: result.scores[:originality],
-          expression: result.scores[:expression],
-          total_score: Judgment.calculate_total_score(result.scores),
-          comment: result.comment
-        )
-      end
+      attrs = build_judgment_attrs(result)
 
       # 条件なし書き込みを実行
       put_item_without_condition(@post.id, persona, attrs)
 
       next unless result.succeeded
 
-      judgment = Judgment.new(
-        post_id: @post.id,
-        persona: persona,
-        **attrs.symbolize_keys
-      )
-      judgment.total_score ||= Judgment.calculate_total_score(result.scores)
-      @successful_judgments << judgment
+      @successful_judgments << build_successful_judgment(persona, attrs)
     end
   end
 
@@ -254,5 +234,33 @@ class JudgePostService
   def skip_processed_post
     Rails.logger.info("[JudgePostService] スキップ(処理済み): post_id=#{@post.id}, status=#{@post.status}")
     nil
+  end
+
+  def build_judgment_attrs(result)
+    attrs = {
+      id: SecureRandom.uuid,
+      succeeded: result.succeeded,
+      error_code: result.error_code,
+      judged_at: Time.now.to_i.to_s
+    }
+    return attrs unless result.succeeded
+
+    attrs.merge(
+      empathy: result.scores[:empathy],
+      humor: result.scores[:humor],
+      brevity: result.scores[:brevity],
+      originality: result.scores[:originality],
+      expression: result.scores[:expression],
+      total_score: Judgment.calculate_total_score(result.scores),
+      comment: result.comment
+    )
+  end
+
+  def build_successful_judgment(persona, attrs)
+    Judgment.new(
+      post_id: @post.id,
+      persona: persona,
+      **attrs
+    )
   end
 end

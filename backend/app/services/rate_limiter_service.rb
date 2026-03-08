@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'digest'
+
 # RateLimiterService - レート制限サービス
 #
 # IPアドレスとニックネームの両方に対して5分間の投稿制限を設ける
@@ -7,9 +9,7 @@ class RateLimiterService
   # 定数
   LIMIT_DURATION = 5 # TODO: 開発の利便性のため一時的に5秒に変更（本来は 300）
 
-  # ログ出力用のハッシュインデックス
-  HASH_LOG_START_INDEX = 3  # ハッシュの開始位置（ログ出力用）
-  HASH_LOG_END_INDEX = 19   # ハッシュの終了位置（ログ出力用）
+  LOG_HASH_LENGTH = 16
 
   # IPアドレスまたはニックネームが制限中かチェック
   # @param ip [String] IPアドレス（生値。内部でハッシュ化する）
@@ -24,14 +24,10 @@ class RateLimiterService
     ip_limited = RateLimit.limited?(ip_identifier)
     nickname_limited = RateLimit.limited?(nickname_identifier)
 
-    if ip_limited || nickname_limited
-      ip_hash = ip_identifier[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
-      nickname_hash = nickname_identifier[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
-      Rails.logger.error("[RateLimiterService] Limited: ip=#{ip_hash}, nickname=#{nickname_hash}")
-      return true
-    end
+    return false unless ip_limited || nickname_limited
 
-    false
+    log_limited_identifiers(ip_identifier, nickname_identifier)
+    true
   rescue StandardError => e
     # フェイルオープン: エラー時は投稿を許可
     Rails.logger.error("[RateLimiterService] DynamoDB error: #{e.class} - #{e.message}")
@@ -46,18 +42,35 @@ class RateLimiterService
     ip_identifier = RateLimit.generate_ip_identifier(ip)
     nickname_identifier = RateLimit.generate_nickname_identifier(nickname)
 
-    # IP制限設定（フェイルオープン）
-    begin
-      RateLimit.set_limit(ip_identifier, seconds: LIMIT_DURATION)
-    rescue StandardError => e
-      Rails.logger.error("[RateLimiterService] Failed to set IP limit: #{e.class} - #{e.message}")
+    # 片系で失敗しても投稿フローを止めない（フェイルオープン）
+    apply_limit_with_fail_open(identifier: ip_identifier, target_label: 'IP')
+    apply_limit_with_fail_open(identifier: nickname_identifier, target_label: 'nickname')
+    true
+  rescue StandardError => e
+    # 識別子生成などの予期しない失敗でも投稿処理は継続する
+    Rails.logger.error("[RateLimiterService] set_limit! failed: #{e.class} - #{e.message}")
+    false
+  end
+
+  class << self
+    private
+
+    def log_limited_identifiers(ip_identifier, nickname_identifier)
+      ip_hash = masked_identifier(ip_identifier)
+      nickname_hash = masked_identifier(nickname_identifier)
+      Rails.logger.error("[RateLimiterService] Limited: ip=#{ip_hash}, nickname=#{nickname_hash}")
     end
 
-    # ニックネーム制限設定（フェイルオープン）
-    begin
-      RateLimit.set_limit(nickname_identifier, seconds: LIMIT_DURATION)
+    def masked_identifier(identifier)
+      return '' unless identifier.is_a?(String)
+
+      Digest::SHA256.hexdigest(identifier).first(LOG_HASH_LENGTH)
+    end
+
+    def apply_limit_with_fail_open(identifier:, target_label:)
+      RateLimit.set_limit(identifier, seconds: LIMIT_DURATION)
     rescue StandardError => e
-      Rails.logger.error("[RateLimiterService] Failed to set nickname limit: #{e.class} - #{e.message}")
+      Rails.logger.error("[RateLimiterService] Failed to set #{target_label} limit: #{e.class} - #{e.message}")
     end
   end
 end

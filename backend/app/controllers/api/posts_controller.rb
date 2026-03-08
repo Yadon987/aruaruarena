@@ -75,12 +75,7 @@ module Api
         LogOgpGenerationEventService.call(event: 'post_created', post:)
 
         # 投稿成功後にレート制限を設定
-        begin
-          RateLimiterService.set_limit!(ip: request.remote_ip, nickname: post_params[:nickname])
-        rescue StandardError => e
-          # set_limit!失敗時も投稿レスポンスを返す（フェイルオープン）
-          Rails.logger.error("[PostsController#create] Rate limit set failed: #{e.class} - #{e.message}")
-        end
+        RateLimiterService.set_limit!(ip: request.remote_ip, nickname: post_params[:nickname])
 
         # 投稿成功後に重複チェックレコードを登録
         begin
