@@ -1,10 +1,19 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadComponent } from '../../../../test/mocks/framerMotion'
 
 const loadJudgeSpeechBubble = () => loadComponent(() => import('../JudgeSpeechBubble'))
 
 describe('E24-05 RED: JudgeSpeechBubble', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
   it('吹き出しが表示される', async () => {
     // 何を検証するか: isVisible=true のとき吹き出しが表示されること
     const { JudgeSpeechBubble } = await loadJudgeSpeechBubble()
@@ -17,7 +26,13 @@ describe('E24-05 RED: JudgeSpeechBubble', () => {
       />
     )
 
-    expect(screen.getByText('それってあなたの感想ですよね')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('それってあなたの感想ですよね')
+
+    await act(async () => {
+      vi.advanceTimersByTime(2500)
+    })
+    expect(screen.getByRole('status')).toHaveTextContent('それってあなたの感想ですよね')
+    expect(screen.getByText('それってあなたの感想ですよね', { selector: 'div' })).toBeInTheDocument()
   })
 
   it('isVisible=false で吹き出しが非表示', async () => {
@@ -58,7 +73,11 @@ describe('E24-05 RED: JudgeSpeechBubble', () => {
 
     render(<JudgeSpeechBubble isVisible={true} text={longText} judgeType="hiroyuki" />)
 
-    const bubble = screen.getByText(longText)
+    await act(async () => {
+      vi.advanceTimersByTime(2500)
+    })
+    const bubble = screen.getByText(longText, { selector: 'div' })
+    expect(bubble).toHaveTextContent(longText)
     expect(bubble).toHaveClass('whitespace-normal')
   })
 

@@ -41,7 +41,7 @@ describe('E23-01 RED: 審査中画面のアバター統合', () => {
     render(<App />)
     await submitValidPost()
 
-    await screen.findByTestId('judging-screen')
+    await screen.findByTestId('top-judge-dock')
 
     for (const persona of JUDGE.PERSONAS) {
       expect(
@@ -52,7 +52,7 @@ describe('E23-01 RED: 審査中画面のアバター統合', () => {
     }
   })
 
-  it('ひろゆきのキャッチフレーズがアバター画像と一緒に表示される', async () => {
+  it('発話開始後にいずれかのキャッチフレーズが表示される', async () => {
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'judge-avatar-red-2',
       status: 'judging',
@@ -69,8 +69,15 @@ describe('E23-01 RED: 審査中画面のアバター統合', () => {
     render(<App />)
     await submitValidPost()
 
+    await waitFor(() => {
+      const bubble =
+        screen.queryByTestId('catchphrase-hiroyuki') ??
+        screen.queryByTestId('catchphrase-dewi') ??
+        screen.queryByTestId('catchphrase-nakao')
+      expect(bubble).not.toBeNull()
+    })
+
     const judgeSlot = await screen.findByTestId('judge-slot-hiroyuki')
-    expect(within(judgeSlot).getByTestId('catchphrase-hiroyuki')).toBeInTheDocument()
     expect(
       within(judgeSlot).getByRole('img', {
         name: `${JUDGE_LABELS.hiroyuki}の審査員アバター`,

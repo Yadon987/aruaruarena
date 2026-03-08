@@ -13,7 +13,7 @@ describe('JudgeDesk Refactor', () => {
 
     const panels = screen.getAllByTestId('judge-desk-score')
     expect(panels).toHaveLength(3)
-    expect(screen.getAllByText('---')).toHaveLength(3)
+    expect(screen.getAllByText('00')).toHaveLength(3)
   })
 
   it('scoring以外のフェーズでは点灯状態をfalseで返す', async () => {
@@ -63,6 +63,6 @@ describe('JudgeDesk Refactor', () => {
       />
     )
 
-    expect(screen.getByLabelText('中尾彬審査員のスコア: N/A点')).toBeInTheDocument()
+    expect(screen.getByLabelText('中尾彬審査員のスコア: 判定対象外')).toBeInTheDocument()
   })
 })

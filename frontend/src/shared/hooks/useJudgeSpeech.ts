@@ -6,10 +6,12 @@ import type { JudgePersona } from '../types/domain'
 const SPEECH_INTERVAL_MIN = JUDGE_SPEECH.INTERVAL_MIN_MS
 const SPEECH_INTERVAL_MAX = JUDGE_SPEECH.INTERVAL_MAX_MS
 const SPEECH_DURATION_MS = JUDGE_SPEECH.DURATION_MS
+const IDLE_SPEECH_CYCLE_MS = 8000
 
 interface UseJudgeSpeechOptions {
   isJudging: boolean
   isPostModalOpen: boolean
+  allowIdleSpeech?: boolean
 }
 
 interface JudgeSpeechState {
@@ -23,6 +25,7 @@ interface JudgeSpeechState {
 export function useJudgeSpeech({
   isJudging,
   isPostModalOpen,
+  allowIdleSpeech = false,
 }: UseJudgeSpeechOptions): JudgeSpeechState {
   const [currentSpeech, setCurrentSpeech] = useState<string | null>(null)
   const [speakingJudge, setSpeakingJudge] = useState<JudgePersona | null>(null)
@@ -43,6 +46,10 @@ export function useJudgeSpeech({
   }
 
   const getRandomInterval = (): number => {
+    if (allowIdleSpeech && !isJudging) {
+      return Math.max(0, IDLE_SPEECH_CYCLE_MS - SPEECH_DURATION_MS)
+    }
+
     return SPEECH_INTERVAL_MIN + Math.random() * (SPEECH_INTERVAL_MAX - SPEECH_INTERVAL_MIN)
   }
 
@@ -87,7 +94,7 @@ export function useJudgeSpeech({
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!isJudging || isPostModalOpen) {
+    if ((!isJudging && !allowIdleSpeech) || isPostModalOpen) {
       clearAllTimers()
       setCurrentSpeech(null)
       setSpeakingJudge(null)
@@ -100,7 +107,7 @@ export function useJudgeSpeech({
     return () => {
       clearAllTimers()
     }
-  }, [isJudging, isPostModalOpen])
+  }, [allowIdleSpeech, isJudging, isPostModalOpen])
 
   return { currentSpeech, speakingJudge }
 }

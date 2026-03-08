@@ -1,17 +1,31 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadComponent } from '../../../../test/mocks/framerMotion'
 
 const loadJudgeSpeechBubble = () => loadComponent(() => import('../JudgeSpeechBubble'))
 
 describe('JudgeSpeechBubble Refactor', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
   it('AnimatePresence 配下で表示・非表示を切り替えできる', async () => {
     const { JudgeSpeechBubble } = await loadJudgeSpeechBubble()
     const { rerender, queryByText } = render(
       <JudgeSpeechBubble isVisible={true} text="表示" judgeType="hiroyuki" />
     )
 
-    expect(queryByText('表示')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('表示')
+
+    await act(async () => {
+      vi.advanceTimersByTime(2500)
+    })
+    expect(screen.getByRole('status')).toHaveTextContent('表示')
 
     rerender(<JudgeSpeechBubble isVisible={false} text="表示" judgeType="hiroyuki" />)
     expect(queryByText('表示')).not.toBeInTheDocument()

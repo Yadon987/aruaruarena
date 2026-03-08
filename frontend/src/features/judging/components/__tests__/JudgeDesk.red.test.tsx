@@ -14,7 +14,7 @@ describe('E25-01 RED: JudgeDesk', () => {
   })
 
   it('scoringフェーズで成功審査員の点数を表示する', async () => {
-    // 何を検証するか: E25-01の受け入れ基準として、採点フェーズで成功した審査員の点数が表示されること
+    // 何を検証するか: E25-01の受け入れ基準として、採点フェーズで2桁のルーレット表示になること
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(
@@ -28,9 +28,11 @@ describe('E25-01 RED: JudgeDesk', () => {
       />
     )
 
-    expect(screen.getByText('81')).toBeInTheDocument()
-    expect(screen.getByText('88')).toBeInTheDocument()
-    expect(screen.getByText('93')).toBeInTheDocument()
+    const panels = screen.getAllByTestId('judge-desk-score')
+    panels.forEach((panel) => {
+      expect(within(panel).getByText(/^\d{2}$/)).toBeInTheDocument()
+      expect(panel).toHaveClass('score-rouletting')
+    })
   })
 
   it('scoringフェーズで失敗審査員はN/Aを表示する', async () => {
@@ -83,8 +85,8 @@ describe('E25-01 RED: JudgeDesk', () => {
     expect(panels[2]).toHaveAttribute('data-lit', 'true')
   })
 
-  it('審査員ごとにネオンボーダーとネオンテキストが適用される', async () => {
-    // 何を検証するか: Issue #150 のカラー要件（中尾=シアン、ひろゆき=ピンク、デヴィ=シアン）を満たすこと
+  it('審査員ごとにゴールドボーダーとゴールドテキストが適用される', async () => {
+    // 何を検証するか: VIPゴールド配色が全審査員パネルに適用されること
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(
@@ -99,17 +101,17 @@ describe('E25-01 RED: JudgeDesk', () => {
     )
 
     const panels = screen.getAllByTestId('judge-desk-score')
-    expect(panels[0]).toHaveClass('neon-border-cyan')
-    expect(panels[1]).toHaveClass('neon-border-pink')
-    expect(panels[2]).toHaveClass('neon-border-cyan')
+    expect(panels[0]).toHaveClass('gold-border')
+    expect(panels[1]).toHaveClass('gold-border')
+    expect(panels[2]).toHaveClass('gold-border')
 
-    expect(within(panels[0]).getByText('85')).toHaveClass('neon-text-cyan')
-    expect(within(panels[1]).getByText('92')).toHaveClass('neon-text-pink')
-    expect(within(panels[2]).getByText('78')).toHaveClass('neon-text-cyan')
+    expect(within(panels[0]).getByText('85')).toHaveClass('gold-text')
+    expect(within(panels[1]).getByText('92')).toHaveClass('gold-text')
+    expect(within(panels[2]).getByText('78')).toHaveClass('gold-text')
   })
 
   it('スコアの数値と単位「点」を表示しaria-labelにも「点」を含む', async () => {
-    // 何を検証するか: Issue #150 のスコア表示要件（単位表示とアクセシビリティ）を満たすこと
+    // 何を検証するか: Issue #150 のスコア表示要件（アクセシビリティラベル）を満たすこと
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(
@@ -126,11 +128,11 @@ describe('E25-01 RED: JudgeDesk', () => {
     expect(screen.getByLabelText('中尾彬審査員のスコア: 8.5点')).toBeInTheDocument()
     expect(screen.getByLabelText('ひろゆき審査員のスコア: 0点')).toBeInTheDocument()
     expect(screen.getByLabelText('デヴィ婦人審査員のスコア: 10点')).toBeInTheDocument()
-    expect(screen.getAllByText('点')).toHaveLength(3)
+    expect(screen.queryByText('点')).not.toBeInTheDocument()
   })
 
   it('未確定と失敗でも「点」を表示しルートとパネルのglass-panel適用位置が正しい', async () => {
-    // 何を検証するか: Issue #150 の台座分離要件と境界表示（---/N-A）を満たすこと
+    // 何を検証するか: Issue #150 の台座分離要件と境界表示（00/N-A）を満たすこと
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(
@@ -149,8 +151,8 @@ describe('E25-01 RED: JudgeDesk', () => {
     })
 
     expect(within(panels[0]).getByText('N/A')).toBeInTheDocument()
-    expect(within(panels[1]).getByText('---')).toBeInTheDocument()
-    expect(within(panels[2]).getByText('---')).toBeInTheDocument()
-    expect(screen.getAllByText('点')).toHaveLength(3)
+    expect(within(panels[1]).getByText('00')).toBeInTheDocument()
+    expect(within(panels[2]).getByText('00')).toBeInTheDocument()
+    expect(screen.queryByText('点')).not.toBeInTheDocument()
   })
 })

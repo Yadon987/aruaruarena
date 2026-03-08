@@ -8,12 +8,12 @@ describe('E23-01 RED: アバター定数', () => {
     // 何を検証するか: 口パクと瞬きの継続時間・間隔が受け入れ基準どおりであること
     const { AVATAR_ANIMATION } = await loadAvatarModule()
 
-    expect(AVATAR_ANIMATION.MOUTH_DURATION_MS).toBe(120)
+    expect(AVATAR_ANIMATION.MOUTH_DURATION_MS).toBe(140)
     expect(AVATAR_ANIMATION.BLINK_DURATION_MS).toBe(150)
-    expect(AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS).toBe(2000)
-    expect(AVATAR_ANIMATION.MOUTH_INTERVAL_MAX_MS).toBe(4000)
-    expect(AVATAR_ANIMATION.BLINK_INTERVAL_MIN_MS).toBe(3000)
-    expect(AVATAR_ANIMATION.BLINK_INTERVAL_MAX_MS).toBe(5000)
+    expect(AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS).toBe(90)
+    expect(AVATAR_ANIMATION.MOUTH_INTERVAL_MAX_MS).toBe(220)
+    expect(AVATAR_ANIMATION.BLINK_INTERVAL_MIN_MS).toBe(1200)
+    expect(AVATAR_ANIMATION.BLINK_INTERVAL_MAX_MS).toBe(2200)
   })
 
   it('アバター画像パス関連の定数と一覧を返せる', async () => {

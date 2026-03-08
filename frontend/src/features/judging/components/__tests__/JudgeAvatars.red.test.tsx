@@ -76,13 +76,13 @@ describe('E24-04 RED: JudgeAvatars', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
-  it('isJudging=true でひろゆきの口癖が表示される', async () => {
-    // 何を検証するか: 初期表示時に既定のひろゆき口癖が表示されること
+  it('isJudging=true かつ発話者未決定では口癖を表示しない', async () => {
+    // 何を検証するか: 待機中は吹き出しを表示しないこと
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
 
-    expect(screen.getByTestId('catchphrase-hiroyuki')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('横並びレイアウト（grid grid-cols-3）が適用される', async () => {

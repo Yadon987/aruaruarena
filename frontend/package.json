@@ -51,6 +51,7 @@
 	},
 	"dependencies": {
 		"@tanstack/react-query": "^5.90.20",
+		"dseg": "^0.46.0",
 		"framer-motion": "^11.18.2",
 		"howler": "^2.2.4",
 		"react": "^19.2.4",

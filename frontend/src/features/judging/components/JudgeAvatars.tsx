@@ -1,4 +1,3 @@
-import { HIROYUKI_CATCHPHRASE } from '../../../shared/constants/avatar'
 import { useJudgeAvatarState } from '../../../shared/hooks/useJudgeAvatarState'
 import { useJudgeEntrance } from '../../../shared/hooks/useJudgeEntrance'
 import { useJudgeSpeech } from '../../../shared/hooks/useJudgeSpeech'
@@ -9,6 +8,7 @@ import { JudgeSlot } from './JudgeSlot'
 interface JudgeAvatarsProps {
   isJudging: boolean
   isPostModalOpen: boolean
+  enableIdleBehavior?: boolean
   judgments?: Array<Partial<Judgment> & JudgeDeskJudgment>
   judgingPhase?: JudgeDeskPhase
   compactBottomSpacing?: boolean
@@ -34,6 +34,7 @@ interface ResolveSpeechTextOptions {
   currentSpeech: string | null
   isJudging: boolean
   isPostModalOpen: boolean
+  enableIdleBehavior: boolean
 }
 
 function resolveSpeechText({
@@ -42,8 +43,10 @@ function resolveSpeechText({
   currentSpeech,
   isJudging,
   isPostModalOpen,
+  enableIdleBehavior,
 }: ResolveSpeechTextOptions): string | null {
-  if (!isJudging || isPostModalOpen) {
+  const canSpeak = isJudging || enableIdleBehavior
+  if (!canSpeak || isPostModalOpen) {
     return null
   }
 
@@ -51,9 +54,7 @@ function resolveSpeechText({
     return currentSpeech ?? FALLBACK_SPEECH
   }
 
-  const shouldShowDefaultCatchphrase = judgeId === 'hiroyuki' && speakingJudge === null
-
-  return shouldShowDefaultCatchphrase ? HIROYUKI_CATCHPHRASE : null
+  return null
 }
 
 function buildJudgmentMap(
@@ -82,6 +83,7 @@ function resolvePhase(isJudging: boolean, judgingPhase?: JudgeDeskPhase): JudgeD
 export function JudgeAvatars({
   isJudging,
   isPostModalOpen,
+  enableIdleBehavior = false,
   judgments,
   judgingPhase,
   compactBottomSpacing = false,
@@ -90,16 +92,18 @@ export function JudgeAvatars({
   const { currentSpeech, speakingJudge } = useJudgeSpeech({
     isJudging,
     isPostModalOpen,
+    allowIdleSpeech: enableIdleBehavior,
   })
   const { avatarStates } = useJudgeAvatarState({
     isJudging,
     isPostModalOpen,
     speakingJudge,
+    allowIdleAnimation: enableIdleBehavior,
   })
 
   const judgmentMap = buildJudgmentMap(judgments)
   const phase = resolvePhase(isJudging, judgingPhase)
-  const showSpeech = phase !== 'scoring' && phase !== 'complete'
+  const showSpeech = phase !== 'complete' || enableIdleBehavior
 
   return (
     <div
@@ -117,6 +121,7 @@ export function JudgeAvatars({
             currentSpeech,
             isJudging,
             isPostModalOpen,
+            enableIdleBehavior,
           })
 
           return (
