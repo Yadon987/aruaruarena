@@ -18,6 +18,7 @@ const JUDGE_LABELS: Record<JudgePersona, string> = {
 const SCORE_PLACEHOLDER = '---'
 const SCORE_NOT_AVAILABLE = 'N/A'
 const AVATAR_SIZE_CLASS = 'h-auto w-28 md:w-48 lg:w-56'
+const AVATAR_BREATHING_CLASS = 'judge-avatar-speaking-breath'
 const VIP_IDLE_CYCLE_MS = 5000
 const VIP_FLASH_TOTAL_MS = 1200
 const VIP_BULBS = [
@@ -102,6 +103,7 @@ export function JudgeSlot({
   const scoreLabel = resolveScoreLabel(judgment)
   const isScoring = phase === 'scoring'
   const isComplete = phase === 'complete'
+  const isSpeaking = Boolean(speechText && showSpeech)
   const [isFlashActive, setIsFlashActive] = useState(false)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLit = isScoring || isComplete
@@ -158,16 +160,18 @@ export function JudgeSlot({
 
       {/* アバター（Framer Motion が transform を上書きするため、位置調整は外側要素に適用する） */}
       <div className="relative z-10 -mb-7 -translate-y-12 md:-mb-12 md:-translate-y-16 lg:-mb-14 lg:-translate-y-24">
-        <motion.img
-          src={getAvatarImagePath(judge, avatarState)}
-          alt={alt}
-          aria-label={getJudgeAriaLabel(judge)}
-          className={AVATAR_SIZE_CLASS}
-          initial={entranceVariant.initial}
-          animate={entranceVariant.animate}
-          transition={entranceVariant.transition}
-          draggable={false}
-        />
+        <div className={isSpeaking ? AVATAR_BREATHING_CLASS : ''}>
+          <motion.img
+            src={getAvatarImagePath(judge, avatarState)}
+            alt={alt}
+            aria-label={getJudgeAriaLabel(judge)}
+            className={AVATAR_SIZE_CLASS}
+            initial={entranceVariant.initial}
+            animate={entranceVariant.animate}
+            transition={entranceVariant.transition}
+            draggable={false}
+          />
+        </div>
       </div>
 
       {/* スコアパネル */}

@@ -1,4 +1,3 @@
-import { HIROYUKI_CATCHPHRASE } from '../../../shared/constants/avatar'
 import { useJudgeAvatarState } from '../../../shared/hooks/useJudgeAvatarState'
 import { useJudgeEntrance } from '../../../shared/hooks/useJudgeEntrance'
 import { useJudgeSpeech } from '../../../shared/hooks/useJudgeSpeech'
@@ -51,9 +50,7 @@ function resolveSpeechText({
     return currentSpeech ?? FALLBACK_SPEECH
   }
 
-  const shouldShowDefaultCatchphrase = judgeId === 'hiroyuki' && speakingJudge === null
-
-  return shouldShowDefaultCatchphrase ? HIROYUKI_CATCHPHRASE : null
+  return null
 }
 
 function buildJudgmentMap(

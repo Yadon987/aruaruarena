@@ -241,6 +241,11 @@
   animation: vip-flash 0.28s ease-in-out 4;
 }
 
+.judge-avatar-speaking-breath {
+  transform-origin: center bottom;
+  animation: judge-avatar-speaking-breath 420ms ease-in-out infinite;
+}
+
 @keyframes vip-roulette {
   0%,
   70%,
@@ -255,6 +260,16 @@
     box-shadow:
       0 0 8px rgba(255, 233, 151, 0.75),
       0 0 16px rgba(255, 185, 75, 0.55);
+  }
+}
+
+@keyframes judge-avatar-speaking-breath {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.028);
   }
 }
 
@@ -460,5 +475,9 @@
   .vip-bulbs-flash .vip-bulb {
     animation: none;
     opacity: 0.75;
+  }
+
+  .judge-avatar-speaking-breath {
+    animation: none;
   }
 }

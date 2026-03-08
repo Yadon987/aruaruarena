@@ -23,17 +23,17 @@ export const HIROYUKI_CATCHPHRASE = 'それってあなたの感想ですよね'
  */
 export const AVATAR_ANIMATION = {
   /** 口パクの継続時間（ms） */
-  MOUTH_DURATION_MS: 120,
+  MOUTH_DURATION_MS: 140,
   /** 瞬きの継続時間（ms） */
   BLINK_DURATION_MS: 150,
   /** 口パクの最小間隔（ms） */
-  MOUTH_INTERVAL_MIN_MS: 2000,
+  MOUTH_INTERVAL_MIN_MS: 90,
   /** 口パクの最大間隔（ms） */
-  MOUTH_INTERVAL_MAX_MS: 4000,
+  MOUTH_INTERVAL_MAX_MS: 220,
   /** 瞬きの最小間隔（ms） */
-  BLINK_INTERVAL_MIN_MS: 3000,
+  BLINK_INTERVAL_MIN_MS: 1200,
   /** 瞬きの最大間隔（ms） */
-  BLINK_INTERVAL_MAX_MS: 5000,
+  BLINK_INTERVAL_MAX_MS: 2200,
 } as const
 
 /** アバター画像のベースパス */

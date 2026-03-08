@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   capturedMotionImgProps,
   loadComponent,
@@ -55,9 +55,14 @@ function setupJudgeAvatarsMocks() {
 
 describe('JudgeAvatars Refactor', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     resetCapturedMotionImgProps()
     vi.clearAllMocks()
     setupJudgeAvatarsMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('登場完了後はentrance.animateを使用する（静止状態）', async () => {
@@ -74,7 +79,18 @@ describe('JudgeAvatars Refactor', () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} judgingPhase="speaking" />)
 
+    await act(async () => {
+      vi.advanceTimersByTime(2500)
+    })
     expect(screen.getByTestId('catchphrase-dewi')).toHaveTextContent('テスト')
+
+    const dewiAvatar = screen.getByAltText('デヴィ夫人風審査員')
+    const hiroyukiAvatar = screen.getByAltText('ひろゆき風審査員')
+    const nakaoAvatar = screen.getByAltText('中尾彬風審査員')
+
+    expect(dewiAvatar.parentElement).toHaveClass('judge-avatar-speaking-breath')
+    expect(hiroyukiAvatar.parentElement).not.toHaveClass('judge-avatar-speaking-breath')
+    expect(nakaoAvatar.parentElement).not.toHaveClass('judge-avatar-speaking-breath')
   })
 
   it('currentSpeech が null でも発話中審査員にはフォールバック文字列を表示する', async () => {
@@ -82,6 +98,9 @@ describe('JudgeAvatars Refactor', () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} judgingPhase="speaking" />)
 
+    await act(async () => {
+      vi.advanceTimersByTime(2500)
+    })
     expect(screen.getByRole('status')).toHaveTextContent('...')
   })
 

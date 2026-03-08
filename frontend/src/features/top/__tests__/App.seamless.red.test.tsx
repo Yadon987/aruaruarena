@@ -148,8 +148,13 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
     render(<App />)
     await fillAndSubmitPost()
 
-    // 審査中画面では初期状態でもひろゆきのフォールバック吹き出しが表示される
-    expect(await screen.findByTestId('catchphrase-hiroyuki')).toBeInTheDocument()
+    await waitFor(() => {
+      const bubble =
+        screen.queryByTestId('catchphrase-hiroyuki') ??
+        screen.queryByTestId('catchphrase-dewi') ??
+        screen.queryByTestId('catchphrase-nakao')
+      expect(bubble).not.toBeNull()
+    })
   })
 
   it('審査完了で結果モーダルが表示される', { timeout: 15000 }, async () => {

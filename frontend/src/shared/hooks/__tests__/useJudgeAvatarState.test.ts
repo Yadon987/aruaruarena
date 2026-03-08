@@ -42,7 +42,7 @@ describe('useJudgeAvatarState', () => {
     })
   })
 
-  it('発話中審査員はmouth_openに遷移し継続時間後にbaseへ戻る', async () => {
+  it('発話中審査員は即mouth_openに遷移し継続時間後にbaseへ戻る', async () => {
     const { useJudgeAvatarState } = await loadUseJudgeAvatarState()
     const { result } = renderHook(
       ({ speakingJudge }) =>
@@ -54,9 +54,6 @@ describe('useJudgeAvatarState', () => {
       { initialProps: { speakingJudge: 'dewi' as JudgePersona } }
     )
 
-    await act(async () => {
-      vi.advanceTimersByTime(AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS)
-    })
     expect(result.current.avatarStates.dewi).toBe('mouth_open')
 
     await act(async () => {
@@ -77,9 +74,6 @@ describe('useJudgeAvatarState', () => {
       { initialProps: { speakingJudge: 'dewi' as JudgePersona } }
     )
 
-    await act(async () => {
-      vi.advanceTimersByTime(AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS)
-    })
     expect(result.current.avatarStates.dewi).toBe('mouth_open')
 
     rerender({ speakingJudge: 'hiroyuki' as JudgePersona })

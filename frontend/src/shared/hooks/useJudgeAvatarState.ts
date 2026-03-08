@@ -128,6 +128,11 @@ export function useJudgeAvatarState({
       return
     }
 
+    setAvatarStates((previous) => ({
+      ...previous,
+      [speakingJudge]: 'mouth_open',
+    }))
+
     const scheduleMouth = () => {
       const nextInterval = getRandomInterval(
         AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS,
@@ -150,7 +155,13 @@ export function useJudgeAvatarState({
       }, nextInterval)
     }
 
-    scheduleMouth()
+    mouthEndTimerRef.current = setTimeout(() => {
+      setAvatarStates((previous) => ({
+        ...previous,
+        [speakingJudge]: 'base',
+      }))
+      scheduleMouth()
+    }, AVATAR_ANIMATION.MOUTH_DURATION_MS)
 
     return () => {
       mouthStartTimerRef.current = clearTimer(mouthStartTimerRef.current)
