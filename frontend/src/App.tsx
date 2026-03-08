@@ -234,6 +234,7 @@ function App() {
   const privacyPolicyTriggerRef = useRef<HTMLButtonElement | null>(null)
   const rankingTriggerRef = useRef<HTMLButtonElement | null>(null)
   const footerRef = useRef<HTMLElement | null>(null)
+  const footerDockRef = useRef<HTMLDivElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
   const resultRequestSeqRef = useRef(0)
   const previousResultModalOpenRef = useRef(false)
@@ -883,15 +884,16 @@ function App() {
       return
     }
 
+    const dockElement = footerDockRef.current
     const footerElement = footerRef.current
-    if (!footerElement) return
+    if (!dockElement || !footerElement) return
 
     const updateFooterReservedSpace = () => {
-      const footerHeight = Math.ceil(footerElement.getBoundingClientRect().height)
-      const bottomOffset = Math.ceil(parseFloat(getComputedStyle(footerElement).bottom) || 0)
+      const dockHeight = Math.ceil(dockElement.getBoundingClientRect().height)
+      const bottomOffset = Math.ceil(parseFloat(getComputedStyle(dockElement).bottom) || 0)
       const nextReservedSpace = Math.max(
         FIXED_FOOTER_MIN_RESERVED_PX,
-        footerHeight + bottomOffset + FIXED_FOOTER_EXTRA_GAP_PX
+        dockHeight + bottomOffset + FIXED_FOOTER_EXTRA_GAP_PX
       )
       setFooterReservedSpace((current) =>
         current === nextReservedSpace ? current : nextReservedSpace
@@ -906,6 +908,7 @@ function App() {
     }
 
     const observer = new ResizeObserver(updateFooterReservedSpace)
+    observer.observe(dockElement)
     observer.observe(footerElement)
 
     return () => {
@@ -1070,6 +1073,7 @@ function App() {
         />
       </div>
       <div
+        ref={footerDockRef}
         className={`fixed inset-x-0 z-40 pointer-events-none ${
           viewMode === 'judging'
             ? 'bottom-24 px-2 sm:bottom-[5.5rem] sm:px-3 md:bottom-[4.5rem] md:px-4 lg:bottom-10 lg:px-6'
