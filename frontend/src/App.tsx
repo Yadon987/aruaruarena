@@ -950,14 +950,16 @@ function App() {
         className="game-show-stage relative min-h-screen overflow-hidden px-6 pb-6"
         style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
       >
-        <div className="mb-4">
-          <JudgeAvatars
-            isJudging={viewMode === 'judging'}
-            isPostModalOpen={isPostModalOpen}
-            judgments={activeResultPost?.judgments}
-            judgingPhase={judgingPhase}
-          />
-        </div>
+        {viewMode === 'judging' && (
+          <div className="mb-4">
+            <JudgeAvatars
+              isJudging={true}
+              isPostModalOpen={isPostModalOpen}
+              judgments={activeResultPost?.judgments}
+              judgingPhase={judgingPhase}
+            />
+          </div>
+        )}
 
         {viewMode === 'judging' && (
           <section
@@ -996,42 +998,6 @@ function App() {
               {successMessage && <p className="text-green-500">{successMessage}</p>}
             </div>
 
-            <footer
-              ref={footerRef}
-              role="contentinfo"
-              className="fixed bottom-6 inset-x-0 w-full flex flex-wrap items-center justify-center gap-3 z-40 pointer-events-none"
-            >
-              <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-3">
-                <NeonButton
-                  ref={myPostsTriggerRef}
-                  type="button"
-                  variant="primary"
-                  ariaLabel="自分の投稿一覧"
-                  onClick={openMyPosts}
-                  onKeyDown={handleMyPostsTriggerKeyDown}
-                >
-                  自分の投稿一覧
-                </NeonButton>
-                <NeonButton
-                  type="button"
-                  variant="secondary"
-                  ariaLabel="ランキング"
-                  ref={rankingTriggerRef}
-                  onClick={openRankingModal}
-                >
-                  ランキング
-                </NeonButton>
-                <NeonButton
-                  ref={privacyPolicyTriggerRef}
-                  type="button"
-                  variant="secondary"
-                  ariaLabel="プライバシーポリシー"
-                  onClick={openPrivacyPolicy}
-                >
-                  プライバシーポリシー
-                </NeonButton>
-              </div>
-            </footer>
           </>
         )}
 
@@ -1128,6 +1094,56 @@ function App() {
           onClose={closeResultModal}
         />
       </div>
+      {viewMode === 'top' && (
+        <div className="fixed bottom-6 inset-x-0 z-40 px-6 pointer-events-none">
+          <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
+            <div data-testid="top-judge-dock" className="w-full pointer-events-none">
+              <JudgeAvatars
+                isJudging={false}
+                isPostModalOpen={isPostModalOpen}
+                judgments={activeResultPost?.judgments}
+                judgingPhase={judgingPhase}
+                compactBottomSpacing={true}
+                compactAvatarSize={true}
+              />
+            </div>
+            <footer
+              ref={footerRef}
+              role="contentinfo"
+              className="pointer-events-auto w-full flex flex-wrap items-center justify-center gap-3"
+            >
+              <NeonButton
+                ref={myPostsTriggerRef}
+                type="button"
+                variant="primary"
+                ariaLabel="自分の投稿一覧"
+                onClick={openMyPosts}
+                onKeyDown={handleMyPostsTriggerKeyDown}
+              >
+                自分の投稿一覧
+              </NeonButton>
+              <NeonButton
+                type="button"
+                variant="secondary"
+                ariaLabel="ランキング"
+                ref={rankingTriggerRef}
+                onClick={openRankingModal}
+              >
+                ランキング
+              </NeonButton>
+              <NeonButton
+                ref={privacyPolicyTriggerRef}
+                type="button"
+                variant="secondary"
+                ariaLabel="プライバシーポリシー"
+                onClick={openPrivacyPolicy}
+              >
+                プライバシーポリシー
+              </NeonButton>
+            </footer>
+          </div>
+        </div>
+      )}
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )

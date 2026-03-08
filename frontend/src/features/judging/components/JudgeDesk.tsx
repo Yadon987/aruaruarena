@@ -15,6 +15,7 @@ export type JudgeDeskJudgment = {
 type JudgeDeskProps = {
   judgments?: JudgeDeskJudgment[]
   phase: JudgeDeskPhase
+  compact?: boolean
 }
 
 const JUDGE_DISPLAY_ORDER: readonly JudgePersona[] = ['nakao', 'hiroyuki', 'dewi']
@@ -56,7 +57,7 @@ const JUDGE_NEON_CLASS: Record<JudgePersona, { border: string; text: string }> =
   dewi: { border: 'neon-border-cyan', text: 'neon-text-cyan' },
 }
 
-export function JudgeDesk({ judgments, phase }: JudgeDeskProps) {
+export function JudgeDesk({ judgments, phase, compact = false }: JudgeDeskProps) {
   const prefersReducedMotion = useReducedMotion()
   const [litCount, setLitCount] = useState(phase === 'scoring' ? 1 : 0)
   const byJudge = buildJudgmentMap(judgments ?? [])
@@ -83,7 +84,10 @@ export function JudgeDesk({ judgments, phase }: JudgeDeskProps) {
   }, [phase, prefersReducedMotion])
 
   return (
-    <div data-testid="judge-desk" className="judge-desk-shell">
+    <div
+      data-testid="judge-desk"
+      className={`judge-desk-shell ${compact ? 'judge-desk-shell-compact' : ''}`}
+    >
       {/* 仕様上の表示順は左→中央→右（中尾→ひろゆき→デヴィ）で固定する */}
       {JUDGE_DISPLAY_ORDER.map((judge, index) => {
         const litValue = phase === 'scoring' && index < litCount ? LIT_ON : LIT_OFF

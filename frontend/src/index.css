@@ -3,7 +3,13 @@
 @tailwind utilities;
 
 .game-show-stage {
-  background: linear-gradient(180deg, #04111f 0%, #071a2f 45%, #020611 100%);
+  position: relative;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
+    url('/images/stage-bg.png');
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
 }
 
 .neon-button-base {
@@ -76,12 +82,15 @@
 
 .judge-desk-shell {
   width: 100%;
-  max-width: 64rem;
   margin: 0 auto;
   padding: 0.5rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.judge-desk-shell-compact {
+  max-width: 32rem;
 }
 
 .judge-desk-panel {

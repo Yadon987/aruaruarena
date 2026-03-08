@@ -72,7 +72,7 @@ describe('JudgeAvatars Refactor', () => {
 
   it('発話中は対象審査員の吹き出しのみ表示する', async () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
-    render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
+    render(<JudgeAvatars isJudging={true} isPostModalOpen={false} judgingPhase="speaking" />)
 
     expect(screen.getByTestId('catchphrase-dewi')).toHaveTextContent('テスト')
   })
@@ -80,12 +80,12 @@ describe('JudgeAvatars Refactor', () => {
   it('currentSpeech が null でも発話中審査員にはフォールバック文字列を表示する', async () => {
     useJudgeSpeechMock.mockReturnValue({ currentSpeech: null, speakingJudge: 'hiroyuki' })
     const { JudgeAvatars } = await loadJudgeAvatars()
-    render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
+    render(<JudgeAvatars isJudging={true} isPostModalOpen={false} judgingPhase="speaking" />)
 
     expect(screen.getByRole('status')).toHaveTextContent('...')
   })
 
-  it('scoringフェーズかつjudgmentsが空配列でもJudgeDeskを表示する', async () => {
+  it('scoringフェーズかつjudgmentsが空配列でもスコアパネルを表示する', async () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(
       <JudgeAvatars
@@ -96,15 +96,38 @@ describe('JudgeAvatars Refactor', () => {
       />
     )
 
-    expect(screen.getByTestId('judge-desk')).toBeInTheDocument()
+    // 新しい構造では各スロット内にスコアパネルが存在
+    expect(screen.getAllByTestId('judge-desk-score')).toHaveLength(3)
   })
 
-  it('judgingPhase未指定時でもJudgeDeskをプレースホルダー表示する', async () => {
+  it('judgingPhase未指定時でもスコアパネルをプレースホルダー表示する', async () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
 
     expect(screen.getByTestId('judge-avatars-container')).toBeInTheDocument()
-    expect(screen.getByTestId('judge-desk')).toBeInTheDocument()
+    // 新しい構造では各スロット内にスコアパネルが存在
+    expect(screen.getAllByTestId('judge-desk-score')).toHaveLength(3)
     expect(screen.getAllByText('---')).toHaveLength(3)
+  })
+
+  it('compactAvatarSize=true の場合はアバターサイズが縮小される', async () => {
+    const { JudgeAvatars } = await loadJudgeAvatars()
+    render(
+      <JudgeAvatars
+        isJudging={false}
+        isPostModalOpen={false}
+        compactAvatarSize={true}
+        judgingPhase="complete"
+      />
+    )
+
+    // 新しい構造ではアバターのサイズクラスを確認
+    const avatars = screen.getAllByRole('img')
+    expect(avatars.length).toBe(3)
+    avatars.forEach((avatar) => {
+      expect(avatar).toHaveClass('w-24')
+      expect(avatar.className).toMatch(/sm:w-28/)
+      expect(avatar.className).toMatch(/md:w-40/)
+    })
   })
 })

@@ -36,4 +36,14 @@ describe('JudgeDesk Refactor', () => {
       expect(panel, `panel[${index}]`).toHaveAttribute('data-lit', 'false')
     })
   })
+
+  it('compact=true の場合はコンパクト用クラスを適用する', async () => {
+    // 何を検証するか: 小型アバター表示時にデスク幅も縮小されること
+    const { JudgeDesk } = await loadJudgeDesk()
+
+    render(<JudgeDesk phase="complete" compact={true} />)
+
+    const desk = screen.getByTestId('judge-desk')
+    expect(desk).toHaveClass('judge-desk-shell-compact')
+  })
 })

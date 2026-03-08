@@ -85,14 +85,15 @@ describe('E24-04 RED: JudgeAvatars', () => {
     expect(screen.getByTestId('catchphrase-hiroyuki')).toBeInTheDocument()
   })
 
-  it('横並びレイアウト（flex-row）が適用される', async () => {
-    // 何を検証するか: 3人の審査員が横一列に並ぶこと
+  it('横並びレイアウト（grid grid-cols-3）が適用される', async () => {
+    // 何を検証するか: 3人の審査員が横一列（3カラムGrid）に並ぶこと
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     render(<JudgeAvatars isJudging={false} isPostModalOpen={false} />)
 
     const container = screen.getByTestId('judge-avatars-container')
-    expect(container).toHaveClass('flex-row')
+    expect(container).toHaveClass('grid')
+    expect(container).toHaveClass('grid-cols-3')
   })
 
   it('レスポンシブサイズ（w-28 md:w-48 lg:w-56）が適用される', async () => {
@@ -110,15 +111,15 @@ describe('E24-04 RED: JudgeAvatars', () => {
   })
 
   it('アバターコンテナのgapが拡張される', async () => {
-    // 何を検証するか: 台座との整合のため gap-6 md:gap-8 lg:gap-10 が適用されること
+    // 何を検証するか: 台座との整合のため gap-4 md:gap-6 lg:gap-8 が適用されること
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     render(<JudgeAvatars isJudging={false} isPostModalOpen={false} />)
 
     const container = screen.getByTestId('judge-avatars-container')
-    expect(container).toHaveClass('gap-6')
-    expect(container.className).toMatch(/md:gap-8/)
-    expect(container.className).toMatch(/lg:gap-10/)
+    expect(container).toHaveClass('gap-4')
+    expect(container.className).toMatch(/md:gap-6/)
+    expect(container.className).toMatch(/lg:gap-8/)
   })
 
   it('ステージコンテナのmax-widthとpadding-bottomが拡張される', async () => {
@@ -143,8 +144,8 @@ describe('E24-04 RED: JudgeAvatars', () => {
     expect(screen.getByAltText('中尾彬風審査員')).toBeInTheDocument()
   })
 
-  it('scoringフェーズでJudgeDeskが表示される', async () => {
-    // 何を検証するか: E25-01の受け入れ基準として、採点フェーズ時にデスクUIが統合表示されること
+  it('scoringフェーズでスコアパネルが表示される', async () => {
+    // 何を検証するか: E25-01の受け入れ基準として、採点フェーズ時に各審査員のスコアが表示されること
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     render(
@@ -160,8 +161,12 @@ describe('E24-04 RED: JudgeAvatars', () => {
       />
     )
 
-    const desk = screen.getByTestId('judge-desk')
-    expect(desk).toBeInTheDocument()
-    expect(desk).not.toHaveClass('glass-panel')
+    // 新しい構造では各スロット内にスコアパネルが存在
+    const scorePanels = screen.getAllByTestId('judge-desk-score')
+    expect(scorePanels).toHaveLength(3)
+    // 各パネルはglass-panelクラスを持つ
+    scorePanels.forEach((panel) => {
+      expect(panel).toHaveClass('glass-panel')
+    })
   })
 })
