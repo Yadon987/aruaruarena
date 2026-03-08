@@ -140,27 +140,28 @@
 }
 
 .vip-judge-desk {
-  border-color: rgba(255, 210, 74, 0.9);
+  border-color: rgba(255, 210, 74, 0.95);
   border-width: 3px;
   background:
-    linear-gradient(180deg, rgba(18, 14, 8, 0.95) 0%, rgba(8, 7, 5, 0.98) 62%, rgba(30, 18, 8, 0.92) 100%),
-    linear-gradient(125deg, rgba(255, 222, 128, 0.22), rgba(255, 193, 74, 0.08));
+    linear-gradient(180deg, rgba(24, 19, 12, 1) 0%, rgba(13, 10, 7, 1) 58%, rgba(30, 20, 11, 1) 100%),
+    radial-gradient(circle at 50% 18%, rgba(255, 213, 116, 0.14), rgba(255, 213, 116, 0) 60%);
   box-shadow:
-    0 16px 28px rgba(0, 0, 0, 0.48),
-    inset 0 2px 0 rgba(255, 236, 178, 0.35),
-    inset 0 -3px 0 rgba(97, 61, 12, 0.7);
+    0 18px 30px rgba(0, 0, 0, 0.58),
+    inset 0 2px 0 rgba(255, 236, 178, 0.42),
+    inset 0 -4px 0 rgba(94, 57, 8, 0.82);
 }
 
 .vip-judge-seat {
   border: 2px solid rgba(255, 206, 92, 0.88);
   border-radius: 1rem 1rem 0.6rem 0.6rem;
   background:
-    radial-gradient(circle at 50% 22%, rgba(255, 196, 90, 0.2), transparent 52%),
-    linear-gradient(180deg, rgba(140, 10, 36, 0.95) 0%, rgba(86, 6, 20, 0.98) 70%, rgba(62, 4, 16, 0.98) 100%);
+    radial-gradient(circle at 50% 28%, rgba(255, 132, 160, 0.44), rgba(255, 132, 160, 0) 54%),
+    radial-gradient(circle at 50% 60%, rgba(183, 20, 57, 0.4), rgba(183, 20, 57, 0) 65%),
+    linear-gradient(180deg, rgba(128, 8, 34, 0.98) 0%, rgba(82, 5, 21, 0.99) 74%, rgba(56, 2, 16, 1) 100%);
   box-shadow:
-    0 10px 16px rgba(20, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 222, 152, 0.48),
-    inset 0 -2px 0 rgba(37, 6, 3, 0.72);
+    0 10px 16px rgba(20, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 222, 152, 0.5),
+    inset 0 -3px 0 rgba(44, 3, 12, 0.82);
 }
 
 .vip-score-text {
@@ -184,9 +185,24 @@
   height: 0.55rem;
   border-radius: 9999px;
   transform: translate(-50%, -50%);
-  background: rgba(140, 110, 40, 0.6);
-  border: 1px solid rgba(255, 225, 148, 0.45);
-  box-shadow: 0 0 4px rgba(255, 206, 92, 0.2);
+  background: radial-gradient(circle at 34% 34%, rgba(255, 238, 186, 0.95), rgba(236, 176, 66, 0.92) 62%, rgba(148, 100, 22, 0.98) 100%);
+  border: 1px solid rgba(255, 225, 148, 0.52);
+  box-shadow:
+    0 0 4px rgba(255, 206, 92, 0.28),
+    inset 0 -1px 2px rgba(97, 55, 6, 0.48),
+    inset 0 1px 1px rgba(255, 249, 219, 0.62);
+}
+
+.vip-bulb::after {
+  content: '';
+  position: absolute;
+  left: 32%;
+  top: 28%;
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.55);
 }
 
 .vip-bulbs-idle .vip-bulb {
@@ -296,7 +312,7 @@
   color: #d9f8ff;
 }
 
-[data-testid='judge-desk-score'][data-lit='true'] .digital-score {
+[data-testid='judge-desk-score']:not(.vip-judge-desk)[data-lit='true'] .digital-score {
   color: #99f4ff;
   text-shadow:
     0 0 8px rgba(153, 244, 255, 0.7),
@@ -312,17 +328,29 @@
   color: #d9f8ff;
 }
 
-[data-testid='judge-desk-score'][data-lit='true'] .digital-score-unit {
+[data-testid='judge-desk-score']:not(.vip-judge-desk)[data-lit='true'] .digital-score-unit {
   color: #99f4ff;
   text-shadow:
     0 0 6px rgba(153, 244, 255, 0.6),
     0 0 12px rgba(153, 244, 255, 0.4);
 }
 
-[data-testid='judge-desk-score'][data-lit='false'] .digital-score,
-[data-testid='judge-desk-score'][data-lit='false'] .digital-score-unit {
+[data-testid='judge-desk-score']:not(.vip-judge-desk)[data-lit='false'] .digital-score,
+[data-testid='judge-desk-score']:not(.vip-judge-desk)[data-lit='false'] .digital-score-unit {
   color: rgba(230, 248, 255, 0.5);
   text-shadow: none;
+}
+
+[data-testid='judge-desk-score'].vip-judge-desk .vip-score-text {
+  color: #ff5a1f;
+}
+
+[data-testid='judge-desk-score'].vip-judge-desk[data-lit='true'] .vip-score-text {
+  color: #ff7c2e;
+  text-shadow:
+    0 0 10px rgba(255, 124, 46, 0.96),
+    0 0 22px rgba(255, 160, 72, 0.82),
+    0 0 34px rgba(255, 206, 132, 0.54);
 }
 
 @media (max-width: 640px) {

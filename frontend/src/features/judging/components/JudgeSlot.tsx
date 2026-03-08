@@ -6,13 +6,6 @@ import type { JudgePersona } from '../../../shared/types/domain'
 import type { JudgeDeskJudgment, JudgeDeskPhase } from './JudgeDesk'
 import { JudgeSpeechBubble } from './JudgeSpeechBubble'
 
-/** 審査員ごとのネオンクラス設定 */
-const JUDGE_NEON_CLASS: Record<JudgePersona, { border: string; text: string }> = {
-  nakao: { border: 'neon-border-cyan', text: 'neon-text-cyan' },
-  hiroyuki: { border: 'neon-border-pink', text: 'neon-text-pink' },
-  dewi: { border: 'neon-border-cyan', text: 'neon-text-cyan' },
-}
-
 /** 審査員の表示名 */
 const JUDGE_LABELS: Record<JudgePersona, string> = {
   hiroyuki: 'ひろゆき',
@@ -99,7 +92,6 @@ export function JudgeSlot({
   phase,
   showSpeech,
 }: JudgeSlotProps) {
-  const neonClass = JUDGE_NEON_CLASS[judge]
   const scoreLabel = resolveScoreLabel(judgment)
   const isScoring = phase === 'scoring'
   const isComplete = phase === 'complete'
@@ -151,7 +143,7 @@ export function JudgeSlot({
       <div
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
-        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} glass-panel ${neonClass.border} relative z-20 -mt-8 w-[110%] max-w-[14rem] md:-mt-12 md:w-[120%] md:max-w-[20rem] lg:-mt-16 lg:max-w-[24rem]`}
+        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} glass-panel relative z-20 -mt-8 w-[110%] max-w-[14rem] md:-mt-12 md:w-[120%] md:max-w-[20rem] lg:-mt-16 lg:max-w-[24rem]`}
         aria-label={buildScoreAriaLabel(judge, scoreLabel)}
         role="group"
       >
@@ -165,8 +157,8 @@ export function JudgeSlot({
             return <span key={`${judge}-bulb-${index}`} className="vip-bulb" style={style} />
           })}
         </div>
-        <span className={`digital-score vip-score-text ${neonClass.text}`}>{scoreLabel}</span>
-        <span className={`digital-score-unit vip-score-text ${neonClass.text}`}>点</span>
+        <span className="digital-score vip-score-text">{scoreLabel}</span>
+        <span className="digital-score-unit vip-score-text">点</span>
       </div>
     </div>
   )
