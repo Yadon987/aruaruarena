@@ -260,7 +260,7 @@ class JudgePostService
     Judgment.new(
       post_id: @post.id,
       persona: persona,
-      **attrs.symbolize_keys
+      **attrs
     )
   end
 end
