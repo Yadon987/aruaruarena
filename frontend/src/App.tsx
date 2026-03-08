@@ -456,15 +456,12 @@ function App() {
     pollingStartedAtRef.current = 0
   }, [])
 
-  const enterJudgingMode = useCallback(
-    (postId: string, nickname?: string, body?: string, isPollingReady: boolean = true) => {
-      setJudgingPostId(postId)
-      setJudgingErrorMessage('')
-      setViewMode('judging')
-      setIsJudgingPollingReady(isPollingReady)
-    },
-    []
-  )
+  const enterJudgingMode = useCallback((postId: string, isPollingReady: boolean = true) => {
+    setJudgingPostId(postId)
+    setJudgingErrorMessage('')
+    setViewMode('judging')
+    setIsJudgingPollingReady(isPollingReady)
+  }, [])
 
   const startJudgingSubmission = useCallback(
     (temporaryPostId: string, nickname: string, body: string) => {
@@ -472,14 +469,14 @@ function App() {
       setPendingFormData({ nickname, body })
       sound.playSe(SOUND_SE_SUBMIT)
       setIsPostModalOpen(false)
-      enterJudgingMode(temporaryPostId, nickname, body, false)
+      enterJudgingMode(temporaryPostId, false)
       syncJudgingPath(temporaryPostId)
     },
     [enterJudgingMode, sound, syncJudgingPath]
   )
 
   const applyJudgingSubmitSuccess = useCallback(
-    (response: CreatePostResponse, optimisticNickname: string, optimisticBody: string) => {
+    (response: CreatePostResponse) => {
       // 正式IDへ差し替えた後、レスポンス状態に応じて画面遷移を確定する。
       setPendingFormData(null)
       savePostId(response.id)
@@ -499,7 +496,7 @@ function App() {
 
       // 審査中/queued など成功側は、暫定情報を残して審査待ちへ進める。
       setSuccessMessage(MESSAGE_SUCCESS)
-      enterJudgingMode(response.id, optimisticNickname, optimisticBody, true)
+      enterJudgingMode(response.id, true)
     },
     [openResultModal, savePostId, syncJudgingPath, syncMyPostIds, enterJudgingMode]
   )
@@ -516,7 +513,7 @@ function App() {
     (post: Post) => {
       // 再審査開始がAPIで確定した場合のみ、審査中画面へ遷移する。
       closeResultModal()
-      enterJudgingMode(post.id, post.nickname)
+      enterJudgingMode(post.id)
       syncJudgingPath(post.id)
     },
     [closeResultModal, enterJudgingMode, syncJudgingPath]
@@ -655,7 +652,7 @@ function App() {
           nickname: trimmedNickname,
           body: trimmedBody,
         })
-        applyJudgingSubmitSuccess(response, trimmedNickname, trimmedBody)
+        applyJudgingSubmitSuccess(response)
       } catch (error) {
         applyJudgingSubmitFailure(error)
       } finally {
@@ -1073,75 +1070,73 @@ function App() {
           onClose={closeResultModal}
         />
       </div>
-      {(viewMode === 'top' || viewMode === 'judging') && (
-        <div
-          className={`fixed inset-x-0 z-40 pointer-events-none ${
-            viewMode === 'judging'
-              ? 'bottom-28 px-2 sm:bottom-24 sm:px-3 md:bottom-20 md:px-4 lg:bottom-10 lg:px-6'
-              : 'bottom-6 px-6'
-          }`}
-        >
-          <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
-            <div data-testid="top-judge-dock" className="w-full pointer-events-none">
-              <JudgeAvatars
-                isJudging={viewMode === 'judging'}
-                isPostModalOpen={isPostModalOpen}
-                judgments={activeResultPost?.judgments}
-                judgingPhase={judgingPhase}
-                compactBottomSpacing={true}
-              />
-            </div>
-            {viewMode === 'top' && (
-              <footer
-                ref={footerRef}
-                role="contentinfo"
-                className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
-              >
-                <NeonButton
-                  ref={myPostsTriggerRef}
-                  type="button"
-                  variant="primary"
-                  compactOnMobile={true}
-                  ariaLabel="過去の投稿"
-                  onClick={openMyPosts}
-                  onKeyDown={handleMyPostsTriggerKeyDown}
-                >
-                  過去の投稿
-                </NeonButton>
-                <NeonButton
-                  type="button"
-                  variant="secondary"
-                  compactOnMobile={true}
-                  ariaLabel="ランキング"
-                  ref={rankingTriggerRef}
-                  onClick={openRankingModal}
-                >
-                  ランキング
-                </NeonButton>
-                <NeonButton
-                  ref={privacyPolicyTriggerRef}
-                  type="button"
-                  variant="secondary"
-                  compactOnMobile={true}
-                  ariaLabel="プライバシーポリシー"
-                  onClick={openPrivacyPolicy}
-                >
-                  プライバシーポリシー
-                </NeonButton>
-                <NeonButton
-                  type="button"
-                  variant="secondary"
-                  compactOnMobile={true}
-                  ariaLabel="問い合わせ"
-                  onClick={openContactForm}
-                >
-                  問い合わせ
-                </NeonButton>
-              </footer>
-            )}
+      <div
+        className={`fixed inset-x-0 z-40 pointer-events-none ${
+          viewMode === 'judging'
+            ? 'bottom-28 px-2 sm:bottom-24 sm:px-3 md:bottom-20 md:px-4 lg:bottom-10 lg:px-6'
+            : 'bottom-6 px-6'
+        }`}
+      >
+        <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
+          <div data-testid="top-judge-dock" className="w-full pointer-events-none">
+            <JudgeAvatars
+              isJudging={viewMode === 'judging'}
+              isPostModalOpen={isPostModalOpen}
+              judgments={activeResultPost?.judgments}
+              judgingPhase={judgingPhase}
+              compactBottomSpacing={true}
+            />
           </div>
+          {viewMode === 'top' && (
+            <footer
+              ref={footerRef}
+              role="contentinfo"
+              className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
+            >
+              <NeonButton
+                ref={myPostsTriggerRef}
+                type="button"
+                variant="primary"
+                compactOnMobile={true}
+                ariaLabel="過去の投稿"
+                onClick={openMyPosts}
+                onKeyDown={handleMyPostsTriggerKeyDown}
+              >
+                過去の投稿
+              </NeonButton>
+              <NeonButton
+                type="button"
+                variant="secondary"
+                compactOnMobile={true}
+                ariaLabel="ランキング"
+                ref={rankingTriggerRef}
+                onClick={openRankingModal}
+              >
+                ランキング
+              </NeonButton>
+              <NeonButton
+                ref={privacyPolicyTriggerRef}
+                type="button"
+                variant="secondary"
+                compactOnMobile={true}
+                ariaLabel="プライバシーポリシー"
+                onClick={openPrivacyPolicy}
+              >
+                プライバシーポリシー
+              </NeonButton>
+              <NeonButton
+                type="button"
+                variant="secondary"
+                compactOnMobile={true}
+                ariaLabel="問い合わせ"
+                onClick={openContactForm}
+              >
+                問い合わせ
+              </NeonButton>
+            </footer>
+          )}
         </div>
-      )}
+      </div>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )
