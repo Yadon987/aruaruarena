@@ -226,7 +226,7 @@ describe('E15-01 RED: ResultModal Component', () => {
 
     render(<App />)
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+      fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
     })
     const missingPostButton = await screen.findByRole('button', { name: 'missing-post-id' })
     await act(async () => {

@@ -14,7 +14,7 @@ const BUBBLE_VARIANTS = JUDGE_SPEECH.BUBBLE_VARIANTS
 const POSITION_CLASSES: Record<JudgePersona, string> = {
   hiroyuki: 'justify-center',
   dewi: 'justify-center',
-  nakao: 'justify-start',
+  nakao: 'justify-center',
 }
 
 /**

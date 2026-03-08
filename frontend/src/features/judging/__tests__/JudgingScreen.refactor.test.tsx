@@ -22,7 +22,7 @@ describe('E13-01 REFACTOR: JudgingScreen edge cases', () => {
     })
   }
 
-  it('投稿詳細取得成功時にフォールバック本文から取得本文へ更新する', async () => {
+  it('投稿詳細取得成功時も審査員ドック表示を維持する', async () => {
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'judging-refactor-1',
       status: 'judging',
@@ -39,10 +39,13 @@ describe('E13-01 REFACTOR: JudgingScreen edge cases', () => {
     render(<App />)
     await submitValidPost()
 
-    expect(await screen.findByText('更新後の本文')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
+      expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
+    })
   })
 
-  it('投稿詳細のnickname/bodyが空文字なら既定フォールバックを維持する', async () => {
+  it('投稿詳細のnickname/bodyが空文字でも審査員ドック表示を維持する', async () => {
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'judging-refactor-2',
       status: 'judging',
@@ -59,11 +62,13 @@ describe('E13-01 REFACTOR: JudgingScreen edge cases', () => {
     render(<App />)
     await submitValidPost()
 
-    expect(await screen.findByText('名無し')).toBeInTheDocument()
-    expect(screen.getByText('投稿内容を読み込み中です')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
+      expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
+    })
   })
 
-  it('投稿詳細取得失敗時も審査中画面の表示を継続する', async () => {
+  it('投稿詳細取得失敗時も審査員ドック表示を継続する', async () => {
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'judging-refactor-3',
       status: 'judging',
@@ -77,7 +82,6 @@ describe('E13-01 REFACTOR: JudgingScreen edge cases', () => {
       expect(api.posts.get).toHaveBeenCalledTimes(1)
     })
 
-    expect(await screen.findByTestId('judging-screen')).toBeInTheDocument()
-    expect(screen.getByText(/AI審査員が採点中/)).toBeInTheDocument()
+    expect(await screen.findByTestId('top-judge-dock')).toBeInTheDocument()
   })
 })

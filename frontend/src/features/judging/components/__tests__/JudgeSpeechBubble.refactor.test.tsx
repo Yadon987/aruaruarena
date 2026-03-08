@@ -31,7 +31,7 @@ describe('JudgeSpeechBubble Refactor', () => {
     dewi.unmount()
 
     const nakao = render(<JudgeSpeechBubble isVisible={true} text="nakao" judgeType="nakao" />)
-    expect(screen.getByRole('status').parentElement).toHaveClass('justify-start')
+    expect(screen.getByRole('status').parentElement).toHaveClass('justify-center')
     nakao.unmount()
   })
 })

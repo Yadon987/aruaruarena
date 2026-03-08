@@ -46,6 +46,25 @@
   cursor: not-allowed;
 }
 
+.neon-button-compact-mobile {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.05rem;
+  gap: 0.25rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+@media (min-width: 641px) {
+  .neon-button-compact-mobile {
+    padding: 0.45rem 0.9rem;
+    font-size: 0.9rem;
+    line-height: 1.25rem;
+    gap: 0.4rem;
+    letter-spacing: 0;
+  }
+}
+
 .neon-glow-blue {
   box-shadow:
     0 0 5px rgba(0, 212, 255, 0.72),

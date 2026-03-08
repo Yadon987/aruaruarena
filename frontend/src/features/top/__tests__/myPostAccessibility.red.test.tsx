@@ -29,7 +29,7 @@ describe('E16-01 MyPost Accessibility RED', () => {
     // 何を検証するか: モーダルを閉じた後のフォーカス復帰が成立すること
     render(<App />)
 
-    const trigger = screen.getByRole('button', { name: '自分の投稿一覧' })
+    const trigger = screen.getByRole('button', { name: '過去の投稿' })
     fireEvent.click(trigger)
     fireEvent.click(await screen.findByRole('button', { name: '閉じる' }))
 

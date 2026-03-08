@@ -17,7 +17,7 @@ describe('MyPostStorage Refactor', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
 
     expect((await screen.findAllByTestId('my-post-id-item')).length).toBe(2)
     expect(screen.getAllByRole('button', { name: 'id-1' })).toHaveLength(1)

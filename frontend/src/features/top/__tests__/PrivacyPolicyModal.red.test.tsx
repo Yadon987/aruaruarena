@@ -154,11 +154,11 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     expect(scrollArea).toHaveClass('overflow-y-auto')
   })
 
-  it('自分の投稿一覧モーダルと同時表示されない', () => {
+  it('過去の投稿モーダルと同時表示されない', () => {
     // 何を検証するか: 複数モーダル競合を避けて常に単一モーダル表示を維持すること
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
     expect(screen.getByRole('dialog', { name: '自分の投稿' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))

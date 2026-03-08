@@ -43,9 +43,6 @@ const MESSAGE_JUDGING_TIMEOUT_ERROR = '通信がタイムアウトしました'
 const MESSAGE_JUDGING_SERVER_ERROR = 'サーバーエラーが発生しました'
 const MESSAGE_JUDGING_CLIENT_ERROR = '投稿に失敗しました'
 const MESSAGE_JUDGING_UNKNOWN_ERROR = '投稿に失敗しました'
-const MESSAGE_JUDGING_LOADING = 'AI審査員が採点中...'
-const MESSAGE_JUDGING_BODY_FALLBACK = '投稿内容を読み込み中です'
-const MESSAGE_JUDGING_NICKNAME_FALLBACK = '名無し'
 const MESSAGE_INVALID_FORM_ERROR = 'ニックネームと本文を正しく入力してください。'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
@@ -60,6 +57,7 @@ const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
 const SOUND_SE_SUBMIT = 'se_submit'
 const SOUND_SE_RETRY = 'se_retry'
 const SOUND_SE_RESULT_OPEN = 'se_result_open'
+const CONTACT_FORM_URL = 'https://forms.gle/zLN3j3YF87qdULXB9'
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
 
@@ -209,8 +207,6 @@ function App() {
   const [myPostIds, setMyPostIds] = useState<string[]>(() => readPostIds())
   const [isMyPostsOpen, setIsMyPostsOpen] = useState(false)
   const [isPrivacyPolicyOpen, setIsPrivacyPolicyOpen] = useState(false)
-  const [judgingNickname, setJudgingNickname] = useState(MESSAGE_JUDGING_NICKNAME_FALLBACK)
-  const [judgingBody, setJudgingBody] = useState(MESSAGE_JUDGING_BODY_FALLBACK)
   const [myPostsError, setMyPostsError] = useState('')
   const [myPostDetails, setMyPostDetails] = useState<Record<string, Post>>({})
   const [myPostDetailErrors, setMyPostDetailErrors] = useState<Record<string, string>>({})
@@ -460,17 +456,12 @@ function App() {
     pollingStartedAtRef.current = 0
   }, [])
 
-  const enterJudgingMode = useCallback(
-    (postId: string, nickname?: string, body?: string, isPollingReady: boolean = true) => {
-      setJudgingPostId(postId)
-      setJudgingNickname(nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
-      setJudgingBody(body || MESSAGE_JUDGING_BODY_FALLBACK)
-      setJudgingErrorMessage('')
-      setViewMode('judging')
-      setIsJudgingPollingReady(isPollingReady)
-    },
-    []
-  )
+  const enterJudgingMode = useCallback((postId: string, isPollingReady: boolean = true) => {
+    setJudgingPostId(postId)
+    setJudgingErrorMessage('')
+    setViewMode('judging')
+    setIsJudgingPollingReady(isPollingReady)
+  }, [])
 
   const startJudgingSubmission = useCallback(
     (temporaryPostId: string, nickname: string, body: string) => {
@@ -478,14 +469,14 @@ function App() {
       setPendingFormData({ nickname, body })
       sound.playSe(SOUND_SE_SUBMIT)
       setIsPostModalOpen(false)
-      enterJudgingMode(temporaryPostId, nickname, body, false)
+      enterJudgingMode(temporaryPostId, false)
       syncJudgingPath(temporaryPostId)
     },
     [enterJudgingMode, sound, syncJudgingPath]
   )
 
   const applyJudgingSubmitSuccess = useCallback(
-    (response: CreatePostResponse, optimisticNickname: string, optimisticBody: string) => {
+    (response: CreatePostResponse) => {
       // 正式IDへ差し替えた後、レスポンス状態に応じて画面遷移を確定する。
       setPendingFormData(null)
       savePostId(response.id)
@@ -505,7 +496,7 @@ function App() {
 
       // 審査中/queued など成功側は、暫定情報を残して審査待ちへ進める。
       setSuccessMessage(MESSAGE_SUCCESS)
-      enterJudgingMode(response.id, optimisticNickname, optimisticBody, true)
+      enterJudgingMode(response.id, true)
     },
     [openResultModal, savePostId, syncJudgingPath, syncMyPostIds, enterJudgingMode]
   )
@@ -522,7 +513,7 @@ function App() {
     (post: Post) => {
       // 再審査開始がAPIで確定した場合のみ、審査中画面へ遷移する。
       closeResultModal()
-      enterJudgingMode(post.id, post.nickname)
+      enterJudgingMode(post.id)
       syncJudgingPath(post.id)
     },
     [closeResultModal, enterJudgingMode, syncJudgingPath]
@@ -540,12 +531,11 @@ function App() {
 
   const exitJudgingWithError = useCallback(() => {
     clearJudgingPolling()
-    setViewMode('top')
+    setViewMode('judging')
     setIsJudgingPollingReady(false)
     setSuccessMessage('')
     setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
-    syncTopPath()
-  }, [clearJudgingPolling, syncTopPath])
+  }, [clearJudgingPolling])
   const exitJudgingWithResultRef = useRef(exitJudgingWithResult)
   const exitJudgingWithErrorRef = useRef(exitJudgingWithError)
 
@@ -562,8 +552,8 @@ function App() {
     if (!routePostId) return
     if (!isUuidLike(routePostId)) {
       setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
-      setViewMode('top')
-      syncTopPath()
+      setViewMode('judging')
+      setIsJudgingPollingReady(false)
       return
     }
 
@@ -601,8 +591,6 @@ function App() {
           exitJudgingWithResultRef.current(response)
           return
         }
-        setJudgingNickname(response.nickname || MESSAGE_JUDGING_NICKNAME_FALLBACK)
-        setJudgingBody(response.body || MESSAGE_JUDGING_BODY_FALLBACK)
       } catch (error) {
         if (isDisposed) return
         if (error instanceof ApiClientError && error.code === API_ERROR_CODE.ABORTED) return
@@ -663,7 +651,7 @@ function App() {
           nickname: trimmedNickname,
           body: trimmedBody,
         })
-        applyJudgingSubmitSuccess(response, trimmedNickname, trimmedBody)
+        applyJudgingSubmitSuccess(response)
       } catch (error) {
         applyJudgingSubmitFailure(error)
       } finally {
@@ -775,6 +763,10 @@ function App() {
 
   const closePrivacyPolicy = () => {
     setIsPrivacyPolicyOpen(false)
+  }
+
+  const openContactForm = () => {
+    window.open(CONTACT_FORM_URL, '_blank', 'noopener,noreferrer')
   }
 
   const openRankingModal = () => {
@@ -950,36 +942,19 @@ function App() {
         className="game-show-stage relative min-h-screen overflow-hidden px-6 pb-6"
         style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
       >
-        {viewMode === 'judging' && (
-          <div className="mb-4">
-            <JudgeAvatars
-              isJudging={true}
-              isPostModalOpen={isPostModalOpen}
-              judgments={activeResultPost?.judgments}
-              judgingPhase={judgingPhase}
-            />
-          </div>
-        )}
-
-        {viewMode === 'judging' && (
+        {viewMode === 'judging' && judgingErrorMessage && (
           <section
             data-testid="judging-screen"
-            aria-label="審査中"
+            aria-label="審査エラー"
             aria-live="polite"
-            className="glass-panel relative z-10 mb-4 rounded p-4"
+            className="glass-panel fixed left-1/2 top-24 z-40 w-[min(92vw,28rem)] -translate-x-1/2 rounded p-4"
           >
-            <h2 className="mb-2 text-lg font-semibold">審査中</h2>
-            <p className="mb-2">{judgingNickname}</p>
-            <p className="mb-4">{judgingBody}</p>
-            <p>{MESSAGE_JUDGING_LOADING}</p>
-            {judgingErrorMessage && (
-              <div className="mt-2 space-y-2">
-                <p className="text-red-500">{judgingErrorMessage}</p>
-                <NeonButton ariaLabel="再投稿する" onClick={retryPostSubmit}>
-                  再投稿する
-                </NeonButton>
-              </div>
-            )}
+            <div className="space-y-2">
+              <p className="text-red-500">{judgingErrorMessage}</p>
+              <NeonButton ariaLabel="再投稿する" onClick={retryPostSubmit}>
+                再投稿する
+              </NeonButton>
+            </div>
           </section>
         )}
 
@@ -1094,36 +1069,44 @@ function App() {
           onClose={closeResultModal}
         />
       </div>
-      {viewMode === 'top' && (
-        <div className="fixed bottom-6 inset-x-0 z-40 px-6 pointer-events-none">
-          <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
-            <div data-testid="top-judge-dock" className="w-full pointer-events-none">
-              <JudgeAvatars
-                isJudging={false}
-                isPostModalOpen={isPostModalOpen}
-                judgments={activeResultPost?.judgments}
-                judgingPhase={judgingPhase}
-                compactBottomSpacing={true}
-              />
-            </div>
+      <div
+        className={`fixed inset-x-0 z-40 pointer-events-none ${
+          viewMode === 'judging'
+            ? 'bottom-28 px-2 sm:bottom-24 sm:px-3 md:bottom-20 md:px-4 lg:bottom-10 lg:px-6'
+            : 'bottom-6 px-6'
+        }`}
+      >
+        <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
+          <div data-testid="top-judge-dock" className="w-full pointer-events-none">
+            <JudgeAvatars
+              isJudging={viewMode === 'judging'}
+              isPostModalOpen={isPostModalOpen}
+              judgments={activeResultPost?.judgments}
+              judgingPhase={judgingPhase}
+              compactBottomSpacing={true}
+            />
+          </div>
+          {viewMode === 'top' && (
             <footer
               ref={footerRef}
               role="contentinfo"
-              className="pointer-events-auto w-full flex flex-wrap items-center justify-center gap-3"
+              className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
             >
               <NeonButton
                 ref={myPostsTriggerRef}
                 type="button"
                 variant="primary"
-                ariaLabel="自分の投稿一覧"
+                compactOnMobile={true}
+                ariaLabel="過去の投稿"
                 onClick={openMyPosts}
                 onKeyDown={handleMyPostsTriggerKeyDown}
               >
-                自分の投稿一覧
+                過去の投稿
               </NeonButton>
               <NeonButton
                 type="button"
                 variant="secondary"
+                compactOnMobile={true}
                 ariaLabel="ランキング"
                 ref={rankingTriggerRef}
                 onClick={openRankingModal}
@@ -1134,15 +1117,25 @@ function App() {
                 ref={privacyPolicyTriggerRef}
                 type="button"
                 variant="secondary"
+                compactOnMobile={true}
                 ariaLabel="プライバシーポリシー"
                 onClick={openPrivacyPolicy}
               >
                 プライバシーポリシー
               </NeonButton>
+              <NeonButton
+                type="button"
+                variant="secondary"
+                compactOnMobile={true}
+                ariaLabel="問い合わせ（新しいタブで開く）"
+                onClick={openContactForm}
+              >
+                問い合わせ
+              </NeonButton>
             </footer>
-          </div>
+          )}
         </div>
-      )}
+      </div>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )
