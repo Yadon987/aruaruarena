@@ -531,12 +531,11 @@ function App() {
 
   const exitJudgingWithError = useCallback(() => {
     clearJudgingPolling()
-    setViewMode('top')
+    setViewMode('judging')
     setIsJudgingPollingReady(false)
     setSuccessMessage('')
     setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
-    syncTopPath()
-  }, [clearJudgingPolling, syncTopPath])
+  }, [clearJudgingPolling])
   const exitJudgingWithResultRef = useRef(exitJudgingWithResult)
   const exitJudgingWithErrorRef = useRef(exitJudgingWithError)
 
@@ -553,8 +552,8 @@ function App() {
     if (!routePostId) return
     if (!isUuidLike(routePostId)) {
       setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
-      setViewMode('top')
-      syncTopPath()
+      setViewMode('judging')
+      setIsJudgingPollingReady(false)
       return
     }
 
@@ -1128,7 +1127,7 @@ function App() {
                 type="button"
                 variant="secondary"
                 compactOnMobile={true}
-                ariaLabel="問い合わせ"
+                ariaLabel="問い合わせ（新しいタブで開く）"
                 onClick={openContactForm}
               >
                 問い合わせ
