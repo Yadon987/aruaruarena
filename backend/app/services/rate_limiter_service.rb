@@ -45,6 +45,11 @@ class RateLimiterService
     # 片系で失敗しても投稿フローを止めない（フェイルオープン）
     apply_limit_with_fail_open(identifier: ip_identifier, target_label: 'IP')
     apply_limit_with_fail_open(identifier: nickname_identifier, target_label: 'nickname')
+    true
+  rescue StandardError => e
+    # 識別子生成などの予期しない失敗でも投稿処理は継続する
+    Rails.logger.error("[RateLimiterService] set_limit! failed: #{e.class} - #{e.message}")
+    false
   end
 
   class << self

@@ -222,6 +222,18 @@ RSpec.describe RateLimiterService, type: :service do
 
         expect(RateLimit.find(ip_identifier)).to be_present
       end
+
+      # Given: 識別子生成で例外が発生する
+      # When: set_limit!を呼び出す
+      # Then: 例外は送出されずfalseを返す（フェイルオープン）
+      it '識別子生成エラー時も例外を送出せずfalseを返すこと' do
+        allow(RateLimit).to receive(:generate_ip_identifier).and_raise(StandardError, 'identifier error')
+        expect(Rails.logger).to receive(:error).with(
+          /\[RateLimiterService\] set_limit! failed: StandardError - identifier error/
+        )
+
+        expect(described_class.set_limit!(ip: ip, nickname: nickname)).to be false
+      end
     end
   end
 
