@@ -33,6 +33,12 @@ RSpec.describe JudgePostService do
     it 'JOIN_TIMEOUT定数が定義されていること' do
       expect(described_class::JOIN_TIMEOUT).to eq(90)
     end
+
+    it 'Executor関連の定数が定義されていること' do
+      expect(described_class::EXECUTOR_THREAD_COUNT).to eq(3)
+      expect(described_class::EXECUTOR_MAX_QUEUE).to eq(0)
+      expect(described_class::EXECUTOR_SHUTDOWN_WAIT_SECONDS).to eq(5)
+    end
   end
   describe '.call' do
     # 何を検証するか: Postが見つからない場合はWARNログを出力して何もしないこと
@@ -350,6 +356,49 @@ RSpec.describe JudgePostService do
         post.reload
         expect(post.status).to eq('failed')
         expect(post.average_score).to be_nil
+      end
+    end
+  end
+
+  describe 'privateメソッド' do
+    let!(:post) { create(:post) }
+    let(:service) { described_class.new(post.id) }
+
+    describe '#resolve_adapter_class' do
+      it 'Class指定時はそのまま返すこと' do
+        expect(service.send(:resolve_adapter_class, GeminiAdapter)).to eq(GeminiAdapter)
+      end
+
+      it 'Symbol指定時は対応するメソッドから解決すること' do
+        expect(service.send(:resolve_adapter_class, :dewi_adapter_class)).to eq(DewiAdapter)
+      end
+    end
+
+    describe '#shutdown_executor' do
+      let(:executor) { instance_double(Concurrent::ThreadPoolExecutor) }
+
+      it '正常に停止した場合はkillを実行しないこと' do
+        service.instance_variable_set(:@executor, executor)
+
+        expect(executor).to receive(:shutdown)
+        expect(executor).to receive(:wait_for_termination)
+          .with(described_class::EXECUTOR_SHUTDOWN_WAIT_SECONDS).and_return(true)
+        expect(executor).not_to receive(:kill)
+        expect(Rails.logger).not_to receive(:warn).with('[JudgePostService] Executor killed after timeout')
+
+        service.send(:shutdown_executor)
+      end
+
+      it '停止待機がタイムアウトした場合はkillを実行すること' do
+        service.instance_variable_set(:@executor, executor)
+
+        expect(executor).to receive(:shutdown)
+        expect(executor).to receive(:wait_for_termination)
+          .with(described_class::EXECUTOR_SHUTDOWN_WAIT_SECONDS).and_return(false)
+        expect(executor).to receive(:kill)
+        expect(Rails.logger).to receive(:warn).with('[JudgePostService] Executor killed after timeout')
+
+        service.send(:shutdown_executor)
       end
     end
   end

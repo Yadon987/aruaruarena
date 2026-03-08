@@ -60,6 +60,25 @@ RSpec.describe RateLimiterService, type: :service do
         create(:rate_limit, identifier: nickname_identifier, expires_at: current_time + described_class::LIMIT_DURATION)
         expect(described_class.limited?(ip: ip, nickname: nickname)).to be true
       end
+
+      # Given: IP側のレート制限レコードが存在する
+      # When: limited?を呼び出す
+      # Then: ログには識別子の一部のみ出力され、生値は出力されない
+      it '制限ログに生のIP/ニックネームを出さず識別子の一部のみを出力すること' do
+        create(:rate_limit, identifier: ip_identifier, expires_at: current_time + described_class::LIMIT_DURATION)
+
+        masked_ip = ip_identifier[
+          described_class::HASH_LOG_START_INDEX..described_class::HASH_LOG_END_INDEX
+        ]
+        masked_nickname = nickname_identifier[
+          described_class::HASH_LOG_START_INDEX..described_class::HASH_LOG_END_INDEX
+        ]
+
+        expect(Rails.logger).to receive(:error).with(
+          "[RateLimiterService] Limited: ip=#{masked_ip}, nickname=#{masked_nickname}"
+        )
+        described_class.limited?(ip: ip, nickname: nickname)
+      end
     end
 
     context '境界値 (Edge Case)' do
@@ -186,6 +205,25 @@ RSpec.describe RateLimiterService, type: :service do
         expect do
           described_class.set_limit!(ip: '192.168.1.1', nickname: '太郎')
         end.not_to raise_error
+      end
+
+      # Given: ニックネーム側の制限設定だけが失敗する
+      # When: set_limit!を呼び出す
+      # Then: 例外は発生せず、IP側の制限設定は成功する
+      it 'ニックネーム側で失敗してもIP側の制限設定は継続すること' do
+        allow(RateLimit).to receive(:set_limit).and_call_original
+        allow(RateLimit).to receive(:set_limit).with(
+          nickname_identifier, seconds: described_class::LIMIT_DURATION
+        ).and_raise(StandardError, 'nickname write error')
+        expect(Rails.logger).to receive(:error).with(
+          /\[RateLimiterService\] Failed to set nickname limit: StandardError - nickname write error/
+        )
+
+        expect do
+          described_class.set_limit!(ip: ip, nickname: nickname)
+        end.not_to raise_error
+
+        expect(RateLimit.find(ip_identifier)).to be_present
       end
     end
   end

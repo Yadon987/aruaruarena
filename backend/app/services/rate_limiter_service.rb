@@ -24,14 +24,10 @@ class RateLimiterService
     ip_limited = RateLimit.limited?(ip_identifier)
     nickname_limited = RateLimit.limited?(nickname_identifier)
 
-    if ip_limited || nickname_limited
-      ip_hash = ip_identifier[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
-      nickname_hash = nickname_identifier[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
-      Rails.logger.error("[RateLimiterService] Limited: ip=#{ip_hash}, nickname=#{nickname_hash}")
-      return true
-    end
+    return false unless ip_limited || nickname_limited
 
-    false
+    log_limited_identifiers(ip_identifier, nickname_identifier)
+    true
   rescue StandardError => e
     # フェイルオープン: エラー時は投稿を許可
     Rails.logger.error("[RateLimiterService] DynamoDB error: #{e.class} - #{e.message}")
@@ -46,18 +42,30 @@ class RateLimiterService
     ip_identifier = RateLimit.generate_ip_identifier(ip)
     nickname_identifier = RateLimit.generate_nickname_identifier(nickname)
 
-    # IP制限設定（フェイルオープン）
-    begin
-      RateLimit.set_limit(ip_identifier, seconds: LIMIT_DURATION)
-    rescue StandardError => e
-      Rails.logger.error("[RateLimiterService] Failed to set IP limit: #{e.class} - #{e.message}")
+    # 片系で失敗しても投稿フローを止めない（フェイルオープン）
+    apply_limit_with_fail_open(identifier: ip_identifier, target_label: 'IP')
+    apply_limit_with_fail_open(identifier: nickname_identifier, target_label: 'nickname')
+  end
+
+  class << self
+    private
+
+    def log_limited_identifiers(ip_identifier, nickname_identifier)
+      ip_hash = masked_identifier(ip_identifier)
+      nickname_hash = masked_identifier(nickname_identifier)
+      Rails.logger.error("[RateLimiterService] Limited: ip=#{ip_hash}, nickname=#{nickname_hash}")
     end
 
-    # ニックネーム制限設定（フェイルオープン）
-    begin
-      RateLimit.set_limit(nickname_identifier, seconds: LIMIT_DURATION)
+    def masked_identifier(identifier)
+      return '' unless identifier.is_a?(String)
+
+      identifier[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
+    end
+
+    def apply_limit_with_fail_open(identifier:, target_label:)
+      RateLimit.set_limit(identifier, seconds: LIMIT_DURATION)
     rescue StandardError => e
-      Rails.logger.error("[RateLimiterService] Failed to set nickname limit: #{e.class} - #{e.message}")
+      Rails.logger.error("[RateLimiterService] Failed to set #{target_label} limit: #{e.class} - #{e.message}")
     end
   end
 end
