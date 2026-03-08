@@ -46,4 +46,14 @@ describe('JudgeDesk Refactor', () => {
     const desk = screen.getByTestId('judge-desk')
     expect(desk).toHaveClass('judge-desk-shell-compact')
   })
+
+  it('RED: JudgeDeskはcompact専用クラスなしで単一レイアウトを使用する', async () => {
+    // 何を検証するか: 審査席パネル幅が画面モードに依存せず単一仕様であること
+    const { JudgeDesk } = await loadJudgeDesk()
+
+    render(<JudgeDesk phase="complete" compact={true} />)
+
+    const desk = screen.getByTestId('judge-desk')
+    expect(desk).not.toHaveClass('judge-desk-shell-compact')
+  })
 })

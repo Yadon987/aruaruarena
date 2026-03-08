@@ -130,4 +130,56 @@ describe('JudgeAvatars Refactor', () => {
       expect(avatar.className).toMatch(/md:w-40/)
     })
   })
+
+  it('RED: ホーム相当でも審査中と同一のアバターサイズクラスになる', async () => {
+    // 何を検証するか: 画面差分を配置のみにし、サイズ仕様を共通化できていること
+    const { JudgeAvatars } = await loadJudgeAvatars()
+
+    const { rerender } = render(
+      <JudgeAvatars
+        isJudging={false}
+        isPostModalOpen={false}
+        compactAvatarSize={true}
+        judgingPhase="complete"
+      />
+    )
+
+    const homeAvatars = screen.getAllByRole('img')
+    homeAvatars.forEach((avatar) => {
+      expect(avatar).toHaveClass('w-28')
+    })
+
+    rerender(<JudgeAvatars isJudging={true} isPostModalOpen={false} judgingPhase="speaking" />)
+    const judgingAvatars = screen.getAllByRole('img')
+    judgingAvatars.forEach((avatar) => {
+      expect(avatar).toHaveClass('w-28')
+    })
+  })
+
+  it('RED: compact系props指定有無でアバターサイズが不変である', async () => {
+    // 何を検証するか: compactAvatarSize/compactBottomSpacingに依存しない単一サイズ仕様であること
+    const { JudgeAvatars } = await loadJudgeAvatars()
+
+    const { rerender } = render(
+      <JudgeAvatars isJudging={false} isPostModalOpen={false} judgingPhase="complete" />
+    )
+    const defaultAvatars = screen.getAllByRole('img')
+    defaultAvatars.forEach((avatar) => {
+      expect(avatar).toHaveClass('w-28')
+    })
+
+    rerender(
+      <JudgeAvatars
+        isJudging={false}
+        isPostModalOpen={false}
+        compactAvatarSize={true}
+        compactBottomSpacing={true}
+        judgingPhase="complete"
+      />
+    )
+    const compactAvatars = screen.getAllByRole('img')
+    compactAvatars.forEach((avatar) => {
+      expect(avatar).toHaveClass('w-28')
+    })
+  })
 })
