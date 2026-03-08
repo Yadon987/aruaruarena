@@ -88,7 +88,10 @@ export function JudgeSlot({
   const isLit = phase === 'scoring' || phase === 'complete'
 
   return (
-    <div data-testid={`judge-slot-${judge}`} className="flex flex-col items-center gap-2">
+    <div
+      data-testid={`judge-slot-${judge}`}
+      className="relative flex flex-col items-center gap-2 overflow-visible"
+    >
       {/* 吹き出し */}
       {speechText && showSpeech && (
         <JudgeSpeechBubble
@@ -99,23 +102,28 @@ export function JudgeSlot({
         />
       )}
 
-      {/* アバター */}
-      <motion.img
-        src={getAvatarImagePath(judge, avatarState)}
-        alt={alt}
-        aria-label={getJudgeAriaLabel(judge)}
-        className={AVATAR_SIZE_CLASS}
-        initial={entranceVariant.initial}
-        animate={entranceVariant.animate}
-        transition={entranceVariant.transition}
-        draggable={false}
-      />
+      {/* 背もたれ（アバター背面） */}
+      <div className="judge-seat-back" aria-hidden="true" />
+
+      {/* アバター（Framer Motion が transform を上書きするため、位置調整は外側要素に適用する） */}
+      <div className="relative z-10 -mb-7 -translate-y-12 md:-mb-12 md:-translate-y-18 lg:-mb-14 lg:-translate-y-24">
+        <motion.img
+          src={getAvatarImagePath(judge, avatarState)}
+          alt={alt}
+          aria-label={getJudgeAriaLabel(judge)}
+          className={AVATAR_SIZE_CLASS}
+          initial={entranceVariant.initial}
+          animate={entranceVariant.animate}
+          transition={entranceVariant.transition}
+          draggable={false}
+        />
+      </div>
 
       {/* スコアパネル */}
       <div
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
-        className={`judge-desk-panel glass-panel ${neonClass.border}`}
+        className={`judge-desk-panel judge-seat-panel glass-panel ${neonClass.border} relative z-20 -mt-8 w-[110%] max-w-[14rem] md:-mt-12 md:w-[120%] md:max-w-[20rem] lg:-mt-16 lg:max-w-[24rem]`}
         aria-label={buildScoreAriaLabel(judge, scoreLabel)}
         role="group"
       >
