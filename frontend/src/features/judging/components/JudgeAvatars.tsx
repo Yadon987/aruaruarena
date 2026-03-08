@@ -23,10 +23,11 @@ const JUDGE_CONFIG: readonly { id: JudgePersona; alt: string }[] = [
 
 /** フォールバックスピーチ（currentSpeechがnull時の表示） */
 const FALLBACK_SPEECH = '...'
-const STAGE_BASE_CLASS = 'relative mx-auto w-full max-w-6xl'
+const STAGE_BASE_CLASS = 'relative mx-auto w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[96rem]'
 const STAGE_COMPACT_BOTTOM_CLASS = 'pb-8'
 const STAGE_DEFAULT_BOTTOM_CLASS = 'pb-16'
-const AVATAR_GRID_CLASS = 'grid grid-cols-3 gap-0.5 px-3 sm:gap-2 sm:px-4 md:gap-6 md:px-0 lg:gap-8'
+const AVATAR_GRID_CLASS =
+  'grid grid-cols-3 gap-0.5 px-3 sm:gap-2 sm:px-4 md:gap-6 md:px-0 lg:gap-8 xl:gap-10 2xl:gap-12'
 
 interface ResolveSpeechTextOptions {
   judgeId: JudgePersona

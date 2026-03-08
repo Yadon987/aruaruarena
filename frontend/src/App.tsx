@@ -60,6 +60,7 @@ const SOUND_SE_RESULT_OPEN = 'se_result_open'
 const CONTACT_FORM_URL = 'https://forms.gle/zLN3j3YF87qdULXB9'
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
+const MOBILE_FOOTER_MEDIA_QUERY = '(max-width: 639px)'
 
 type ValidationErrors = {
   nicknameError: string
@@ -216,6 +217,8 @@ function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('top')
   const [isMuted, setIsMuted] = useState(() => sound.isMuted)
   const [isRankingModalOpen, setIsRankingModalOpen] = useState(false)
+  const [isFooterActionSheetOpen, setIsFooterActionSheetOpen] = useState(false)
+  const [isMobileFooterLayout, setIsMobileFooterLayout] = useState(false)
   const [judgingPostId, setJudgingPostId] = useState('')
   const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
   const [pendingFormData, setPendingFormData] = useState<{ nickname: string; body: string } | null>(
@@ -438,6 +441,34 @@ function App() {
       document.body.style.overflow = previousOverflow
     }
   }, [isRankingModalOpen])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+
+    const mediaQueryList = window.matchMedia(MOBILE_FOOTER_MEDIA_QUERY)
+    const applyLayout = (matches: boolean) => {
+      setIsMobileFooterLayout(matches)
+      if (!matches) {
+        setIsFooterActionSheetOpen(false)
+      }
+    }
+    applyLayout(mediaQueryList.matches)
+
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      applyLayout(event.matches)
+    }
+    mediaQueryList.addEventListener('change', handleMediaChange)
+
+    return () => {
+      mediaQueryList.removeEventListener('change', handleMediaChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (viewMode !== 'top') {
+      setIsFooterActionSheetOpen(false)
+    }
+  }, [viewMode])
 
   useEffect(() => {
     return () => {
@@ -731,6 +762,7 @@ function App() {
   }, [])
 
   const openMyPosts = () => {
+    setIsFooterActionSheetOpen(false)
     syncMyPostIds()
     setMyPostsError('')
     setIsPrivacyPolicyOpen(false)
@@ -756,6 +788,7 @@ function App() {
   }
 
   const openPrivacyPolicy = () => {
+    setIsFooterActionSheetOpen(false)
     setIsMyPostsOpen(false)
     setIsRankingModalOpen(false)
     resetMyPostsModalState()
@@ -767,10 +800,12 @@ function App() {
   }
 
   const openContactForm = () => {
+    setIsFooterActionSheetOpen(false)
     window.open(CONTACT_FORM_URL, '_blank', 'noopener,noreferrer')
   }
 
   const openRankingModal = () => {
+    setIsFooterActionSheetOpen(false)
     setIsMyPostsOpen(false)
     setIsPrivacyPolicyOpen(false)
     resetMyPostsModalState()
@@ -779,6 +814,14 @@ function App() {
 
   const closeRankingModal = () => {
     setIsRankingModalOpen(false)
+  }
+
+  const openFooterActionSheet = () => {
+    setIsFooterActionSheetOpen(true)
+  }
+
+  const closeFooterActionSheet = () => {
+    setIsFooterActionSheetOpen(false)
   }
 
   const retryPostSubmit = useCallback(() => {
@@ -1071,74 +1114,162 @@ function App() {
           onRejudgeSuccess={handleResultRejudgeSuccess}
           onClose={closeResultModal}
         />
-      </div>
-      <div
-        ref={footerDockRef}
-        className={`fixed inset-x-0 z-40 pointer-events-none ${
-          viewMode === 'judging'
-            ? 'bottom-24 px-2 sm:bottom-[5.5rem] sm:px-3 md:bottom-[4.5rem] md:px-4 lg:bottom-10 lg:px-6'
-            : 'bottom-20 px-2 sm:bottom-[4.5rem] sm:px-3 md:bottom-14 md:px-4 lg:bottom-10 lg:px-6'
-        }`}
-      >
-        <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
-          <div data-testid="top-judge-dock" className="w-full pointer-events-none">
-            <JudgeAvatars
-              isJudging={viewMode === 'judging'}
-              isPostModalOpen={isPostModalOpen}
-              enableIdleBehavior={viewMode === 'top'}
-              judgments={activeResultPost?.judgments}
-              judgingPhase={judgingPhase}
-              compactBottomSpacing={true}
-            />
-          </div>
-          {viewMode === 'top' && (
-            <footer
-              ref={footerRef}
-              role="contentinfo"
-              className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
+        {viewMode === 'top' && isMobileFooterLayout && isFooterActionSheetOpen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="補助メニュー"
+            className="fixed inset-0 z-[45] bg-black/55 p-3 sm:hidden"
+            onClick={closeFooterActionSheet}
+            onKeyDown={(event) => {
+              if (event.key === DIALOG_CLOSE_KEY) {
+                event.preventDefault()
+                closeFooterActionSheet()
+              }
+            }}
+          >
+            <div
+              className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-white/20 bg-slate-950/95 p-4"
+              onClick={(event) => event.stopPropagation()}
             >
-              <NeonButton
-                ref={myPostsTriggerRef}
-                type="button"
-                variant="primary"
-                compactOnMobile={true}
-                ariaLabel="過去の投稿"
-                onClick={openMyPosts}
-                onKeyDown={handleMyPostsTriggerKeyDown}
+              <p className="mb-3 text-sm font-semibold text-cyan-100">補助メニュー</p>
+              <div className="grid grid-cols-1 gap-2">
+                <NeonButton
+                  ref={myPostsTriggerRef}
+                  type="button"
+                  variant="primary"
+                  compactOnMobile={true}
+                  ariaLabel="過去の投稿"
+                  onClick={openMyPosts}
+                  onKeyDown={handleMyPostsTriggerKeyDown}
+                >
+                  過去の投稿
+                </NeonButton>
+                <NeonButton
+                  ref={privacyPolicyTriggerRef}
+                  type="button"
+                  variant="secondary"
+                  compactOnMobile={true}
+                  ariaLabel="プライバシーポリシー"
+                  onClick={openPrivacyPolicy}
+                >
+                  プライバシーポリシー
+                </NeonButton>
+                <NeonButton
+                  type="button"
+                  variant="secondary"
+                  compactOnMobile={true}
+                  ariaLabel="問い合わせ（新しいタブで開く）"
+                  onClick={openContactForm}
+                >
+                  問い合わせ
+                </NeonButton>
+                <button
+                  type="button"
+                  className="mt-1 rounded border border-white/30 px-3 py-2 text-sm text-white/90"
+                  aria-label="補助メニューを閉じる"
+                  onClick={closeFooterActionSheet}
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        <div
+          ref={footerDockRef}
+          className={`fixed inset-x-0 z-40 pointer-events-none ${
+            viewMode === 'judging'
+              ? 'bottom-24 px-2 sm:bottom-[5.5rem] sm:px-3 md:bottom-[4.5rem] md:px-4 lg:bottom-10 lg:px-6'
+              : 'bottom-20 px-2 sm:bottom-[4.5rem] sm:px-3 md:bottom-14 md:px-4 lg:bottom-10 lg:px-6'
+          }`}
+        >
+          <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
+            <div data-testid="top-judge-dock" className="w-full pointer-events-none">
+              <JudgeAvatars
+                isJudging={viewMode === 'judging'}
+                isPostModalOpen={isPostModalOpen}
+                enableIdleBehavior={viewMode === 'top'}
+                judgments={activeResultPost?.judgments}
+                judgingPhase={judgingPhase}
+                compactBottomSpacing={true}
+              />
+            </div>
+            {viewMode === 'top' && (
+              <footer
+                ref={footerRef}
+                role="contentinfo"
+                className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
               >
-                過去の投稿
-              </NeonButton>
-              <NeonButton
-                type="button"
-                variant="secondary"
-                compactOnMobile={true}
-                ariaLabel="ランキング"
-                ref={rankingTriggerRef}
-                onClick={openRankingModal}
-              >
-                ランキング
-              </NeonButton>
-              <NeonButton
-                ref={privacyPolicyTriggerRef}
-                type="button"
-                variant="secondary"
-                compactOnMobile={true}
-                ariaLabel="プライバシーポリシー"
-                onClick={openPrivacyPolicy}
-              >
-                プライバシーポリシー
-              </NeonButton>
-              <NeonButton
-                type="button"
-                variant="secondary"
-                compactOnMobile={true}
-                ariaLabel="問い合わせ（新しいタブで開く）"
-                onClick={openContactForm}
-              >
-                問い合わせ
-              </NeonButton>
-            </footer>
-          )}
+                {isMobileFooterLayout && !isFooterActionSheetOpen ? (
+                  <>
+                    <NeonButton
+                      type="button"
+                      variant="secondary"
+                      compactOnMobile={true}
+                      ariaLabel="ランキング"
+                      ref={rankingTriggerRef}
+                      onClick={openRankingModal}
+                    >
+                      ランキング
+                    </NeonButton>
+                  <NeonButton
+                    type="button"
+                    variant="primary"
+                    compactOnMobile={true}
+                    ariaLabel="その他を開く"
+                    onClick={openFooterActionSheet}
+                  >
+                    その他
+                  </NeonButton>
+                  </>
+                ) : !isMobileFooterLayout ? (
+                  <>
+                    <NeonButton
+                      ref={myPostsTriggerRef}
+                      type="button"
+                      variant="primary"
+                      compactOnMobile={true}
+                      ariaLabel="過去の投稿"
+                      onClick={openMyPosts}
+                      onKeyDown={handleMyPostsTriggerKeyDown}
+                    >
+                      過去の投稿
+                    </NeonButton>
+                    <NeonButton
+                      type="button"
+                      variant="secondary"
+                      compactOnMobile={true}
+                      ariaLabel="ランキング"
+                      ref={rankingTriggerRef}
+                      onClick={openRankingModal}
+                    >
+                      ランキング
+                    </NeonButton>
+                    <NeonButton
+                      ref={privacyPolicyTriggerRef}
+                      type="button"
+                      variant="secondary"
+                      compactOnMobile={true}
+                      ariaLabel="プライバシーポリシー"
+                      onClick={openPrivacyPolicy}
+                    >
+                      プライバシーポリシー
+                    </NeonButton>
+                    <NeonButton
+                      type="button"
+                      variant="secondary"
+                      compactOnMobile={true}
+                      ariaLabel="問い合わせ（新しいタブで開く）"
+                      onClick={openContactForm}
+                    >
+                      問い合わせ
+                    </NeonButton>
+                  </>
+                ) : null}
+              </footer>
+            )}
+          </div>
         </div>
       </div>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}

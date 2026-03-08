@@ -55,7 +55,7 @@
   white-space: nowrap;
 }
 
-@media (min-width: 641px) {
+@media (min-width: 640px) {
   .neon-button-compact-mobile {
     padding: 0.45rem 0.9rem;
     font-size: 0.9rem;
@@ -83,10 +83,10 @@
   position: absolute;
   z-index: 0;
   left: 50%;
-  top: 14%;
+  top: 12%;
   transform: translateX(-50%);
-  width: min(64vw, 680px);
-  height: min(22vw, 200px);
+  width: 78vw;
+  height: 30vw;
   border-radius: 9999px;
   background:
     radial-gradient(circle at 50% 35%, rgba(130, 244, 255, 0.28), rgba(15, 74, 115, 0.08) 48%),
@@ -107,10 +107,10 @@
 .judge-desk-shell {
   width: 100%;
   margin: 0 auto;
-  padding: 0.5rem;
+  padding: 0.25rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .judge-desk-shell-compact {
@@ -118,9 +118,10 @@
 }
 
 .judge-desk-panel {
+  --judge-slot-scale: 0.8;
   border-radius: 1rem;
-  padding: 2.25rem 1.15rem;
-  min-height: 14.8rem;
+  padding: 1.9rem 0.85rem;
+  min-height: 10.2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -131,9 +132,9 @@
 .judge-seat-back {
   position: absolute;
   left: 8%;
-  top: 18%;
+  top: 8%;
   width: 84%;
-  height: 60%;
+  height: 66%;
   border-radius: 0.85rem 0.85rem 0.4rem 0.4rem;
   background:
     linear-gradient(180deg, rgba(180, 236, 255, 0.35) 0%, rgba(12, 36, 62, 0.92) 100%),
@@ -200,8 +201,8 @@
 
 .vip-bulb {
   position: absolute;
-  width: 0.55rem;
-  height: 0.55rem;
+  width: 0.45rem;
+  height: 0.45rem;
   border-radius: 9999px;
   transform: translate(-50%, -50%);
   background: radial-gradient(circle at 34% 34%, rgba(255, 238, 186, 0.95), rgba(236, 176, 66, 0.92) 62%, rgba(148, 100, 22, 0.98) 100%);
@@ -320,9 +321,9 @@
   content: '';
   position: absolute;
   left: 6%;
-  bottom: -0.45rem;
+  bottom: -0.35rem;
   width: 88%;
-  height: 0.6rem;
+  height: 0.5rem;
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(170, 220, 255, 0.28), rgba(3, 13, 30, 0.72));
   box-shadow: 0 5px 8px rgba(0, 7, 18, 0.35);
@@ -375,11 +376,12 @@
 
 .digital-score {
   font-family: var(--font-digital);
-  font-size: 3.5rem;
+  font-size: calc(3.45rem * var(--judge-slot-scale));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
+  letter-spacing: calc(0.08em * var(--judge-slot-scale));
   line-height: 1;
+  white-space: nowrap;
   color: #d9f8ff;
 }
 
@@ -392,7 +394,7 @@
 
 .digital-score-unit {
   font-family: var(--font-digital);
-  font-size: 1rem;
+  font-size: calc(1rem * var(--judge-slot-scale));
   font-weight: 500;
   margin-left: 0.25rem;
   opacity: 0.9;
@@ -403,9 +405,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 7.8rem;
-  min-height: 5.2rem;
-  padding: 0.68rem 0.85rem 0.36rem;
+  width: min(100%, calc(9.35rem * var(--judge-slot-scale)));
+  min-width: 0;
+  min-height: calc(5.7rem * var(--judge-slot-scale));
+  padding: calc(0.74rem * var(--judge-slot-scale)) calc(0.98rem * var(--judge-slot-scale))
+    calc(0.4rem * var(--judge-slot-scale));
   border-radius: 0.62rem;
   background:
     linear-gradient(180deg, rgba(16, 10, 7, 0.94), rgba(8, 5, 3, 0.96)),
@@ -494,66 +498,73 @@
     0 0 34px rgba(255, 206, 132, 0.54);
 }
 
-@media (max-width: 640px) {
-  .background-title-art {
-    top: 12%;
-    width: 78vw;
-    height: 30vw;
-  }
-
+@media (min-width: 640px) {
   .judge-desk-shell {
     padding: 0.25rem;
-    gap: 0.5rem;
+    gap: 0.65rem;
   }
 
   .judge-desk-panel {
+    --judge-slot-scale: 0.86;
     padding: 1.9rem 0.85rem;
     min-height: 10.2rem;
   }
 
   .judge-seat-back {
-    top: 20%;
-    height: 58%;
+    top: 9%;
+    height: 65%;
   }
 
-  .judge-seat-panel::after {
-    bottom: -0.35rem;
-    height: 0.5rem;
-  }
-
-  .vip-bulb {
-    width: 0.45rem;
-    height: 0.45rem;
-  }
-
-  .digital-score {
-    font-size: 3rem;
-  }
-
-  .digital-score-unit {
-    font-size: 0.875rem;
-  }
 }
 
-@media (min-width: 641px) and (max-width: 1023px) {
+@media (min-width: 768px) {
   .judge-desk-panel {
+    --judge-slot-scale: 0.92;
     padding: 2.05rem 1rem;
     min-height: 12.6rem;
   }
 
-  .digital-score {
-    font-size: 3.2rem;
+  .judge-seat-back {
+    top: 11%;
+    height: 63%;
+  }
+
+}
+
+@media (min-width: 1024px) {
+  .background-title-art {
+    top: 14%;
+    width: min(64vw, 680px);
+    height: min(22vw, 200px);
+  }
+
+  .judge-desk-shell {
+    padding: 0.5rem;
+    gap: 1rem;
+  }
+
+  .judge-desk-panel {
+    --judge-slot-scale: 1.4;
+    padding: 2.25rem 1.15rem;
+    min-height: 14.8rem;
   }
 
   .judge-seat-back {
-    top: 17%;
-    height: 61%;
+    top: 18%;
+    height: 60%;
   }
+
 }
 
 @media (min-width: 1280px) {
-  .digital-score {
-    font-size: 3.8rem;
+  .judge-desk-panel {
+    --judge-slot-scale: 1.55;
+  }
+}
+
+@media (min-width: 1536px) {
+  .judge-desk-panel {
+    --judge-slot-scale: 1.68;
   }
 }
 
