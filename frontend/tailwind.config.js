@@ -45,6 +45,27 @@ export default {
 					900: "#7f1d1d",
 					950: "#450a0a",
 				},
+				vip: {
+					gold: "#FFD166",
+					goldDeep: "#C58A1E",
+					red: "#8B0000",
+					redDeep: "#5A0012",
+					black: "#120E08",
+				},
+			},
+			keyframes: {
+				"vip-roulette": {
+					"0%, 70%, 100%": { opacity: "0.35" },
+					"35%": { opacity: "1" },
+				},
+				"vip-flash": {
+					"0%, 100%": { opacity: "0.25" },
+					"50%": { opacity: "1" },
+				},
+			},
+			animation: {
+				"vip-roulette": "vip-roulette 1.25s linear infinite",
+				"vip-flash": "vip-flash 0.28s ease-in-out 4",
 			},
 			fontFamily: {
 				// 日本語フォントを優先
