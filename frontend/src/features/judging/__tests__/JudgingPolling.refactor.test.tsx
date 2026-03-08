@@ -13,6 +13,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
   beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }))
 
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     window.history.replaceState({}, '', '/')
     mswServer.use(
       http.post('/api/posts', () => {
@@ -28,6 +29,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     mswServer.resetHandlers()
     localStorage.clear()
     getPostSpy.mockClear()
+    vi.useRealTimers()
     if (dateNowSpy) {
       dateNowSpy.mockRestore()
       dateNowSpy = null
@@ -59,7 +61,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     currentTime = baseTime + 59_000
 
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 3200))
+      await vi.advanceTimersByTimeAsync(3200)
     })
 
     expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
@@ -88,7 +90,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     currentTime = baseTime + 60_000
 
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 3200))
+      await vi.advanceTimersByTimeAsync(3200)
     })
 
     expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
