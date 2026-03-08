@@ -53,6 +53,7 @@ describe('App Game Show Layout Refactor', () => {
 
     const dock = screen.getByTestId('top-judge-dock')
     const avatars = within(dock).getAllByRole('img')
+    expect(avatars.length).toBeGreaterThan(0)
     avatars.forEach((avatar) => {
       expect(avatar).toHaveClass('w-28')
     })

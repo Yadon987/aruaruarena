@@ -110,18 +110,26 @@ describe('JudgeAvatars Refactor', () => {
     expect(screen.getAllByText('---')).toHaveLength(3)
   })
 
-  it('compactAvatarSize=true でもアバターサイズは共通仕様を維持する', async () => {
+  it('judgingPhase未指定かつisJudging=falseではcomplete相当で吹き出しを表示しない', async () => {
+    // 何を検証するか: フェーズ自動解決でトップ画面はcomplete扱いになること
+    const { JudgeAvatars } = await loadJudgeAvatars()
+    render(<JudgeAvatars isJudging={false} isPostModalOpen={false} />)
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('judge-desk-score')).toHaveLength(3)
+  })
+
+  it('ホーム表示でもアバターサイズは共通仕様を維持する', async () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(
       <JudgeAvatars
         isJudging={false}
         isPostModalOpen={false}
-        compactAvatarSize={true}
         judgingPhase="complete"
       />
     )
 
-    // 何を検証するか: compact指定があってもアバターサイズが共通化されること
+    // 何を検証するか: 画面モードに依存せずアバターサイズが共通化されること
     const avatars = screen.getAllByRole('img')
     expect(avatars.length).toBe(3)
     avatars.forEach((avatar) => {
@@ -136,12 +144,7 @@ describe('JudgeAvatars Refactor', () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     const { rerender } = render(
-      <JudgeAvatars
-        isJudging={false}
-        isPostModalOpen={false}
-        compactAvatarSize={true}
-        judgingPhase="complete"
-      />
+      <JudgeAvatars isJudging={false} isPostModalOpen={false} judgingPhase="complete" />
     )
 
     const homeAvatars = screen.getAllByRole('img')
@@ -156,8 +159,8 @@ describe('JudgeAvatars Refactor', () => {
     })
   })
 
-  it('compact系props指定有無でアバターサイズが不変である', async () => {
-    // 何を検証するか: compactAvatarSize/compactBottomSpacingに依存しない単一サイズ仕様であること
+  it('isJudging指定有無でアバターサイズが不変である', async () => {
+    // 何を検証するか: ホーム/審査中でアバターサイズが不変であること
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     const { rerender } = render(
@@ -170,16 +173,35 @@ describe('JudgeAvatars Refactor', () => {
 
     rerender(
       <JudgeAvatars
-        isJudging={false}
+        isJudging={true}
         isPostModalOpen={false}
-        compactAvatarSize={true}
-        compactBottomSpacing={true}
-        judgingPhase="complete"
+        judgingPhase="speaking"
       />
     )
     const compactAvatars = screen.getAllByRole('img')
     compactAvatars.forEach((avatar) => {
       expect(avatar).toHaveClass('w-28')
     })
+  })
+
+  it('judgeとpersonaが混在するjudgmentsでも審査員ごとに正しくマッピングする', async () => {
+    // 何を検証するか: judge/persona混在データを取り込んでも表示崩れしないこと
+    const { JudgeAvatars } = await loadJudgeAvatars()
+    render(
+      <JudgeAvatars
+        isJudging={false}
+        isPostModalOpen={false}
+        judgingPhase="complete"
+        judgments={[
+          { judge: 'nakao', score: 81, success: true },
+          { persona: 'hiroyuki', score: 88, success: true },
+          { judge: 'dewi', score: 93, success: true },
+        ]}
+      />
+    )
+
+    expect(screen.getByLabelText('中尾彬審査員のスコア: 81点')).toBeInTheDocument()
+    expect(screen.getByLabelText('ひろゆき審査員のスコア: 88点')).toBeInTheDocument()
+    expect(screen.getByLabelText('デヴィ婦人審査員のスコア: 93点')).toBeInTheDocument()
   })
 })

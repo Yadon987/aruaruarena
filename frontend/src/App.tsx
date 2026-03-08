@@ -1104,7 +1104,6 @@ function App() {
                 judgments={activeResultPost?.judgments}
                 judgingPhase={judgingPhase}
                 compactBottomSpacing={true}
-                compactAvatarSize={true}
               />
             </div>
             <footer

@@ -15,7 +15,6 @@ export type JudgeDeskJudgment = {
 type JudgeDeskProps = {
   judgments?: JudgeDeskJudgment[]
   phase: JudgeDeskPhase
-  compact?: boolean
 }
 
 const JUDGE_DISPLAY_ORDER: readonly JudgePersona[] = ['nakao', 'hiroyuki', 'dewi']

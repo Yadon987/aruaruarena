@@ -12,7 +12,6 @@ interface JudgeAvatarsProps {
   judgments?: Array<Partial<Judgment> & JudgeDeskJudgment>
   judgingPhase?: JudgeDeskPhase
   compactBottomSpacing?: boolean
-  compactAvatarSize?: boolean
 }
 
 /** 審査員設定（表示順: 中尾 -> ひろゆき -> デヴィ） */
@@ -24,6 +23,10 @@ const JUDGE_CONFIG: readonly { id: JudgePersona; alt: string }[] = [
 
 /** フォールバックスピーチ（currentSpeechがnull時の表示） */
 const FALLBACK_SPEECH = '...'
+const STAGE_BASE_CLASS = 'relative mx-auto w-full max-w-6xl'
+const STAGE_COMPACT_BOTTOM_CLASS = 'pb-8'
+const STAGE_DEFAULT_BOTTOM_CLASS = 'pb-16'
+const AVATAR_GRID_CLASS = 'grid grid-cols-3 gap-4 md:gap-6 lg:gap-8'
 
 interface ResolveSpeechTextOptions {
   judgeId: JudgePersona
@@ -53,6 +56,23 @@ function resolveSpeechText({
   return shouldShowDefaultCatchphrase ? HIROYUKI_CATCHPHRASE : null
 }
 
+function buildJudgmentMap(
+  judgments?: Array<Partial<Judgment> & JudgeDeskJudgment>
+): Map<JudgePersona, JudgeDeskJudgment> {
+  if (!judgments) return new Map<JudgePersona, JudgeDeskJudgment>()
+
+  return judgments.reduce<Map<JudgePersona, JudgeDeskJudgment>>((map, judgment) => {
+    const key = judgment.judge ?? judgment.persona
+    if (key) map.set(key, judgment)
+    return map
+  }, new Map<JudgePersona, JudgeDeskJudgment>())
+}
+
+function resolvePhase(isJudging: boolean, judgingPhase?: JudgeDeskPhase): JudgeDeskPhase {
+  // フェーズ未指定時は画面状態に合わせて既定値を補完する
+  return judgingPhase ?? (isJudging ? 'speaking' : 'complete')
+}
+
 /**
  * 審査員アバターとスコアパネルをGrid配置で表示するコンポーネント
  *
@@ -77,31 +97,18 @@ export function JudgeAvatars({
     speakingJudge,
   })
 
-  // 判定結果をMapに変換してルックアップを効率化
-  const judgmentMap = new Map<JudgePersona, JudgeDeskJudgment>()
-  if (judgments) {
-    for (const judgment of judgments) {
-      const key = judgment.judge ?? judgment.persona
-      if (key) {
-        judgmentMap.set(key, judgment)
-      }
-    }
-  }
-
-  const phase = judgingPhase ?? (isJudging ? 'speaking' : 'complete')
+  const judgmentMap = buildJudgmentMap(judgments)
+  const phase = resolvePhase(isJudging, judgingPhase)
   const showSpeech = phase !== 'scoring' && phase !== 'complete'
 
   return (
     <div
       data-testid="judge-stage"
-      className={`relative mx-auto w-full max-w-6xl ${
-        compactBottomSpacing ? 'pb-8' : 'pb-16'
+      className={`${STAGE_BASE_CLASS} ${
+        compactBottomSpacing ? STAGE_COMPACT_BOTTOM_CLASS : STAGE_DEFAULT_BOTTOM_CLASS
       }`}
     >
-      <div
-        data-testid="judge-avatars-container"
-        className="grid grid-cols-3 gap-4 md:gap-6 lg:gap-8"
-      >
+      <div data-testid="judge-avatars-container" className={AVATAR_GRID_CLASS}>
         {JUDGE_CONFIG.map((judge) => {
           const entrance = entranceVariants[judge.id]
           const speechText = resolveSpeechText({

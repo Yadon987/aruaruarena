@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import type { TargetAndTransition, Transition } from 'framer-motion'
 import { getAvatarImagePath, getJudgeAriaLabel } from '../../../shared/constants/avatar'
 import type { AvatarState } from '../../../shared/constants/avatar'
 import type { JudgePersona } from '../../../shared/types/domain'
@@ -21,10 +22,14 @@ const JUDGE_LABELS: Record<JudgePersona, string> = {
 
 const SCORE_PLACEHOLDER = '---'
 const SCORE_NOT_AVAILABLE = 'N/A'
+const AVATAR_SIZE_CLASS = 'h-auto w-28 md:w-48 lg:w-56'
 
-/** 登場アニメーションのバリアント型（framer-motionとの互換性のため緩い型定義） */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type EntranceVariant = { initial: any; animate: any; transition: any }
+/** 登場アニメーションのバリアント型 */
+type EntranceVariant = {
+  initial: TargetAndTransition
+  animate: TargetAndTransition
+  transition: Transition
+}
 
 interface JudgeSlotProps {
   /** 審査員ID */
@@ -98,7 +103,7 @@ export function JudgeSlot({
         src={getAvatarImagePath(judge, avatarState)}
         alt={alt}
         aria-label={getJudgeAriaLabel(judge)}
-        className="h-auto w-28 md:w-48 lg:w-56"
+        className={AVATAR_SIZE_CLASS}
         initial={entranceVariant.initial}
         animate={entranceVariant.animate}
         transition={entranceVariant.transition}

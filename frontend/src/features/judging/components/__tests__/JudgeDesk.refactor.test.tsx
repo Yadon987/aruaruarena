@@ -37,23 +37,32 @@ describe('JudgeDesk Refactor', () => {
     })
   })
 
-  it('compact=true が指定されても単一レイアウトクラスを維持する', async () => {
-    // 何を検証するか: デスクはcompact指定に依存せず単一仕様で描画されること
+  it('JudgeDeskは単一レイアウトクラスで描画される', async () => {
+    // 何を検証するか: デスクが常に単一のレイアウトクラスで描画されること
     const { JudgeDesk } = await loadJudgeDesk()
 
-    render(<JudgeDesk phase="complete" compact={true} />)
+    render(<JudgeDesk phase="complete" />)
 
     const desk = screen.getByTestId('judge-desk')
+    expect(desk).toHaveClass('judge-desk-shell')
     expect(desk).not.toHaveClass('judge-desk-shell-compact')
   })
 
-  it('JudgeDeskはcompact専用クラスなしで単一レイアウトを使用する', async () => {
-    // 何を検証するか: 審査席パネル幅が画面モードに依存せず単一仕様であること
+  it('score未指定かつsuccess=falseならN/Aを優先表示する', async () => {
+    // 何を検証するか: 不完全な判定データでも失敗結果がN/Aで表現されること
     const { JudgeDesk } = await loadJudgeDesk()
 
-    render(<JudgeDesk phase="complete" compact={true} />)
+    render(
+      <JudgeDesk
+        phase="complete"
+        judgments={[
+          { judge: 'nakao', success: false },
+          { judge: 'hiroyuki', success: true, score: 80 },
+          { judge: 'dewi', success: true, score: 90 },
+        ]}
+      />
+    )
 
-    const desk = screen.getByTestId('judge-desk')
-    expect(desk).not.toHaveClass('judge-desk-shell-compact')
+    expect(screen.getByLabelText('中尾彬審査員のスコア: N/A点')).toBeInTheDocument()
   })
 })
