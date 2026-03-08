@@ -1,5 +1,5 @@
+import type { ComponentProps } from 'react'
 import { motion } from 'framer-motion'
-import type { TargetAndTransition, Transition } from 'framer-motion'
 import { getAvatarImagePath, getJudgeAriaLabel } from '../../../shared/constants/avatar'
 import type { AvatarState } from '../../../shared/constants/avatar'
 import type { JudgePersona } from '../../../shared/types/domain'
@@ -25,10 +25,11 @@ const SCORE_NOT_AVAILABLE = 'N/A'
 const AVATAR_SIZE_CLASS = 'h-auto w-28 md:w-48 lg:w-56'
 
 /** 登場アニメーションのバリアント型 */
+type MotionImageProps = ComponentProps<typeof motion.img>
 type EntranceVariant = {
-  initial: TargetAndTransition
-  animate: TargetAndTransition
-  transition: Transition
+  initial: MotionImageProps['initial']
+  animate: MotionImageProps['animate']
+  transition: MotionImageProps['transition']
 }
 
 interface JudgeSlotProps {
