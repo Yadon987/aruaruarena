@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'digest'
+
 # RateLimiterService - レート制限サービス
 #
 # IPアドレスとニックネームの両方に対して5分間の投稿制限を設ける
@@ -7,9 +9,7 @@ class RateLimiterService
   # 定数
   LIMIT_DURATION = 5 # TODO: 開発の利便性のため一時的に5秒に変更（本来は 300）
 
-  # ログ出力用のハッシュインデックス
-  HASH_LOG_START_INDEX = 3  # ハッシュの開始位置（ログ出力用）
-  HASH_LOG_END_INDEX = 19   # ハッシュの終了位置（ログ出力用）
+  LOG_HASH_LENGTH = 16
 
   # IPアドレスまたはニックネームが制限中かチェック
   # @param ip [String] IPアドレス（生値。内部でハッシュ化する）
@@ -59,7 +59,7 @@ class RateLimiterService
     def masked_identifier(identifier)
       return '' unless identifier.is_a?(String)
 
-      identifier[HASH_LOG_START_INDEX..HASH_LOG_END_INDEX]
+      Digest::SHA256.hexdigest(identifier).first(LOG_HASH_LENGTH)
     end
 
     def apply_limit_with_fail_open(identifier:, target_label:)

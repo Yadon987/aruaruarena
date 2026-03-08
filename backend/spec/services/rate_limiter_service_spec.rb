@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
+require 'digest'
 
 RSpec.describe RateLimiterService, type: :service do
   include ActiveSupport::Testing::TimeHelpers
@@ -67,12 +68,8 @@ RSpec.describe RateLimiterService, type: :service do
       it '制限ログに生のIP/ニックネームを出さず識別子の一部のみを出力すること' do
         create(:rate_limit, identifier: ip_identifier, expires_at: current_time + described_class::LIMIT_DURATION)
 
-        masked_ip = ip_identifier[
-          described_class::HASH_LOG_START_INDEX..described_class::HASH_LOG_END_INDEX
-        ]
-        masked_nickname = nickname_identifier[
-          described_class::HASH_LOG_START_INDEX..described_class::HASH_LOG_END_INDEX
-        ]
+        masked_ip = Digest::SHA256.hexdigest(ip_identifier).first(described_class::LOG_HASH_LENGTH)
+        masked_nickname = Digest::SHA256.hexdigest(nickname_identifier).first(described_class::LOG_HASH_LENGTH)
 
         expect(Rails.logger).to receive(:error).with(
           "[RateLimiterService] Limited: ip=#{masked_ip}, nickname=#{masked_nickname}"

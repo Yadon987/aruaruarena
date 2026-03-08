@@ -35,8 +35,8 @@ RSpec.describe JudgePostService do
     end
 
     it 'Executor関連の定数が定義されていること' do
-      expect(described_class::EXECUTOR_THREAD_COUNT).to eq(3)
-      expect(described_class::EXECUTOR_MAX_QUEUE).to eq(0)
+      expect(described_class::EXECUTOR_THREAD_COUNT).to eq(described_class::JUDGES.size)
+      expect(described_class::EXECUTOR_MAX_QUEUE).to eq(described_class::JUDGES.size)
       expect(described_class::EXECUTOR_SHUTDOWN_WAIT_SECONDS).to eq(5)
     end
   end

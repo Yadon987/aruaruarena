@@ -20,8 +20,9 @@ class JudgePostService
   PER_JUDGE_TIMEOUT = 70  # 各審査員のタイムアウト（秒）
   JOIN_TIMEOUT = 90       # 全体のタイムアウト（秒）
   MAX_ERROR_BACKTRACE_LINES = 20
-  EXECUTOR_THREAD_COUNT = 3
-  EXECUTOR_MAX_QUEUE = 0
+  # 審査員数と同じスレッド数に揃え、キューを有限にして:caller_runsの背圧を効かせる
+  EXECUTOR_THREAD_COUNT = JUDGES.size
+  EXECUTOR_MAX_QUEUE = JUDGES.size
   EXECUTOR_SHUTDOWN_WAIT_SECONDS = 5
 
   # 初期化
