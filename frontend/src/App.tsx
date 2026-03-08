@@ -219,6 +219,7 @@ function App() {
   const [isRankingModalOpen, setIsRankingModalOpen] = useState(false)
   const [isFooterActionSheetOpen, setIsFooterActionSheetOpen] = useState(false)
   const [isMobileFooterLayout, setIsMobileFooterLayout] = useState(false)
+  const [isStopJudgingConfirmOpen, setIsStopJudgingConfirmOpen] = useState(false)
   const [judgingPostId, setJudgingPostId] = useState('')
   const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
   const [pendingFormData, setPendingFormData] = useState<{ nickname: string; body: string } | null>(
@@ -244,6 +245,8 @@ function App() {
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
+  const submitAbortControllerRef = useRef<AbortController | null>(null)
+  const submitRequestSeqRef = useRef(0)
   const activeResultErrorCode = resultModalErrorCode
   const resultAudioScene = useMemo(() => {
     if (!isResultModalOpen || !activeResultPost) return null
@@ -472,6 +475,7 @@ function App() {
 
   useEffect(() => {
     return () => {
+      submitAbortControllerRef.current?.abort()
       sound.dispose()
     }
   }, [sound])
@@ -656,6 +660,10 @@ function App() {
   const onSubmit = useCallback(
     async ({ nickname, body }: { nickname: string; body: string }) => {
       if (isSubmitting) return
+      const submitRequestSeq = ++submitRequestSeqRef.current
+      const submitAbortController = new AbortController()
+      submitAbortControllerRef.current?.abort()
+      submitAbortControllerRef.current = submitAbortController
 
       const trimmedNickname = nickname.trim()
       const trimmedBody = body.trim()
@@ -679,15 +687,28 @@ function App() {
       const temporaryPostId = crypto.randomUUID()
       startJudgingSubmission(temporaryPostId, trimmedNickname, trimmedBody)
       try {
-        const response = await api.posts.create({
-          nickname: trimmedNickname,
-          body: trimmedBody,
-        })
+        const response = await api.posts.create(
+          {
+            nickname: trimmedNickname,
+            body: trimmedBody,
+          },
+          {
+            signal: submitAbortController.signal,
+          }
+        )
+        if (submitRequestSeq !== submitRequestSeqRef.current) return
         applyJudgingSubmitSuccess(response)
       } catch (error) {
+        if (submitRequestSeq !== submitRequestSeqRef.current) return
+        if (error instanceof ApiClientError && error.code === API_ERROR_CODE.ABORTED) return
         applyJudgingSubmitFailure(error)
       } finally {
-        setIsSubmitting(false)
+        if (submitAbortControllerRef.current === submitAbortController) {
+          submitAbortControllerRef.current = null
+        }
+        if (submitRequestSeq === submitRequestSeqRef.current) {
+          setIsSubmitting(false)
+        }
       }
     },
     [applyJudgingSubmitFailure, applyJudgingSubmitSuccess, isSubmitting, startJudgingSubmission]
@@ -834,6 +855,28 @@ function App() {
     syncTopPath()
   }, [clearJudgingPolling, syncTopPath])
 
+  const resetToTopAfterJudgingStop = useCallback(() => {
+    setPendingFormData(null)
+    setSubmitError('')
+    setSuccessMessage('')
+    setJudgingErrorMessage('')
+    setJudgingPostId('')
+    setIsJudgingPollingReady(false)
+    setIsPostModalOpen(false)
+    setIsStopJudgingConfirmOpen(false)
+    setViewMode('top')
+    syncTopPath()
+  }, [syncTopPath])
+
+  const handleStopJudgingConfirm = useCallback(() => {
+    clearJudgingPolling()
+    submitAbortControllerRef.current?.abort()
+    submitAbortControllerRef.current = null
+    submitRequestSeqRef.current += 1
+    setIsSubmitting(false)
+    resetToTopAfterJudgingStop()
+  }, [clearJudgingPolling, resetToTopAfterJudgingStop])
+
   const handleRankingPostClick = (postId: string) => {
     openResultModal(postId)
   }
@@ -962,6 +1005,19 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {viewMode === 'judging' && (
+        <div className="fixed left-4 top-4 z-50 sm:left-6 sm:top-6">
+          <NeonButton
+            type="button"
+            variant="secondary"
+            compactOnMobile={true}
+            ariaLabel="審査を停止してホームに戻る"
+            onClick={() => setIsStopJudgingConfirmOpen(true)}
+          >
+            ホームへ戻る
+          </NeonButton>
+        </div>
+      )}
       <div
         data-testid="top-action-controls"
         className="fixed right-4 top-4 z-50 flex items-center gap-2 sm:right-6 sm:top-6"
@@ -988,6 +1044,9 @@ function App() {
         className="game-show-stage relative min-h-screen overflow-hidden px-6 pb-6"
         style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
       >
+        {viewMode === 'judging' && !judgingErrorMessage && (
+          <section data-testid="judging-screen" aria-label="審査中" className="sr-only" />
+        )}
         {viewMode === 'judging' && judgingErrorMessage && (
           <section
             data-testid="judging-screen"
@@ -1172,6 +1231,51 @@ function App() {
                 >
                   閉じる
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {viewMode === 'judging' && isStopJudgingConfirmOpen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="審査停止確認"
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setIsStopJudgingConfirmOpen(false)}
+            onKeyDown={(event) => {
+              if (event.key === DIALOG_CLOSE_KEY) {
+                event.preventDefault()
+                setIsStopJudgingConfirmOpen(false)
+              }
+            }}
+          >
+            <div
+              className="glass-panel w-full max-w-sm rounded p-4"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h2 className="mb-2 text-lg font-semibold text-cyan-100">審査を中止しますか？</h2>
+              <p className="mb-4 text-sm text-slate-100">
+                審査中の投稿は破棄され、トップ画面へ戻ります。
+              </p>
+              <div className="flex justify-end gap-2">
+                <NeonButton
+                  type="button"
+                  variant="secondary"
+                  compactOnMobile={true}
+                  ariaLabel="審査を続ける"
+                  onClick={() => setIsStopJudgingConfirmOpen(false)}
+                >
+                  続ける
+                </NeonButton>
+                <NeonButton
+                  type="button"
+                  variant="primary"
+                  compactOnMobile={true}
+                  ariaLabel="中止する"
+                  onClick={handleStopJudgingConfirm}
+                >
+                  中止する
+                </NeonButton>
               </div>
             </div>
           </div>
