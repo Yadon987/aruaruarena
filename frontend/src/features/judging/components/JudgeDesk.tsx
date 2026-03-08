@@ -104,8 +104,9 @@ function JudgeDeskScorePanel({
       className={`judge-desk-panel glass-panel gold-border ${scoreMotionClass} ${particleClass}`}
       aria-label={buildScoreAriaLabel(judge, scoreLabel)}
     >
-      <span className="digital-score gold-text">{scoreLabel}</span>
-      <span className="digital-score-unit gold-text">点</span>
+      <span className="score-display-plate">
+        <span className="digital-score gold-text">{scoreLabel}</span>
+      </span>
       <span className="score-particles" aria-hidden="true">
         {SCORE_PARTICLES.map((particle, index) => (
           <span

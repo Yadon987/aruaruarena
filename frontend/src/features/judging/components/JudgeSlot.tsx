@@ -210,7 +210,7 @@ export function JudgeSlot({
       <div
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
-        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} ${scoreMotionClass} ${particleClass} glass-panel relative z-20 -mt-10 w-full max-w-[14rem] md:-mt-14 md:max-w-[20rem] lg:-mt-[4.5rem] lg:max-w-[24rem]`}
+        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} ${scoreMotionClass} ${particleClass} glass-panel relative z-20 -mt-10 w-full max-w-[16rem] md:-mt-14 md:max-w-[22rem] lg:-mt-[4.5rem] lg:max-w-[26rem]`}
         aria-label={buildScoreAriaLabel(judge, scoreLabel)}
         role="group"
       >
@@ -225,8 +225,9 @@ export function JudgeSlot({
             return <span key={`${judge}-bulb-${index}`} className="vip-bulb" style={style} />
           })}
         </div>
-        <span className="digital-score vip-score-text">{scoreLabel}</span>
-        <span className="digital-score-unit vip-score-text">点</span>
+        <span className="score-display-plate">
+          <span className="digital-score vip-score-text">{scoreLabel}</span>
+        </span>
         <span className="score-particles" aria-hidden="true">
           {SCORE_PARTICLES.map((particle, index) => (
             <span

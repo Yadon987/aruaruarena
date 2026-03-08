@@ -111,7 +111,7 @@ describe('E25-01 RED: JudgeDesk', () => {
   })
 
   it('スコアの数値と単位「点」を表示しaria-labelにも「点」を含む', async () => {
-    // 何を検証するか: Issue #150 のスコア表示要件（単位表示とアクセシビリティ）を満たすこと
+    // 何を検証するか: Issue #150 のスコア表示要件（アクセシビリティラベル）を満たすこと
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(
@@ -128,7 +128,7 @@ describe('E25-01 RED: JudgeDesk', () => {
     expect(screen.getByLabelText('中尾彬審査員のスコア: 8.5点')).toBeInTheDocument()
     expect(screen.getByLabelText('ひろゆき審査員のスコア: 0点')).toBeInTheDocument()
     expect(screen.getByLabelText('デヴィ婦人審査員のスコア: 10点')).toBeInTheDocument()
-    expect(screen.getAllByText('点')).toHaveLength(3)
+    expect(screen.queryByText('点')).not.toBeInTheDocument()
   })
 
   it('未確定と失敗でも「点」を表示しルートとパネルのglass-panel適用位置が正しい', async () => {
@@ -153,6 +153,6 @@ describe('E25-01 RED: JudgeDesk', () => {
     expect(within(panels[0]).getByText('N/A')).toBeInTheDocument()
     expect(within(panels[1]).getByText('00')).toBeInTheDocument()
     expect(within(panels[2]).getByText('00')).toBeInTheDocument()
-    expect(screen.getAllByText('点')).toHaveLength(3)
+    expect(screen.queryByText('点')).not.toBeInTheDocument()
   })
 })

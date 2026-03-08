@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import 'dseg/css/dseg.css'
 import App from './App.tsx'
 import './index.css'
 
