@@ -1072,8 +1072,8 @@ function App() {
       <div
         className={`fixed inset-x-0 z-40 pointer-events-none ${
           viewMode === 'judging'
-            ? 'bottom-28 px-2 sm:bottom-24 sm:px-3 md:bottom-20 md:px-4 lg:bottom-10 lg:px-6'
-            : 'bottom-6 px-6'
+            ? 'bottom-24 px-2 sm:bottom-[5.5rem] sm:px-3 md:bottom-[4.5rem] md:px-4 lg:bottom-10 lg:px-6'
+            : 'bottom-20 px-2 sm:bottom-[4.5rem] sm:px-3 md:bottom-14 md:px-4 lg:bottom-10 lg:px-6'
         }`}
       >
         <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">

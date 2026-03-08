@@ -119,8 +119,8 @@
 
 .judge-desk-panel {
   border-radius: 1rem;
-  padding: 1.35rem 1rem;
-  min-height: 10rem;
+  padding: 1.5rem 1rem;
+  min-height: 11.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -131,9 +131,9 @@
 .judge-seat-back {
   position: absolute;
   left: 8%;
-  top: 22%;
+  top: 18%;
   width: 84%;
-  height: 56%;
+  height: 60%;
   border-radius: 0.85rem 0.85rem 0.4rem 0.4rem;
   background:
     linear-gradient(180deg, rgba(180, 236, 255, 0.35) 0%, rgba(12, 36, 62, 0.92) 100%),
@@ -420,13 +420,13 @@
   }
 
   .judge-desk-panel {
-    padding: 1rem 0.75rem;
-    min-height: 5.2rem;
+    padding: 1.1rem 0.75rem;
+    min-height: 7rem;
   }
 
   .judge-seat-back {
-    top: 26%;
-    height: 50%;
+    top: 20%;
+    height: 58%;
   }
 
   .judge-seat-panel::after {
@@ -445,6 +445,18 @@
 
   .digital-score-unit {
     font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .judge-desk-panel {
+    padding: 1.25rem 0.9rem;
+    min-height: 9.25rem;
+  }
+
+  .judge-seat-back {
+    top: 17%;
+    height: 61%;
   }
 }
 

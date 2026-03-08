@@ -145,7 +145,7 @@ export function JudgeSlot({
     >
       {/* 吹き出し */}
       {speechText && showSpeech && (
-        <div className="absolute -top-24 left-1/2 z-30 w-40 -translate-x-1/2 sm:w-52 md:-top-28 md:w-60 lg:-top-32 lg:w-64">
+        <div className="absolute -top-28 left-1/2 z-30 w-40 -translate-x-1/2 sm:-top-[7.5rem] sm:w-52 md:-top-[8.5rem] md:w-60 lg:-top-[9.5rem] lg:w-64">
           <JudgeSpeechBubble
             isVisible={true}
             text={speechText}
@@ -159,7 +159,7 @@ export function JudgeSlot({
       <div className="judge-seat-back vip-judge-seat" aria-hidden="true" />
 
       {/* アバター（Framer Motion が transform を上書きするため、位置調整は外側要素に適用する） */}
-      <div className="relative z-10 -mb-7 -translate-y-12 md:-mb-12 md:-translate-y-16 lg:-mb-14 lg:-translate-y-24">
+      <div className="relative z-10 -mb-8 -translate-y-16 md:-mb-14 md:-translate-y-[5.5rem] lg:-mb-16 lg:-translate-y-[7rem]">
         <div className={isSpeaking ? AVATAR_BREATHING_CLASS : ''}>
           <motion.img
             src={getAvatarImagePath(judge, avatarState)}
@@ -178,7 +178,7 @@ export function JudgeSlot({
       <div
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
-        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} glass-panel relative z-20 -mt-8 w-full max-w-[14rem] md:-mt-12 md:max-w-[20rem] lg:-mt-16 lg:max-w-[24rem]`}
+        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} glass-panel relative z-20 -mt-10 w-full max-w-[14rem] md:-mt-14 md:max-w-[20rem] lg:-mt-[4.5rem] lg:max-w-[24rem]`}
         aria-label={buildScoreAriaLabel(judge, scoreLabel)}
         role="group"
       >

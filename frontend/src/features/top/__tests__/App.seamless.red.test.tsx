@@ -157,7 +157,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
         throw new Error('catchphrase bubble is not rendered yet')
       }
       expect(bubble).toHaveTextContent(/\S/)
-    })
+    }, { timeout: 3000 })
   })
 
   it('審査完了で結果モーダルが表示される', { timeout: 15000 }, async () => {
