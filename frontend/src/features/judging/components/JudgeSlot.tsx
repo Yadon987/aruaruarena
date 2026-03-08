@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react'
+import type { ComponentProps, CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import { getAvatarImagePath, getJudgeAriaLabel } from '../../../shared/constants/avatar'
 import type { AvatarState } from '../../../shared/constants/avatar'
@@ -23,6 +23,22 @@ const JUDGE_LABELS: Record<JudgePersona, string> = {
 const SCORE_PLACEHOLDER = '---'
 const SCORE_NOT_AVAILABLE = 'N/A'
 const AVATAR_SIZE_CLASS = 'h-auto w-28 md:w-48 lg:w-56'
+const VIP_BULBS = [
+  { left: 8, top: 8 },
+  { left: 25, top: 5 },
+  { left: 50, top: 4 },
+  { left: 75, top: 5 },
+  { left: 92, top: 8 },
+  { left: 95, top: 30 },
+  { left: 95, top: 60 },
+  { left: 92, top: 88 },
+  { left: 75, top: 92 },
+  { left: 50, top: 94 },
+  { left: 25, top: 92 },
+  { left: 8, top: 88 },
+  { left: 5, top: 60 },
+  { left: 5, top: 30 },
+] as const
 
 /** 登場アニメーションのバリアント型 */
 type MotionImageProps = ComponentProps<typeof motion.img>
@@ -85,7 +101,19 @@ export function JudgeSlot({
 }: JudgeSlotProps) {
   const neonClass = JUDGE_NEON_CLASS[judge]
   const scoreLabel = resolveScoreLabel(judgment)
-  const isLit = phase === 'scoring' || phase === 'complete'
+  const isScoring = phase === 'scoring'
+  const isComplete = phase === 'complete'
+  const isLit = isScoring || isComplete
+  const bulbStateClass = isComplete
+    ? 'vip-bulbs-flash'
+    : isScoring
+      ? 'vip-bulbs-roulette'
+      : 'vip-bulbs-idle'
+  const deskStateClass = isComplete
+    ? 'vip-desk-complete'
+    : isScoring
+      ? 'vip-desk-scoring'
+      : 'vip-desk-idle'
 
   return (
     <div
@@ -103,7 +131,7 @@ export function JudgeSlot({
       )}
 
       {/* 背もたれ（アバター背面） */}
-      <div className="judge-seat-back" aria-hidden="true" />
+      <div className="judge-seat-back vip-judge-seat" aria-hidden="true" />
 
       {/* アバター（Framer Motion が transform を上書きするため、位置調整は外側要素に適用する） */}
       <div className="relative z-10 -mb-7 -translate-y-12 md:-mb-12 md:-translate-y-18 lg:-mb-14 lg:-translate-y-24">
@@ -123,12 +151,22 @@ export function JudgeSlot({
       <div
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
-        className={`judge-desk-panel judge-seat-panel glass-panel ${neonClass.border} relative z-20 -mt-8 w-[110%] max-w-[14rem] md:-mt-12 md:w-[120%] md:max-w-[20rem] lg:-mt-16 lg:max-w-[24rem]`}
+        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} glass-panel ${neonClass.border} relative z-20 -mt-8 w-[110%] max-w-[14rem] md:-mt-12 md:w-[120%] md:max-w-[20rem] lg:-mt-16 lg:max-w-[24rem]`}
         aria-label={buildScoreAriaLabel(judge, scoreLabel)}
         role="group"
       >
-        <span className={`digital-score ${neonClass.text}`}>{scoreLabel}</span>
-        <span className={`digital-score-unit ${neonClass.text}`}>点</span>
+        <div className="vip-bulb-track" aria-hidden="true">
+          {VIP_BULBS.map((bulb, index) => {
+            const style: CSSProperties = {
+              left: `${bulb.left}%`,
+              top: `${bulb.top}%`,
+              animationDelay: `${index * 90}ms`,
+            }
+            return <span key={`${judge}-bulb-${index}`} className="vip-bulb" style={style} />
+          })}
+        </div>
+        <span className={`digital-score vip-score-text ${neonClass.text}`}>{scoreLabel}</span>
+        <span className={`digital-score-unit vip-score-text ${neonClass.text}`}>点</span>
       </div>
     </div>
   )
