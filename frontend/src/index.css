@@ -436,6 +436,7 @@
     text-shadow: none;
   }
 
+  .vip-bulbs-idle .vip-bulb,
   .vip-bulbs-roulette .vip-bulb,
   .vip-bulbs-flash .vip-bulb {
     animation: none;

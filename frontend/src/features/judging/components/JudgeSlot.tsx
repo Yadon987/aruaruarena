@@ -19,7 +19,6 @@ const SCORE_PLACEHOLDER = '---'
 const SCORE_NOT_AVAILABLE = 'N/A'
 const AVATAR_SIZE_CLASS = 'h-auto w-28 md:w-48 lg:w-56'
 const VIP_IDLE_CYCLE_MS = 5000
-const VIP_BULB_STEP_MS = Math.round(JUDGE_ENTRANCE.DURATION_MS / 13)
 const VIP_FLASH_TOTAL_MS = 1200
 const VIP_BULBS = [
   { left: 8, top: 8 },
@@ -37,6 +36,9 @@ const VIP_BULBS = [
   { left: 5, top: 60 },
   { left: 5, top: 30 },
 ] as const
+const VIP_BULB_STEP_MS = Math.round(
+  JUDGE_ENTRANCE.DURATION_MS / Math.max(VIP_BULBS.length - 1, 1)
+)
 
 /** 登場アニメーションのバリアント型 */
 type MotionImageProps = ComponentProps<typeof motion.img>
@@ -115,9 +117,11 @@ export function JudgeSlot({
       : 'vip-desk-idle'
 
   useEffect(() => {
-    if (flashTimerRef.current) {
-      clearTimeout(flashTimerRef.current)
-      flashTimerRef.current = null
+    const clearFlashTimer = () => {
+      if (flashTimerRef.current) {
+        clearTimeout(flashTimerRef.current)
+        flashTimerRef.current = null
+      }
     }
 
     if (isComplete) {
@@ -125,20 +129,11 @@ export function JudgeSlot({
       flashTimerRef.current = setTimeout(() => {
         setIsFlashActive(false)
       }, VIP_FLASH_TOTAL_MS)
-      return () => {
-        if (flashTimerRef.current) {
-          clearTimeout(flashTimerRef.current)
-        }
-      }
+    } else {
+      setIsFlashActive(false)
     }
 
-    setIsFlashActive(false)
-
-    return () => {
-      if (flashTimerRef.current) {
-        clearTimeout(flashTimerRef.current)
-      }
-    }
+    return clearFlashTimer
   }, [isComplete])
 
   return (
