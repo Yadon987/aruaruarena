@@ -1081,6 +1081,7 @@ function App() {
             <JudgeAvatars
               isJudging={viewMode === 'judging'}
               isPostModalOpen={isPostModalOpen}
+              enableIdleBehavior={viewMode === 'top'}
               judgments={activeResultPost?.judgments}
               judgingPhase={judgingPhase}
               compactBottomSpacing={true}

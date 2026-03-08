@@ -11,6 +11,7 @@ interface UseJudgeAvatarStateOptions {
   isJudging: boolean
   isPostModalOpen: boolean
   speakingJudge: JudgePersona | null
+  allowIdleAnimation?: boolean
 }
 
 interface JudgeAvatarStateResult {
@@ -53,6 +54,7 @@ export function useJudgeAvatarState({
   isJudging,
   isPostModalOpen,
   speakingJudge,
+  allowIdleAnimation = false,
 }: UseJudgeAvatarStateOptions): JudgeAvatarStateResult {
   const prefersReducedMotion = useReducedMotion()
   const [avatarStates, setAvatarStates] = useState<AvatarStateMap>(INITIAL_AVATAR_STATES)
@@ -63,7 +65,8 @@ export function useJudgeAvatarState({
   const mouthEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const speakingJudgeRef = useRef<JudgePersona | null>(speakingJudge)
 
-  const isAnimationEnabled = isJudging && !isPostModalOpen && !prefersReducedMotion
+  const isAnimationEnabled =
+    (isJudging || allowIdleAnimation) && !isPostModalOpen && !prefersReducedMotion
 
   useEffect(() => {
     speakingJudgeRef.current = speakingJudge

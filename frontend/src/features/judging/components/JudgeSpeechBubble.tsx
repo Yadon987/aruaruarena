@@ -35,9 +35,10 @@ export function JudgeSpeechBubble({ isVisible, text, judgeType, testId }: JudgeS
     <AnimatePresence>
       {isVisible && (
         <div className={`relative z-30 mb-2 flex ${POSITION_CLASSES[judgeType]}`}>
+          <span className="sr-only" role="status" aria-live="polite">
+            {text}
+          </span>
           <motion.div
-            role="status"
-            aria-live="polite"
             data-testid={testId}
             initial={BUBBLE_VARIANTS.initial}
             animate={BUBBLE_VARIANTS.animate}

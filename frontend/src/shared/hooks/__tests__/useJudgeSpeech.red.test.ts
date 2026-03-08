@@ -32,6 +32,27 @@ describe('E24-03 RED: useJudgeSpeech', () => {
     expect(result.current.speakingJudge).toBeNull()
   })
 
+  it('allowIdleSpeech=true なら isJudging=false でも8秒周期で発話する', async () => {
+    // 何を検証するか: ホーム待機中でも8秒周期で発話が開始されること
+    const { useJudgeSpeech } = await loadUseJudgeSpeech()
+    const { result } = renderHook(() =>
+      useJudgeSpeech({ isJudging: false, isPostModalOpen: false, allowIdleSpeech: true })
+    )
+
+    expect(result.current.currentSpeech).toBeNull()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5400)
+    })
+    expect(result.current.currentSpeech).toBeNull()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200)
+    })
+    expect(result.current.speakingJudge).not.toBeNull()
+    expect(result.current.currentSpeech).not.toBeNull()
+  })
+
   it('isPostModalOpen=true では発話しない', async () => {
     // 何を検証するか: 投稿モーダルオープン中は口癖が表示されないこと（FR-09）
     const { useJudgeSpeech } = await loadUseJudgeSpeech()
@@ -59,11 +80,12 @@ describe('E24-03 RED: useJudgeSpeech', () => {
 
   it('SPEECH_DURATION_MS 後に発話終了', async () => {
     // 何を検証するか: 口癖表示時間（2.5s）後に発話が終了すること
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(1)
     const { useJudgeSpeech } = await loadUseJudgeSpeech()
     const { result } = renderHook(() => useJudgeSpeech({ isJudging: true, isPostModalOpen: false }))
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(6000)
+      await vi.advanceTimersByTimeAsync(500)
     })
     expect(result.current.currentSpeech).not.toBeNull()
 
@@ -71,6 +93,7 @@ describe('E24-03 RED: useJudgeSpeech', () => {
       await vi.advanceTimersByTimeAsync(SPEECH_DURATION_MS)
     })
     expect(result.current.currentSpeech).toBeNull()
+    randomSpy.mockRestore()
   })
 
   it('同一審査員の連続選択は許容される', async () => {

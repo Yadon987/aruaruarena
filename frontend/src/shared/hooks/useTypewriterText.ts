@@ -18,7 +18,10 @@ export function useTypewriterText({
   maxDurationMs,
 }: UseTypewriterTextOptions): string {
   const prefersReducedMotion = useReducedMotion()
-  const [displayText, setDisplayText] = useState('')
+  const [displayText, setDisplayText] = useState(() => {
+    if (!isVisible || !text) return ''
+    return prefersReducedMotion ? text : text.slice(0, 1)
+  })
 
   const effectiveIntervalMs = useMemo(() => {
     if (text.length <= 1) return baseIntervalMs

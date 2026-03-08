@@ -153,7 +153,10 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
         screen.queryByTestId('catchphrase-hiroyuki') ??
         screen.queryByTestId('catchphrase-dewi') ??
         screen.queryByTestId('catchphrase-nakao')
-      expect(bubble).not.toBeNull()
+      if (!bubble) {
+        throw new Error('catchphrase bubble is not rendered yet')
+      }
+      expect(bubble).toHaveTextContent(/\S/)
     })
   })
 

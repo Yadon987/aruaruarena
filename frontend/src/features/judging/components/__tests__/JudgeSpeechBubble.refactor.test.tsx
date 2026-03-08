@@ -20,6 +20,8 @@ describe('JudgeSpeechBubble Refactor', () => {
       <JudgeSpeechBubble isVisible={true} text="表示" judgeType="hiroyuki" />
     )
 
+    expect(screen.getByRole('status')).toHaveTextContent('表示')
+
     await act(async () => {
       vi.advanceTimersByTime(2500)
     })

@@ -93,6 +93,27 @@ describe('JudgeAvatars Refactor', () => {
     expect(nakaoAvatar.parentElement).not.toHaveClass('judge-avatar-speaking-breath')
   })
 
+  it('ホーム待機モードでも話者未設定時は呼吸アニメーションを適用しない', async () => {
+    useJudgeSpeechMock.mockReturnValue({ currentSpeech: null, speakingJudge: null })
+    const { JudgeAvatars } = await loadJudgeAvatars()
+    render(
+      <JudgeAvatars
+        isJudging={false}
+        isPostModalOpen={false}
+        enableIdleBehavior={true}
+        judgingPhase="complete"
+      />
+    )
+
+    const hiroyukiAvatar = screen.getByAltText('ひろゆき風審査員')
+    const dewiAvatar = screen.getByAltText('デヴィ夫人風審査員')
+    const nakaoAvatar = screen.getByAltText('中尾彬風審査員')
+
+    expect(hiroyukiAvatar.parentElement).not.toHaveClass('judge-avatar-speaking-breath')
+    expect(dewiAvatar.parentElement).not.toHaveClass('judge-avatar-speaking-breath')
+    expect(nakaoAvatar.parentElement).not.toHaveClass('judge-avatar-speaking-breath')
+  })
+
   it('currentSpeech が null でも発話中審査員にはフォールバック文字列を表示する', async () => {
     useJudgeSpeechMock.mockReturnValue({ currentSpeech: null, speakingJudge: 'hiroyuki' })
     const { JudgeAvatars } = await loadJudgeAvatars()

@@ -26,10 +26,13 @@ describe('E24-05 RED: JudgeSpeechBubble', () => {
       />
     )
 
+    expect(screen.getByRole('status')).toHaveTextContent('それってあなたの感想ですよね')
+
     await act(async () => {
       vi.advanceTimersByTime(2500)
     })
     expect(screen.getByRole('status')).toHaveTextContent('それってあなたの感想ですよね')
+    expect(screen.getByText('それってあなたの感想ですよね', { selector: 'div' })).toBeInTheDocument()
   })
 
   it('isVisible=false で吹き出しが非表示', async () => {
@@ -73,7 +76,7 @@ describe('E24-05 RED: JudgeSpeechBubble', () => {
     await act(async () => {
       vi.advanceTimersByTime(2500)
     })
-    const bubble = screen.getByRole('status')
+    const bubble = screen.getByText(longText, { selector: 'div' })
     expect(bubble).toHaveTextContent(longText)
     expect(bubble).toHaveClass('whitespace-normal')
   })

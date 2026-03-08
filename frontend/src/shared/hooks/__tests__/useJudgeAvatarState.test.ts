@@ -141,4 +141,22 @@ describe('useJudgeAvatarState', () => {
       nakao: 'base',
     })
   })
+
+  it('allowIdleAnimation=true なら isJudging=false でも瞬きが動作する', async () => {
+    const { useJudgeAvatarState } = await loadUseJudgeAvatarState()
+    const { result } = renderHook(() =>
+      useJudgeAvatarState({
+        isJudging: false,
+        isPostModalOpen: false,
+        speakingJudge: null,
+        allowIdleAnimation: true,
+      })
+    )
+
+    await act(async () => {
+      vi.advanceTimersByTime(AVATAR_ANIMATION.BLINK_INTERVAL_MIN_MS)
+    })
+
+    expect(result.current.avatarStates.hiroyuki).toBe('eye_closed')
+  })
 })
