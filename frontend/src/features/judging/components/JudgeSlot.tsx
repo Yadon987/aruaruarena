@@ -117,6 +117,7 @@ export function JudgeSlot({
         data-lit={isLit ? 'true' : 'false'}
         className={`judge-desk-panel glass-panel ${neonClass.border}`}
         aria-label={buildScoreAriaLabel(judge, scoreLabel)}
+        role="group"
       >
         <span className={`digital-score ${neonClass.text}`}>{scoreLabel}</span>
         <span className={`digital-score-unit ${neonClass.text}`}>点</span>
