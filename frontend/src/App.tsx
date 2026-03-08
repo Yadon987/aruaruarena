@@ -1090,12 +1090,13 @@ function App() {
               <footer
                 ref={footerRef}
                 role="contentinfo"
-                className="pointer-events-auto w-full flex flex-wrap items-center justify-center gap-3"
+                className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
               >
                 <NeonButton
                   ref={myPostsTriggerRef}
                   type="button"
                   variant="primary"
+                  compactOnMobile={true}
                   ariaLabel="自分の投稿一覧"
                   onClick={openMyPosts}
                   onKeyDown={handleMyPostsTriggerKeyDown}
@@ -1105,6 +1106,7 @@ function App() {
                 <NeonButton
                   type="button"
                   variant="secondary"
+                  compactOnMobile={true}
                   ariaLabel="ランキング"
                   ref={rankingTriggerRef}
                   onClick={openRankingModal}
@@ -1115,6 +1117,7 @@ function App() {
                   ref={privacyPolicyTriggerRef}
                   type="button"
                   variant="secondary"
+                  compactOnMobile={true}
                   ariaLabel="プライバシーポリシー"
                   onClick={openPrivacyPolicy}
                 >
