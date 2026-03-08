@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
+import { useScoreRoulette } from '../../../shared/hooks/useScoreRoulette'
 import type { JudgePersona } from '../../../shared/types/domain'
 
 export type JudgeDeskPhase = 'entrance' | 'speaking' | 'scoring' | 'complete'
@@ -18,18 +19,37 @@ type JudgeDeskProps = {
 }
 
 const JUDGE_DISPLAY_ORDER: readonly JudgePersona[] = ['nakao', 'hiroyuki', 'dewi']
-const SCORE_PLACEHOLDER = '---'
+const SCORE_PLACEHOLDER = '00'
 const SCORE_NOT_AVAILABLE = 'N/A'
 const LIT_ON = 'true'
 const LIT_OFF = 'false'
 const SCORE_LIGHT_INTERVAL_MS = 300
+const SCORE_PARTICLES = [
+  { x: -34, y: -24 },
+  { x: -18, y: -30 },
+  { x: 10, y: -32 },
+  { x: 30, y: -24 },
+  { x: 34, y: 8 },
+  { x: 20, y: 22 },
+  { x: -12, y: 28 },
+  { x: -30, y: 14 },
+] as const
 
-function resolveScoreLabel(judgment?: JudgeDeskJudgment): string {
-  if (!judgment) return SCORE_PLACEHOLDER
-  if (judgment.success === false) return SCORE_NOT_AVAILABLE
-
+function resolveScoreState(judgment?: JudgeDeskJudgment): {
+  finalScoreLabel: string | null
+  isFailed: boolean
+} {
+  if (!judgment) {
+    return { finalScoreLabel: null, isFailed: false }
+  }
+  if (judgment.success === false) {
+    return { finalScoreLabel: null, isFailed: true }
+  }
   const score = judgment.score ?? judgment.total_score
-  return typeof score === 'number' ? String(score) : SCORE_PLACEHOLDER
+  return {
+    finalScoreLabel: typeof score === 'number' ? String(score) : null,
+    isFailed: false,
+  }
 }
 
 function buildJudgmentMap(judgments: JudgeDeskJudgment[]): Map<JudgePersona, JudgeDeskJudgment> {
@@ -50,10 +70,57 @@ const JUDGE_LABELS: Record<JudgePersona, string> = {
   nakao: '中尾彬',
 }
 
-const JUDGE_NEON_CLASS: Record<JudgePersona, { border: string; text: string }> = {
-  nakao: { border: 'neon-border-cyan', text: 'neon-text-cyan' },
-  hiroyuki: { border: 'neon-border-pink', text: 'neon-text-pink' },
-  dewi: { border: 'neon-border-cyan', text: 'neon-text-cyan' },
+interface JudgeDeskScorePanelProps {
+  judge: JudgePersona
+  judgment?: JudgeDeskJudgment
+  phase: JudgeDeskPhase
+  litValue: string
+  prefersReducedMotion: boolean
+}
+
+function JudgeDeskScorePanel({
+  judge,
+  judgment,
+  phase,
+  litValue,
+  prefersReducedMotion,
+}: JudgeDeskScorePanelProps) {
+  const scoreState = resolveScoreState(judgment)
+  const { displayValue, isRouletting, isRevealed } = useScoreRoulette({
+    phase,
+    finalScoreLabel: scoreState.finalScoreLabel,
+    isFailed: scoreState.isFailed,
+    prefersReducedMotion,
+    placeholder: SCORE_PLACEHOLDER,
+  })
+  const scoreLabel = scoreState.isFailed ? SCORE_NOT_AVAILABLE : displayValue
+  const scoreMotionClass = isRouletting ? 'score-rouletting' : isRevealed ? 'score-revealed' : ''
+  const particleClass = isRevealed ? 'score-particles-active' : ''
+
+  return (
+    <div
+      data-testid="judge-desk-score"
+      data-lit={litValue}
+      className={`judge-desk-panel glass-panel gold-border ${scoreMotionClass} ${particleClass}`}
+      aria-label={buildScoreAriaLabel(judge, scoreLabel)}
+    >
+      <span className="digital-score gold-text">{scoreLabel}</span>
+      <span className="digital-score-unit gold-text">点</span>
+      <span className="score-particles" aria-hidden="true">
+        {SCORE_PARTICLES.map((particle, index) => (
+          <span
+            key={`${judge}-desk-particle-${index}`}
+            className="score-particle"
+            style={{
+              ['--particle-index' as string]: String(index),
+              ['--particle-x' as string]: `${particle.x}px`,
+              ['--particle-y' as string]: `${particle.y}px`,
+            }}
+          />
+        ))}
+      </span>
+    </div>
+  )
 }
 
 export function JudgeDesk({ judgments, phase }: JudgeDeskProps) {
@@ -87,20 +154,16 @@ export function JudgeDesk({ judgments, phase }: JudgeDeskProps) {
       {/* 仕様上の表示順は左→中央→右（中尾→ひろゆき→デヴィ）で固定する */}
       {JUDGE_DISPLAY_ORDER.map((judge, index) => {
         const litValue = phase === 'scoring' && index < litCount ? LIT_ON : LIT_OFF
-        const neonClass = JUDGE_NEON_CLASS[judge]
-        const scoreLabel = resolveScoreLabel(byJudge.get(judge))
 
         return (
-          <div
+          <JudgeDeskScorePanel
             key={judge}
-            data-testid="judge-desk-score"
-            data-lit={litValue}
-            className={`judge-desk-panel glass-panel ${neonClass.border}`}
-            aria-label={buildScoreAriaLabel(judge, scoreLabel)}
-          >
-            <span className={`digital-score ${neonClass.text}`}>{scoreLabel}</span>
-            <span className={`digital-score-unit ${neonClass.text}`}>点</span>
-          </div>
+            judge={judge}
+            judgment={byJudge.get(judge)}
+            phase={phase}
+            litValue={litValue}
+            prefersReducedMotion={prefersReducedMotion}
+          />
         )
       })}
     </div>

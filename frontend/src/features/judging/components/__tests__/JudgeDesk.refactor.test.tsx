@@ -13,7 +13,7 @@ describe('JudgeDesk Refactor', () => {
 
     const panels = screen.getAllByTestId('judge-desk-score')
     expect(panels).toHaveLength(3)
-    expect(screen.getAllByText('---')).toHaveLength(3)
+    expect(screen.getAllByText('00')).toHaveLength(3)
   })
 
   it('scoring以外のフェーズでは点灯状態をfalseで返す', async () => {

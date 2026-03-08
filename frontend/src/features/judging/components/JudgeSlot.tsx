@@ -3,6 +3,8 @@ import type { ComponentProps, CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import { getAvatarImagePath, getJudgeAriaLabel } from '../../../shared/constants/avatar'
 import { JUDGE_ENTRANCE } from '../../../shared/constants/animations'
+import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
+import { useScoreRoulette } from '../../../shared/hooks/useScoreRoulette'
 import type { AvatarState } from '../../../shared/constants/avatar'
 import type { JudgePersona } from '../../../shared/types/domain'
 import type { JudgeDeskJudgment, JudgeDeskPhase } from './JudgeDesk'
@@ -15,7 +17,7 @@ const JUDGE_LABELS: Record<JudgePersona, string> = {
   nakao: '中尾彬',
 }
 
-const SCORE_PLACEHOLDER = '---'
+const SCORE_PLACEHOLDER = '00'
 const SCORE_NOT_AVAILABLE = 'N/A'
 const AVATAR_SIZE_CLASS = 'h-auto w-28 md:w-48 lg:w-56'
 const AVATAR_BREATHING_CLASS = 'judge-avatar-speaking-breath'
@@ -36,6 +38,16 @@ const VIP_BULBS = [
   { left: 8, top: 88 },
   { left: 5, top: 60 },
   { left: 5, top: 30 },
+] as const
+const SCORE_PARTICLES = [
+  { x: -34, y: -24 },
+  { x: -18, y: -30 },
+  { x: 10, y: -32 },
+  { x: 30, y: -24 },
+  { x: 34, y: 8 },
+  { x: 20, y: 22 },
+  { x: -12, y: 28 },
+  { x: -30, y: 14 },
 ] as const
 const VIP_BULB_STEP_MS = Math.round(
   JUDGE_ENTRANCE.DURATION_MS / Math.max(VIP_BULBS.length - 1, 1)
@@ -69,14 +81,23 @@ interface JudgeSlotProps {
 }
 
 /**
- * スコアラベルを解決する
+ * スコア状態を解決する
  */
-function resolveScoreLabel(judgment?: JudgeDeskJudgment): string {
-  if (!judgment) return SCORE_PLACEHOLDER
-  if (judgment.success === false) return SCORE_NOT_AVAILABLE
-
+function resolveScoreState(judgment?: JudgeDeskJudgment): {
+  finalScoreLabel: string | null
+  isFailed: boolean
+} {
+  if (!judgment) {
+    return { finalScoreLabel: null, isFailed: false }
+  }
+  if (judgment.success === false) {
+    return { finalScoreLabel: null, isFailed: true }
+  }
   const score = judgment.score ?? judgment.total_score
-  return typeof score === 'number' ? String(score) : SCORE_PLACEHOLDER
+  return {
+    finalScoreLabel: typeof score === 'number' ? String(score) : null,
+    isFailed: false,
+  }
 }
 
 /**
@@ -100,7 +121,16 @@ export function JudgeSlot({
   phase,
   showSpeech,
 }: JudgeSlotProps) {
-  const scoreLabel = resolveScoreLabel(judgment)
+  const prefersReducedMotion = useReducedMotion()
+  const scoreState = resolveScoreState(judgment)
+  const { displayValue, isRouletting, isRevealed } = useScoreRoulette({
+    phase,
+    finalScoreLabel: scoreState.finalScoreLabel,
+    isFailed: scoreState.isFailed,
+    prefersReducedMotion,
+    placeholder: SCORE_PLACEHOLDER,
+  })
+  const scoreLabel = scoreState.isFailed ? SCORE_NOT_AVAILABLE : displayValue
   const isScoring = phase === 'scoring'
   const isComplete = phase === 'complete'
   const isSpeaking = Boolean(speechText && showSpeech)
@@ -117,6 +147,8 @@ export function JudgeSlot({
     : isScoring
       ? 'vip-desk-scoring'
       : 'vip-desk-idle'
+  const scoreMotionClass = isRouletting ? 'score-rouletting' : isRevealed ? 'score-revealed' : ''
+  const particleClass = isRevealed ? 'score-particles-active' : ''
 
   useEffect(() => {
     const clearFlashTimer = () => {
@@ -178,7 +210,7 @@ export function JudgeSlot({
       <div
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
-        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} glass-panel relative z-20 -mt-10 w-full max-w-[14rem] md:-mt-14 md:max-w-[20rem] lg:-mt-[4.5rem] lg:max-w-[24rem]`}
+        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} ${scoreMotionClass} ${particleClass} glass-panel relative z-20 -mt-10 w-full max-w-[14rem] md:-mt-14 md:max-w-[20rem] lg:-mt-[4.5rem] lg:max-w-[24rem]`}
         aria-label={buildScoreAriaLabel(judge, scoreLabel)}
         role="group"
       >
@@ -195,6 +227,19 @@ export function JudgeSlot({
         </div>
         <span className="digital-score vip-score-text">{scoreLabel}</span>
         <span className="digital-score-unit vip-score-text">点</span>
+        <span className="score-particles" aria-hidden="true">
+          {SCORE_PARTICLES.map((particle, index) => (
+            <span
+              key={`${judge}-particle-${index}`}
+              className="score-particle"
+              style={{
+                ['--particle-index' as string]: String(index),
+                ['--particle-x' as string]: `${particle.x}px`,
+                ['--particle-y' as string]: `${particle.y}px`,
+              }}
+            />
+          ))}
+        </span>
       </div>
     </div>
   )

@@ -867,9 +867,9 @@ function App() {
   const isResultModalLoading = isResultPostLoading && !activeResultPost
   const judgingPhase: 'entrance' | 'speaking' | 'scoring' | 'complete' =
     viewMode === 'judging'
-      ? 'speaking'
-      : activeResultPost?.status === 'scored'
-        ? 'scoring'
+      ? 'scoring'
+      : activeResultPost?.status === 'scored' || activeResultPost?.status === 'failed'
+        ? 'complete'
         : 'complete'
 
   useEffect(() => {

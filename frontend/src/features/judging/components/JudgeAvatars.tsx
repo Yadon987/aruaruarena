@@ -103,7 +103,7 @@ export function JudgeAvatars({
 
   const judgmentMap = buildJudgmentMap(judgments)
   const phase = resolvePhase(isJudging, judgingPhase)
-  const showSpeech = phase !== 'scoring' && (phase !== 'complete' || enableIdleBehavior)
+  const showSpeech = phase !== 'complete' || enableIdleBehavior
 
   return (
     <div

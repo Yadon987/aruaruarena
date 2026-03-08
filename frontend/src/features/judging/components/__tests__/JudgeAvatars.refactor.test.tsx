@@ -147,7 +147,7 @@ describe('JudgeAvatars Refactor', () => {
     expect(screen.getByTestId('judge-avatars-container')).toBeInTheDocument()
     // 新しい構造では各スロット内にスコアパネルが存在
     expect(screen.getAllByTestId('judge-desk-score')).toHaveLength(3)
-    expect(screen.getAllByText('---')).toHaveLength(3)
+    expect(screen.getAllByText('00')).toHaveLength(3)
   })
 
   it('judgingPhase未指定かつisJudging=falseではcomplete相当で吹き出しを表示しない', async () => {
