@@ -38,7 +38,8 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
+      expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
     })
 
     await waitFor(
@@ -115,7 +116,6 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
-      expect(screen.queryByTestId('judging-screen')).not.toBeInTheDocument()
     })
   })
 
@@ -147,7 +147,6 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
-      expect(screen.queryByTestId('judging-screen')).not.toBeInTheDocument()
     })
 
     expect(getPostSpy).not.toHaveBeenCalled()

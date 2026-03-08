@@ -51,7 +51,8 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     await fillAndSubmitPostForm({ nickname: '境界太郎', body: '境界値テスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
+      expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
     })
 
     await waitFor(() => {
@@ -64,7 +65,7 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
       await vi.advanceTimersByTimeAsync(3200)
     })
 
-    expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
     expect(
       screen.queryByText('投稿情報の取得に失敗しました。トップへ戻って再度お試しください。')
     ).not.toBeInTheDocument()
@@ -80,7 +81,8 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     await fillAndSubmitPostForm({ nickname: '境界太郎', body: '境界値テスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
+      expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
     })
 
     await waitFor(() => {
@@ -94,7 +96,6 @@ describe('E13-02 Refactor: 審査中ポーリング境界値', () => {
     })
 
     expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
-    expect(screen.queryByTestId('judging-screen')).not.toBeInTheDocument()
     expect(getPostSpy).toHaveBeenCalledTimes(1)
   }, 10000)
 })

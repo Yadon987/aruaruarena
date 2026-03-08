@@ -143,12 +143,14 @@ export function JudgeSlot({
     >
       {/* 吹き出し */}
       {speechText && showSpeech && (
-        <JudgeSpeechBubble
-          isVisible={true}
-          text={speechText}
-          judgeType={judge}
-          testId={`catchphrase-${judge}`}
-        />
+        <div className="absolute -top-24 left-1/2 z-30 w-64 -translate-x-1/2 md:-top-28 lg:-top-32">
+          <JudgeSpeechBubble
+            isVisible={true}
+            text={speechText}
+            judgeType={judge}
+            testId={`catchphrase-${judge}`}
+          />
+        </div>
       )}
 
       {/* 背もたれ（アバター背面） */}

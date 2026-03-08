@@ -32,10 +32,11 @@ const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿
     expect(screen.queryByRole('dialog', { name: '投稿フォーム' })).not.toBeInTheDocument()
   })
 
-  // ポーリングが開始され、審査中画面が表示されることを待機
+  // ポーリングが開始され、審査モード（投稿ボタン非表示）へ遷移することを待機
   await waitFor(
     () => {
-      expect(screen.getByText(/審査中/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
+      expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
     },
     { timeout: 5000 }
   )
@@ -98,12 +99,13 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
     await fillAndSubmitPost()
 
     await waitFor(() => {
-      expect(screen.getByText(/審査中/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
+      expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
     })
   })
 
-  it('審査中に投稿内容（ニックネーム・本文）が表示される', async () => {
-    // 何を検証するか: FR-07 - 審査中の投稿内容が画面表示されること
+  it('審査中に投稿内容表示コンテナを出さない', async () => {
+    // 何を検証するか: 審査中は投稿詳細テキストコンテナを表示せず、審査員UIに集中すること
     // モックデータ（テスト太郎等）と被らない意図的な別データ
     const inputNickname = '独自のニックネーム'
     const inputBody = '独自のあるある投稿内容'
@@ -124,11 +126,9 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
 
     await fillAndSubmitPost(inputNickname, inputBody)
 
-    await waitFor(() => {
-      // APIが返した審査中データ（このテストでは入力値と同値）を画面表示できることを確認
-      expect(screen.getByText(inputNickname)).toBeInTheDocument()
-      expect(screen.getByText(inputBody)).toBeInTheDocument()
-    })
+    expect(screen.queryByText(inputNickname)).not.toBeInTheDocument()
+    expect(screen.queryByText(inputBody)).not.toBeInTheDocument()
+    expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
   })
 
   it('審査中に口癖が表示される', async () => {
