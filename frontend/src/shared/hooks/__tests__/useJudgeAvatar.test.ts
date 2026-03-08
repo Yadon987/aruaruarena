@@ -1,13 +1,14 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useJudgeAvatar } from '../useJudgeAvatar'
 
-const useReducedMotionMock = vi.fn(() => false)
+const { useReducedMotionMock } = vi.hoisted(() => ({
+  useReducedMotionMock: vi.fn(() => false),
+}))
 
 vi.mock('../useReducedMotion', () => ({
   useReducedMotion: useReducedMotionMock,
 }))
-
-const loadUseJudgeAvatar = () => import('../useJudgeAvatar.ts')
 
 class MockImage {
   public onload: null | (() => void) = null
@@ -25,7 +26,6 @@ class MockImage {
 
 describe('E23-01 RED: useJudgeAvatar', () => {
   beforeEach(() => {
-    vi.resetModules()
     vi.useFakeTimers()
     useReducedMotionMock.mockReturnValue(false)
     vi.stubGlobal('Image', MockImage)
@@ -39,7 +39,6 @@ describe('E23-01 RED: useJudgeAvatar', () => {
 
   it('初期状態で base 画像を返す', async () => {
     // 何を検証するか: 審査開始直後は通常表情の base 状態から表示されること
-    const { useJudgeAvatar } = await loadUseJudgeAvatar()
     const { result } = renderHook(() => useJudgeAvatar('hiroyuki', false))
 
     expect(result.current.currentState).toBe('base')
@@ -48,7 +47,6 @@ describe('E23-01 RED: useJudgeAvatar', () => {
 
   it('isSpeaking=true のときに口パクが始まり終了後に base に戻る', async () => {
     // 何を検証するか: 発話中のみ口パクし、120ms 経過後に base へ戻ること
-    const { useJudgeAvatar } = await loadUseJudgeAvatar()
     const { result, rerender } = renderHook(
       ({ isSpeaking }) => useJudgeAvatar('hiroyuki', isSpeaking),
       { initialProps: { isSpeaking: false } }
@@ -71,7 +69,6 @@ describe('E23-01 RED: useJudgeAvatar', () => {
 
   it('瞬きが口パクより優先される', async () => {
     // 何を検証するか: 瞬きタイミングと発話が重なっても eye_closed が優先されること
-    const { useJudgeAvatar } = await loadUseJudgeAvatar()
     const { result } = renderHook(({ isSpeaking }) => useJudgeAvatar('dewi', isSpeaking), {
       initialProps: { isSpeaking: true },
     })
@@ -87,7 +84,6 @@ describe('E23-01 RED: useJudgeAvatar', () => {
     // 何を検証するか: prefers-reduced-motion 有効時はタイマー起因の状態遷移が発生しないこと
     useReducedMotionMock.mockReturnValue(true)
 
-    const { useJudgeAvatar } = await loadUseJudgeAvatar()
     const { result } = renderHook(() => useJudgeAvatar('nakao', true))
 
     await act(async () => {

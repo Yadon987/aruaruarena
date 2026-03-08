@@ -285,7 +285,7 @@ describe('E15-01 RED: ResultModal Component', () => {
     })
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersToNextTimerAsync()
     })
     expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
 

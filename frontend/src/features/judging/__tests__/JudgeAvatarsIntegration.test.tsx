@@ -69,8 +69,8 @@ describe('E23-01 RED: 審査中画面のアバター統合', () => {
     render(<App />)
     await submitValidPost()
 
-    await screen.findByTestId('catchphrase-hiroyuki')
     const judgeSlot = await screen.findByTestId('judge-slot-hiroyuki')
+    expect(within(judgeSlot).getByTestId('catchphrase-hiroyuki')).toBeInTheDocument()
     expect(
       within(judgeSlot).getByRole('img', {
         name: `${JUDGE_LABELS.hiroyuki}の審査員アバター`,
