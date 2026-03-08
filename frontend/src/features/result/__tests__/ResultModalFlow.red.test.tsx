@@ -80,7 +80,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
   })
 
   it('自分の投稿選択で結果モーダルが開く', async () => {
-    // 何を検証するか: 自分の投稿一覧から投稿を選択した際に結果モーダルが表示されること
+    // 何を検証するか: 過去の投稿から投稿を選択した際に結果モーダルが表示されること
     localStorage.setItem('my_post_ids', JSON.stringify(['my-post-id']))
     vi.spyOn(api.posts, 'get').mockResolvedValue({
       id: 'my-post-id',

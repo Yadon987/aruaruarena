@@ -52,7 +52,7 @@ describe('MyPostDetail Integration', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
     fireEvent.click(await screen.findByRole('button', { name: 'id-1' }))
 
     const detail = await screen.findByRole('heading', { name: '投稿詳細' })
@@ -77,7 +77,7 @@ describe('MyPostDetail Integration', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
     fireEvent.click(await screen.findByRole('button', { name: 'id-1' }))
     fireEvent.click(await screen.findByRole('button', { name: '戻る' }))
 
@@ -99,7 +99,7 @@ describe('MyPostDetail Integration', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
     fireEvent.click(await screen.findByRole('button', { name: 'id-1' }))
     const detailHeading = await screen.findByRole('heading', {
       name: '投稿詳細',
@@ -114,7 +114,7 @@ describe('MyPostDetail Integration', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: '自分の投稿' })).not.toBeInTheDocument()
     )
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
 
     expect(await screen.findByRole('heading', { name: '自分の投稿' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '投稿詳細' })).not.toBeInTheDocument()

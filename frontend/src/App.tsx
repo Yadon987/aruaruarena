@@ -57,6 +57,7 @@ const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
 const SOUND_SE_SUBMIT = 'se_submit'
 const SOUND_SE_RETRY = 'se_retry'
 const SOUND_SE_RESULT_OPEN = 'se_result_open'
+const CONTACT_FORM_URL = 'https://forms.gle/zLN3j3YF87qdULXB9'
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
 
@@ -768,6 +769,10 @@ function App() {
     setIsPrivacyPolicyOpen(false)
   }
 
+  const openContactForm = () => {
+    window.open(CONTACT_FORM_URL, '_blank', 'noopener,noreferrer')
+  }
+
   const openRankingModal = () => {
     setIsMyPostsOpen(false)
     setIsPrivacyPolicyOpen(false)
@@ -1097,11 +1102,11 @@ function App() {
                   type="button"
                   variant="primary"
                   compactOnMobile={true}
-                  ariaLabel="自分の投稿一覧"
+                  ariaLabel="過去の投稿"
                   onClick={openMyPosts}
                   onKeyDown={handleMyPostsTriggerKeyDown}
                 >
-                  自分の投稿一覧
+                  過去の投稿
                 </NeonButton>
                 <NeonButton
                   type="button"
@@ -1122,6 +1127,15 @@ function App() {
                   onClick={openPrivacyPolicy}
                 >
                   プライバシーポリシー
+                </NeonButton>
+                <NeonButton
+                  type="button"
+                  variant="secondary"
+                  compactOnMobile={true}
+                  ariaLabel="問い合わせ"
+                  onClick={openContactForm}
+                >
+                  問い合わせ
                 </NeonButton>
               </footer>
             )}

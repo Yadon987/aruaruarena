@@ -54,7 +54,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
 
     await waitFor(() => expect(getPostSpy).toHaveBeenCalledWith(MY_POST_ID))
     expect(await screen.findByText(/本文1/)).toBeInTheDocument()
@@ -80,7 +80,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
     fireEvent.click(await screen.findByRole('button', { name: MY_POST_ID }))
 
     await waitFor(() =>
@@ -98,7 +98,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
     fireEvent.click(await screen.findByRole('button', { name: MY_POST_ID }))
 
     expect(await screen.findByText('投稿詳細の取得に失敗しました')).toBeInTheDocument()
@@ -121,7 +121,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
 
     await screen.findByRole('heading', { name: '自分の投稿' })
     expect(getPostSpy).not.toHaveBeenCalled()
@@ -156,7 +156,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '自分の投稿一覧' }))
+    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
 
     await waitFor(() => expect(maxInFlight).toBeGreaterThan(0))
     await waitFor(() => expect(maxInFlight).toBeLessThanOrEqual(3))
