@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from 'react'
 import type { ComponentProps, CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import { getAvatarImagePath, getJudgeAriaLabel } from '../../../shared/constants/avatar'
+import { JUDGE_ENTRANCE } from '../../../shared/constants/animations'
 import type { AvatarState } from '../../../shared/constants/avatar'
 import type { JudgePersona } from '../../../shared/types/domain'
 import type { JudgeDeskJudgment, JudgeDeskPhase } from './JudgeDesk'
@@ -16,6 +18,9 @@ const JUDGE_LABELS: Record<JudgePersona, string> = {
 const SCORE_PLACEHOLDER = '---'
 const SCORE_NOT_AVAILABLE = 'N/A'
 const AVATAR_SIZE_CLASS = 'h-auto w-28 md:w-48 lg:w-56'
+const VIP_IDLE_CYCLE_MS = 5000
+const VIP_BULB_STEP_MS = Math.round(JUDGE_ENTRANCE.DURATION_MS / 13)
+const VIP_FLASH_TOTAL_MS = 1200
 const VIP_BULBS = [
   { left: 8, top: 8 },
   { left: 25, top: 5 },
@@ -95,8 +100,10 @@ export function JudgeSlot({
   const scoreLabel = resolveScoreLabel(judgment)
   const isScoring = phase === 'scoring'
   const isComplete = phase === 'complete'
+  const [isFlashActive, setIsFlashActive] = useState(false)
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLit = isScoring || isComplete
-  const bulbStateClass = isComplete
+  const bulbStateClass = isFlashActive
     ? 'vip-bulbs-flash'
     : isScoring
       ? 'vip-bulbs-roulette'
@@ -106,6 +113,33 @@ export function JudgeSlot({
     : isScoring
       ? 'vip-desk-scoring'
       : 'vip-desk-idle'
+
+  useEffect(() => {
+    if (flashTimerRef.current) {
+      clearTimeout(flashTimerRef.current)
+      flashTimerRef.current = null
+    }
+
+    if (isComplete) {
+      setIsFlashActive(true)
+      flashTimerRef.current = setTimeout(() => {
+        setIsFlashActive(false)
+      }, VIP_FLASH_TOTAL_MS)
+      return () => {
+        if (flashTimerRef.current) {
+          clearTimeout(flashTimerRef.current)
+        }
+      }
+    }
+
+    setIsFlashActive(false)
+
+    return () => {
+      if (flashTimerRef.current) {
+        clearTimeout(flashTimerRef.current)
+      }
+    }
+  }, [isComplete])
 
   return (
     <div
@@ -152,7 +186,8 @@ export function JudgeSlot({
             const style: CSSProperties = {
               left: `${bulb.left}%`,
               top: `${bulb.top}%`,
-              animationDelay: `${index * 90}ms`,
+              ['--vip-bulb-delay' as string]: `${index * VIP_BULB_STEP_MS}ms`,
+              ['--vip-idle-cycle' as string]: `${VIP_IDLE_CYCLE_MS}ms`,
             }
             return <span key={`${judge}-bulb-${index}`} className="vip-bulb" style={style} />
           })}
