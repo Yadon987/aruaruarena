@@ -13,7 +13,7 @@
 		"lint:fix": "eslint . --ext js,jsx,ts,tsx --fix",
 		"format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
 		"format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
-		"test": "vitest run --pool=forks",
+		"test": "vitest run --pool=threads",
 		"test:e2e": "playwright test",
 		"test:e2e:ui": "playwright test --ui",
 		"test:e2e:debug": "playwright test --debug",

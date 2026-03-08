@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # ==========================================
 # 全テスト実行スクリプト (aruaruarena)
@@ -7,14 +7,25 @@ set -e
 
 DYNAMODB_CONTAINER_NAME="aruaruarena-dynamodb-test"
 DYNAMODB_ENDPOINT="http://127.0.0.1:8002"
+LOG_DIR="/tmp/aruaru_test_$$"
+RSPEC_COVERAGE_WARN=0
 
 # プロジェクトルートに移動
 cd "$(dirname "$0")/.."
 
-echo "   ✅ Skipping permission fix (chown -R) for performance. If you encounter permission errors, run 'sudo chown -R \$(id -u):\$(id -g) .' manually."
+mkdir -p "${LOG_DIR}"
+trap 'rm -rf "${LOG_DIR}"' EXIT
+
+if [ "${1:-}" = "--fast" ]; then
+  export SKIP_BACKEND_OGP_IMAGE_BUILD=1
+fi
+
+export DOCKER_BUILDKIT=1
 
 echo "🚀 aruaruarenaのテストを開始します..."
 echo "----------------------------------------"
+echo "📁 ログ出力先: ${LOG_DIR}"
+echo ""
 
 # タイムアウト付きDynamoDBヘルスチェック
 dynamodb_is_healthy() {
@@ -34,7 +45,7 @@ cleanup_backend_test_processes() {
   echo "🧹 backendテスト残骸プロセスを確認中..."
 
   local pids
-  pids=$(ps -ef | grep -E 'bundle exec rspec|bin/rails runner|rails runner' | grep -v grep | awk '{print $2}')
+  pids=$(ps -ef | grep -E 'bundle exec rspec|bin/rails runner|rails runner' | grep -v grep | awk '{print $2}' || true)
 
   if [ -z "$pids" ]; then
     echo "   ✅ 競合プロセスはありません"
@@ -46,144 +57,166 @@ cleanup_backend_test_processes() {
   sleep 1
 }
 
-# backendディレクトリへ移動
-cd backend
+run_static_analysis() {
+  cd backend
+  set +e
+  bundle exec rubocop -A --format simple
+  local rubocop_status=$?
+  bundle exec brakeman -q --no-pager
+  local brakeman_status=$?
+  set -e
 
-# 0. backendテスト残骸の掃除
-cleanup_backend_test_processes
+  if [ "${rubocop_status}" -eq 0 ] && [ "${brakeman_status}" -eq 0 ]; then
+    return 0
+  fi
+  return 1
+}
 
-# 1. 静的解析
-echo "🔍 Running Static Analysis..."
+run_vitest() {
+  cd frontend
+  npm ci
+  npm run test
+}
 
-# RuboCop（自動修正付き、違反があっても続行）
-echo "  - RuboCop..."
-set +e  # 一時的にset -eを解除
-bundle exec rubocop -A --format simple
-rubocop_status=$?
-set -e  # set -eを再開
+ensure_dynamodb() {
+  cd "$(dirname "$0")/.."
+  if dynamodb_is_healthy; then
+    echo "✅ DynamoDB Local OK"
+    return 0
+  fi
 
-if [ $rubocop_status -eq 0 ]; then
-  echo "    ✅ RuboCop Passed"
-else
-  echo "    ⚠️  RuboCop found some issues (continuing...)"
-fi
+  echo "⚠️  DynamoDB Local (port 8002) が応答しません。起動を試みます..."
 
-# Brakeman
-echo "  - Brakeman..."
-set +e  # 一時的にset -eを解除
-bundle exec brakeman -q --no-pager
-brakeman_status=$?
-set -e  # set -eを再開
-
-if [ $brakeman_status -eq 0 ]; then
-  echo "    ✅ Brakeman Passed"
-else
-  echo "    ⚠️  Brakeman found some issues (continuing...)"
-fi
-
-echo ""
-
-# 2. DynamoDB Localの起動確認
-echo "🔍 DynamoDB Local(テスト用:8002)の状態確認..."
-if ! dynamodb_is_healthy; then
-  echo "⚠️  DynamoDB Local (port 8002) が応答しません。"
-  echo "   Dockerコンテナを起動します..."
-
-  # まずテスト用サービス起動を試す（通常の起動経路）
   if docker compose up -d dynamodb-test > /dev/null 2>&1; then
     echo "   docker compose で dynamodb-test を起動しました"
   else
-    # compose が使えない場合のみ既存コンテナ再利用/単体起動を試す
     if docker ps -a --format '{{.Names}}' | grep -q "^${DYNAMODB_CONTAINER_NAME}$"; then
-      docker start "${DYNAMODB_CONTAINER_NAME}"
+      docker start "${DYNAMODB_CONTAINER_NAME}" > /dev/null
     else
-      docker run -d --name "${DYNAMODB_CONTAINER_NAME}" -p 8002:8000 amazon/dynamodb-local:latest -jar DynamoDBLocal.jar -inMemory -sharedDb
+      docker run -d --name "${DYNAMODB_CONTAINER_NAME}" -p 8002:8000 amazon/dynamodb-local:latest -jar DynamoDBLocal.jar -inMemory -sharedDb > /dev/null
     fi
   fi
 
   echo "⏳ DynamoDB Localの起動を待機中..."
-  sleep 5
-
   count=0
   until dynamodb_is_healthy; do
-    echo "   ...waiting for DynamoDB Local ($count/10)"
-    sleep 1
-    count=$((count+1))
-    if [ $count -ge 10 ]; then
+    count=$((count + 1))
+    if [ ${count} -ge 15 ]; then
       echo "🚨 DynamoDB Localの起動に失敗しました"
-      exit 1
+      return 1
     fi
+    echo "   ...waiting for DynamoDB Local (${count}/15)"
+    sleep 1
   done
-fi
 
-echo "✅ DynamoDB Local OK"
-echo ""
+  echo "✅ DynamoDB Local OK"
+}
 
-# 3. テスト実行
-echo "🧪 Running RSpec..."
-echo "----------------------------------------"
+run_rspec() {
+  cd backend
+  set +e
+  DYNAMODB_ENDPOINT="${DYNAMODB_ENDPOINT}" bundle exec rspec --format progress
+  rspec_exit=$?
+  set -e
 
-# テスト実行（DynamoDB Localのエンドポイントを指定）
-# SimpleCovのカバレッジ警告（exit 2/3）は許容してテスト結果を判定
-set +e  # 一時的にset -eを解除
-DYNAMODB_ENDPOINT="${DYNAMODB_ENDPOINT}" bundle exec rspec --format documentation > /tmp/rspec_output.txt 2>&1
-rspec_exit=$?
-cat /tmp/rspec_output.txt
-set -e  # set -eを再開
-
-echo "----------------------------------------"
-echo ""
-
-# RSpec自体が成功（exit 0）か、カバレッジ警告のみ（exit 2/3）なら続行
-if [ $rspec_exit -eq 0 ] || [ $rspec_exit -eq 2 ] || [ $rspec_exit -eq 3 ]; then
-  if [ $rspec_exit -eq 2 ] || [ $rspec_exit -eq 3 ]; then
-    echo "⚠️  テストは成功しましたが、カバレッジが目標未達です"
-    # RSpecの出力から直接カバレッジを抽出
-    coverage=$(grep "Line Coverage:" /tmp/rspec_output.txt | sed -E 's/.*Line Coverage: ([0-9.]+)%.*/\1/' || echo "Unknown")
-    echo "   現在のカバレッジ: ${coverage}%"
+  if [ ${rspec_exit} -eq 2 ] || [ ${rspec_exit} -eq 3 ]; then
+    RSPEC_COVERAGE_WARN=1
+    return 0
   fi
-  echo "🎉 全てのテストが成功しました！"
-else
-  echo "🚨 Backend Tests Failed (exit code: ${rspec_exit})"
-  exit $rspec_exit
-fi
 
-echo ""
-echo "backend tests finished."
-echo "----------------------------------------"
+  return ${rspec_exit}
+}
 
-echo "🖼️ Running OGP Smoke / E2E Check..."
-echo "----------------------------------------"
-cd ..
-bash scripts/check_ogp_docker.sh
-cd backend
-echo "----------------------------------------"
+run_ogp_check() {
+  cd "$(dirname "$0")/.."
+  bash scripts/check_ogp_docker.sh
+}
 
-# 4. Frontendテスト実行
-echo "🧪 Running Frontend Tests..."
-echo "----------------------------------------"
+print_status() {
+  local name="$1"
+  local status="$2"
+  if [ "${status}" -eq 0 ]; then
+    echo "✅ ${name}"
+  else
+    echo "🚨 ${name} (exit: ${status})"
+  fi
+}
 
-cd ../frontend
+show_failed_log() {
+  local name="$1"
+  local status="$2"
+  local path="$3"
+  if [ "${status}" -eq 0 ]; then
+    return
+  fi
+  echo ""
+  echo "----- ${name} 失敗ログ: ${path} -----"
+  cat "${path}"
+  echo "----- ${name} 失敗ログここまで -----"
+}
 
-# 依存関係のインストール確認（node_modulesがない場合のみ）
-if [ ! -d "node_modules" ]; then
-  echo "📦 Installing dependencies..."
-  npm ci
-fi
+cleanup_backend_test_processes
 
-# テスト実行
+echo "🧵 Phase 1 (並行): 静的解析 / Vitest / DynamoDB"
+(run_static_analysis) > "${LOG_DIR}/static.log" 2>&1 &
+static_pid=$!
+(run_vitest) > "${LOG_DIR}/vitest.log" 2>&1 &
+vitest_pid=$!
+(ensure_dynamodb) > "${LOG_DIR}/dynamodb.log" 2>&1 &
+dynamodb_pid=$!
+
 set +e
-npm run test
-frontend_test_exit=$?
+wait "${static_pid}"; static_status=$?
+wait "${vitest_pid}"; vitest_status=$?
+wait "${dynamodb_pid}"; dynamodb_status=$?
 set -e
 
-if [ $frontend_test_exit -eq 0 ]; then
-  echo "✅ Frontend Tests Passed"
+echo "🔁 Phase 2 (直列): RSpec → OGP Check"
+if [ "${dynamodb_status}" -eq 0 ]; then
+  set +e
+  (run_rspec) > "${LOG_DIR}/rspec.log" 2>&1
+  rspec_status=$?
+  set -e
+
+  set +e
+  (run_ogp_check) > "${LOG_DIR}/ogp.log" 2>&1
+  ogp_status=$?
+  set -e
 else
-  echo "🚨 Frontend Tests Failed"
-  exit 1
+  echo "DynamoDB 起動失敗のため RSpec と OGP Check をスキップしました" > "${LOG_DIR}/rspec.log"
+  echo "DynamoDB 起動失敗のため OGP Check をスキップしました" > "${LOG_DIR}/ogp.log"
+  rspec_status=1
+  ogp_status=1
 fi
 
-echo "----------------------------------------"
-echo "🎉 全てのテストが成功しました！"
-exit 0
+echo ""
+echo "=========================================="
+echo "テスト結果サマリ"
+echo "=========================================="
+print_status "静的解析" "${static_status}"
+print_status "Vitest" "${vitest_status}"
+print_status "DynamoDB" "${dynamodb_status}"
+print_status "RSpec" "${rspec_status}"
+print_status "OGP Check" "${ogp_status}"
+
+if [ "${RSPEC_COVERAGE_WARN}" -eq 1 ]; then
+  echo "⚠️  RSpecは成功しましたが、カバレッジが目標未達です (exit 2/3)"
+fi
+
+show_failed_log "静的解析" "${static_status}" "${LOG_DIR}/static.log"
+show_failed_log "Vitest" "${vitest_status}" "${LOG_DIR}/vitest.log"
+show_failed_log "DynamoDB" "${dynamodb_status}" "${LOG_DIR}/dynamodb.log"
+show_failed_log "RSpec" "${rspec_status}" "${LOG_DIR}/rspec.log"
+show_failed_log "OGP Check" "${ogp_status}" "${LOG_DIR}/ogp.log"
+
+if [ "${static_status}" -eq 0 ] \
+  && [ "${vitest_status}" -eq 0 ] \
+  && [ "${dynamodb_status}" -eq 0 ] \
+  && [ "${rspec_status}" -eq 0 ] \
+  && [ "${ogp_status}" -eq 0 ]; then
+  echo ""
+  echo "🎉 全てのテストが成功しました！"
+  exit 0
+fi
+
+exit 1
