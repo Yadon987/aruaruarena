@@ -155,7 +155,7 @@ export function JudgeSlot({
       <div className="judge-seat-back vip-judge-seat" aria-hidden="true" />
 
       {/* アバター（Framer Motion が transform を上書きするため、位置調整は外側要素に適用する） */}
-      <div className="relative z-10 -mb-7 -translate-y-12 md:-mb-12 md:-translate-y-18 lg:-mb-14 lg:-translate-y-24">
+      <div className="relative z-10 -mb-7 -translate-y-12 md:-mb-12 md:-translate-y-16 lg:-mb-14 lg:-translate-y-24">
         <motion.img
           src={getAvatarImagePath(judge, avatarState)}
           alt={alt}
