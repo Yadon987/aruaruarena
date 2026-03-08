@@ -107,6 +107,29 @@ function buildScoreAriaLabel(judge: JudgePersona, scoreLabel: string): string {
   return `${JUDGE_LABELS[judge]}審査員のスコア: ${scoreLabel}点`
 }
 
+function buildScoreStateAriaLabel({
+  judge,
+  isFailed,
+  isRouletting,
+  finalScoreLabel,
+}: {
+  judge: JudgePersona
+  isFailed: boolean
+  isRouletting: boolean
+  finalScoreLabel: string | null
+}): string {
+  if (isFailed) {
+    return `${JUDGE_LABELS[judge]}審査員のスコア: 判定対象外`
+  }
+  if (isRouletting) {
+    return `${JUDGE_LABELS[judge]}審査員のスコアを集計中`
+  }
+  if (finalScoreLabel !== null) {
+    return buildScoreAriaLabel(judge, finalScoreLabel)
+  }
+  return `${JUDGE_LABELS[judge]}審査員のスコアは未表示`
+}
+
 /**
  * 1審査員分のスロットコンポーネント
  * 吹き出し・アバター・スコアパネルを縦積みで配置し、位置関係を強固にする
@@ -131,6 +154,12 @@ export function JudgeSlot({
     placeholder: SCORE_PLACEHOLDER,
   })
   const scoreLabel = scoreState.isFailed ? SCORE_NOT_AVAILABLE : displayValue
+  const scoreAriaLabel = buildScoreStateAriaLabel({
+    judge,
+    isFailed: scoreState.isFailed,
+    isRouletting,
+    finalScoreLabel: scoreState.finalScoreLabel,
+  })
   const isScoring = phase === 'scoring'
   const isComplete = phase === 'complete'
   const isSpeaking = Boolean(speechText && showSpeech)
@@ -211,7 +240,7 @@ export function JudgeSlot({
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
         className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} ${scoreMotionClass} ${particleClass} glass-panel relative z-20 -mt-10 w-full max-w-[16rem] md:-mt-14 md:max-w-[22rem] lg:-mt-[4.5rem] lg:max-w-[26rem]`}
-        aria-label={buildScoreAriaLabel(judge, scoreLabel)}
+        aria-label={scoreAriaLabel}
         role="group"
       >
         <div className="vip-bulb-track" aria-hidden="true">

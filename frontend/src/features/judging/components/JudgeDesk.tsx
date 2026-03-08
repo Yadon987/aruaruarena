@@ -64,6 +64,29 @@ function buildScoreAriaLabel(judge: JudgePersona, scoreLabel: string): string {
   return `${JUDGE_LABELS[judge]}審査員のスコア: ${scoreLabel}点`
 }
 
+function buildScoreStateAriaLabel({
+  judge,
+  isFailed,
+  isRouletting,
+  finalScoreLabel,
+}: {
+  judge: JudgePersona
+  isFailed: boolean
+  isRouletting: boolean
+  finalScoreLabel: string | null
+}): string {
+  if (isFailed) {
+    return `${JUDGE_LABELS[judge]}審査員のスコア: 判定対象外`
+  }
+  if (isRouletting) {
+    return `${JUDGE_LABELS[judge]}審査員のスコアを集計中`
+  }
+  if (finalScoreLabel !== null) {
+    return buildScoreAriaLabel(judge, finalScoreLabel)
+  }
+  return `${JUDGE_LABELS[judge]}審査員のスコアは未表示`
+}
+
 const JUDGE_LABELS: Record<JudgePersona, string> = {
   hiroyuki: 'ひろゆき',
   dewi: 'デヴィ婦人',
@@ -94,6 +117,12 @@ function JudgeDeskScorePanel({
     placeholder: SCORE_PLACEHOLDER,
   })
   const scoreLabel = scoreState.isFailed ? SCORE_NOT_AVAILABLE : displayValue
+  const scoreAriaLabel = buildScoreStateAriaLabel({
+    judge,
+    isFailed: scoreState.isFailed,
+    isRouletting,
+    finalScoreLabel: scoreState.finalScoreLabel,
+  })
   const scoreMotionClass = isRouletting ? 'score-rouletting' : isRevealed ? 'score-revealed' : ''
   const particleClass = isRevealed ? 'score-particles-active' : ''
 
@@ -101,8 +130,9 @@ function JudgeDeskScorePanel({
     <div
       data-testid="judge-desk-score"
       data-lit={litValue}
-      className={`judge-desk-panel glass-panel gold-border ${scoreMotionClass} ${particleClass}`}
-      aria-label={buildScoreAriaLabel(judge, scoreLabel)}
+      className={`judge-desk-panel glass-panel gold-border relative ${scoreMotionClass} ${particleClass}`}
+      role="group"
+      aria-label={scoreAriaLabel}
     >
       <span className="score-display-plate">
         <span className="digital-score gold-text">{scoreLabel}</span>

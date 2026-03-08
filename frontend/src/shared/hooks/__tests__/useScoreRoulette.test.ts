@@ -82,4 +82,19 @@ describe('useScoreRoulette', () => {
     expect(result.current.isRouletting).toBe(false)
     expect(result.current.isRevealed).toBe(false)
   })
+
+  it('isFailed時はN/Aを表示しルーレットを停止する', () => {
+    const { result } = renderHook(() =>
+      useScoreRoulette({
+        phase: 'scoring',
+        finalScoreLabel: '88',
+        isFailed: true,
+        prefersReducedMotion: false,
+      })
+    )
+
+    expect(result.current.displayValue).toBe('N/A')
+    expect(result.current.isRouletting).toBe(false)
+    expect(result.current.isRevealed).toBe(false)
+  })
 })
