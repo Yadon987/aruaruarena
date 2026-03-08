@@ -473,13 +473,6 @@ function App() {
     }
   }, [viewMode])
 
-  useEffect(() => {
-    return () => {
-      submitAbortControllerRef.current?.abort()
-      sound.dispose()
-    }
-  }, [sound])
-
   const clearJudgingPolling = useCallback(() => {
     if (pollingTimerRef.current) {
       clearInterval(pollingTimerRef.current)
@@ -491,6 +484,23 @@ function App() {
     }
     pollingStartedAtRef.current = 0
   }, [])
+
+  const abortSubmitRequest = useCallback(() => {
+    submitAbortControllerRef.current?.abort()
+    submitAbortControllerRef.current = null
+  }, [])
+
+  const invalidateSubmitRequest = useCallback(() => {
+    submitRequestSeqRef.current += 1
+    return submitRequestSeqRef.current
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      abortSubmitRequest()
+      sound.dispose()
+    }
+  }, [abortSubmitRequest, sound])
 
   const enterJudgingMode = useCallback((postId: string, isPollingReady: boolean = true) => {
     setJudgingPostId(postId)
@@ -660,9 +670,9 @@ function App() {
   const onSubmit = useCallback(
     async ({ nickname, body }: { nickname: string; body: string }) => {
       if (isSubmitting) return
-      const submitRequestSeq = ++submitRequestSeqRef.current
+      const submitRequestSeq = invalidateSubmitRequest()
       const submitAbortController = new AbortController()
-      submitAbortControllerRef.current?.abort()
+      abortSubmitRequest()
       submitAbortControllerRef.current = submitAbortController
 
       const trimmedNickname = nickname.trim()
@@ -711,7 +721,14 @@ function App() {
         }
       }
     },
-    [applyJudgingSubmitFailure, applyJudgingSubmitSuccess, isSubmitting, startJudgingSubmission]
+    [
+      abortSubmitRequest,
+      applyJudgingSubmitFailure,
+      applyJudgingSubmitSuccess,
+      invalidateSubmitRequest,
+      isSubmitting,
+      startJudgingSubmission,
+    ]
   )
 
   const storeMyPostDetail = useCallback((postId: string, post: Post) => {
@@ -870,12 +887,11 @@ function App() {
 
   const handleStopJudgingConfirm = useCallback(() => {
     clearJudgingPolling()
-    submitAbortControllerRef.current?.abort()
-    submitAbortControllerRef.current = null
-    submitRequestSeqRef.current += 1
+    abortSubmitRequest()
+    invalidateSubmitRequest()
     setIsSubmitting(false)
     resetToTopAfterJudgingStop()
-  }, [clearJudgingPolling, resetToTopAfterJudgingStop])
+  }, [abortSubmitRequest, clearJudgingPolling, invalidateSubmitRequest, resetToTopAfterJudgingStop])
 
   const handleRankingPostClick = (postId: string) => {
     openResultModal(postId)
