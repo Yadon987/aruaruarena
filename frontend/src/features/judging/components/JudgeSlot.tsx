@@ -143,7 +143,7 @@ export function JudgeSlot({
     >
       {/* 吹き出し */}
       {speechText && showSpeech && (
-        <div className="absolute -top-24 left-1/2 z-30 w-64 -translate-x-1/2 md:-top-28 lg:-top-32">
+        <div className="absolute -top-24 left-1/2 z-30 w-40 -translate-x-1/2 sm:w-52 md:-top-28 md:w-60 lg:-top-32 lg:w-64">
           <JudgeSpeechBubble
             isVisible={true}
             text={speechText}

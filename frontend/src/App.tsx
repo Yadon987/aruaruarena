@@ -1069,7 +1069,13 @@ function App() {
         />
       </div>
       {(viewMode === 'top' || viewMode === 'judging') && (
-        <div className="fixed bottom-6 inset-x-0 z-40 px-6 pointer-events-none">
+        <div
+          className={`fixed inset-x-0 z-40 pointer-events-none ${
+            viewMode === 'judging'
+              ? 'bottom-28 px-2 sm:bottom-24 sm:px-3 md:bottom-20 md:px-4 lg:bottom-10 lg:px-6'
+              : 'bottom-6 px-6'
+          }`}
+        >
           <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
             <div data-testid="top-judge-dock" className="w-full pointer-events-none">
               <JudgeAvatars
