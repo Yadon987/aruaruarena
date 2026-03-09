@@ -875,6 +875,16 @@ function App() {
     syncTopPath()
   }, [clearJudgingPolling, syncTopPath])
 
+  const backToTopFromJudgingError = useCallback(() => {
+    clearJudgingPolling()
+    setSubmitError('')
+    setSuccessMessage('')
+    setJudgingErrorMessage('')
+    setViewMode('top')
+    setIsPostModalOpen(false)
+    syncTopPath()
+  }, [clearJudgingPolling, syncTopPath])
+
   const resetToTopAfterJudgingStop = useCallback(() => {
     setPendingFormData(null)
     setSubmitError('')
@@ -1058,14 +1068,35 @@ function App() {
           <section
             data-testid="judging-screen"
             aria-label="審査エラー"
-            aria-live="polite"
-            className="glass-panel fixed left-1/2 top-24 z-40 w-[min(92vw,28rem)] -translate-x-1/2 rounded p-4"
+            aria-live="assertive"
+            className="relative z-[120] mx-auto mt-20 w-full max-w-xl"
           >
-            <div className="space-y-2">
-              <p className="text-red-500">{judgingErrorMessage}</p>
-              <NeonButton ariaLabel="再投稿する" onClick={retryPostSubmit}>
-                再投稿する
-              </NeonButton>
+            <div className="rounded-2xl border border-rose-300/60 bg-white/95 p-5 shadow-[0_18px_38px_rgba(15,23,42,0.16)] backdrop-blur">
+              <div className="flex items-start gap-3">
+                <div
+                  aria-hidden="true"
+                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-lg text-rose-700"
+                >
+                  !
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">読み込みに失敗しました</h2>
+                  <p className="text-sm leading-relaxed text-slate-700">{judgingErrorMessage}</p>
+                  <p className="text-xs text-slate-500">通信状況をご確認のうえ、再度お試しください。</p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <button
+                  type="button"
+                  onClick={backToTopFromJudgingError}
+                  className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                >
+                  トップへ戻る
+                </button>
+                <NeonButton ariaLabel="再投稿する" onClick={retryPostSubmit}>
+                  再投稿する
+                </NeonButton>
+              </div>
             </div>
           </section>
         )}
@@ -1290,7 +1321,7 @@ function App() {
         )}
         <div
           ref={footerDockRef}
-          className={`fixed inset-x-0 z-40 pointer-events-none ${
+          className={`fixed inset-x-0 z-30 pointer-events-none ${
             viewMode === 'judging'
               ? 'bottom-24 px-2 sm:bottom-24 sm:px-3 md:bottom-24 md:px-4 lg:bottom-10 lg:px-6'
               : 'bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] px-2 sm:bottom-5 sm:px-3 md:bottom-6 md:px-4 lg:bottom-10 lg:px-6'
