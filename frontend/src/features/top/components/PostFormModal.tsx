@@ -97,15 +97,11 @@ export function PostFormModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50">
-          <button
-            type="button"
-            data-testid="modal-overlay"
-            aria-label="モーダル背景"
-            className="absolute inset-0 bg-black/60"
-            onClick={handleBackdropClick}
-          />
-
+        <div
+          className="fixed inset-0 z-50 flex h-full items-center justify-center bg-black/60 p-4"
+          data-testid="modal-overlay"
+          onClick={handleBackdropClick}
+        >
           <div className="relative flex h-full items-center justify-center p-4">
             <div
               ref={dialogRef}

@@ -172,6 +172,48 @@ describe('E15-01 RED: ResultModal Component', () => {
     expect(screen.getByText('平均点: 0.0')).toBeInTheDocument()
   })
 
+  it('モーダル内クリックでは閉じない', () => {
+    // 何を検証するか: 背景クリック閉鎖時でも結果ダイアログ本体クリックで誤クローズしないこと
+    const onClose = vi.fn()
+    render(
+      <ResultModal
+        isOpen
+        post={buildModalPost()}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={onClose}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('dialog', { name: '審査結果モーダル' }))
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('モーダル外側クリックで閉じる', () => {
+    // 何を検証するか: 結果モーダルは最外層クリックで閉じる統一仕様を満たすこと
+    const onClose = vi.fn()
+    render(
+      <ResultModal
+        isOpen
+        post={buildModalPost()}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={onClose}
+      />
+    )
+
+    fireEvent.click(screen.getByTestId('result-modal-overlay'))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('judgment.success=false の場合に失敗表示を行う', async () => {
     // 何を検証するか: 審査員ごとの success=false がカードに失敗として表示されること
     await moveToResultScreen({

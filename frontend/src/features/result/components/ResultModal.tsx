@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 import { api } from '../../../shared/services/api'
 import type { Post } from '../../../shared/types/domain'
@@ -326,22 +326,17 @@ export function ResultModal({
     }
   }
 
-  const handleBackdropKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === KEY_ESCAPE) {
-      event.preventDefault()
-      onClose()
-    }
+  // モーダル本体クリックでは閉じず、背景クリックのみで閉じる仕様に固定する。
+  const handleDialogClick = (event: MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation()
   }
 
   return (
-    <div className="fixed inset-0 z-50">
-      <button
-        type="button"
-        aria-label="モーダルを閉じる"
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-        onKeyDown={handleBackdropKeyDown}
-      />
+    <div
+      className="fixed inset-0 z-50 flex h-full items-center justify-center bg-black/50 p-4"
+      data-testid="result-modal-overlay"
+      onClick={onClose}
+    >
       <div className="relative flex h-full items-center justify-center p-4">
         <div
           ref={modalRef}
@@ -349,7 +344,7 @@ export function ResultModal({
           aria-modal="true"
           aria-label="審査結果モーダル"
           className="w-full max-w-2xl rounded bg-white p-4 max-h-[90vh] overflow-y-auto"
-          onClick={(event) => event.stopPropagation()}
+          onClick={handleDialogClick}
           onKeyDown={handleKeyDown}
           style={prefersReducedMotion ? { transitionDuration: '0ms' } : undefined}
         >
