@@ -47,9 +47,13 @@ class DuplicateCheck
   # 重複チェック（本文からハッシュ生成してチェック）
   # @param body [String] 本文（生値）
   # @return [Boolean] 重複ありならtrue、なければfalse
-  def self.check(body)
+  def self.check?(body)
     hash = generate_body_hash(body)
     exists_with_hash?(hash)
+  end
+
+  class << self
+    alias check check?
   end
 
   # ハッシュ値での重複チェック（内部用またはハッシュが既にある場合）
@@ -57,7 +61,10 @@ class DuplicateCheck
   # @return [Boolean] 重複ありならtrue、なければfalse
   def self.exists_with_hash?(body_hash)
     record = find(body_hash)
-    record&.expires_at&.to_i&.> Time.now.to_i
+    expires_at = record&.expires_at
+    return false if expires_at.nil?
+
+    expires_at.to_i > Time.now.to_i
   rescue Dynamoid::Errors::RecordNotFound
     false
   rescue StandardError => e

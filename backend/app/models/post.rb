@@ -60,7 +60,7 @@ class Post
                          range_key: :score_key
 
   # アソシエーション
-  has_many :judgments
+  has_many :judgments, dependent: :restrict_with_error
 
   # バリデーション
   validates :id,          presence: { message: 'を入力してください' }

@@ -162,8 +162,9 @@ RSpec.describe DuplicateCheckService, type: :service do
     context 'フェイルオープン (Resilience)' do
       # DynamoDB接続エラー時、falseを返す（投稿を許可）
       it 'DynamoDB接続エラー時、falseを返すこと' do
-        allow(DuplicateCheck).to receive(:exists_with_hash?).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
-                                                                                                               'Service unavailable'))
+        allow(DuplicateCheck).to receive(:exists_with_hash?).and_raise(
+          Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable')
+        )
         allow(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] DynamoDB error:/)
         expect(described_class.duplicate?(body: 'テスト投稿')).to be false
       end
@@ -242,8 +243,9 @@ RSpec.describe DuplicateCheckService, type: :service do
     context '異常系' do
       # DynamoDB接続エラー時、nilを返すこと（フェイルオープン）
       it 'DynamoDB接続エラー時、nilを返すこと' do
-        allow(DuplicateCheck).to receive(:register).and_raise(Aws::DynamoDB::Errors::ServiceError.new(nil,
-                                                                                                      'Service unavailable'))
+        allow(DuplicateCheck).to receive(:register).and_raise(
+          Aws::DynamoDB::Errors::ServiceError.new(nil, 'Service unavailable')
+        )
         allow(Rails.logger).to receive(:error).with(/\[DuplicateCheckService\] register! failed:/)
         expect(described_class.register!(body: 'テスト投稿', post_id: 'test_id')).to be_nil
       end

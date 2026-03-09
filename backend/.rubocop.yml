@@ -1,3 +1,5 @@
+inherit_from: .rubocop_todo.yml
+
 # Omakase Ruby styling for Rails
 # inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
@@ -17,6 +19,7 @@ AllCops:
 
 Metrics/BlockLength:
   Exclude:
+    - 'app/models/judgment.rb'
     - 'spec/**/*'
     - 'lib/tasks/**/*'
 

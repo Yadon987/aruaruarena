@@ -11,6 +11,7 @@ class TestAdapter < BaseAiAdapter
 
   # テスト用アダプターを初期化する
   def initialize
+    super(context: :test)
     @call_count = 0
     @mutex = Mutex.new
   end
