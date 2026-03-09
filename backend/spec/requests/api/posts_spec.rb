@@ -436,8 +436,20 @@ RSpec.describe 'API::Posts', type: :request do
         expect(json['id']).to be_present
       end
 
-      # TODO: RateLimiterService.set_limit! を実装し、投稿フロー（posts_controller / JudgePostService）に組み込んだ後、
-      #       set_limit! 時の DynamoDB エラーに対するフェイルオープン動作をテストする
+      # Given: 投稿保存後のレート制限設定で例外発生
+      # When: 投稿リクエスト
+      # Then: 例外を握りつぶして投稿成功（201 Created）
+      it 'レート制限設定時の例外は投稿を阻害しない' do
+        # 何を検証するか: RateLimiterService.set_limit! が失敗しても投稿作成レスポンスが成功すること
+        allow(RateLimiterService).to receive(:set_limit!).and_raise(StandardError, 'set failed')
+        allow(Rails.logger).to receive(:error)
+
+        post '/api/posts', params: valid_params.to_json, headers: valid_headers
+
+        expect(response).to have_http_status(:created)
+        json = response.parsed_body
+        expect(json['id']).to be_present
+      end
     end
 
     context '非同期審査トリガー (E05-06)' do

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ComponentProps, CSSProperties } from 'react'
 import { motion } from 'framer-motion'
-import { getAvatarImagePath, getJudgeAriaLabel } from '../../../shared/constants/avatar'
+import { getAvatarImagePath } from '../../../shared/constants/avatar'
 import { JUDGE_ENTRANCE } from '../../../shared/constants/animations'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 import { useScoreRoulette } from '../../../shared/hooks/useScoreRoulette'
@@ -225,7 +225,6 @@ export function JudgeSlot({
           <motion.img
             src={getAvatarImagePath(judge, avatarState)}
             alt={alt}
-            aria-label={getJudgeAriaLabel(judge)}
             className={AVATAR_SIZE_CLASS}
             initial={entranceVariant.initial}
             animate={entranceVariant.animate}
