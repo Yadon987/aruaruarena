@@ -19,6 +19,7 @@ interface PostFormModalProps {
   error?: string
   initialNickname?: string
   initialBody?: string
+  onCloseWithDraft?: (draft: { nickname: string; body: string }) => void
 }
 
 /**
@@ -32,6 +33,7 @@ export function PostFormModal({
   error,
   initialNickname,
   initialBody,
+  onCloseWithDraft,
 }: PostFormModalProps) {
   const FALLBACK_FORM_VALUE = ''
   const [nickname, setNickname] = useState('')
@@ -62,13 +64,15 @@ export function PostFormModal({
       return
     }
 
-    setNickname('')
-    setBody('')
+    // 閉じる操作では入力内容を下書きとして親へ通知し、再表示時に復元できるようにする。
+    if (wasOpenRef.current && onCloseWithDraft && (nickname.trim() || body.trim())) {
+      onCloseWithDraft({ nickname, body })
+    }
     // モーダルを閉じたら元のフォーカス先へ戻し、アクセスビリティ導線を維持する。
     previousActiveElementRef.current?.focus()
     previousActiveElementRef.current = null
     wasOpenRef.current = false
-  }, [isOpen, initialNickname, initialBody])
+  }, [body, initialBody, initialNickname, isOpen, nickname, onCloseWithDraft])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

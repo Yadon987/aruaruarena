@@ -38,4 +38,65 @@ describe('PostFormModal Refactor', () => {
 
     expect(last).toHaveFocus()
   })
+
+  it('モーダルクローズ時に入力値を下書きとして通知する', async () => {
+    const { PostFormModal } = await loadPostFormModal()
+    const onClose = vi.fn()
+    const onCloseWithDraft = vi.fn()
+
+    const { rerender } = render(
+      <PostFormModal
+        isOpen={true}
+        onClose={onClose}
+        onCloseWithDraft={onCloseWithDraft}
+        onSubmit={vi.fn()}
+        isLoading={false}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '下書き太郎' } })
+    fireEvent.change(screen.getByLabelText('あるある'), { target: { value: '閉じても保持される本文' } })
+
+    rerender(
+      <PostFormModal
+        isOpen={false}
+        onClose={onClose}
+        onCloseWithDraft={onCloseWithDraft}
+        onSubmit={vi.fn()}
+        isLoading={false}
+      />
+    )
+
+    expect(onCloseWithDraft).toHaveBeenCalledWith({
+      nickname: '下書き太郎',
+      body: '閉じても保持される本文',
+    })
+  })
+
+  it('空入力で閉じた場合は下書き通知を行わない', async () => {
+    const { PostFormModal } = await loadPostFormModal()
+    const onCloseWithDraft = vi.fn()
+
+    const { rerender } = render(
+      <PostFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onCloseWithDraft={onCloseWithDraft}
+        onSubmit={vi.fn()}
+        isLoading={false}
+      />
+    )
+
+    rerender(
+      <PostFormModal
+        isOpen={false}
+        onClose={vi.fn()}
+        onCloseWithDraft={onCloseWithDraft}
+        onSubmit={vi.fn()}
+        isLoading={false}
+      />
+    )
+
+    expect(onCloseWithDraft).not.toHaveBeenCalled()
+  })
 })

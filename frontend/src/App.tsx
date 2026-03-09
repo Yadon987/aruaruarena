@@ -531,7 +531,6 @@ function App() {
   const applyJudgingSubmitSuccess = useCallback(
     (response: CreatePostResponse) => {
       // 正式IDへ差し替えた後、レスポンス状態に応じて画面遷移を確定する。
-      setPendingFormData(null)
       savePostId(response.id)
       syncMyPostIds()
       setJudgingPostId(response.id)
@@ -575,6 +574,7 @@ function App() {
   const exitJudgingWithResult = useCallback(
     (post: Post) => {
       clearJudgingPolling()
+      setPendingFormData(null)
       setIsJudgingPollingReady(false)
       syncTopPath()
       openResultModal(post.id, post)
@@ -612,6 +612,31 @@ function App() {
 
     enterJudgingMode(routePostId)
   }, [enterJudgingMode, syncTopPath])
+
+  useEffect(() => {
+    if (viewMode !== 'judging' || !judgingPostId) return
+
+    const handlePopState = () => {
+      window.history.pushState({}, '', `${JUDGING_PATH_PREFIX}${judgingPostId}`)
+      setIsStopJudgingConfirmOpen(true)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [judgingPostId, viewMode])
+
+  useEffect(() => {
+    if (viewMode !== 'judging') return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+      return ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [viewMode])
 
   useEffect(() => {
     if (viewMode !== 'judging' || !judgingPostId || !isJudgingPollingReady) return
@@ -715,7 +740,6 @@ function App() {
 
       if (nextNicknameError || nextBodyError) {
         setSubmitError(MESSAGE_INVALID_FORM_ERROR)
-        setPendingFormData(null)
         return
       }
 
@@ -917,6 +941,17 @@ function App() {
     syncTopPath()
   }, [clearJudgingPolling, syncTopPath])
 
+  const handlePostModalCloseWithDraft = useCallback((draft: { nickname: string; body: string }) => {
+    const trimmedNickname = draft.nickname.trim()
+    const trimmedBody = draft.body.trim()
+
+    if (!trimmedNickname && !trimmedBody) {
+      setPendingFormData(null)
+      return
+    }
+    setPendingFormData({ nickname: trimmedNickname, body: trimmedBody })
+  }, [])
+
   const backToTopFromJudgingError = useCallback(() => {
     clearJudgingPolling()
     setSubmitError('')
@@ -947,6 +982,22 @@ function App() {
     setIsSubmitting(false)
     resetToTopAfterJudgingStop()
   }, [abortSubmitRequest, clearJudgingPolling, invalidateSubmitRequest, resetToTopAfterJudgingStop])
+
+  const handleStopJudgingAndRepost = useCallback(() => {
+    clearJudgingPolling()
+    abortSubmitRequest()
+    invalidateSubmitRequest()
+    setIsSubmitting(false)
+    setSubmitError('')
+    setSuccessMessage('')
+    setJudgingErrorMessage('')
+    setJudgingPostId('')
+    setIsJudgingPollingReady(false)
+    setIsStopJudgingConfirmOpen(false)
+    setViewMode('top')
+    setIsPostModalOpen(true)
+    syncTopPath()
+  }, [abortSubmitRequest, clearJudgingPolling, invalidateSubmitRequest, syncTopPath])
 
   const handleRankingPostClick = (postId: string) => {
     openResultModal(postId)
@@ -1158,6 +1209,7 @@ function App() {
             <PostFormModal
               isOpen={isPostModalOpen}
               onClose={() => setIsPostModalOpen(false)}
+              onCloseWithDraft={handlePostModalCloseWithDraft}
               onSubmit={onSubmit}
               isLoading={isSubmitting}
               error={submitError}
@@ -1346,7 +1398,7 @@ function App() {
             >
               <h2 className="mb-2 text-lg font-semibold text-cyan-100">審査を中止しますか？</h2>
               <p className="mb-4 text-sm text-slate-100">
-                審査中の投稿は破棄され、トップ画面へ戻ります。
+                中止する場合は投稿内容を破棄します。再投稿する場合は入力内容を保持したまま戻れます。
               </p>
               <div className="flex justify-end gap-2">
                 <NeonButton
@@ -1357,6 +1409,15 @@ function App() {
                   onClick={() => setIsStopJudgingConfirmOpen(false)}
                 >
                   続ける
+                </NeonButton>
+                <NeonButton
+                  type="button"
+                  variant="secondary"
+                  compactOnMobile={true}
+                  ariaLabel="再投稿する"
+                  onClick={handleStopJudgingAndRepost}
+                >
+                  再投稿する
                 </NeonButton>
                 <NeonButton
                   type="button"
@@ -1398,7 +1459,6 @@ function App() {
                   className="center-submit-cta"
                   ariaLabel="投稿する"
                   onClick={() => {
-                    setPendingFormData(null)
                     setSubmitError('')
                     setIsPostModalOpen(true)
                   }}
