@@ -75,12 +75,13 @@ describe('PostFormModal Refactor', () => {
 
   it('空入力で閉じた場合は下書き通知を行わない', async () => {
     const { PostFormModal } = await loadPostFormModal()
+    const onClose = vi.fn()
     const onCloseWithDraft = vi.fn()
 
     const { rerender } = render(
       <PostFormModal
         isOpen={true}
-        onClose={vi.fn()}
+        onClose={onClose}
         onCloseWithDraft={onCloseWithDraft}
         onSubmit={vi.fn()}
         isLoading={false}
@@ -90,7 +91,7 @@ describe('PostFormModal Refactor', () => {
     rerender(
       <PostFormModal
         isOpen={false}
-        onClose={vi.fn()}
+        onClose={onClose}
         onCloseWithDraft={onCloseWithDraft}
         onSubmit={vi.fn()}
         isLoading={false}

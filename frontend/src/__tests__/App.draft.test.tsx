@@ -5,6 +5,7 @@ import { api } from '../shared/services/api'
 import { fillPostForm, openPostDialog, submitPostForm } from '../test/helpers'
 
 describe('E30-02 RED: 下書き保持と審査停止3アクション', () => {
+  const consoleErrorOriginal = console.error
   const setupPendingPostApiMocks = () => {
     vi.spyOn(api.posts, 'create').mockImplementation(() => new Promise(() => {}))
     vi.spyOn(api.posts, 'get').mockImplementation(() => new Promise(() => {}))
@@ -14,7 +15,10 @@ describe('E30-02 RED: 下書き保持と審査停止3アクション', () => {
     localStorage.clear()
     window.history.replaceState({}, '', '/')
     vi.clearAllMocks()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation((message, ...args) => {
+      if (typeof message === 'string' && message.includes('Warning:')) return
+      consoleErrorOriginal(message, ...args)
+    })
   })
 
   afterEach(() => {
