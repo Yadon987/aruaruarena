@@ -57,10 +57,10 @@ export function PostFormModal({
       if (!wasOpenRef.current) {
         setNickname(initialNickname ?? FALLBACK_FORM_VALUE)
         setBody(initialBody ?? FALLBACK_FORM_VALUE)
+        previousActiveElementRef.current = document.activeElement as HTMLElement
+        closeButtonRef.current?.focus()
+        wasOpenRef.current = true
       }
-      previousActiveElementRef.current = document.activeElement as HTMLElement
-      closeButtonRef.current?.focus()
-      wasOpenRef.current = true
       return
     }
 
