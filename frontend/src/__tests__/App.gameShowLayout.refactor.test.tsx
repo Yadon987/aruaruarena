@@ -110,7 +110,6 @@ describe('App Game Show Layout Refactor', () => {
     expect(screen.getByRole('button', { name: 'プライバシーポリシー' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '問い合わせ（新しいタブで開く）' })).toBeInTheDocument()
   })
-
   it('自分の投稿モーダルは外側クリックで閉じる', () => {
     // 何を検証するか: App直下モーダルでも外側クリック閉鎖の統一仕様を満たすこと
     render(<App />)

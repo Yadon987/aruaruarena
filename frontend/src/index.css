@@ -687,7 +687,6 @@
     letter-spacing: calc(0.06em * var(--judge-slot-scale));
   }
 }
-
 @media (min-width: 640px) {
   .judge-desk-shell {
     padding: 0.25rem;
