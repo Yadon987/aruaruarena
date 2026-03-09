@@ -20,24 +20,15 @@ vi.mock('../shared/hooks/useRankings', () => ({
 
 describe('App Game Show Layout Refactor', () => {
   let originalScrollIntoView: typeof window.HTMLElement.prototype.scrollIntoView
-  let originalMatchMedia: typeof window.matchMedia | undefined
 
   beforeEach(() => {
     vi.clearAllMocks()
     originalScrollIntoView = window.HTMLElement.prototype.scrollIntoView
-    originalMatchMedia = window.matchMedia
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
     window.HTMLElement.prototype.scrollIntoView = originalScrollIntoView
-    if (originalMatchMedia) {
-      window.matchMedia = originalMatchMedia
-    } else {
-      // matchMedia未実装環境向けに、テストで差し替えた関数を戻す
-      // @ts-expect-error cleanup for test environment
-      delete window.matchMedia
-    }
   })
 
   it('ランキングボタン押下でランキングセクションへスクロールする', () => {
@@ -68,19 +59,8 @@ describe('App Game Show Layout Refactor', () => {
     })
   })
 
-  it('モバイル幅ではフッター常時表示がランキングとその他の2アクションになる', () => {
-    // 何を検証するか: 細いスマホ向けに常時表示操作を2つへ制限できること
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === '(max-width: 639px)',
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }))
-
+  it('フッター常時表示が全サイズでランキングとその他の2アクションになる', () => {
+    // 何を検証するか: 画面幅に関わらずフッター導線が2ボタンで統一されること
     render(<App />)
 
     const footer = screen.getByRole('contentinfo')
@@ -89,19 +69,8 @@ describe('App Game Show Layout Refactor', () => {
     expect(within(footer).queryByRole('button', { name: '過去の投稿' })).not.toBeInTheDocument()
   })
 
-  it('モバイル幅で「その他」押下時に補助メニューの3導線が表示される', () => {
-    // 何を検証するか: 省略した補助導線がボトムシートで利用できること
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === '(max-width: 639px)',
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }))
-
+  it('「その他」押下時に補助メニューの3導線が表示される', () => {
+    // 何を検証するか: 補助導線が「その他」メニューに集約されること
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'その他を開く' }))
 
@@ -114,6 +83,7 @@ describe('App Game Show Layout Refactor', () => {
     // 何を検証するか: App直下モーダルでも外側クリック閉鎖の統一仕様を満たすこと
     render(<App />)
 
+    fireEvent.click(screen.getByRole('button', { name: 'その他を開く' }))
     fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
     const dialog = screen.getByRole('dialog', { name: '自分の投稿' })
     expect(dialog).toBeInTheDocument()

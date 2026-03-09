@@ -63,6 +63,23 @@
   white-space: nowrap;
 }
 
+.center-submit-cta {
+  min-height: 2.8rem;
+  padding: 0.7rem 1.8rem;
+  font-size: 1.06rem;
+  line-height: 1.3rem;
+  font-weight: 800;
+  border-radius: 1rem;
+}
+
+@media (min-width: 640px) {
+  .center-submit-cta {
+    min-height: 3rem;
+    padding: 0.8rem 2.2rem;
+    font-size: 1.12rem;
+  }
+}
+
 @media (min-width: 640px) {
   .neon-button-compact-mobile {
     min-height: 2.3rem;
@@ -81,6 +98,16 @@
     font-size: 0.98rem;
     line-height: 1.24rem;
     font-weight: 700;
+  }
+}
+
+@media (min-width: 640px) {
+  .footer-main-action-button {
+    min-height: 2.55rem;
+    padding: 0.6rem 1.32rem;
+    font-size: 0.95rem;
+    line-height: 1.2rem;
+    border-radius: 0.95rem;
   }
 }
 
