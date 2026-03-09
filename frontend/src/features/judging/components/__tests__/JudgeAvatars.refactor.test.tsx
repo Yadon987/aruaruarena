@@ -242,4 +242,13 @@ describe('JudgeAvatars Refactor', () => {
     expect(screen.getByLabelText('ひろゆき審査員のスコア: 88点')).toBeInTheDocument()
     expect(screen.getByLabelText('デヴィ婦人審査員のスコア: 93点')).toBeInTheDocument()
   })
+
+  it('各審査員スロットに名札を表示する', async () => {
+    const { JudgeAvatars } = await loadJudgeAvatars()
+    render(<JudgeAvatars isJudging={false} isPostModalOpen={false} />)
+
+    expect(screen.getByTestId('judge-seat-nameplate-nakao')).toHaveTextContent('大物俳優N')
+    expect(screen.getByTestId('judge-seat-nameplate-hiroyuki')).toHaveTextContent('論破王H')
+    expect(screen.getByTestId('judge-seat-nameplate-dewi')).toHaveTextContent('富豪D夫人')
+  })
 })

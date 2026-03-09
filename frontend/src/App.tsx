@@ -59,6 +59,9 @@ const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
+const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
+const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
+const AI_TRANSIENT_ERROR_CODES = ['provider_error', 'connection_failed', 'timeout', 'secrets_fetch_failed']
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
@@ -169,6 +172,19 @@ function resolveResultModalErrorCode(error: unknown): string {
   return RESULT_MODAL_ERROR_FETCH_FAILED
 }
 
+function isTransientJudgingPollingError(error: unknown): boolean {
+  if (!(error instanceof ApiClientError)) return false
+  if (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT) return true
+  return AI_TRANSIENT_ERROR_CODES.includes(error.code)
+}
+
+function buildTransientErrorNotice(errorCount: number): string {
+  if (errorCount >= JUDGING_TRANSIENT_ERROR_MAX_RETRIES - 1) {
+    return `通信が不安定です（${errorCount}/${JUDGING_TRANSIENT_ERROR_MAX_RETRIES}）。まもなくタイムアウトします。`
+  }
+  return `通信が不安定です（${errorCount}/${JUDGING_TRANSIENT_ERROR_MAX_RETRIES}）。再接続を試しています...`
+}
+
 function validateForm(nickname: string, body: string): ValidationErrors {
   const trimmedNickname = nickname.trim()
   const trimmedBody = body.trim()
@@ -237,6 +253,7 @@ function App() {
   const [isResultPostLoading, setIsResultPostLoading] = useState(false)
   const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
   const [isJudgingPollingReady, setIsJudgingPollingReady] = useState(false)
+  const [judgingTransientErrorCount, setJudgingTransientErrorCount] = useState(0)
   const [footerReservedSpace, setFooterReservedSpace] = useState(FIXED_FOOTER_MIN_RESERVED_PX)
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
   const myPostDetailsRef = useRef<Record<string, Post>>({})
@@ -252,6 +269,8 @@ function App() {
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
+  const pollingTransientErrorCountRef = useRef<number>(0)
+  const pollingTransientErrorStartedAtRef = useRef<number>(0)
   const submitAbortControllerRef = useRef<AbortController | null>(null)
   const submitRequestSeqRef = useRef(0)
   const activeResultErrorCode = resultModalErrorCode
@@ -468,6 +487,9 @@ function App() {
       pollingAbortControllerRef.current = null
     }
     pollingStartedAtRef.current = 0
+    pollingTransientErrorCountRef.current = 0
+    pollingTransientErrorStartedAtRef.current = 0
+    setJudgingTransientErrorCount(0)
   }, [])
 
   const abortSubmitRequest = useCallback(() => {
@@ -509,7 +531,6 @@ function App() {
   const applyJudgingSubmitSuccess = useCallback(
     (response: CreatePostResponse) => {
       // 正式IDへ差し替えた後、レスポンス状態に応じて画面遷移を確定する。
-      setPendingFormData(null)
       savePostId(response.id)
       syncMyPostIds()
       setJudgingPostId(response.id)
@@ -553,6 +574,7 @@ function App() {
   const exitJudgingWithResult = useCallback(
     (post: Post) => {
       clearJudgingPolling()
+      setPendingFormData(null)
       setIsJudgingPollingReady(false)
       syncTopPath()
       openResultModal(post.id, post)
@@ -592,6 +614,31 @@ function App() {
   }, [enterJudgingMode, syncTopPath])
 
   useEffect(() => {
+    if (viewMode !== 'judging' || !judgingPostId) return
+
+    const handlePopState = () => {
+      window.history.pushState({}, '', `${JUDGING_PATH_PREFIX}${judgingPostId}`)
+      setIsStopJudgingConfirmOpen(true)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [judgingPostId, viewMode])
+
+  useEffect(() => {
+    if (viewMode !== 'judging') return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+      return ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [viewMode])
+
+  useEffect(() => {
     if (viewMode !== 'judging' || !judgingPostId || !isJudgingPollingReady) return
 
     let isDisposed = false
@@ -618,6 +665,9 @@ function App() {
           signal: abortController.signal,
         })
         if (isDisposed) return
+        pollingTransientErrorCountRef.current = 0
+        pollingTransientErrorStartedAtRef.current = 0
+        setJudgingTransientErrorCount(0)
         if (response.status === 'scored' || response.status === 'failed') {
           exitJudgingWithResultRef.current(response)
           return
@@ -628,6 +678,23 @@ function App() {
         // 404は対象投稿が消失しているため即時終了とする。
         if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
           handleJudgingFetchFailed()
+          return
+        }
+
+        if (isTransientJudgingPollingError(error)) {
+          if (pollingTransientErrorCountRef.current === 0) {
+            pollingTransientErrorStartedAtRef.current = Date.now()
+          }
+          pollingTransientErrorCountRef.current += 1
+          setJudgingTransientErrorCount(pollingTransientErrorCountRef.current)
+
+          const transientElapsed = Date.now() - pollingTransientErrorStartedAtRef.current
+          if (
+            pollingTransientErrorCountRef.current >= JUDGING_TRANSIENT_ERROR_MAX_RETRIES ||
+            transientElapsed >= JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS
+          ) {
+            handleJudgingFetchFailed()
+          }
           return
         }
 
@@ -673,7 +740,6 @@ function App() {
 
       if (nextNicknameError || nextBodyError) {
         setSubmitError(MESSAGE_INVALID_FORM_ERROR)
-        setPendingFormData(null)
         return
       }
 
@@ -875,6 +941,27 @@ function App() {
     syncTopPath()
   }, [clearJudgingPolling, syncTopPath])
 
+  const handlePostModalCloseWithDraft = useCallback((draft: { nickname: string; body: string }) => {
+    const trimmedNickname = draft.nickname.trim()
+    const trimmedBody = draft.body.trim()
+
+    if (!trimmedNickname && !trimmedBody) {
+      setPendingFormData(null)
+      return
+    }
+    setPendingFormData({ nickname: trimmedNickname, body: trimmedBody })
+  }, [])
+
+  const backToTopFromJudgingError = useCallback(() => {
+    clearJudgingPolling()
+    setSubmitError('')
+    setSuccessMessage('')
+    setJudgingErrorMessage('')
+    setViewMode('top')
+    setIsPostModalOpen(false)
+    syncTopPath()
+  }, [clearJudgingPolling, syncTopPath])
+
   const resetToTopAfterJudgingStop = useCallback(() => {
     setPendingFormData(null)
     setSubmitError('')
@@ -895,6 +982,22 @@ function App() {
     setIsSubmitting(false)
     resetToTopAfterJudgingStop()
   }, [abortSubmitRequest, clearJudgingPolling, invalidateSubmitRequest, resetToTopAfterJudgingStop])
+
+  const handleStopJudgingAndRepost = useCallback(() => {
+    clearJudgingPolling()
+    abortSubmitRequest()
+    invalidateSubmitRequest()
+    setIsSubmitting(false)
+    setSubmitError('')
+    setSuccessMessage('')
+    setJudgingErrorMessage('')
+    setJudgingPostId('')
+    setIsJudgingPollingReady(false)
+    setIsStopJudgingConfirmOpen(false)
+    setViewMode('top')
+    setIsPostModalOpen(true)
+    syncTopPath()
+  }, [abortSubmitRequest, clearJudgingPolling, invalidateSubmitRequest, syncTopPath])
 
   const handleRankingPostClick = (postId: string) => {
     openResultModal(postId)
@@ -1054,18 +1157,49 @@ function App() {
         {viewMode === 'judging' && !judgingErrorMessage && (
           <section data-testid="judging-screen" aria-label="審査中" className="sr-only" />
         )}
+        {viewMode === 'judging' && !judgingErrorMessage && judgingTransientErrorCount > 0 && (
+          <div className="pointer-events-none fixed left-1/2 top-5 z-[125] -translate-x-1/2">
+            <p
+              aria-live="polite"
+              className="rounded-full border border-rose-300/70 bg-white/90 px-4 py-2 text-sm font-semibold text-red-600 shadow-[0_8px_20px_rgba(15,23,42,0.14)] backdrop-blur"
+            >
+              {buildTransientErrorNotice(judgingTransientErrorCount)}
+            </p>
+          </div>
+        )}
         {viewMode === 'judging' && judgingErrorMessage && (
           <section
             data-testid="judging-screen"
             aria-label="審査エラー"
-            aria-live="polite"
-            className="glass-panel fixed left-1/2 top-24 z-40 w-[min(92vw,28rem)] -translate-x-1/2 rounded p-4"
+            aria-live="assertive"
+            className="relative z-[120] mx-auto mt-20 w-full max-w-xl"
           >
-            <div className="space-y-2">
-              <p className="text-red-500">{judgingErrorMessage}</p>
-              <NeonButton ariaLabel="再投稿する" onClick={retryPostSubmit}>
-                再投稿する
-              </NeonButton>
+            <div className="rounded-2xl border border-rose-300/60 bg-white/95 p-5 shadow-[0_18px_38px_rgba(15,23,42,0.16)] backdrop-blur">
+              <div className="flex items-start gap-3">
+                <div
+                  aria-hidden="true"
+                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-lg text-rose-700"
+                >
+                  !
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">読み込みに失敗しました</h2>
+                  <p className="text-sm leading-relaxed text-slate-700">{judgingErrorMessage}</p>
+                  <p className="text-xs text-slate-500">通信状況をご確認のうえ、再度お試しください。</p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <button
+                  type="button"
+                  onClick={backToTopFromJudgingError}
+                  className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                >
+                  トップへ戻る
+                </button>
+                <NeonButton ariaLabel="再投稿する" onClick={retryPostSubmit}>
+                  再投稿する
+                </NeonButton>
+              </div>
             </div>
           </section>
         )}
@@ -1075,6 +1209,7 @@ function App() {
             <PostFormModal
               isOpen={isPostModalOpen}
               onClose={() => setIsPostModalOpen(false)}
+              onCloseWithDraft={handlePostModalCloseWithDraft}
               onSubmit={onSubmit}
               isLoading={isSubmitting}
               error={submitError}
@@ -1263,7 +1398,7 @@ function App() {
             >
               <h2 className="mb-2 text-lg font-semibold text-cyan-100">審査を中止しますか？</h2>
               <p className="mb-4 text-sm text-slate-100">
-                審査中の投稿は破棄され、トップ画面へ戻ります。
+                中止する場合は投稿内容を破棄します。再投稿する場合は入力内容を保持したまま戻れます。
               </p>
               <div className="flex justify-end gap-2">
                 <NeonButton
@@ -1274,6 +1409,15 @@ function App() {
                   onClick={() => setIsStopJudgingConfirmOpen(false)}
                 >
                   続ける
+                </NeonButton>
+                <NeonButton
+                  type="button"
+                  variant="secondary"
+                  compactOnMobile={true}
+                  ariaLabel="再投稿する"
+                  onClick={handleStopJudgingAndRepost}
+                >
+                  再投稿する
                 </NeonButton>
                 <NeonButton
                   type="button"
@@ -1290,7 +1434,7 @@ function App() {
         )}
         <div
           ref={footerDockRef}
-          className={`fixed inset-x-0 z-40 pointer-events-none ${
+          className={`fixed inset-x-0 z-30 pointer-events-none ${
             viewMode === 'judging'
               ? 'bottom-24 px-2 sm:bottom-24 sm:px-3 md:bottom-24 md:px-4 lg:bottom-10 lg:px-6'
               : 'bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] px-2 sm:bottom-5 sm:px-3 md:bottom-6 md:px-4 lg:bottom-10 lg:px-6'
@@ -1315,7 +1459,6 @@ function App() {
                   className="center-submit-cta"
                   ariaLabel="投稿する"
                   onClick={() => {
-                    setPendingFormData(null)
                     setSubmitError('')
                     setIsPostModalOpen(true)
                   }}
