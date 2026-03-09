@@ -13,7 +13,7 @@ describe('useScoreRoulette', () => {
   })
 
   it('scoringフェーズでは60msごとに2桁数値が切り替わる', async () => {
-    const randomSpy = vi
+    vi
       .spyOn(Math, 'random')
       .mockReturnValueOnce(0)
       .mockReturnValueOnce(0.55)
@@ -42,8 +42,6 @@ describe('useScoreRoulette', () => {
     expect(firstValue).toMatch(/^\d{2}$/)
     expect(secondValue).toMatch(/^\d{2}$/)
     expect(secondValue).not.toBe(firstValue)
-
-    randomSpy.mockRestore()
   })
 
   it('completeフェーズで最終スコアに停止しrevealedになる', async () => {

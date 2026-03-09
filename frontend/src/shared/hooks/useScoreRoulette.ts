@@ -75,6 +75,7 @@ export function useScoreRoulette({
   useEffect(() => {
     if (isFailed) {
       setIsRevealed(false)
+      previousPhaseRef.current = phase
       return
     }
 

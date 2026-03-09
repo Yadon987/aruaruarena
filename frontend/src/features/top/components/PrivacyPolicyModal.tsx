@@ -8,6 +8,8 @@ type Props = {
 }
 
 const KEY_ESCAPE = 'Escape'
+const KEY_ENTER = 'Enter'
+const KEY_SPACE = ' '
 const KEY_TAB = 'Tab'
 const FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -69,8 +71,10 @@ export function PrivacyPolicyModal({ isOpen, onClose, triggerRef }: Props) {
     handleFocusTrap(event)
   }
 
-  const handleOverlayKeyDown = (_event: KeyboardEvent<HTMLDivElement>) => {
-    // no-op: 背景クリック閉鎖オーバーレイの a11y lint 要件を満たすために定義
+  const handleOverlayKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== KEY_ENTER && event.key !== KEY_SPACE) return
+    event.preventDefault()
+    handleClose()
   }
 
   // モーダル本体クリックでは閉じず、背景クリックのみで閉じる仕様に固定する。
@@ -82,6 +86,8 @@ export function PrivacyPolicyModal({ isOpen, onClose, triggerRef }: Props) {
     <div
       className="fixed inset-0 z-50 flex h-full items-center justify-center bg-black/50 p-4"
       data-testid="privacy-policy-modal-overlay"
+      role="button"
+      tabIndex={0}
       onClick={handleClose}
       onKeyDown={handleOverlayKeyDown}
     >

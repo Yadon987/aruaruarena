@@ -27,8 +27,8 @@ describe('MyPostStorage RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'その他を開く' }))
-    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'その他を開く' }))
+    fireEvent.click(await screen.findByRole('button', { name: '過去の投稿' }))
 
     expect(await screen.findByText('投稿するとここに表示されます')).toBeInTheDocument()
   })
@@ -40,8 +40,8 @@ describe('MyPostStorage RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'その他を開く' }))
-    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'その他を開く' }))
+    fireEvent.click(await screen.findByRole('button', { name: '過去の投稿' }))
 
     expect((await screen.findAllByTestId('my-post-id-item')).length).toBe(20)
   })
