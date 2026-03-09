@@ -4,8 +4,8 @@
 
 :root {
   --font-digital: 'DSEG7-Classic', 'Orbitron', 'Courier New', monospace;
-  --main-action-track-width: min(78vw, 17.5rem);
-  --main-action-gap: 0.72rem;
+  --main-action-track-width: min(82vw, 18.25rem);
+  --main-action-gap: 0.42rem;
 }
 
 .game-show-stage {
@@ -186,14 +186,28 @@
 
 @media (min-width: 640px) {
   :root {
-    --main-action-track-width: clamp(16rem, 36vw, 22rem);
-    --main-action-gap: 0.8rem;
+    --main-action-track-width: min(68vw, 20rem);
+    --main-action-gap: 0.5rem;
   }
 
   .neon-button-base.neon-glow-blue.center-submit-cta {
     min-height: 3rem;
     padding: 0.8rem 2.2rem;
     font-size: 1.12rem;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --main-action-track-width: min(60vw, 21rem);
+    --main-action-gap: 0.56rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --main-action-track-width: clamp(18rem, 30vw, 22rem);
+    --main-action-gap: 0.64rem;
   }
 }
 

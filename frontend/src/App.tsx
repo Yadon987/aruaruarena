@@ -1283,10 +1283,10 @@ function App() {
           className={`fixed inset-x-0 z-40 pointer-events-none ${
             viewMode === 'judging'
               ? 'bottom-24 px-2 sm:bottom-[5.5rem] sm:px-3 md:bottom-[4.5rem] md:px-4 lg:bottom-10 lg:px-6'
-              : 'bottom-20 px-2 sm:bottom-[4.5rem] sm:px-3 md:bottom-14 md:px-4 lg:bottom-10 lg:px-6'
+              : 'bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] px-2 sm:bottom-5 sm:px-3 md:bottom-6 md:px-4 lg:bottom-[7vh] lg:px-6'
           }`}
         >
-          <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
+          <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-0">
             <div data-testid="top-judge-dock" className="w-full pointer-events-none">
               <JudgeAvatars
                 isJudging={viewMode === 'judging'}
@@ -1298,7 +1298,7 @@ function App() {
               />
             </div>
             {viewMode === 'top' && (
-              <div className="pointer-events-auto">
+              <div className="pointer-events-auto -mt-3 sm:-mt-4 md:-mt-5 lg:-mt-6">
                 <NeonButton
                   type="button"
                   variant="primary"
