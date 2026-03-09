@@ -59,6 +59,8 @@ const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
+const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
+const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
@@ -169,6 +171,11 @@ function resolveResultModalErrorCode(error: unknown): string {
   return RESULT_MODAL_ERROR_FETCH_FAILED
 }
 
+function isTransientJudgingPollingError(error: unknown): boolean {
+  if (!(error instanceof ApiClientError)) return false
+  return error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT
+}
+
 function validateForm(nickname: string, body: string): ValidationErrors {
   const trimmedNickname = nickname.trim()
   const trimmedBody = body.trim()
@@ -252,6 +259,8 @@ function App() {
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
+  const pollingTransientErrorCountRef = useRef<number>(0)
+  const pollingTransientErrorStartedAtRef = useRef<number>(0)
   const submitAbortControllerRef = useRef<AbortController | null>(null)
   const submitRequestSeqRef = useRef(0)
   const activeResultErrorCode = resultModalErrorCode
@@ -468,6 +477,8 @@ function App() {
       pollingAbortControllerRef.current = null
     }
     pollingStartedAtRef.current = 0
+    pollingTransientErrorCountRef.current = 0
+    pollingTransientErrorStartedAtRef.current = 0
   }, [])
 
   const abortSubmitRequest = useCallback(() => {
@@ -618,6 +629,8 @@ function App() {
           signal: abortController.signal,
         })
         if (isDisposed) return
+        pollingTransientErrorCountRef.current = 0
+        pollingTransientErrorStartedAtRef.current = 0
         if (response.status === 'scored' || response.status === 'failed') {
           exitJudgingWithResultRef.current(response)
           return
@@ -628,6 +641,22 @@ function App() {
         // 404は対象投稿が消失しているため即時終了とする。
         if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
           handleJudgingFetchFailed()
+          return
+        }
+
+        if (isTransientJudgingPollingError(error)) {
+          if (pollingTransientErrorCountRef.current === 0) {
+            pollingTransientErrorStartedAtRef.current = Date.now()
+          }
+          pollingTransientErrorCountRef.current += 1
+
+          const transientElapsed = Date.now() - pollingTransientErrorStartedAtRef.current
+          if (
+            pollingTransientErrorCountRef.current >= JUDGING_TRANSIENT_ERROR_MAX_RETRIES ||
+            transientElapsed >= JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS
+          ) {
+            handleJudgingFetchFailed()
+          }
           return
         }
 

@@ -140,6 +140,29 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     )
   })
 
+  it('通信エラーが連続したとき60秒を待たずに審査エラーパネルを表示する', async () => {
+    // 何を検証するか: ネットワーク障害が連続する場合に早期終了して審査エラー導線を表示すること
+    mswServer.use(
+      http.get('/api/posts/:id', () => {
+        return HttpResponse.error()
+      })
+    )
+
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: '再投稿する' })).toBeInTheDocument()
+      },
+      { timeout: 12000 }
+    )
+
+    expect(getPostSpy).toHaveBeenCalledTimes(4)
+  }, 14000)
+
   it('不正な投稿IDではポーリングせず審査エラーパネルを表示する', async () => {
     // 何を検証するか: 不正IDの場合にGETを呼ばず審査エラー導線を表示すること
     window.history.pushState({}, '', '/judging/invalid-id')
