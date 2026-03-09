@@ -1318,9 +1318,9 @@ function App() {
               <footer
                 ref={footerRef}
                 role="contentinfo"
-                className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
+                className="footer-main-actions-wrap pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
               >
-                <div className="flex items-center gap-2">
+                <div className="footer-main-actions-track">
                   <NeonButton
                     type="button"
                     variant="secondary"
