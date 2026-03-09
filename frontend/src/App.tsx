@@ -1186,7 +1186,7 @@ function App() {
             role="dialog"
             aria-modal="true"
             aria-label="補助メニュー"
-            className="fixed inset-0 z-[45] flex items-end justify-center bg-black/55 p-3 sm:items-center"
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-3 sm:items-center"
             onClick={closeFooterActionSheet}
             onKeyDown={(event) => {
               if (event.key === DIALOG_CLOSE_KEY) {
