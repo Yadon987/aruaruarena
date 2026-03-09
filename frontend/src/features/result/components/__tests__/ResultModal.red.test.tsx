@@ -280,7 +280,7 @@ describe('E15-01 RED: ResultModal Component', () => {
   })
 
   it('取得中状態で読み込み中表示を行う', async () => {
-    // 何を検証するか: 結果取得中に審査中メッセージを表示すること
+    // 何を検証するか: 結果取得中は審査中画面を維持し、結果モーダルを表示しないこと
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'loading-post-id',
       status: 'judging',
@@ -296,8 +296,9 @@ describe('E15-01 RED: ResultModal Component', () => {
     await fillAndSubmitPostForm({ nickname: '読込太郎', body: '読込テスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByText('AI審査員が採点中...')).toBeInTheDocument()
+      expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
     })
+    expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
   })
 
   it('共有画像が未準備のままならリトライ失敗メッセージを表示する', { timeout: 15000 }, async () => {

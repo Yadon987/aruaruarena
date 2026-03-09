@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AVATAR_ANIMATION } from '../../constants/avatar'
 import { useJudgeAvatar } from '../useJudgeAvatar'
 
 const { useReducedMotionMock } = vi.hoisted(() => ({
@@ -46,7 +47,7 @@ describe('E23-01 RED: useJudgeAvatar', () => {
   })
 
   it('isSpeaking=true のときに口パクが始まり終了後に base に戻る', async () => {
-    // 何を検証するか: 発話中のみ口パクし、120ms 経過後に base へ戻ること
+    // 何を検証するか: 発話中のみ口パクし、継続時間経過後に base へ戻ること
     const { result, rerender } = renderHook(
       ({ isSpeaking }) => useJudgeAvatar('hiroyuki', isSpeaking),
       { initialProps: { isSpeaking: false } }
@@ -55,13 +56,13 @@ describe('E23-01 RED: useJudgeAvatar', () => {
     rerender({ isSpeaking: true })
 
     await act(async () => {
-      vi.advanceTimersByTime(2000)
+      vi.advanceTimersByTime(AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS)
     })
 
     expect(result.current.currentState).toBe('mouth_open')
 
     await act(async () => {
-      vi.advanceTimersByTime(120)
+      vi.advanceTimersByTime(AVATAR_ANIMATION.MOUTH_DURATION_MS)
     })
 
     expect(result.current.currentState).toBe('base')
@@ -74,7 +75,7 @@ describe('E23-01 RED: useJudgeAvatar', () => {
     })
 
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(AVATAR_ANIMATION.BLINK_INTERVAL_MIN_MS)
     })
 
     expect(result.current.currentState).toBe('eye_closed')

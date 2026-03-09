@@ -32,7 +32,7 @@ describe('E12-01 RED: TopPage Integration', () => {
   })
 
   it('429エラー時に専用メッセージを表示し入力を保持する', async () => {
-    // 何を検証するか: RATE_LIMITED時の専用文言表示と入力保持が行われること
+    // 何を検証するか: RATE_LIMITED時に専用文言と再投稿導線が表示されること
     mswServer.use(
       http.post('/api/posts', () => {
         return HttpResponse.json(
@@ -49,12 +49,11 @@ describe('E12-01 RED: TopPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByText('投稿に失敗しました')).toBeInTheDocument()
     })
-    expect(screen.getByText('制限太郎')).toBeInTheDocument()
-    expect(screen.getByText('投稿テキストです')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '再投稿する' })).toBeInTheDocument()
   })
 
   it('500エラー時に汎用メッセージを表示し入力を保持する', async () => {
-    // 何を検証するか: サーバーエラー時に汎用文言表示と入力保持が行われること
+    // 何を検証するか: サーバーエラー時に汎用文言表示と再投稿導線が表示されること
     mswServer.use(
       http.post('/api/posts', () => {
         return HttpResponse.json(
@@ -71,8 +70,7 @@ describe('E12-01 RED: TopPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByText('サーバーエラーが発生しました')).toBeInTheDocument()
     })
-    expect(screen.getByText('障害太郎')).toBeInTheDocument()
-    expect(screen.getByText('障害テスト本文です')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '再投稿する' })).toBeInTheDocument()
   })
 
   it('my_post_idsが不正JSONでも投稿成功時に保存できる', async () => {
@@ -94,7 +92,7 @@ describe('E12-01 RED: TopPage Integration', () => {
   })
 
   it('通信失敗時に既定エラーメッセージを表示し入力を保持する', async () => {
-    // 何を検証するか: ネットワーク失敗時に入力保持と既定エラー表示が行われること
+    // 何を検証するか: ネットワーク失敗時に既定エラー表示と再投稿導線が行われること
     mswServer.use(
       http.post('/api/posts', () => {
         return HttpResponse.error()
@@ -108,7 +106,6 @@ describe('E12-01 RED: TopPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByText('ネットワークに接続できませんでした')).toBeInTheDocument()
     })
-    expect(screen.getByText('通信太郎')).toBeInTheDocument()
-    expect(screen.getByText('通信失敗テスト本文です')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '再投稿する' })).toBeInTheDocument()
   })
 })

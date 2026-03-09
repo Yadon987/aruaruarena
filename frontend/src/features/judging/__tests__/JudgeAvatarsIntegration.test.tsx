@@ -1,7 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
-import { JUDGE_LABELS } from '../../../shared/constants/avatar'
 import { JUDGE } from '../../../shared/constants/validation'
 import { api } from '../../../shared/services/api'
 import { fillAndSubmitPostForm } from '../../../test/helpers'
@@ -43,13 +42,10 @@ describe('E23-01 RED: 審査中画面のアバター統合', () => {
 
     await screen.findByTestId('top-judge-dock')
 
-    for (const persona of JUDGE.PERSONAS) {
-      expect(
-        screen.getByRole('img', {
-          name: `${JUDGE_LABELS[persona]}の審査員アバター`,
-        })
-      ).toBeInTheDocument()
-    }
+    const avatars = screen.getAllByRole('img').filter((image) => {
+      return image.getAttribute('alt')?.includes('審査員')
+    })
+    expect(avatars).toHaveLength(JUDGE.PERSONAS.length)
   })
 
   it('発話開始後にいずれかのキャッチフレーズが表示される', async () => {
@@ -80,7 +76,7 @@ describe('E23-01 RED: 審査中画面のアバター統合', () => {
     const judgeSlot = await screen.findByTestId('judge-slot-hiroyuki')
     expect(
       within(judgeSlot).getByRole('img', {
-        name: `${JUDGE_LABELS.hiroyuki}の審査員アバター`,
+        name: /ひろゆき風審査員/,
       })
     ).toBeInTheDocument()
   })

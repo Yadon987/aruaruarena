@@ -67,9 +67,12 @@ describe('postFormHelpers', () => {
     await fillAndSubmitPostForm({ nickname: 'テスト太郎', body: 'テスト本文です' })
 
     await screen.findByTestId('judging-screen')
-    expect(api.posts.create).toHaveBeenCalledWith({
+    expect(api.posts.create).toHaveBeenCalledWith(
+      {
       nickname: 'テスト太郎',
       body: 'テスト本文です',
-    })
+      },
+      expect.any(Object)
+    )
   })
 })

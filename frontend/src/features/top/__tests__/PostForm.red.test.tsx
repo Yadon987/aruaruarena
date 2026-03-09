@@ -43,10 +43,13 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     await waitFor(() => {
       expect(api.posts.create).toHaveBeenCalledTimes(1)
     })
-    expect(api.posts.create).toHaveBeenCalledWith({
-      nickname: 'てすと太郎',
-      body: 'あるあるネタです',
-    })
+    expect(api.posts.create).toHaveBeenCalledWith(
+      {
+        nickname: 'てすと太郎',
+        body: 'あるあるネタです',
+      },
+      expect.any(Object)
+    )
     await waitFor(() => {
       expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
     })
