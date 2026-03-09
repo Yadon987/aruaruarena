@@ -81,6 +81,7 @@ export function RankingModal({
   }
 
   const handleOverlayKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return
     if (event.key !== KEY_ENTER && event.key !== KEY_SPACE) return
     event.preventDefault()
     handleClose()

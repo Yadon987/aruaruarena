@@ -243,6 +243,7 @@ function App() {
   const myPostsTriggerRef = useRef<HTMLButtonElement | null>(null)
   const privacyPolicyTriggerRef = useRef<HTMLButtonElement | null>(null)
   const rankingTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const footerActionSheetTriggerRef = useRef<HTMLButtonElement | null>(null)
   const footerRef = useRef<HTMLElement | null>(null)
   const footerDockRef = useRef<HTMLDivElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
@@ -853,6 +854,7 @@ function App() {
 
   const closeFooterActionSheet = () => {
     setIsFooterActionSheetOpen(false)
+    footerActionSheetTriggerRef.current?.focus()
   }
 
   const retryPostSubmit = useCallback(() => {
@@ -1336,6 +1338,7 @@ function App() {
                     variant="primary"
                     className="footer-main-action-button"
                     ariaLabel="その他を開く"
+                    ref={footerActionSheetTriggerRef}
                     onClick={openFooterActionSheet}
                   >
                     その他
