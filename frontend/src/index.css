@@ -130,26 +130,26 @@
 .neon-button-base.neon-glow-blue.center-submit-cta::after {
   content: '';
   position: absolute;
-  top: -58%;
-  left: -34%;
-  width: 11%;
-  height: 220%;
+  top: -64%;
+  left: -36%;
+  width: 20%;
+  height: 240%;
   pointer-events: none;
   transform: rotate(22deg);
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.06) 34%,
-    rgba(255, 255, 255, 0.2) 46%,
-    rgba(255, 255, 255, 0.64) 50%,
-    rgba(255, 255, 255, 0.2) 54%,
-    rgba(255, 255, 255, 0.06) 66%,
+    rgba(255, 233, 160, 0.28) 34%,
+    rgba(255, 215, 116, 0.58) 46%,
+    rgba(255, 196, 74, 0.96) 50%,
+    rgba(255, 215, 116, 0.58) 54%,
+    rgba(255, 233, 160, 0.28) 66%,
     rgba(255, 255, 255, 0) 100%
   );
   mix-blend-mode: screen;
-  filter: blur(1.4px);
+  filter: blur(0.9px);
   opacity: 0;
-  animation: submit-cta-sheen 4.4s linear infinite;
+  animation: submit-cta-sheen 3.4s linear infinite;
 }
 
 .footer-main-actions-track {
@@ -320,7 +320,7 @@
 }
 
 .neon-button-base.neon-glow-blue.center-submit-cta:hover:not(:disabled)::after {
-  animation: submit-cta-sheen 3.8s linear infinite;
+  animation: submit-cta-sheen 2.9s linear infinite;
 }
 
 .neon-glow-pink {
@@ -410,24 +410,24 @@
 
 @keyframes submit-cta-sheen {
   0% {
-    left: -34%;
+    left: -36%;
     opacity: 0;
   }
-  76% {
-    left: -34%;
+  72% {
+    left: -36%;
     opacity: 0;
   }
-  82% {
-    left: 18%;
-    opacity: 0.42;
+  80% {
+    left: 14%;
+    opacity: 0.72;
   }
-  90% {
-    left: 56%;
-    opacity: 0.56;
+  88% {
+    left: 54%;
+    opacity: 0.95;
   }
-  93% {
-    left: 104%;
-    opacity: 0.56;
+  94% {
+    left: 102%;
+    opacity: 0.72;
   }
   100% {
     left: 124%;
@@ -500,11 +500,11 @@
 
 .judge-seat-back {
   position: absolute;
-  left: 8%;
-  top: 8%;
-  width: 84%;
-  height: 66%;
-  border-radius: 0.85rem 0.85rem 0.4rem 0.4rem;
+  left: -1%;
+  top: -40%;
+  width: 102%;
+  height: 134%;
+  border-radius: 1rem 1rem 0.55rem 0.55rem;
   background:
     linear-gradient(180deg, rgba(180, 236, 255, 0.35) 0%, rgba(12, 36, 62, 0.92) 100%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02));
@@ -1025,8 +1025,8 @@
   }
 
   .judge-seat-back {
-    top: 9%;
-    height: 65%;
+    top: -38%;
+    height: 132%;
   }
 
 }
@@ -1038,8 +1038,8 @@
   }
 
   .judge-seat-back {
-    top: 11%;
-    height: 63%;
+    top: -36%;
+    height: 130%;
   }
 
 }
@@ -1062,8 +1062,8 @@
   }
 
   .judge-seat-back {
-    top: 18%;
-    height: 60%;
+    top: -32%;
+    height: 126%;
   }
 
 }
