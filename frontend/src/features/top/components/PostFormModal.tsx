@@ -101,6 +101,7 @@ export function PostFormModal({
           className="fixed inset-0 z-50 flex h-full items-center justify-center bg-black/60 p-4"
           data-testid="modal-overlay"
           onClick={handleBackdropClick}
+          onKeyDown={handleDialogKeyDown}
         >
           <div className="relative flex h-full items-center justify-center p-4">
             <div

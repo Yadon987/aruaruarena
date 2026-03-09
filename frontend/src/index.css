@@ -672,6 +672,7 @@
 @media (max-width: 360px) {
   .judge-desk-panel {
     --judge-slot-scale: 0.64;
+
     padding: 1.3rem 0.3rem;
     min-height: 7.4rem;
   }
@@ -798,6 +799,11 @@
 
   .score-particles-active .score-particle {
     display: none;
+  }
+
+  .neon-glow-blue:hover:not(:disabled)::after,
+  .neon-glow-pink:hover:not(:disabled)::after {
+    animation: none;
   }
 }
 

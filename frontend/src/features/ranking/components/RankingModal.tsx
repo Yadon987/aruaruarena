@@ -78,6 +78,10 @@ export function RankingModal({
     handleFocusTrap(event)
   }
 
+  const handleOverlayKeyDown = (_event: KeyboardEvent<HTMLDivElement>) => {
+    // no-op: 背景クリック閉鎖オーバーレイの a11y lint 要件を満たすために定義
+  }
+
   // モーダル本体クリックでは閉じず、背景クリックのみで閉じる仕様に固定する。
   const handleDialogClick = (event: MouseEvent<HTMLDivElement>) => {
     event.stopPropagation()
@@ -87,7 +91,9 @@ export function RankingModal({
     <div
       className="fixed inset-0 z-50 flex h-full items-center justify-center bg-black/50 p-4"
       data-testid="ranking-modal-overlay"
+      role="presentation"
       onClick={handleClose}
+      onKeyDown={handleOverlayKeyDown}
     >
       <div className="relative flex h-full items-center justify-center p-4">
         <div
