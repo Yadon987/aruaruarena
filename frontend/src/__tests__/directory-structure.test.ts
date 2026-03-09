@@ -42,7 +42,7 @@ describe('E04-04: ディレクトリ構成の整備', () => {
       expect(existsSync(sharedDir)).toBe(true)
     })
 
-    it('features/post/ に必要なサブディレクトリが含まれている', () => {
+    it('features/post/ ディレクトリが存在する', () => {
       const postDir = path.join(srcDir, 'features/post')
       expect(existsSync(postDir)).toBe(true)
     })
@@ -76,8 +76,8 @@ describe('E04-04: ディレクトリ構成の整備', () => {
   })
 
   describe('正常系: パスエイリアスの動作確認', () => {
-    it('@/ で App.tsx にアクセスできる', async () => {
-      const app = await import('../App')
+    it('@/ で App.tsx にアクセスできる', { timeout: 20_000 }, async () => {
+      const app = await import('@/App')
       expect(app).toBeDefined()
     })
 

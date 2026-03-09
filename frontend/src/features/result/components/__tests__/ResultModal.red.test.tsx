@@ -214,6 +214,27 @@ describe('E15-01 RED: ResultModal Component', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('Escapeキーで閉じる', () => {
+    // 何を検証するか: キーボード操作(Escape)で結果モーダルを閉じられること
+    const onClose = vi.fn()
+    render(
+      <ResultModal
+        isOpen
+        post={buildModalPost()}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={onClose}
+      />
+    )
+
+    fireEvent.keyDown(screen.getByRole('dialog', { name: '審査結果モーダル' }), { key: 'Escape' })
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('judgment.success=false の場合に失敗表示を行う', async () => {
     // 何を検証するか: 審査員ごとの success=false がカードに失敗として表示されること
     await moveToResultScreen({

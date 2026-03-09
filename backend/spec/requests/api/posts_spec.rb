@@ -440,8 +440,8 @@ RSpec.describe 'API::Posts', type: :request do
       # When: 投稿リクエスト
       # Then: 例外を握りつぶして投稿成功（201 Created）
       it 'レート制限設定時の例外は投稿を阻害しない' do
-        # 何を検証するか: RateLimiterService.set_limit! が失敗しても投稿作成レスポンスが成功すること
-        allow(RateLimiterService).to receive(:set_limit!).and_raise(StandardError, 'set failed')
+        # 何を検証するか: RateLimiterService.set_limit! が失敗(false)でも投稿作成レスポンスが成功すること
+        allow(RateLimiterService).to receive(:set_limit!).and_return(false)
         allow(Rails.logger).to receive(:error)
 
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
@@ -449,6 +449,7 @@ RSpec.describe 'API::Posts', type: :request do
         expect(response).to have_http_status(:created)
         json = response.parsed_body
         expect(json['id']).to be_present
+        expect(Rails.logger).to have_received(:error).with('[PostsController#create] Rate limit set failed')
       end
     end
 

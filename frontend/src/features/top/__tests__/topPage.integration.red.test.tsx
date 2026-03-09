@@ -16,6 +16,9 @@ describe('E12-01 RED: TopPage Integration', () => {
   async function expectRetryRestoresFormInput(nickname: string, body: string) {
     const retryButton = screen.getByRole('button', { name: '再投稿する' })
     fireEvent.click(retryButton)
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '再投稿する' })).not.toBeInTheDocument()
+    })
 
     const dialog = await screen.findByRole('dialog', { name: '投稿フォーム' })
     expect(dialog).toBeInTheDocument()
