@@ -857,6 +857,14 @@ function App() {
     footerActionSheetTriggerRef.current?.focus()
   }
 
+  useEffect(() => {
+    if (!isFooterActionSheetOpen) return
+    const rafId = window.requestAnimationFrame(() => {
+      myPostsTriggerRef.current?.focus()
+    })
+    return () => window.cancelAnimationFrame(rafId)
+  }, [isFooterActionSheetOpen])
+
   const retryPostSubmit = useCallback(() => {
     // 再投稿は入力復元を前提に、トップの投稿モーダルへ復帰するだけの導線に限定する。
     clearJudgingPolling()
