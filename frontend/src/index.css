@@ -9,7 +9,7 @@
   --judge-slot-scale: 0.8;
   --judge-avatar-width: calc(8.75rem * var(--judge-slot-scale));
   --judge-bubble-width: calc(12.5rem * var(--judge-slot-scale));
-  --judge-bubble-offset-y: clamp(6.6rem, calc(7.5rem * var(--judge-slot-scale)), 9.1rem);
+  --judge-bubble-offset-y: clamp(6.9rem, calc(7.8rem * var(--judge-slot-scale)), 9.4rem);
   --judge-score-width: calc(20rem * var(--judge-slot-scale));
   --judge-stack-offset-y: calc(5rem * var(--judge-slot-scale));
   --judge-score-margin-top: calc(3.125rem * var(--judge-slot-scale));
