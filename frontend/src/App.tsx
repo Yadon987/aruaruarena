@@ -1322,27 +1322,27 @@ function App() {
                 className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
               >
                 {isMobileFooterLayout && !isFooterActionSheetOpen ? (
-                  <>
+                  <div className="flex items-center gap-2">
                     <NeonButton
                       type="button"
                       variant="secondary"
-                      compactOnMobile={true}
+                      className="footer-main-action-button"
                       ariaLabel="ランキング"
                       ref={rankingTriggerRef}
                       onClick={openRankingModal}
                     >
                       ランキング
                     </NeonButton>
-                  <NeonButton
-                    type="button"
-                    variant="primary"
-                    compactOnMobile={true}
-                    ariaLabel="その他を開く"
-                    onClick={openFooterActionSheet}
-                  >
-                    その他
-                  </NeonButton>
-                  </>
+                    <NeonButton
+                      type="button"
+                      variant="primary"
+                      className="footer-main-action-button"
+                      ariaLabel="その他を開く"
+                      onClick={openFooterActionSheet}
+                    >
+                      その他
+                    </NeonButton>
+                  </div>
                 ) : !isMobileFooterLayout ? (
                   <>
                     <NeonButton
