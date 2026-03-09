@@ -111,13 +111,15 @@ describe('E24-04 RED: JudgeAvatars', () => {
   })
 
   it('アバターコンテナのgapが拡張される', async () => {
-    // 何を検証するか: スマホは隙間を詰めつつ、タブレット以上で段階的にgapを広げること
+    // 何を検証するか: 狭幅スマホでは余白を詰めつつ、タブレット以上で段階的にgapを広げること
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     render(<JudgeAvatars isJudging={false} isPostModalOpen={false} />)
 
     const container = screen.getByTestId('judge-avatars-container')
-    expect(container).toHaveClass('gap-0.5')
+    expect(container).toHaveClass('gap-0')
+    expect(container).toHaveClass('px-1.5')
+    expect(container.className).toMatch(/max-\[360px\]:px-1/)
     expect(container.className).toMatch(/sm:gap-2/)
     expect(container.className).toMatch(/md:gap-6/)
     expect(container.className).toMatch(/lg:gap-8/)

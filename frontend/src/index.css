@@ -410,6 +410,7 @@
   min-height: calc(5.7rem * var(--judge-slot-scale));
   padding: calc(0.74rem * var(--judge-slot-scale)) calc(0.98rem * var(--judge-slot-scale))
     calc(0.4rem * var(--judge-slot-scale));
+  overflow: hidden;
   border-radius: 0.62rem;
   background:
     linear-gradient(180deg, rgba(16, 10, 7, 0.94), rgba(8, 5, 3, 0.96)),
@@ -496,6 +497,25 @@
     0 0 10px rgba(255, 124, 46, 0.96),
     0 0 22px rgba(255, 160, 72, 0.82),
     0 0 34px rgba(255, 206, 132, 0.54);
+}
+
+@media (max-width: 360px) {
+  .judge-desk-panel {
+    --judge-slot-scale: 0.64;
+    padding: 1.3rem 0.3rem;
+    min-height: 7.4rem;
+  }
+
+  .score-display-plate {
+    width: min(100%, calc(8.3rem * var(--judge-slot-scale)));
+    padding: calc(0.58rem * var(--judge-slot-scale)) calc(0.45rem * var(--judge-slot-scale))
+      calc(0.34rem * var(--judge-slot-scale));
+  }
+
+  .digital-score {
+    font-size: clamp(2.45rem, 13.6vw, calc(4.1rem * var(--judge-slot-scale)));
+    letter-spacing: calc(0.06em * var(--judge-slot-scale));
+  }
 }
 
 @media (min-width: 640px) {
