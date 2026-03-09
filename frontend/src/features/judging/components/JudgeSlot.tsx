@@ -8,6 +8,8 @@ import { useScoreRoulette } from '../../../shared/hooks/useScoreRoulette'
 import type { AvatarState } from '../../../shared/constants/avatar'
 import type { JudgePersona } from '../../../shared/types/domain'
 import type { JudgeDeskJudgment, JudgeDeskPhase } from './JudgeDesk'
+import type { JudgeSeatBackrestVariant } from './JudgeSeatBackrest'
+import { JudgeSeatBackrest } from './JudgeSeatBackrest'
 import { JudgeSpeechBubble } from './JudgeSpeechBubble'
 
 /** 審査員の表示名 */
@@ -17,9 +19,17 @@ const JUDGE_LABELS: Record<JudgePersona, string> = {
   nakao: '中尾彬',
 }
 
+/** 審査員席の名札文言 */
+const JUDGE_NAMEPLATES: Record<JudgePersona, string> = {
+  nakao: '大物俳優N',
+  hiroyuki: '論破王H',
+  dewi: '富豪D夫人',
+}
+
 const SCORE_PLACEHOLDER = '00'
 const SCORE_NOT_AVAILABLE = 'N/A'
 const AVATAR_BREATHING_CLASS = 'judge-avatar-speaking-breath'
+const ACTIVE_BACKREST_VARIANT: JudgeSeatBackrestVariant = 'royal-crown'
 const VIP_IDLE_CYCLE_MS = 5000
 const VIP_FLASH_TOTAL_MS = 1200
 const VIP_BULBS = [
@@ -48,9 +58,7 @@ const SCORE_PARTICLES = [
   { x: -12, y: 28 },
   { x: -30, y: 14 },
 ] as const
-const VIP_BULB_STEP_MS = Math.round(
-  JUDGE_ENTRANCE.DURATION_MS / Math.max(VIP_BULBS.length - 1, 1)
-)
+const VIP_BULB_STEP_MS = Math.round(JUDGE_ENTRANCE.DURATION_MS / Math.max(VIP_BULBS.length - 1, 1))
 
 /** 登場アニメーションのバリアント型 */
 type MotionImageProps = ComponentProps<typeof motion.img>
@@ -153,6 +161,7 @@ export function JudgeSlot({
     placeholder: SCORE_PLACEHOLDER,
   })
   const scoreLabel = scoreState.isFailed ? SCORE_NOT_AVAILABLE : displayValue
+  const nameplateLabel = JUDGE_NAMEPLATES[judge]
   const scoreAriaLabel = buildScoreStateAriaLabel({
     judge,
     isFailed: scoreState.isFailed,
@@ -222,7 +231,7 @@ export function JudgeSlot({
       )}
 
       {/* 背もたれ（アバター背面） */}
-      <div className="judge-seat-back vip-judge-seat" aria-hidden="true" />
+      <JudgeSeatBackrest variant={ACTIVE_BACKREST_VARIANT} />
 
       {/* アバター（Framer Motion が transform を上書きするため、位置調整は外側要素に適用する） */}
       <div
@@ -257,6 +266,9 @@ export function JudgeSlot({
         aria-label={scoreAriaLabel}
         role="group"
       >
+        <span className="judge-seat-nameplate" data-testid={`judge-seat-nameplate-${judge}`}>
+          {nameplateLabel}
+        </span>
         <div className="vip-bulb-track" aria-hidden="true">
           {VIP_BULBS.map((bulb, index) => {
             const style: CSSProperties = {
