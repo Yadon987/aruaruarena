@@ -55,7 +55,7 @@ describe('App Game Show Layout Refactor', () => {
     const avatars = within(dock).getAllByRole('img')
     expect(avatars.length).toBeGreaterThan(0)
     avatars.forEach((avatar) => {
-      expect(avatar).toHaveClass('w-28')
+      expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })
     })
   })
 

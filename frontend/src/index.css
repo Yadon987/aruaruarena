@@ -6,6 +6,14 @@
   --font-digital: 'DSEG7-Classic', 'Orbitron', 'Courier New', monospace;
   --main-action-track-width: min(82vw, 18.25rem);
   --main-action-gap: 0.42rem;
+  --judge-slot-scale: 0.8;
+  --judge-avatar-width: calc(8.75rem * var(--judge-slot-scale));
+  --judge-bubble-width: calc(12.5rem * var(--judge-slot-scale));
+  --judge-bubble-offset-y: calc(8.75rem * var(--judge-slot-scale));
+  --judge-score-width: calc(20rem * var(--judge-slot-scale));
+  --judge-stack-offset-y: calc(5rem * var(--judge-slot-scale));
+  --judge-score-margin-top: calc(3.125rem * var(--judge-slot-scale));
+  --judge-avatar-margin-bottom: calc(2.5rem * var(--judge-slot-scale));
 }
 
 .game-show-stage {
@@ -188,6 +196,7 @@
   :root {
     --main-action-track-width: min(68vw, 20rem);
     --main-action-gap: 0.5rem;
+    --judge-slot-scale: 0.86;
   }
 
   .neon-button-base.neon-glow-blue.center-submit-cta {
@@ -201,6 +210,7 @@
   :root {
     --main-action-track-width: min(60vw, 21rem);
     --main-action-gap: 0.56rem;
+    --judge-slot-scale: 0.92;
   }
 }
 
@@ -208,6 +218,7 @@
   :root {
     --main-action-track-width: clamp(18rem, 30vw, 22rem);
     --main-action-gap: 0.64rem;
+    --judge-slot-scale: 1.4;
   }
 }
 
@@ -477,7 +488,6 @@
 }
 
 .judge-desk-panel {
-  --judge-slot-scale: 0.8;
   border-radius: 1rem;
   padding: 1.9rem 0.85rem;
   min-height: 10.2rem;
@@ -859,9 +869,11 @@
 }
 
 @media (max-width: 360px) {
-  .judge-desk-panel {
+  :root {
     --judge-slot-scale: 0.64;
+  }
 
+  .judge-desk-panel {
     padding: 1.3rem 0.3rem;
     min-height: 7.4rem;
   }
@@ -884,7 +896,6 @@
   }
 
   .judge-desk-panel {
-    --judge-slot-scale: 0.86;
     padding: 1.9rem 0.85rem;
     min-height: 10.2rem;
   }
@@ -898,7 +909,6 @@
 
 @media (min-width: 768px) {
   .judge-desk-panel {
-    --judge-slot-scale: 0.92;
     padding: 2.05rem 1rem;
     min-height: 12.6rem;
   }
@@ -923,7 +933,6 @@
   }
 
   .judge-desk-panel {
-    --judge-slot-scale: 1.4;
     padding: 2.25rem 1.15rem;
     min-height: 14.8rem;
   }
@@ -936,13 +945,13 @@
 }
 
 @media (min-width: 1280px) {
-  .judge-desk-panel {
+  :root {
     --judge-slot-scale: 1.55;
   }
 }
 
 @media (min-width: 1536px) {
-  .judge-desk-panel {
+  :root {
     --judge-slot-scale: 1.68;
   }
 }

@@ -19,7 +19,6 @@ const JUDGE_LABELS: Record<JudgePersona, string> = {
 
 const SCORE_PLACEHOLDER = '00'
 const SCORE_NOT_AVAILABLE = 'N/A'
-const AVATAR_SIZE_CLASS = 'h-auto w-28 sm:w-36 md:w-48 lg:w-56 xl:w-64 2xl:w-72'
 const AVATAR_BREATHING_CLASS = 'judge-avatar-speaking-breath'
 const VIP_IDLE_CYCLE_MS = 5000
 const VIP_FLASH_TOTAL_MS = 1200
@@ -206,7 +205,13 @@ export function JudgeSlot({
     >
       {/* 吹き出し */}
       {speechText && showSpeech && (
-        <div className="absolute -top-28 left-1/2 z-30 w-40 -translate-x-1/2 sm:-top-[7.5rem] sm:w-52 md:-top-[8.5rem] md:w-60 lg:-top-[9.5rem] lg:w-64 xl:-top-[10.5rem] xl:w-72 2xl:-top-[11rem] 2xl:w-80">
+        <div
+          className="absolute left-1/2 z-30 -translate-x-1/2"
+          style={{
+            top: 'calc(-1 * var(--judge-bubble-offset-y))',
+            width: 'var(--judge-bubble-width)',
+          }}
+        >
           <JudgeSpeechBubble
             isVisible={true}
             text={speechText}
@@ -220,12 +225,18 @@ export function JudgeSlot({
       <div className="judge-seat-back vip-judge-seat" aria-hidden="true" />
 
       {/* アバター（Framer Motion が transform を上書きするため、位置調整は外側要素に適用する） */}
-      <div className="relative z-10 -mb-8 -translate-y-16 md:-mb-14 md:-translate-y-[5.5rem] lg:-mb-16 lg:-translate-y-[7rem]">
+      <div
+        className="relative z-10"
+        style={{
+          marginBottom: 'calc(-1 * var(--judge-avatar-margin-bottom))',
+          transform: 'translateY(calc(-1 * var(--judge-stack-offset-y)))',
+        }}
+      >
         <div className={isSpeaking ? AVATAR_BREATHING_CLASS : ''}>
           <motion.img
             src={getAvatarImagePath(judge, avatarState)}
             alt={alt}
-            className={AVATAR_SIZE_CLASS}
+            style={{ width: 'var(--judge-avatar-width)', height: 'auto' }}
             initial={entranceVariant.initial}
             animate={entranceVariant.animate}
             transition={entranceVariant.transition}
@@ -238,7 +249,11 @@ export function JudgeSlot({
       <div
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
-        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} ${scoreMotionClass} ${particleClass} glass-panel relative z-20 -mt-10 w-full max-w-[16rem] sm:max-w-[18rem] md:-mt-14 md:max-w-[22rem] lg:-mt-[4.5rem] lg:max-w-[26rem] xl:-mt-[5rem] xl:max-w-[30rem] 2xl:max-w-[34rem]`}
+        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} ${scoreMotionClass} ${particleClass} glass-panel relative z-20 w-full`}
+        style={{
+          maxWidth: 'var(--judge-score-width)',
+          marginTop: 'calc(-1 * var(--judge-score-margin-top))',
+        }}
         aria-label={scoreAriaLabel}
         role="group"
       >
