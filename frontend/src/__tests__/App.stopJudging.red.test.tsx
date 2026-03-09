@@ -65,7 +65,7 @@ describe('E30-01 RED: 審査停止導線', () => {
 
   it('停止後に投稿作成成功レスポンスが返っても審査画面へ戻らない', async () => {
     // 何を検証するか: 停止後の遅延成功応答を無効化し、画面巻き戻りを防げること
-    let resolveCreate: ((value: { id: string; status: 'judging' }) => void) | null = null
+    let resolveCreate: (value: { id: string; status: 'judging' }) => void = () => {}
     const createPromise = new Promise<{ id: string; status: 'judging' }>((resolve) => {
       resolveCreate = resolve
     })
@@ -88,7 +88,7 @@ describe('E30-01 RED: 審査停止導線', () => {
       expect(window.location.pathname).toBe('/')
     })
 
-    resolveCreate?.({ id: 'delayed-official-id', status: 'judging' })
+    resolveCreate({ id: 'delayed-official-id', status: 'judging' })
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
       expect(window.location.pathname).toBe('/')
