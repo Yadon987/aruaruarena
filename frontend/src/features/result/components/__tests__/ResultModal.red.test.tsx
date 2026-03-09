@@ -230,7 +230,9 @@ describe('E15-01 RED: ResultModal Component', () => {
       />
     )
 
-    fireEvent.keyDown(screen.getByRole('dialog', { name: '審査結果モーダル' }), { key: 'Escape' })
+    const closeButton = screen.getByRole('button', { name: '閉じる' })
+    closeButton.focus()
+    fireEvent.keyDown(closeButton, { key: 'Escape' })
 
     expect(onClose).toHaveBeenCalledTimes(1)
   })
