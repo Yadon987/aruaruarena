@@ -173,9 +173,7 @@ describe('JudgeAvatars Refactor', () => {
     const avatars = screen.getAllByRole('img')
     expect(avatars.length).toBe(3)
     avatars.forEach((avatar) => {
-      expect(avatar).toHaveClass('w-28')
-      expect(avatar.className).toMatch(/md:w-48/)
-      expect(avatar.className).toMatch(/lg:w-56/)
+      expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })
     })
   })
 
@@ -189,13 +187,13 @@ describe('JudgeAvatars Refactor', () => {
 
     const homeAvatars = screen.getAllByRole('img')
     homeAvatars.forEach((avatar) => {
-      expect(avatar).toHaveClass('w-28')
+      expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })
     })
 
     rerender(<JudgeAvatars isJudging={true} isPostModalOpen={false} judgingPhase="speaking" />)
     const judgingAvatars = screen.getAllByRole('img')
     judgingAvatars.forEach((avatar) => {
-      expect(avatar).toHaveClass('w-28')
+      expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })
     })
   })
 
@@ -208,7 +206,7 @@ describe('JudgeAvatars Refactor', () => {
     )
     const defaultAvatars = screen.getAllByRole('img')
     defaultAvatars.forEach((avatar) => {
-      expect(avatar).toHaveClass('w-28')
+      expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })
     })
 
     rerender(
@@ -220,7 +218,7 @@ describe('JudgeAvatars Refactor', () => {
     )
     const compactAvatars = screen.getAllByRole('img')
     compactAvatars.forEach((avatar) => {
-      expect(avatar).toHaveClass('w-28')
+      expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })
     })
   })
 

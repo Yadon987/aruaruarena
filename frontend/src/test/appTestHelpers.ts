@@ -19,7 +19,8 @@ export function mockRankings(rankings: RankingItem[], totalCount: number = ranki
 
 export async function openMyPostsDialog() {
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'その他を開く' }))
+    fireEvent.click(await screen.findByRole('button', { name: '過去の投稿' }))
   })
   return screen.findByRole('dialog', { name: '自分の投稿' })
 }

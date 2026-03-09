@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
@@ -30,53 +30,44 @@ describe('E25-01 RED: App Game Show Layout', () => {
     expect(screen.queryByRole('banner')).not.toBeInTheDocument()
   })
 
-  it('画面右上に「投稿する」「音声切り替え」が並ぶ', () => {
-    // 何を検証するか: E25-01の受け入れ基準として、画面右上の操作領域に2つのボタンが横並びで配置されること
+  it('画面右上には音声切り替えのみ表示し、「投稿する」はメイン導線に表示される', () => {
+    // 何を検証するか: 右上は補助操作のみとし、投稿導線は中央のメインエリアに配置されること
     render(<App />)
 
     const actionControls = screen.getByTestId('top-action-controls')
-    const postButton = within(actionControls).getByRole('button', { name: '投稿する' })
     const soundButton = within(actionControls).getByRole('button', { name: /音声/ })
+    const postButton = screen.getByRole('button', { name: '投稿する' })
 
     expect(actionControls).toHaveClass('fixed')
+    expect(within(actionControls).queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
     expect(postButton).toBeInTheDocument()
     expect(soundButton).toBeInTheDocument()
     expect(postButton).toHaveClass('neon-button-base')
     expect(soundButton).toHaveClass('neon-button-base')
   })
 
-  it('フッターに「過去の投稿」「ランキング」「プライバシーポリシー」「問い合わせ」が並ぶ', () => {
-    // 何を検証するか: E25-01の受け入れ基準として、フッターに4つの導線ボタンが揃って表示されること
+  it('フッターは全サイズで「ランキング」「その他」の2ボタン構成になる', () => {
+    // 何を検証するか: 主要導線を2ボタンへ集約し、補助導線は「その他」に統合されること
     render(<App />)
 
     const footer = screen.getByRole('contentinfo')
     expect(footer).toHaveClass('flex-nowrap')
-    const myPostsButton = within(footer).getByRole('button', { name: '過去の投稿' })
     const rankingButton = within(footer).getByRole('button', { name: 'ランキング' })
-    const privacyButton = within(footer).getByRole('button', { name: 'プライバシーポリシー' })
-    const contactButton = within(footer).getByRole('button', { name: '問い合わせ（新しいタブで開く）' })
+    const otherButton = within(footer).getByRole('button', { name: 'その他を開く' })
 
-    expect(myPostsButton).toBeInTheDocument()
     expect(rankingButton).toBeInTheDocument()
-    expect(privacyButton).toBeInTheDocument()
-    expect(contactButton).toBeInTheDocument()
-    expect(myPostsButton).toHaveClass('neon-button-base')
-    expect(myPostsButton).toHaveClass('neon-button-compact-mobile')
+    expect(otherButton).toBeInTheDocument()
     expect(rankingButton).toHaveClass('neon-button-base')
-    expect(rankingButton).toHaveClass('neon-button-compact-mobile')
-    expect(privacyButton).toHaveClass('neon-button-base')
-    expect(privacyButton).toHaveClass('neon-button-compact-mobile')
-    expect(contactButton).toHaveClass('neon-button-base')
-    expect(contactButton).toHaveClass('neon-button-compact-mobile')
+    expect(otherButton).toHaveClass('neon-button-base')
   })
 
-  it('問い合わせボタン押下でフォームURLを新規タブで開く', () => {
+  it('「その他」内の問い合わせ押下でフォームURLを新規タブで開く', () => {
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
     render(<App />)
 
-    const footer = screen.getByRole('contentinfo')
-    const contactButton = within(footer).getByRole('button', { name: '問い合わせ（新しいタブで開く）' })
-    contactButton.click()
+    fireEvent.click(screen.getByRole('button', { name: 'その他を開く' }))
+    const contactButton = screen.getByRole('button', { name: '問い合わせ（新しいタブで開く）' })
+    fireEvent.click(contactButton)
 
     expect(windowOpenSpy).toHaveBeenCalledWith(
       'https://forms.gle/zLN3j3YF87qdULXB9',

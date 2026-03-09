@@ -68,7 +68,6 @@ const SOUND_SE_RESULT_OPEN = 'se_result_open'
 const CONTACT_FORM_URL = 'https://forms.gle/zLN3j3YF87qdULXB9'
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
-const MOBILE_FOOTER_MEDIA_QUERY = '(max-width: 639px)'
 
 type ValidationErrors = {
   nicknameError: string
@@ -226,7 +225,6 @@ function App() {
   const [isMuted, setIsMuted] = useState(() => sound.isMuted)
   const [isRankingModalOpen, setIsRankingModalOpen] = useState(false)
   const [isFooterActionSheetOpen, setIsFooterActionSheetOpen] = useState(false)
-  const [isMobileFooterLayout, setIsMobileFooterLayout] = useState(false)
   const [isStopJudgingConfirmOpen, setIsStopJudgingConfirmOpen] = useState(false)
   const [judgingPostId, setJudgingPostId] = useState('')
   const [judgingErrorMessage, setJudgingErrorMessage] = useState('')
@@ -245,6 +243,7 @@ function App() {
   const myPostsTriggerRef = useRef<HTMLButtonElement | null>(null)
   const privacyPolicyTriggerRef = useRef<HTMLButtonElement | null>(null)
   const rankingTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const footerActionSheetTriggerRef = useRef<HTMLButtonElement | null>(null)
   const footerRef = useRef<HTMLElement | null>(null)
   const footerDockRef = useRef<HTMLDivElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
@@ -452,28 +451,6 @@ function App() {
       document.body.style.overflow = previousOverflow
     }
   }, [isRankingModalOpen])
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return
-
-    const mediaQueryList = window.matchMedia(MOBILE_FOOTER_MEDIA_QUERY)
-    const applyLayout = (matches: boolean) => {
-      setIsMobileFooterLayout(matches)
-      if (!matches) {
-        setIsFooterActionSheetOpen(false)
-      }
-    }
-    applyLayout(mediaQueryList.matches)
-
-    const handleMediaChange = (event: MediaQueryListEvent) => {
-      applyLayout(event.matches)
-    }
-    mediaQueryList.addEventListener('change', handleMediaChange)
-
-    return () => {
-      mediaQueryList.removeEventListener('change', handleMediaChange)
-    }
-  }, [])
 
   useEffect(() => {
     if (viewMode !== 'top') {
@@ -868,12 +845,25 @@ function App() {
   }
 
   const openFooterActionSheet = () => {
+    setIsMyPostsOpen(false)
+    setIsPrivacyPolicyOpen(false)
+    setIsRankingModalOpen(false)
+    resetMyPostsModalState()
     setIsFooterActionSheetOpen(true)
   }
 
   const closeFooterActionSheet = () => {
     setIsFooterActionSheetOpen(false)
+    footerActionSheetTriggerRef.current?.focus()
   }
+
+  useEffect(() => {
+    if (!isFooterActionSheetOpen) return
+    const rafId = window.requestAnimationFrame(() => {
+      myPostsTriggerRef.current?.focus()
+    })
+    return () => window.cancelAnimationFrame(rafId)
+  }, [isFooterActionSheetOpen])
 
   const retryPostSubmit = useCallback(() => {
     // 再投稿は入力復元を前提に、トップの投稿モーダルへ復帰するだけの導線に限定する。
@@ -1049,20 +1039,8 @@ function App() {
       )}
       <div
         data-testid="top-action-controls"
-        className="fixed right-4 top-4 z-50 flex items-center gap-2 sm:right-6 sm:top-6"
+        className="fixed right-4 top-4 z-50 flex items-center sm:right-6 sm:top-6"
       >
-        {viewMode === 'top' && (
-          <NeonButton
-            ariaLabel="投稿する"
-            onClick={() => {
-              setPendingFormData(null)
-              setSubmitError('')
-              setIsPostModalOpen(true)
-            }}
-          >
-            投稿する
-          </NeonButton>
-        )}
         <SoundToggleButton
           isMuted={isMuted}
           onToggle={handleSoundToggle}
@@ -1203,12 +1181,12 @@ function App() {
           onRejudgeSuccess={handleResultRejudgeSuccess}
           onClose={closeResultModal}
         />
-        {viewMode === 'top' && isMobileFooterLayout && isFooterActionSheetOpen && (
+        {viewMode === 'top' && isFooterActionSheetOpen && (
           <div
             role="dialog"
             aria-modal="true"
             aria-label="補助メニュー"
-            className="fixed inset-0 z-[45] bg-black/55 p-3 sm:hidden"
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-3 sm:items-center"
             onClick={closeFooterActionSheet}
             onKeyDown={(event) => {
               if (event.key === DIALOG_CLOSE_KEY) {
@@ -1218,7 +1196,7 @@ function App() {
             }}
           >
             <div
-              className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-white/20 bg-slate-950/95 p-4"
+              className="w-full max-w-md rounded-2xl border border-white/20 bg-slate-950/95 p-4 shadow-2xl"
               onClick={stopOverlayContentClick}
             >
               <p className="mb-3 text-sm font-semibold text-cyan-100">補助メニュー</p>
@@ -1314,11 +1292,11 @@ function App() {
           ref={footerDockRef}
           className={`fixed inset-x-0 z-40 pointer-events-none ${
             viewMode === 'judging'
-              ? 'bottom-24 px-2 sm:bottom-[5.5rem] sm:px-3 md:bottom-[4.5rem] md:px-4 lg:bottom-10 lg:px-6'
-              : 'bottom-20 px-2 sm:bottom-[4.5rem] sm:px-3 md:bottom-14 md:px-4 lg:bottom-10 lg:px-6'
+              ? 'bottom-24 px-2 sm:bottom-24 sm:px-3 md:bottom-24 md:px-4 lg:bottom-10 lg:px-6'
+              : 'bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] px-2 sm:bottom-5 sm:px-3 md:bottom-6 md:px-4 lg:bottom-10 lg:px-6'
           }`}
         >
-          <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-2">
+          <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-0">
             <div data-testid="top-judge-dock" className="w-full pointer-events-none">
               <JudgeAvatars
                 isJudging={viewMode === 'judging'}
@@ -1330,77 +1308,50 @@ function App() {
               />
             </div>
             {viewMode === 'top' && (
+              <div className="pointer-events-auto -mt-2 sm:-mt-3 md:-mt-4 lg:-mt-5">
+                <NeonButton
+                  type="button"
+                  variant="primary"
+                  className="center-submit-cta"
+                  ariaLabel="投稿する"
+                  onClick={() => {
+                    setPendingFormData(null)
+                    setSubmitError('')
+                    setIsPostModalOpen(true)
+                  }}
+                >
+                  投稿する
+                </NeonButton>
+              </div>
+            )}
+            {viewMode === 'top' && (
               <footer
                 ref={footerRef}
                 role="contentinfo"
-                className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
+                className="footer-main-actions-wrap pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
               >
-                {isMobileFooterLayout && !isFooterActionSheetOpen ? (
-                  <div className="flex items-center gap-2">
-                    <NeonButton
-                      type="button"
-                      variant="secondary"
-                      className="footer-main-action-button"
-                      ariaLabel="ランキング"
-                      ref={rankingTriggerRef}
-                      onClick={openRankingModal}
-                    >
-                      ランキング
-                    </NeonButton>
-                    <NeonButton
-                      type="button"
-                      variant="primary"
-                      className="footer-main-action-button"
-                      ariaLabel="その他を開く"
-                      onClick={openFooterActionSheet}
-                    >
-                      その他
-                    </NeonButton>
-                  </div>
-                ) : !isMobileFooterLayout ? (
-                  <>
-                    <NeonButton
-                      ref={myPostsTriggerRef}
-                      type="button"
-                      variant="primary"
-                      compactOnMobile={true}
-                      ariaLabel="過去の投稿"
-                      onClick={openMyPosts}
-                      onKeyDown={handleMyPostsTriggerKeyDown}
-                    >
-                      過去の投稿
-                    </NeonButton>
-                    <NeonButton
-                      type="button"
-                      variant="secondary"
-                      compactOnMobile={true}
-                      ariaLabel="ランキング"
-                      ref={rankingTriggerRef}
-                      onClick={openRankingModal}
-                    >
-                      ランキング
-                    </NeonButton>
-                    <NeonButton
-                      ref={privacyPolicyTriggerRef}
-                      type="button"
-                      variant="secondary"
-                      compactOnMobile={true}
-                      ariaLabel="プライバシーポリシー"
-                      onClick={openPrivacyPolicy}
-                    >
-                      プライバシーポリシー
-                    </NeonButton>
-                    <NeonButton
-                      type="button"
-                      variant="secondary"
-                      compactOnMobile={true}
-                      ariaLabel="問い合わせ（新しいタブで開く）"
-                      onClick={openContactForm}
-                    >
-                      問い合わせ
-                    </NeonButton>
-                  </>
-                ) : null}
+                <div className="footer-main-actions-track">
+                  <NeonButton
+                    type="button"
+                    variant="secondary"
+                    className="footer-main-action-button"
+                    ariaLabel="ランキング"
+                    ref={rankingTriggerRef}
+                    onClick={openRankingModal}
+                  >
+                    ランキング
+                  </NeonButton>
+                  <NeonButton
+                    type="button"
+                    variant="primary"
+                    className="footer-main-action-button"
+                    ariaLabel="その他を開く"
+                    ref={footerActionSheetTriggerRef}
+                    onClick={openFooterActionSheet}
+                  >
+                    その他
+                  </NeonButton>
+                </div>
               </footer>
             )}
           </div>

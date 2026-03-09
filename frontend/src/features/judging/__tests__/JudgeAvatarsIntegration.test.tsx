@@ -41,11 +41,12 @@ describe('E23-01 RED: 審査中画面のアバター統合', () => {
     await submitValidPost()
 
     await screen.findByTestId('top-judge-dock')
-
-    const avatars = screen.getAllByRole('img').filter((image) => {
-      return image.getAttribute('alt')?.includes('審査員')
+    await waitFor(() => {
+      const avatars = screen.getAllByRole('img').filter((image) => {
+        return image.getAttribute('alt')?.includes('審査員')
+      })
+      expect(avatars).toHaveLength(JUDGE.PERSONAS.length)
     })
-    expect(avatars).toHaveLength(JUDGE.PERSONAS.length)
   })
 
   it('発話開始後にいずれかのキャッチフレーズが表示される', async () => {
@@ -73,10 +74,21 @@ describe('E23-01 RED: 審査中画面のアバター統合', () => {
       expect(bubble).not.toBeNull()
     })
 
-    const judgeSlot = await screen.findByTestId('judge-slot-hiroyuki')
+    const bubble =
+      screen.queryByTestId('catchphrase-hiroyuki') ??
+      screen.queryByTestId('catchphrase-dewi') ??
+      screen.queryByTestId('catchphrase-nakao')
+    expect(bubble).not.toBeNull()
+    const judgeId = bubble?.getAttribute('data-testid')?.replace('catchphrase-', '') ?? 'hiroyuki'
+    const avatarLabelByJudge = {
+      hiroyuki: /ひろゆき風審査員/,
+      dewi: /デヴィ夫人風審査員/,
+      nakao: /中尾彬風審査員/,
+    } as const
+    const judgeSlot = await screen.findByTestId(`judge-slot-${judgeId}`)
     expect(
       within(judgeSlot).getByRole('img', {
-        name: /ひろゆき風審査員/,
+        name: avatarLabelByJudge[judgeId as keyof typeof avatarLabelByJudge],
       })
     ).toBeInTheDocument()
   })
