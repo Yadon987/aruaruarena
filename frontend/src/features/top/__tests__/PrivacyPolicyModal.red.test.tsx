@@ -78,6 +78,16 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     expect(screen.queryByRole('dialog', { name: 'プライバシーポリシー' })).not.toBeInTheDocument()
   })
 
+  it('モーダル内クリックでは閉じない', () => {
+    // 何を検証するか: 背景クリック閉鎖を導入しても本文領域クリックで誤クローズしないこと
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
+    fireEvent.click(screen.getByRole('dialog', { name: 'プライバシーポリシー' }))
+
+    expect(screen.getByRole('dialog', { name: 'プライバシーポリシー' })).toBeInTheDocument()
+  })
+
   it('閉じた後にトリガーボタンへフォーカスが戻る', () => {
     // 何を検証するか: モーダルを閉じると起動ボタンへフォーカス復帰すること
     render(<App />)
@@ -129,7 +139,7 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
       name: 'プライバシーポリシー',
     })
     fireEvent.click(trigger)
-    fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシーモーダル背景' }))
+    fireEvent.click(screen.getByTestId('privacy-policy-modal-overlay'))
 
     expect(screen.queryByRole('dialog', { name: 'プライバシーポリシー' })).not.toBeInTheDocument()
     expect(trigger).toHaveFocus()

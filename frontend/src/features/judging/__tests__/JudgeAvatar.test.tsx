@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AVATAR_ANIMATION } from '../../../shared/constants/avatar'
 
 const loadJudgeAvatar = async () => {
   const modulePath = '../components/JudgeAvatar'
@@ -33,7 +34,7 @@ describe('E23-01 RED: JudgeAvatar', () => {
     render(<JudgeAvatar persona="dewi" isSpeaking />)
 
     await act(async () => {
-      vi.advanceTimersByTime(2000)
+      vi.advanceTimersByTime(AVATAR_ANIMATION.MOUTH_INTERVAL_MIN_MS)
     })
 
     const speakingImage = screen.getByRole('img', { hidden: true })
@@ -48,7 +49,7 @@ describe('E23-01 RED: JudgeAvatar', () => {
     render(<JudgeAvatar persona="nakao" isSpeaking />)
 
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(AVATAR_ANIMATION.BLINK_INTERVAL_MIN_MS)
     })
 
     const blinkingImage = screen.getByRole('img', { hidden: true })

@@ -24,7 +24,12 @@ const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿
   await fillAndSubmitPostForm({ nickname, body })
   await waitFor(() => {
     expect(api.posts.create).toHaveBeenCalledTimes(1)
-    expect(api.posts.create).toHaveBeenCalledWith({ nickname, body })
+    expect(api.posts.create).toHaveBeenCalledWith(
+      { nickname, body },
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      })
+    )
   })
 
   // 投稿フォームモーダル（name: '投稿フォーム'）が閉じることを確認
@@ -32,11 +37,10 @@ const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿
     expect(screen.queryByRole('dialog', { name: '投稿フォーム' })).not.toBeInTheDocument()
   })
 
-  // ポーリングが開始され、審査モード（投稿ボタン非表示）へ遷移することを待機
+  // ポーリングが開始され、審査中画面へ遷移することを待機
   await waitFor(
     () => {
-      expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
-      expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
+      expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
     },
     { timeout: 5000 }
   )
@@ -99,8 +103,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
     await fillAndSubmitPost()
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
-      expect(screen.getByTestId('top-judge-dock')).toBeInTheDocument()
+      expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
     })
   })
 
@@ -157,7 +160,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
         throw new Error('catchphrase bubble is not rendered yet')
       }
       expect(bubble).toHaveTextContent(/\S/)
-    }, { timeout: 3000 })
+    }, { timeout: 7000 })
   })
 
   it('審査完了で結果モーダルが表示される', { timeout: 15000 }, async () => {

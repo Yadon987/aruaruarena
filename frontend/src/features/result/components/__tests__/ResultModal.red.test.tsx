@@ -172,6 +172,71 @@ describe('E15-01 RED: ResultModal Component', () => {
     expect(screen.getByText('平均点: 0.0')).toBeInTheDocument()
   })
 
+  it('モーダル内クリックでは閉じない', () => {
+    // 何を検証するか: 背景クリック閉鎖時でも結果ダイアログ本体クリックで誤クローズしないこと
+    const onClose = vi.fn()
+    render(
+      <ResultModal
+        isOpen
+        post={buildModalPost()}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={onClose}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('dialog', { name: '審査結果モーダル' }))
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('モーダル外側クリックで閉じる', () => {
+    // 何を検証するか: 結果モーダルは最外層クリックで閉じる統一仕様を満たすこと
+    const onClose = vi.fn()
+    render(
+      <ResultModal
+        isOpen
+        post={buildModalPost()}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={onClose}
+      />
+    )
+
+    fireEvent.click(screen.getByTestId('result-modal-overlay'))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('Escapeキーで閉じる', () => {
+    // 何を検証するか: キーボード操作(Escape)で結果モーダルを閉じられること
+    const onClose = vi.fn()
+    render(
+      <ResultModal
+        isOpen
+        post={buildModalPost()}
+        isLoading={false}
+        errorCode={null}
+        onRetry={() => undefined}
+        onPlayRetrySound={() => undefined}
+        onRejudgeSuccess={() => undefined}
+        onClose={onClose}
+      />
+    )
+
+    const closeButton = screen.getByRole('button', { name: '閉じる' })
+    closeButton.focus()
+    fireEvent.keyDown(closeButton, { key: 'Escape' })
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('judgment.success=false の場合に失敗表示を行う', async () => {
     // 何を検証するか: 審査員ごとの success=false がカードに失敗として表示されること
     await moveToResultScreen({
@@ -238,7 +303,7 @@ describe('E15-01 RED: ResultModal Component', () => {
   })
 
   it('取得中状態で読み込み中表示を行う', async () => {
-    // 何を検証するか: 結果取得中に審査中メッセージを表示すること
+    // 何を検証するか: 結果取得中は審査中画面を維持し、結果モーダルを表示しないこと
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'loading-post-id',
       status: 'judging',
@@ -254,8 +319,9 @@ describe('E15-01 RED: ResultModal Component', () => {
     await fillAndSubmitPostForm({ nickname: '読込太郎', body: '読込テスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByText('AI審査員が採点中...')).toBeInTheDocument()
+      expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
     })
+    expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
   })
 
   it('共有画像が未準備のままならリトライ失敗メッセージを表示する', { timeout: 15000 }, async () => {

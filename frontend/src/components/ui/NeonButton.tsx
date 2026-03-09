@@ -7,6 +7,7 @@ type NeonButtonProps = {
   variant?: 'primary' | 'secondary'
   ariaLabel: string
   compactOnMobile?: boolean
+  className?: string
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'aria-label' | 'className'>
 
 export const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(function NeonButton(
@@ -17,13 +18,14 @@ export const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(functio
     disabled = false,
     ariaLabel,
     compactOnMobile = false,
+    className: customClassName,
     ...rest
   },
   ref
 ) {
   const variantClass = variant === 'secondary' ? 'neon-glow-pink' : 'neon-glow-blue'
   const compactClass = compactOnMobile ? 'neon-button-compact-mobile' : ''
-  const className = `neon-button-base ${variantClass} ${compactClass}`.trim()
+  const className = `neon-button-base ${variantClass} ${compactClass} ${customClassName ?? ''}`.trim()
 
   return (
     <button

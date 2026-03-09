@@ -1,6 +1,14 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
 import { RankingModal } from './features/ranking'
@@ -818,6 +826,11 @@ function App() {
     }
   }
 
+  // App直下モーダルの内側クリックを無効化し、外側クリック閉鎖と挙動を分離する。
+  const stopOverlayContentClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    event.stopPropagation()
+  }
+
   const handleMyPostsTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (OPEN_KEYS.includes(event.key as (typeof OPEN_KEYS)[number])) {
       event.preventDefault()
@@ -1104,11 +1117,12 @@ function App() {
             aria-label="自分の投稿"
             tabIndex={-1}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => closeMyPosts()}
             onKeyDown={(event) => {
               if (event.key === DIALOG_CLOSE_KEY) closeMyPosts()
             }}
           >
-            <div className="w-full max-w-md rounded bg-white p-4">
+            <div className="w-full max-w-md rounded bg-white p-4" onClick={stopOverlayContentClick}>
               {selectedPost ? (
                 <MyPostDetail
                   post={selectedPost}
@@ -1205,7 +1219,7 @@ function App() {
           >
             <div
               className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-white/20 bg-slate-950/95 p-4"
-              onClick={(event) => event.stopPropagation()}
+              onClick={stopOverlayContentClick}
             >
               <p className="mb-3 text-sm font-semibold text-cyan-100">補助メニュー</p>
               <div className="grid grid-cols-1 gap-2">
@@ -1267,7 +1281,7 @@ function App() {
           >
             <div
               className="glass-panel w-full max-w-sm rounded p-4"
-              onClick={(event) => event.stopPropagation()}
+              onClick={stopOverlayContentClick}
             >
               <h2 className="mb-2 text-lg font-semibold text-cyan-100">審査を中止しますか？</h2>
               <p className="mb-4 text-sm text-slate-100">
@@ -1322,27 +1336,27 @@ function App() {
                 className="pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
               >
                 {isMobileFooterLayout && !isFooterActionSheetOpen ? (
-                  <>
+                  <div className="flex items-center gap-2">
                     <NeonButton
                       type="button"
                       variant="secondary"
-                      compactOnMobile={true}
+                      className="footer-main-action-button"
                       ariaLabel="ランキング"
                       ref={rankingTriggerRef}
                       onClick={openRankingModal}
                     >
                       ランキング
                     </NeonButton>
-                  <NeonButton
-                    type="button"
-                    variant="primary"
-                    compactOnMobile={true}
-                    ariaLabel="その他を開く"
-                    onClick={openFooterActionSheet}
-                  >
-                    その他
-                  </NeonButton>
-                  </>
+                    <NeonButton
+                      type="button"
+                      variant="primary"
+                      className="footer-main-action-button"
+                      ariaLabel="その他を開く"
+                      onClick={openFooterActionSheet}
+                    >
+                      その他
+                    </NeonButton>
+                  </div>
                 ) : !isMobileFooterLayout ? (
                   <>
                     <NeonButton

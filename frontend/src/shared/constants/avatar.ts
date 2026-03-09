@@ -17,7 +17,7 @@ export const HIROYUKI_CATCHPHRASE = 'それってあなたの感想ですよね'
 /**
  * アバターアニメーション設定
  *
- * - 口パク継続時間: 120ms
+ * - 口パク継続時間: 140ms
  * - 瞬き継続時間: 150ms
  * - 間隔は範囲で管理し、将来ランダム化しても定数を再利用できる
  */
@@ -27,7 +27,7 @@ export const AVATAR_ANIMATION = {
   /** 瞬きの継続時間（ms） */
   BLINK_DURATION_MS: 150,
   /** 口パクの最小間隔（ms） */
-  MOUTH_INTERVAL_MIN_MS: 90,
+  MOUTH_INTERVAL_MIN_MS: 140,
   /** 口パクの最大間隔（ms） */
   MOUTH_INTERVAL_MAX_MS: 220,
   /** 瞬きの最小間隔（ms） */

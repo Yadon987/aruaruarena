@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import App from '../../../App'
@@ -12,6 +12,19 @@ describe('E12-01 RED: TopPage Integration', () => {
     localStorage.clear()
   })
   afterAll(() => mswServer.close())
+
+  async function expectRetryRestoresFormInput(nickname: string, body: string) {
+    const retryButton = screen.getByRole('button', { name: '再投稿する' })
+    fireEvent.click(retryButton)
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '再投稿する' })).not.toBeInTheDocument()
+    })
+
+    const dialog = await screen.findByRole('dialog', { name: '投稿フォーム' })
+    expect(dialog).toBeInTheDocument()
+    expect(screen.getByLabelText('ニックネーム')).toHaveValue(nickname)
+    expect(screen.getByLabelText('あるある')).toHaveValue(body)
+  }
 
   it('POST成功時にmy_post_idsへ保存する', async () => {
     // 何を検証するか: API成功後にLocalStorageへ投稿IDが保存されること
@@ -32,7 +45,7 @@ describe('E12-01 RED: TopPage Integration', () => {
   })
 
   it('429エラー時に専用メッセージを表示し入力を保持する', async () => {
-    // 何を検証するか: RATE_LIMITED時の専用文言表示と入力保持が行われること
+    // 何を検証するか: RATE_LIMITED時に専用文言表示後、再投稿で入力復元されること
     mswServer.use(
       http.post('/api/posts', () => {
         return HttpResponse.json(
@@ -49,12 +62,11 @@ describe('E12-01 RED: TopPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByText('投稿に失敗しました')).toBeInTheDocument()
     })
-    expect(screen.getByText('制限太郎')).toBeInTheDocument()
-    expect(screen.getByText('投稿テキストです')).toBeInTheDocument()
+    await expectRetryRestoresFormInput('制限太郎', '投稿テキストです')
   })
 
   it('500エラー時に汎用メッセージを表示し入力を保持する', async () => {
-    // 何を検証するか: サーバーエラー時に汎用文言表示と入力保持が行われること
+    // 何を検証するか: サーバーエラー時に汎用文言表示後、再投稿で入力復元されること
     mswServer.use(
       http.post('/api/posts', () => {
         return HttpResponse.json(
@@ -71,8 +83,7 @@ describe('E12-01 RED: TopPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByText('サーバーエラーが発生しました')).toBeInTheDocument()
     })
-    expect(screen.getByText('障害太郎')).toBeInTheDocument()
-    expect(screen.getByText('障害テスト本文です')).toBeInTheDocument()
+    await expectRetryRestoresFormInput('障害太郎', '障害テスト本文です')
   })
 
   it('my_post_idsが不正JSONでも投稿成功時に保存できる', async () => {
@@ -94,7 +105,7 @@ describe('E12-01 RED: TopPage Integration', () => {
   })
 
   it('通信失敗時に既定エラーメッセージを表示し入力を保持する', async () => {
-    // 何を検証するか: ネットワーク失敗時に入力保持と既定エラー表示が行われること
+    // 何を検証するか: ネットワーク失敗時に既定エラー表示後、再投稿で入力復元されること
     mswServer.use(
       http.post('/api/posts', () => {
         return HttpResponse.error()
@@ -108,7 +119,6 @@ describe('E12-01 RED: TopPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByText('ネットワークに接続できませんでした')).toBeInTheDocument()
     })
-    expect(screen.getByText('通信太郎')).toBeInTheDocument()
-    expect(screen.getByText('通信失敗テスト本文です')).toBeInTheDocument()
+    await expectRetryRestoresFormInput('通信太郎', '通信失敗テスト本文です')
   })
 })

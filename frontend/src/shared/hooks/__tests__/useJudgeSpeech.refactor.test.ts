@@ -25,7 +25,7 @@ describe('useJudgeSpeech Refactor', () => {
     )
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(6000)
+      await vi.advanceTimersByTimeAsync(1000)
     })
     expect(result.current.currentSpeech).not.toBeNull()
 
@@ -34,7 +34,7 @@ describe('useJudgeSpeech Refactor', () => {
 
     rerender({ isJudging: true, isPostModalOpen: false })
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(6000)
+      await vi.advanceTimersByTimeAsync(1000)
     })
     expect(result.current.currentSpeech).not.toBeNull()
   })

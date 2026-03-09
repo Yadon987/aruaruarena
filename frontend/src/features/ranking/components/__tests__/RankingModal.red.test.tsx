@@ -63,9 +63,19 @@ describe('RankingModal RED', () => {
     const onClose = vi.fn()
     render(<RankingModal isOpen onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'ランキングモーダル背景' }))
+    fireEvent.click(screen.getByTestId('ranking-modal-overlay'))
 
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('モーダル内クリックでは閉じない', () => {
+    // 何を検証するか: 外側クリック閉鎖時でもダイアログ本体クリックで誤クローズしないこと
+    const onClose = vi.fn()
+    render(<RankingModal isOpen onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('dialog', { name: 'ランキング' }))
+
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('閉じる操作後にトリガーボタンへフォーカスを戻す', () => {
