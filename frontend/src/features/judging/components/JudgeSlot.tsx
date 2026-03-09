@@ -19,7 +19,7 @@ const JUDGE_LABELS: Record<JudgePersona, string> = {
 
 const SCORE_PLACEHOLDER = '00'
 const SCORE_NOT_AVAILABLE = 'N/A'
-const AVATAR_SIZE_CLASS = 'h-auto w-28 md:w-48 lg:w-56'
+const AVATAR_SIZE_CLASS = 'h-auto w-28 sm:w-36 md:w-48 lg:w-56 xl:w-64 2xl:w-72'
 const AVATAR_BREATHING_CLASS = 'judge-avatar-speaking-breath'
 const VIP_IDLE_CYCLE_MS = 5000
 const VIP_FLASH_TOTAL_MS = 1200
@@ -206,7 +206,7 @@ export function JudgeSlot({
     >
       {/* 吹き出し */}
       {speechText && showSpeech && (
-        <div className="absolute -top-28 left-1/2 z-30 w-40 -translate-x-1/2 sm:-top-[7.5rem] sm:w-52 md:-top-[8.5rem] md:w-60 lg:-top-[9.5rem] lg:w-64">
+        <div className="absolute -top-28 left-1/2 z-30 w-40 -translate-x-1/2 sm:-top-[7.5rem] sm:w-52 md:-top-[8.5rem] md:w-60 lg:-top-[9.5rem] lg:w-64 xl:-top-[10.5rem] xl:w-72 2xl:-top-[11rem] 2xl:w-80">
           <JudgeSpeechBubble
             isVisible={true}
             text={speechText}
@@ -239,7 +239,7 @@ export function JudgeSlot({
       <div
         data-testid="judge-desk-score"
         data-lit={isLit ? 'true' : 'false'}
-        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} ${scoreMotionClass} ${particleClass} glass-panel relative z-20 -mt-10 w-full max-w-[16rem] md:-mt-14 md:max-w-[22rem] lg:-mt-[4.5rem] lg:max-w-[26rem]`}
+        className={`judge-desk-panel judge-seat-panel vip-judge-desk ${deskStateClass} ${bulbStateClass} ${scoreMotionClass} ${particleClass} glass-panel relative z-20 -mt-10 w-full max-w-[16rem] sm:max-w-[18rem] md:-mt-14 md:max-w-[22rem] lg:-mt-[4.5rem] lg:max-w-[26rem] xl:-mt-[5rem] xl:max-w-[30rem] 2xl:max-w-[34rem]`}
         aria-label={scoreAriaLabel}
         role="group"
       >

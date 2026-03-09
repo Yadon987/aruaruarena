@@ -175,8 +175,9 @@ async function request<T>(path: string, options?: RequestInit & { timeout?: numb
  */
 export const api = {
   posts: {
-    create: (data: CreatePostRequest) =>
+    create: (data: CreatePostRequest, options?: RequestInit & { timeout?: number }) =>
       request<CreatePostResponse>('/posts', {
+        ...options,
         method: 'POST',
         body: JSON.stringify(data),
       }),
