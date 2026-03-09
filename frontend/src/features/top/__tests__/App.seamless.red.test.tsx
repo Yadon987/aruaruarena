@@ -24,7 +24,12 @@ const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿
   await fillAndSubmitPostForm({ nickname, body })
   await waitFor(() => {
     expect(api.posts.create).toHaveBeenCalledTimes(1)
-    expect(api.posts.create).toHaveBeenCalledWith({ nickname, body }, expect.any(Object))
+    expect(api.posts.create).toHaveBeenCalledWith(
+      { nickname, body },
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      })
+    )
   })
 
   // 投稿フォームモーダル（name: '投稿フォーム'）が閉じることを確認

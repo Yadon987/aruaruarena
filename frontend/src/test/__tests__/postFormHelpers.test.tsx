@@ -69,10 +69,12 @@ describe('postFormHelpers', () => {
     await screen.findByTestId('judging-screen')
     expect(api.posts.create).toHaveBeenCalledWith(
       {
-      nickname: 'テスト太郎',
-      body: 'テスト本文です',
+        nickname: 'テスト太郎',
+        body: 'テスト本文です',
       },
-      expect.any(Object)
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      })
     )
   })
 })

@@ -48,7 +48,9 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
         nickname: 'てすと太郎',
         body: 'あるあるネタです',
       },
-      expect.any(Object)
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      })
     )
     await waitFor(() => {
       expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
