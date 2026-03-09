@@ -138,6 +138,26 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
       },
       { timeout: 5000 }
     )
+    expect(
+      screen.queryByText('通信が不安定です（1/4）。再接続を試しています...')
+    ).not.toBeInTheDocument()
+  })
+
+  it('AI API通信エラーコード(provider_error)で進捗メッセージを表示する', async () => {
+    // 何を検証するか: AI接続系コードを受け取った場合に通信エラー進捗を表示すること
+    mswServer.use(
+      http.get('/api/posts/:id', () => {
+        return HttpResponse.json({ error: 'AI接続に失敗', code: 'provider_error' }, { status: 503 })
+      })
+    )
+
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
+
+    await waitFor(() => {
+      expect(screen.getByText('通信が不安定です（1/4）。再接続を試しています...')).toBeInTheDocument()
+    })
   })
 
   it('通信エラーが連続したとき60秒を待たずに審査エラーパネルを表示する', async () => {
@@ -162,6 +182,25 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     expect(getPostSpy).toHaveBeenCalledTimes(4)
   }, 14000)
+
+  it('通信エラー発生時に進捗メッセージ（1/4）を頭上中央に表示する', async () => {
+    // 何を検証するか: 通信エラー直後に再接続試行中の進捗表示が見えること
+    mswServer.use(
+      http.get('/api/posts/:id', () => {
+        return HttpResponse.error()
+      })
+    )
+
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('通信が不安定です（1/4）。再接続を試しています...')
+      ).toBeInTheDocument()
+    })
+  })
 
   it('不正な投稿IDではポーリングせず審査エラーパネルを表示する', async () => {
     // 何を検証するか: 不正IDの場合にGETを呼ばず審査エラー導線を表示すること

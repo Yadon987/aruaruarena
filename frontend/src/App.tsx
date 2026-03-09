@@ -61,6 +61,7 @@ const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
 const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
+const AI_TRANSIENT_ERROR_CODES = ['provider_error', 'connection_failed', 'timeout', 'secrets_fetch_failed']
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
@@ -173,7 +174,15 @@ function resolveResultModalErrorCode(error: unknown): string {
 
 function isTransientJudgingPollingError(error: unknown): boolean {
   if (!(error instanceof ApiClientError)) return false
-  return error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT
+  if (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT) return true
+  return AI_TRANSIENT_ERROR_CODES.includes(error.code)
+}
+
+function buildTransientErrorNotice(errorCount: number): string {
+  if (errorCount >= JUDGING_TRANSIENT_ERROR_MAX_RETRIES - 1) {
+    return `通信が不安定です（${errorCount}/${JUDGING_TRANSIENT_ERROR_MAX_RETRIES}）。まもなくタイムアウトします。`
+  }
+  return `通信が不安定です（${errorCount}/${JUDGING_TRANSIENT_ERROR_MAX_RETRIES}）。再接続を試しています...`
 }
 
 function validateForm(nickname: string, body: string): ValidationErrors {
@@ -244,6 +253,7 @@ function App() {
   const [isResultPostLoading, setIsResultPostLoading] = useState(false)
   const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
   const [isJudgingPollingReady, setIsJudgingPollingReady] = useState(false)
+  const [judgingTransientErrorCount, setJudgingTransientErrorCount] = useState(0)
   const [footerReservedSpace, setFooterReservedSpace] = useState(FIXED_FOOTER_MIN_RESERVED_PX)
   const inFlightPostIdsRef = useRef<Set<string>>(new Set())
   const myPostDetailsRef = useRef<Record<string, Post>>({})
@@ -479,6 +489,7 @@ function App() {
     pollingStartedAtRef.current = 0
     pollingTransientErrorCountRef.current = 0
     pollingTransientErrorStartedAtRef.current = 0
+    setJudgingTransientErrorCount(0)
   }, [])
 
   const abortSubmitRequest = useCallback(() => {
@@ -631,6 +642,7 @@ function App() {
         if (isDisposed) return
         pollingTransientErrorCountRef.current = 0
         pollingTransientErrorStartedAtRef.current = 0
+        setJudgingTransientErrorCount(0)
         if (response.status === 'scored' || response.status === 'failed') {
           exitJudgingWithResultRef.current(response)
           return
@@ -649,6 +661,7 @@ function App() {
             pollingTransientErrorStartedAtRef.current = Date.now()
           }
           pollingTransientErrorCountRef.current += 1
+          setJudgingTransientErrorCount(pollingTransientErrorCountRef.current)
 
           const transientElapsed = Date.now() - pollingTransientErrorStartedAtRef.current
           if (
@@ -1092,6 +1105,16 @@ function App() {
       >
         {viewMode === 'judging' && !judgingErrorMessage && (
           <section data-testid="judging-screen" aria-label="審査中" className="sr-only" />
+        )}
+        {viewMode === 'judging' && !judgingErrorMessage && judgingTransientErrorCount > 0 && (
+          <div className="pointer-events-none fixed left-1/2 top-5 z-[125] -translate-x-1/2">
+            <p
+              aria-live="polite"
+              className="rounded-full border border-rose-300/70 bg-white/90 px-4 py-2 text-sm font-semibold text-red-600 shadow-[0_8px_20px_rgba(15,23,42,0.14)] backdrop-blur"
+            >
+              {buildTransientErrorNotice(judgingTransientErrorCount)}
+            </p>
+          </div>
         )}
         {viewMode === 'judging' && judgingErrorMessage && (
           <section
