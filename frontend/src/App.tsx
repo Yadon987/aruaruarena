@@ -1049,20 +1049,8 @@ function App() {
       )}
       <div
         data-testid="top-action-controls"
-        className="fixed right-4 top-4 z-50 flex items-center gap-2 sm:right-6 sm:top-6"
+        className="fixed right-4 top-4 z-50 flex items-center sm:right-6 sm:top-6"
       >
-        {viewMode === 'top' && (
-          <NeonButton
-            ariaLabel="投稿する"
-            onClick={() => {
-              setPendingFormData(null)
-              setSubmitError('')
-              setIsPostModalOpen(true)
-            }}
-          >
-            投稿する
-          </NeonButton>
-        )}
         <SoundToggleButton
           isMuted={isMuted}
           onToggle={handleSoundToggle}
@@ -1329,6 +1317,22 @@ function App() {
                 compactBottomSpacing={true}
               />
             </div>
+            {viewMode === 'top' && (
+              <div className="pointer-events-auto">
+                <NeonButton
+                  type="button"
+                  variant="primary"
+                  ariaLabel="投稿する"
+                  onClick={() => {
+                    setPendingFormData(null)
+                    setSubmitError('')
+                    setIsPostModalOpen(true)
+                  }}
+                >
+                  投稿する
+                </NeonButton>
+              </div>
+            )}
             {viewMode === 'top' && (
               <footer
                 ref={footerRef}
