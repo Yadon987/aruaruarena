@@ -29,7 +29,8 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
   it('API通信完了前に投稿モーダルが閉じて審査中画面へ遷移する', async () => {
     vi.spyOn(api.posts, 'create').mockImplementation(() => new Promise(() => {}))
     vi.spyOn(api.posts, 'get').mockImplementation(() => new Promise(() => {}))
-    localStorage.setItem('aruaru_sound_muted', 'false')
+    localStorage.setItem('aruaru_sound_consent', 'true')
+    localStorage.setItem('aruaru_sound_volume', '0.5')
 
     render(<App />)
     fireEvent.pointerDown(document.body)

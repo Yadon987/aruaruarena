@@ -13,10 +13,12 @@ import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
 import { RankingModal } from './features/ranking'
 import { ResultModal } from './features/result'
+import { AudioConsentModal } from './features/top/components/AudioConsentModal'
 import { MyPostDetail } from './features/top/components/MyPostDetail'
 import { PostFormModal } from './features/top/components/PostFormModal'
 import { PrivacyPolicyModal } from './features/top/components/PrivacyPolicyModal'
-import { SoundToggleButton } from './features/top/components/SoundToggleButton'
+import { SoundControlButton } from './features/top/components/SoundControlButton'
+import { SoundSettingsPanel } from './features/top/components/SoundSettingsPanel'
 import { createSoundController } from './hooks/useSound'
 import { queryClient } from './shared/config/queryClient'
 import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
@@ -78,6 +80,13 @@ type ValidationErrors = {
 }
 
 type ViewMode = 'top' | 'judging'
+
+function shouldShowAudioConsentModalInTest(): boolean {
+  return (
+    (globalThis as { __SHOW_AUDIO_CONSENT_MODAL_IN_TEST__?: boolean })
+      .__SHOW_AUDIO_CONSENT_MODAL_IN_TEST__ === true
+  )
+}
 
 function canOpenResultModalFromMyPost(post: Post): boolean {
   return (
@@ -224,6 +233,13 @@ function App() {
     soundControllerRef.current = createSoundController()
   }
   const sound = soundControllerRef.current
+  if (
+    import.meta.env.MODE === 'test' &&
+    !sound.hasConsented &&
+    !shouldShowAudioConsentModalInTest()
+  ) {
+    sound.setConsented()
+  }
   const [submitError, setSubmitError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -238,7 +254,9 @@ function App() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('top')
-  const [isMuted, setIsMuted] = useState(() => sound.isMuted)
+  const [volume, setVolume] = useState(() => sound.volume)
+  const [hasAudioConsent, setHasAudioConsent] = useState(() => sound.hasConsented)
+  const [isSoundSettingsOpen, setIsSoundSettingsOpen] = useState(false)
   const [isRankingModalOpen, setIsRankingModalOpen] = useState(false)
   const [isFooterActionSheetOpen, setIsFooterActionSheetOpen] = useState(false)
   const [isStopJudgingConfirmOpen, setIsStopJudgingConfirmOpen] = useState(false)
@@ -263,6 +281,7 @@ function App() {
   const footerActionSheetTriggerRef = useRef<HTMLButtonElement | null>(null)
   const footerRef = useRef<HTMLElement | null>(null)
   const footerDockRef = useRef<HTMLDivElement | null>(null)
+  const soundSettingsContainerRef = useRef<HTMLDivElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
   const resultRequestSeqRef = useRef(0)
   const previousResultModalOpenRef = useRef(false)
@@ -279,6 +298,9 @@ function App() {
     return activeResultPost.status === 'scored' ? 'success' : 'failed'
   }, [activeResultPost, isResultModalOpen])
   const audioScene = resultAudioScene ?? viewMode
+  const isAudioConsentModalOpen =
+    !hasAudioConsent &&
+    (import.meta.env.MODE !== 'test' || shouldShowAudioConsentModalInTest())
   const syncMyPostIds = useCallback(() => setMyPostIds(readPostIds()), [])
   const setMyPostLoading = useCallback((postId: string, isLoading: boolean) => {
     setLoadingMyPostIds((prev) => {
@@ -398,22 +420,60 @@ function App() {
     sound.playSe(SOUND_SE_RETRY)
   }, [sound])
 
-  const handleSoundToggle = useCallback(() => {
+  const handleAudioConsent = useCallback(
+    (nextVolume: number) => {
+      sound.unlockAudio()
+      sound.setConsented()
+      sound.setVolume(nextVolume)
+      setHasAudioConsent(true)
+      setVolume(nextVolume)
+
+      if (nextVolume > 0) {
+        sound.playSceneBgm(audioScene)
+      }
+    },
+    [audioScene, sound]
+  )
+
+  const handleSoundControlClick = useCallback(() => {
     sound.unlockAudio()
-    const nextMuted = !isMuted
-    sound.setMuted(nextMuted)
-    setIsMuted(nextMuted)
-    if (!nextMuted) {
-      sound.playSceneBgm(audioScene)
+    if (!hasAudioConsent) {
+      sound.setConsented()
+      setHasAudioConsent(true)
     }
-  }, [audioScene, isMuted, sound])
+    setIsSoundSettingsOpen((prev) => !prev)
+  }, [hasAudioConsent, sound])
+
+  const handleVolumeChange = useCallback(
+    (nextVolume: number) => {
+      sound.unlockAudio()
+      if (!hasAudioConsent) {
+        sound.setConsented()
+        setHasAudioConsent(true)
+      }
+      sound.setVolume(nextVolume)
+      setVolume(nextVolume)
+      if (nextVolume > 0) {
+        setIsSoundSettingsOpen(true)
+      }
+      if (nextVolume > 0) {
+        sound.playSceneBgm(audioScene)
+      }
+    },
+    [audioScene, hasAudioConsent, sound]
+  )
+
+  useEffect(() => {
+    if (hasAudioConsent) return
+    setIsSoundSettingsOpen(false)
+  }, [hasAudioConsent])
 
   useEffect(() => {
     if (sound.audioUnlocked) return
 
     const handleUnlock = () => {
       sound.unlockAudio()
-      if (!sound.isMuted) {
+      if (sound.hasConsented && sound.volume > 0) {
         sound.playSceneBgm(audioScene)
       }
       document.removeEventListener('pointerdown', handleUnlock)
@@ -433,8 +493,14 @@ function App() {
   }, [audioScene, sound])
 
   useEffect(() => {
-    sound.playSceneBgm(audioScene)
-  }, [audioScene, sound])
+    if (!hasAudioConsent || volume === 0) {
+      sound.stopBgm()
+      return
+    }
+    if (sound.audioUnlocked) {
+      sound.playSceneBgm(audioScene)
+    }
+  }, [audioScene, hasAudioConsent, sound, volume])
 
   useEffect(() => {
     if (!previousResultModalOpenRef.current && isResultModalOpen) {
@@ -1127,6 +1193,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AudioConsentModal isOpen={isAudioConsentModalOpen} onConsent={handleAudioConsent} />
       {viewMode === 'judging' && (
         <div className="fixed left-4 top-4 z-50 sm:left-6 sm:top-6">
           <NeonButton
@@ -1144,11 +1211,20 @@ function App() {
         data-testid="top-action-controls"
         className="fixed right-4 top-4 z-50 flex items-center sm:right-6 sm:top-6"
       >
-        <SoundToggleButton
-          isMuted={isMuted}
-          onToggle={handleSoundToggle}
-          className="neon-button-base neon-glow-pink"
-        />
+        <div ref={soundSettingsContainerRef} className="relative">
+          <SoundControlButton
+            volume={volume}
+            isOpen={isSoundSettingsOpen}
+            onClick={handleSoundControlClick}
+          />
+          <SoundSettingsPanel
+            isOpen={isSoundSettingsOpen}
+            volume={volume}
+            onVolumeChange={handleVolumeChange}
+            onClose={() => setIsSoundSettingsOpen(false)}
+            containerRef={soundSettingsContainerRef}
+          />
+        </div>
       </div>
       <div
         className="game-show-stage relative min-h-screen overflow-hidden px-6 pb-6"
@@ -1452,7 +1528,7 @@ function App() {
               />
             </div>
             {viewMode === 'top' && (
-              <div className="pointer-events-auto -mt-2 sm:-mt-3 md:-mt-4 lg:-mt-5">
+              <div className="pointer-events-auto -mt-1 sm:-mt-2 md:-mt-3 lg:-mt-4">
                 <NeonButton
                   type="button"
                   variant="primary"
