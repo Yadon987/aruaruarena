@@ -89,7 +89,7 @@ export function JudgeAvatars({
   judgingPhase,
   compactBottomSpacing = false,
 }: JudgeAvatarsProps) {
-  const { variants: entranceVariants } = useJudgeEntrance()
+  const { hasEntered, variants: entranceVariants } = useJudgeEntrance()
   const { currentSpeech, speakingJudge } = useJudgeSpeech({
     isJudging,
     isPostModalOpen,
@@ -133,6 +133,7 @@ export function JudgeAvatars({
               speechText={speechText}
               avatarState={avatarStates[judge.id]}
               entranceVariant={entrance}
+              hasEntered={hasEntered}
               judgment={judgmentMap.get(judge.id)}
               phase={phase}
               showSpeech={showSpeech}
