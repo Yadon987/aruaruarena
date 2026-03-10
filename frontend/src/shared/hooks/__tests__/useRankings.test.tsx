@@ -47,7 +47,15 @@ describe('useRankings', () => {
   it('useRankings が useQuery を正しく呼び出し、データを返す', async () => {
     // 検証内容: 正常系データ取得
     const mockData: GetRankingResponse = {
-      rankings: [{ id: '1', nickname: 'test' }],
+      rankings: [
+        {
+          rank: 1,
+          id: '1',
+          nickname: 'test',
+          body: 'テスト投稿',
+          average_score: 75,
+        },
+      ],
       total_count: 1,
     }
     rankingsListMock.mockResolvedValue(mockData)
