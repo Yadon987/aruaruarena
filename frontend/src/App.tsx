@@ -22,6 +22,7 @@ import { SoundSettingsPanel } from './features/top/components/SoundSettingsPanel
 import { createSoundController } from './hooks/useSound'
 import { queryClient } from './shared/config/queryClient'
 import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
+import { DEFAULT_RANKING_LIMIT } from './shared/constants/query'
 import { queryKeys } from './shared/constants/queryKeys'
 import { TEXT_LENGTH } from './shared/constants/validation'
 import { useAvatarImages } from './shared/hooks/useAvatarImages'
@@ -1006,6 +1007,16 @@ function App() {
     setIsRankingModalOpen(true)
   }
 
+  const prefetchRankings = useCallback(() => {
+    const queryKey = queryKeys.rankings.list(DEFAULT_RANKING_LIMIT)
+    if (queryClient.getQueryData(queryKey)) return
+
+    void queryClient.prefetchQuery({
+      queryKey,
+      queryFn: () => api.rankings.list(DEFAULT_RANKING_LIMIT),
+    })
+  }, [])
+
   const closeRankingModal = () => {
     setIsRankingModalOpen(false)
   }
@@ -1274,6 +1285,8 @@ function App() {
             <>
               <button
                 type="button"
+                onMouseEnter={prefetchRankings}
+                onFocus={prefetchRankings}
                 onClick={openRankingModal}
                 aria-label="ランキング"
                 title="ランキング"

@@ -9,7 +9,7 @@ export const QUERY_CONFIG = {
   /** ランキング表示の最大件数 */
   MAX_RANKING_LIMIT: 20,
   /** ランキング再取得の間隔（ミリ秒） */
-  RANKING_POLLING_INTERVAL_MS: 3000,
+  RANKING_POLLING_INTERVAL_MS: 10000,
   /** ネットワークエラー時のリトライ回数 */
   MAX_RETRY_COUNT: 1,
   /** キャッシュの有効期限（ミリ秒） */
