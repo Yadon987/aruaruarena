@@ -16,6 +16,12 @@ function getAudioDebugEvents() {
   )
 }
 
+function setupAudioForTest(sound: ReturnType<typeof createSoundController>) {
+  sound.unlockAudio()
+  sound.setConsented()
+  sound.setVolume(0.5)
+}
+
 describe('E18-01 RED: soundController', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -35,9 +41,7 @@ describe('E18-01 RED: soundController', () => {
       .__HOWLER_FADE_SPY__!
     const sound = createSoundController()
 
-    sound.unlockAudio()
-    sound.setConsented()
-    sound.setVolume(0.5)
+    setupAudioForTest(sound)
     sound.playSceneBgm('top')
     fadeSpy.mockClear()
 
@@ -59,9 +63,7 @@ describe('E18-01 RED: soundController', () => {
     // 何を検証するか: stopBgm()実行後は同じシーンでも新規再生できること
     const sound = createSoundController() as ExtendedSoundController
 
-    sound.unlockAudio()
-    sound.setConsented()
-    sound.setVolume(0.5)
+    setupAudioForTest(sound)
     sound.playSceneBgm('top')
 
     expect(typeof sound.stopBgm).toBe('function')
@@ -81,9 +83,7 @@ describe('E18-01 RED: soundController', () => {
     // 何を検証するか: dispose()でリソース解放用の後始末メソッドを安全に実行できること
     const sound = createSoundController() as ExtendedSoundController
 
-    sound.unlockAudio()
-    sound.setConsented()
-    sound.setVolume(0.5)
+    setupAudioForTest(sound)
     sound.playSceneBgm('top')
 
     expect(typeof sound.dispose).toBe('function')

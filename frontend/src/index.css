@@ -178,7 +178,6 @@
 
 .top-right-action-stack {
   display: flex;
-  flex-direction: row;
   align-items: flex-end;
   gap: 0.5rem;
 }

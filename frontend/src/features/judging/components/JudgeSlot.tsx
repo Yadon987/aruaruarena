@@ -1,11 +1,11 @@
+import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { ComponentProps, CSSProperties } from 'react'
-import { motion } from 'framer-motion'
+import type { AvatarState } from '../../../shared/constants/avatar'
 import { getAvatarImagePath } from '../../../shared/constants/avatar'
 import { JUDGE_ENTRANCE } from '../../../shared/constants/animations'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 import { useScoreRoulette } from '../../../shared/hooks/useScoreRoulette'
-import type { AvatarState } from '../../../shared/constants/avatar'
 import type { JudgePersona } from '../../../shared/types/domain'
 import type { JudgeDeskJudgment, JudgeDeskPhase } from './JudgeDesk'
 import type { JudgeSeatBackrestVariant } from './JudgeSeatBackrest'
@@ -75,9 +75,9 @@ const VIP_BULB_STEP_MS = Math.round(JUDGE_ENTRANCE.DURATION_MS / Math.max(VIP_BU
 /** 登場アニメーションのバリアント型 */
 type MotionImageProps = ComponentProps<typeof motion.img>
 type EntranceVariant = {
-  initial: MotionImageProps['initial']
-  animate: MotionImageProps['animate']
-  transition: MotionImageProps['transition']
+  initial: unknown
+  animate: unknown
+  transition: unknown
 }
 
 interface JudgeSlotProps {
@@ -188,7 +188,9 @@ export function JudgeSlot({
   const isSpeaking = Boolean(speechText && showSpeech)
   const isSpeakingAnimated = isSpeaking && hasEntered
   const [isFlashActive, setIsFlashActive] = useState(false)
-  const [isDewiSparkleActive, setIsDewiSparkleActive] = useState(judge === 'dewi' && !prefersReducedMotion)
+  const [isDewiSparkleActive, setIsDewiSparkleActive] = useState(
+    judge === 'dewi' && !prefersReducedMotion
+  )
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dewiSparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLit = isScoring || isComplete
@@ -313,9 +315,11 @@ export function JudgeSlot({
               src={getAvatarImagePath(judge, avatarState)}
               alt={alt}
               style={{ width: 'var(--judge-avatar-width)', height: 'auto' }}
-              initial={entranceVariant.initial}
-              animate={entranceVariant.animate}
-              transition={entranceVariant.transition}
+              initial={
+                hasEntered ? undefined : (entranceVariant.initial as MotionImageProps['initial'])
+              }
+              animate={entranceVariant.animate as MotionImageProps['animate']}
+              transition={entranceVariant.transition as MotionImageProps['transition']}
               draggable={false}
             />
           </div>

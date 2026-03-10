@@ -8,6 +8,8 @@ export type VolumeSliderProps = {
   inputRef?: RefObject<HTMLInputElement | null>
 }
 
+const VOLUME_LABEL = '音量'
+
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0
   if (value < 0) return 0
@@ -25,7 +27,7 @@ export function VolumeSlider({ id, value, onChange, inputRef }: VolumeSliderProp
   return (
     <label className="volume-slider" htmlFor={sliderId}>
       <span id={labelId} className="volume-slider__label">
-        音量
+        {VOLUME_LABEL}
       </span>
       <input
         id={sliderId}

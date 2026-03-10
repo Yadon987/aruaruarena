@@ -2,6 +2,7 @@ import { useJudgeAvatarState } from '../../../shared/hooks/useJudgeAvatarState'
 import { useJudgeEntrance } from '../../../shared/hooks/useJudgeEntrance'
 import { useJudgeSpeech } from '../../../shared/hooks/useJudgeSpeech'
 import type { JudgePersona, Judgment } from '../../../shared/types/domain'
+import { useJudgeResultSpeech } from '../hooks/useJudgeResultSpeech'
 import type { JudgeDeskJudgment, JudgeDeskPhase } from './JudgeDesk'
 import { JudgeSlot } from './JudgeSlot'
 
@@ -12,6 +13,8 @@ interface JudgeAvatarsProps {
   judgments?: Array<Partial<Judgment> & JudgeDeskJudgment>
   judgingPhase?: JudgeDeskPhase
   compactBottomSpacing?: boolean
+  resultMode?: boolean
+  resultJudgments?: Judgment[]
 }
 
 /** 審査員設定（表示順: 中尾 -> ひろゆき -> デヴィ） */
@@ -88,23 +91,33 @@ export function JudgeAvatars({
   judgments,
   judgingPhase,
   compactBottomSpacing = false,
+  resultMode = false,
+  resultJudgments,
 }: JudgeAvatarsProps) {
   const { hasEntered, variants: entranceVariants } = useJudgeEntrance()
-  const { currentSpeech, speakingJudge } = useJudgeSpeech({
-    isJudging,
-    isPostModalOpen,
-    allowIdleSpeech: enableIdleBehavior,
+  const { displayedComments } = useJudgeResultSpeech({
+    judgments: resultJudgments,
+    isActive: resultMode,
   })
-  const { avatarStates } = useJudgeAvatarState({
-    isJudging,
+  const isJudgingActive = isJudging && !resultMode
+  const allowIdleSpeech = enableIdleBehavior && !resultMode
+  const { currentSpeech, speakingJudge } = useJudgeSpeech({
+    isJudging: isJudgingActive,
     isPostModalOpen,
-    speakingJudge,
-    allowIdleAnimation: enableIdleBehavior,
+    allowIdleSpeech,
+  })
+  const resultSpeakingJudge = resultMode ? null : speakingJudge
+  const { avatarStates } = useJudgeAvatarState({
+    isJudging: isJudgingActive,
+    isPostModalOpen,
+    speakingJudge: resultSpeakingJudge,
+    allowIdleAnimation: allowIdleSpeech,
   })
 
-  const judgmentMap = buildJudgmentMap(judgments)
-  const phase = resolvePhase(isJudging, judgingPhase)
-  const showSpeech = phase !== 'complete' || enableIdleBehavior
+  const judgmentMap = buildJudgmentMap(resultMode ? resultJudgments : judgments)
+  const phase = resultMode ? 'complete' : resolvePhase(isJudgingActive, judgingPhase)
+  const showSpeech = resultMode ? true : phase !== 'complete' || allowIdleSpeech
+  const effectiveHasEntered = resultMode ? true : hasEntered
 
   return (
     <div
@@ -116,14 +129,16 @@ export function JudgeAvatars({
       <div data-testid="judge-avatars-container" className={AVATAR_GRID_CLASS}>
         {JUDGE_CONFIG.map((judge) => {
           const entrance = entranceVariants[judge.id]
-          const speechText = resolveSpeechText({
-            judgeId: judge.id,
-            speakingJudge,
-            currentSpeech,
-            isJudging,
-            isPostModalOpen,
-            enableIdleBehavior,
-          })
+          const speechText = resultMode
+            ? (displayedComments[judge.id] ?? null)
+            : resolveSpeechText({
+                judgeId: judge.id,
+                speakingJudge,
+                currentSpeech,
+                isJudging: isJudgingActive,
+                isPostModalOpen,
+                enableIdleBehavior: allowIdleSpeech,
+              })
 
           return (
             <JudgeSlot
@@ -133,7 +148,7 @@ export function JudgeAvatars({
               speechText={speechText}
               avatarState={avatarStates[judge.id]}
               entranceVariant={entrance}
-              hasEntered={hasEntered}
+              hasEntered={effectiveHasEntered}
               judgment={judgmentMap.get(judge.id)}
               phase={phase}
               showSpeech={showSpeech}

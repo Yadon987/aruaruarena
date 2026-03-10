@@ -32,7 +32,7 @@
 .sound-settings-panel__title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--sound-panel-title-color, #0f172a);
+  color: var(--sound-settings-text-color, var(--sound-panel-title-color, #0f172a));
 }
 
 @keyframes sound-settings-fade-in {

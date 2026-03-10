@@ -68,6 +68,7 @@ describe('E18 RED: Sound settings integration', () => {
   it('拒否で音量0を保存する', async () => {
     // 何を検証するか: 「いいえ」選択で音量0が保存されること
     // 注: aruaru_sound_consent は「同意したか」ではなく「初回モーダルに回答済みか」を示す。
+    // TODO: 将来的にキー名を aruaru_sound_modal_answered へリネームする。
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'いいえ' }))

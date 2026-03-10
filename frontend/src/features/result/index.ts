@@ -1,2 +1,1 @@
-export { JudgeResultCard } from './components/JudgeResultCard'
-export { ResultModal } from './components/ResultModal'
+export { ResultSummary } from './components/ResultSummary'

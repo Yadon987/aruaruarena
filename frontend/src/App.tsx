@@ -12,7 +12,7 @@ import {
 import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
 import { RankingModal } from './features/ranking'
-import { ResultModal } from './features/result'
+import { ResultSummary } from './features/result/components/ResultSummary'
 import { AudioConsentModal } from './features/top/components/AudioConsentModal'
 import { MyPostDetail } from './features/top/components/MyPostDetail'
 import { PostFormModal } from './features/top/components/PostFormModal'
@@ -28,7 +28,7 @@ import { TEXT_LENGTH } from './shared/constants/validation'
 import { useAvatarImages } from './shared/hooks/useAvatarImages'
 import { ApiClientError, api } from './shared/services/api'
 import type { CreatePostResponse } from './shared/types/api'
-import type { Post } from './shared/types/domain'
+import type { JudgePersona, Post } from './shared/types/domain'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
@@ -73,11 +73,22 @@ const AI_TRANSIENT_ERROR_CODES = [
 ]
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
+const MESSAGE_REJUDGE_FAILED = '再審査に失敗しました。時間をおいて再度お試しください'
+const MESSAGE_SHARE_URL_COPIED = 'シェアURLをコピーしました。Xへ貼り付けて共有してください。'
+const MESSAGE_SHARE_NAVIGATE_CONFIRM =
+  'ポップアップがブロックされました。現在の画面を離れてシェアページを開きますか？'
+const X_SHARE_BASE_URL = 'https://x.com/intent/tweet?text='
+const SHARE_HASHTAG = '#あるあるアリーナ'
+const SHARE_TARGET = '_blank'
+const SHARE_WINDOW_FEATURES = 'noopener,noreferrer'
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
 const SOUND_SE_SUBMIT = 'se_submit'
 const SOUND_SE_RETRY = 'se_retry'
 const SOUND_SE_RESULT_OPEN = 'se_result_open'
 const CONTACT_FORM_URL = 'https://forms.gle/zLN3j3YF87qdULXB9'
+const FRONTEND_BASE_URL = (
+  import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'
+).replace(/\/$/, '')
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
 
@@ -86,7 +97,7 @@ type ValidationErrors = {
   bodyError: string
 }
 
-type ViewMode = 'top' | 'judging'
+type ViewMode = 'top' | 'judging' | 'result'
 
 function shouldShowAudioConsentModalInTest(): boolean {
   return (
@@ -188,6 +199,12 @@ function resolveResultModalErrorCode(error: unknown): string {
   return RESULT_MODAL_ERROR_FETCH_FAILED
 }
 
+function buildShareUrl(postBody: string, postId: string): string {
+  const postUrl = `${FRONTEND_BASE_URL}/posts/${postId}`
+  const shareText = `${postBody} ${SHARE_HASHTAG} ${postUrl}`
+  return `${X_SHARE_BASE_URL}${encodeURIComponent(shareText)}`
+}
+
 function isTransientJudgingPollingError(error: unknown): boolean {
   if (!(error instanceof ApiClientError)) return false
   if (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT)
@@ -282,11 +299,13 @@ function App() {
   const [pendingFormData, setPendingFormData] = useState<{ nickname: string; body: string } | null>(
     null
   )
-  const [isResultModalOpen, setIsResultModalOpen] = useState(false)
   const [activeResultPostId, setActiveResultPostId] = useState('')
   const [activeResultPost, setActiveResultPost] = useState<Post | null>(null)
   const [isResultPostLoading, setIsResultPostLoading] = useState(false)
   const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
+  const [isRejudgeModalOpen, setIsRejudgeModalOpen] = useState(false)
+  const [isRejudging, setIsRejudging] = useState(false)
+  const [rejudgeErrorMessage, setRejudgeErrorMessage] = useState('')
   const [isJudgingPollingReady, setIsJudgingPollingReady] = useState(false)
   const [judgingTransientErrorCount, setJudgingTransientErrorCount] = useState(0)
   const [footerReservedSpace, setFooterReservedSpace] = useState(FIXED_FOOTER_MIN_RESERVED_PX)
@@ -300,7 +319,7 @@ function App() {
   const soundSettingsContainerRef = useRef<HTMLDivElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
   const resultRequestSeqRef = useRef(0)
-  const previousResultModalOpenRef = useRef(false)
+  const previousResultViewActiveRef = useRef(false)
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
@@ -323,10 +342,10 @@ function App() {
   }, [sound])
 
   const resultAudioScene = useMemo(() => {
-    if (!isResultModalOpen || !activeResultPost) return null
+    if (viewMode !== 'result' || !activeResultPost) return null
     return activeResultPost.status === 'scored' ? 'success' : 'failed'
-  }, [activeResultPost, isResultModalOpen])
-  const audioScene = resultAudioScene ?? viewMode
+  }, [activeResultPost, viewMode])
+  const audioScene = resultAudioScene ?? (viewMode === 'result' ? 'top' : viewMode)
   const isAudioConsentModalOpen =
     !hasAudioConsent && (import.meta.env.MODE !== 'test' || shouldShowAudioConsentModalInTest())
   const syncMyPostIds = useCallback(() => setMyPostIds(readPostIds()), [])
@@ -347,14 +366,17 @@ function App() {
       return next
     })
   }, [])
-  const saveResultModalTrigger = useCallback(() => {
+  const saveResultViewTrigger = useCallback(() => {
     resultTriggerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null
   }, [])
-  const resetResultModalState = useCallback(() => {
+  const resetResultViewState = useCallback(() => {
     setActiveResultPost(null)
     setIsResultPostLoading(false)
     setResultModalErrorCode(null)
+    setIsRejudgeModalOpen(false)
+    setRejudgeErrorMessage('')
+    setIsRejudging(false)
   }, [])
   const syncTopPath = useCallback(() => {
     window.history.replaceState({}, '', ROOT_PATH)
@@ -397,56 +419,81 @@ function App() {
     }
   }, [])
 
-  const openResultModal = useCallback(
+  const enterResultView = useCallback(
     (postId: string, initialPost?: Post | null) => {
-      saveResultModalTrigger()
+      saveResultViewTrigger()
       setActiveResultPostId(postId)
       setResultModalErrorCode(null)
+      setRejudgeErrorMessage('')
+      setIsRejudging(false)
       if (initialPost) {
         queryClient.setQueryData(queryKeys.posts.detail(postId), initialPost)
         setActiveResultPost(initialPost)
         setIsResultPostLoading(false)
+        setIsRejudgeModalOpen(initialPost.status === 'failed')
       } else {
         setActiveResultPost(null)
+        setIsRejudgeModalOpen(false)
         void fetchResultPost(postId)
       }
-      setIsResultModalOpen(true)
-      setViewMode('top')
+      setViewMode('result')
+      syncTopPath()
     },
-    [fetchResultPost, saveResultModalTrigger]
+    [fetchResultPost, saveResultViewTrigger, syncTopPath]
   )
 
-  const openResultModalWithError = useCallback(
+  const enterResultViewWithError = useCallback(
     (postId: string, errorCode: string) => {
-      saveResultModalTrigger()
+      saveResultViewTrigger()
       setActiveResultPostId(postId)
       setActiveResultPost(null)
       setResultModalErrorCode(errorCode)
       setIsResultPostLoading(false)
-      setIsResultModalOpen(true)
-      setViewMode('top')
+      setIsRejudgeModalOpen(false)
+      setViewMode('result')
+      syncTopPath()
     },
-    [saveResultModalTrigger]
+    [saveResultViewTrigger, syncTopPath]
   )
 
-  const closeResultModal = useCallback(() => {
-    setIsResultModalOpen(false)
-    resetResultModalState()
+  const closeResultView = useCallback(() => {
+    setViewMode('top')
+    resetResultViewState()
     resultRequestSeqRef.current += 1
     requestAnimationFrame(() => {
       if (resultTriggerRef.current && document.body.contains(resultTriggerRef.current)) {
         resultTriggerRef.current.focus()
       }
     })
-  }, [resetResultModalState])
+  }, [resetResultViewState])
 
-  const retryResultModal = useCallback(() => {
+  const retryResultViewFetch = useCallback(() => {
     if (!activeResultPostId) return
     void fetchResultPost(activeResultPostId, true)
   }, [activeResultPostId, fetchResultPost])
+
   const handlePlayRetrySound = useCallback(() => {
     sound.playSe(SOUND_SE_RETRY)
   }, [sound])
+
+  const handleResultShare = useCallback(async () => {
+    if (!activeResultPost) return
+    const shareUrl = buildShareUrl(activeResultPost.body, activeResultPost.id)
+    const openedWindow = window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
+    if (openedWindow) return
+
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      window.alert(MESSAGE_SHARE_URL_COPIED)
+      return
+    } catch {
+      // no-op: クリップボード非対応時は確認のうえ同一タブ遷移する。
+    }
+
+    if (window.confirm(MESSAGE_SHARE_NAVIGATE_CONFIRM)) {
+      window.location.assign(shareUrl)
+    }
+  }, [activeResultPost])
 
   const handleAudioConsent = useCallback(
     (nextVolume: number) => {
@@ -529,20 +576,21 @@ function App() {
   }, [audioScene, hasAudioConsent, sound, volume])
 
   useEffect(() => {
-    if (!previousResultModalOpenRef.current && isResultModalOpen) {
+    const isResultView = viewMode === 'result'
+    if (!previousResultViewActiveRef.current && isResultView) {
       sound.playSe(SOUND_SE_RESULT_OPEN)
     }
-    previousResultModalOpenRef.current = isResultModalOpen
-  }, [isResultModalOpen, sound])
+    previousResultViewActiveRef.current = isResultView
+  }, [sound, viewMode])
 
   useEffect(() => {
-    if (!isResultModalOpen) return
+    if (!isRejudgeModalOpen) return
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = previousOverflow
     }
-  }, [isResultModalOpen])
+  }, [isRejudgeModalOpen])
 
   useEffect(() => {
     if (!isPrivacyPolicyOpen) return
@@ -564,7 +612,7 @@ function App() {
   }, [isRankingModalOpen])
 
   useEffect(() => {
-    if (viewMode !== 'top') {
+    if (viewMode === 'judging') {
       setIsFooterActionSheetOpen(false)
     }
   }, [viewMode])
@@ -630,10 +678,10 @@ function App() {
       setIsJudgingPollingReady(true)
 
       if (response.status === 'failed') {
-        // failed応答は結果モーダルへ直接遷移し、ポーリングは中断する。
+        // failed応答は結果画面へ直接遷移し、ポーリングは中断する。
         setSuccessMessage('')
         setJudgingErrorMessage('')
-        openResultModal(response.id)
+        enterResultView(response.id)
         setIsJudgingPollingReady(false)
         return
       }
@@ -642,7 +690,7 @@ function App() {
       setSuccessMessage(MESSAGE_SUCCESS)
       enterJudgingMode(response.id, true)
     },
-    [openResultModal, savePostId, syncJudgingPath, syncMyPostIds, enterJudgingMode]
+    [enterResultView, syncJudgingPath, syncMyPostIds, enterJudgingMode]
   )
 
   const applyJudgingSubmitFailure = useCallback((error: unknown) => {
@@ -656,22 +704,84 @@ function App() {
   const handleResultRejudgeSuccess = useCallback(
     (post: Post) => {
       // 再審査開始がAPIで確定した場合のみ、審査中画面へ遷移する。
-      closeResultModal()
+      closeResultView()
       enterJudgingMode(post.id)
       syncJudgingPath(post.id)
     },
-    [closeResultModal, enterJudgingMode, syncJudgingPath]
+    [closeResultView, enterJudgingMode, syncJudgingPath]
   )
+
+  const handleResultRejudge = useCallback(async () => {
+    if (!activeResultPost || activeResultPost.status !== 'failed' || isRejudging) return
+
+    try {
+      handlePlayRetrySound()
+    } catch (error) {
+      console.error('再審査SEの再生に失敗しました', error)
+    }
+
+    const extractedFailedPersonas = activeResultPost.judgments
+      ?.filter((judgment) => !(judgment.success ?? false))
+      .map((judgment) => judgment.persona)
+    const failedPersonas: JudgePersona[] = extractedFailedPersonas?.length
+      ? extractedFailedPersonas
+      : ['hiroyuki', 'dewi', 'nakao']
+
+    setRejudgeErrorMessage('')
+    setIsRejudging(true)
+
+    try {
+      const response = await api.posts.rejudge(activeResultPost.id, failedPersonas)
+      setIsRejudgeModalOpen(false)
+      handleResultRejudgeSuccess({ ...activeResultPost, ...response })
+    } catch (error) {
+      setRejudgeErrorMessage(MESSAGE_REJUDGE_FAILED)
+      console.error('再審査API呼び出しに失敗しました', error)
+    } finally {
+      setIsRejudging(false)
+    }
+  }, [activeResultPost, handlePlayRetrySound, handleResultRejudgeSuccess, isRejudging])
+
+  const closeRejudgeModal = useCallback(() => {
+    if (isRejudging) return
+    setIsRejudgeModalOpen(false)
+    setRejudgeErrorMessage('')
+  }, [isRejudging])
+
+  useEffect(() => {
+    if (viewMode !== 'result') {
+      setIsRejudgeModalOpen(false)
+      return
+    }
+    setIsRejudgeModalOpen(activeResultPost?.status === 'failed')
+  }, [activeResultPost?.status, viewMode])
+
+  useEffect(() => {
+    if (viewMode !== 'result' || !activeResultPost || activeResultPost.status !== 'failed') return
+
+    const handleEsc = (event: globalThis.KeyboardEvent) => {
+      if (event.key === DIALOG_CLOSE_KEY) {
+        closeRejudgeModal()
+      }
+    }
+
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [activeResultPost, closeRejudgeModal, viewMode])
+
+  const closeResultAndBackTop = useCallback(() => {
+    closeResultView()
+    syncTopPath()
+  }, [closeResultView, syncTopPath])
 
   const exitJudgingWithResult = useCallback(
     (post: Post) => {
       clearJudgingPolling()
       setPendingFormData(null)
       setIsJudgingPollingReady(false)
-      syncTopPath()
-      openResultModal(post.id, post)
+      enterResultView(post.id, post)
     },
-    [clearJudgingPolling, openResultModal, syncTopPath]
+    [clearJudgingPolling, enterResultView]
   )
 
   const exitJudgingWithError = useCallback(() => {
@@ -1121,7 +1231,7 @@ function App() {
   }, [abortSubmitRequest, clearJudgingPolling, invalidateSubmitRequest, syncTopPath])
 
   const handleRankingPostClick = (postId: string) => {
-    openResultModal(postId)
+    enterResultView(postId)
   }
 
   const handleMyPostClick = async (postId: string) => {
@@ -1129,7 +1239,7 @@ function App() {
     if (cachedPost) {
       if (canOpenResultModalFromMyPost(cachedPost)) {
         closeMyPosts(false)
-        openResultModal(postId, cachedPost)
+        enterResultView(postId, cachedPost)
       } else {
         setSelectedPost(cachedPost)
       }
@@ -1154,7 +1264,7 @@ function App() {
       clearMyPostDetailError(postId)
       if (canOpenResultModalFromMyPost(response)) {
         closeMyPosts(false)
-        openResultModal(postId, response)
+        enterResultView(postId, response)
       } else {
         setSelectedPost(response)
       }
@@ -1165,7 +1275,7 @@ function App() {
       setMyPostsError(resolvePostDetailErrorMessage(error))
       if (status === HTTP_STATUS.NOT_FOUND) {
         closeMyPosts(false)
-        openResultModalWithError(postId, resolveResultModalErrorCode(error))
+        enterResultViewWithError(postId, resolveResultModalErrorCode(error))
       } else {
         setMyPostDetailErrors((prev) => ({
           ...prev,
@@ -1173,7 +1283,7 @@ function App() {
         }))
         if (shouldOpenResultModalOnMyPostError(status)) {
           closeMyPosts(false)
-          openResultModalWithError(postId, resolveResultModalErrorCode(error))
+          enterResultViewWithError(postId, resolveResultModalErrorCode(error))
         }
         restorePostIdsAfterNonNotFound(previousPostIds)
       }
@@ -1194,7 +1304,6 @@ function App() {
   const retryMyPostDetail = (postId: string) => {
     void fetchMyPostDetailForList(postId, true)
   }
-  const isResultModalLoading = isResultPostLoading && !activeResultPost
   const judgingPhase: 'entrance' | 'speaking' | 'scoring' | 'complete' =
     viewMode === 'judging'
       ? 'scoring'
@@ -1281,7 +1390,7 @@ function App() {
               containerRef={soundSettingsContainerRef}
             />
           </div>
-          {viewMode === 'top' && (
+          {viewMode !== 'judging' && (
             <>
               <button
                 type="button"
@@ -1385,7 +1494,63 @@ function App() {
           </>
         )}
 
-        {viewMode === 'top' && isMyPostsOpen && (
+        {viewMode === 'result' && (
+          <section
+            data-testid="result-screen"
+            aria-label="審査結果"
+            className="relative z-[120] mx-auto mt-16 w-full max-w-4xl px-1 pb-6 sm:mt-20"
+          >
+            {isResultPostLoading && !activeResultPost && (
+              <div className="glass-panel mx-auto w-full max-w-xl rounded-2xl p-6 text-center text-slate-100">
+                投稿結果を読み込み中です...
+              </div>
+            )}
+            {!isResultPostLoading && activeResultErrorCode && (
+              <div className="glass-panel mx-auto w-full max-w-xl rounded-2xl p-6 text-center">
+                <p className="text-sm font-semibold text-rose-100">
+                  {activeResultErrorCode === RESULT_MODAL_ERROR_NOT_FOUND
+                    ? MESSAGE_POST_NOT_FOUND
+                    : MESSAGE_POST_DETAIL_SERVER_ERROR}
+                </p>
+                <div className="mt-4 flex items-center justify-center gap-3">
+                  <NeonButton
+                    type="button"
+                    variant="secondary"
+                    compactOnMobile={true}
+                    ariaLabel="再試行する"
+                    onClick={retryResultViewFetch}
+                  >
+                    再試行
+                  </NeonButton>
+                  <button
+                    type="button"
+                    onClick={closeResultAndBackTop}
+                    className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
+                  >
+                    トップへ戻る
+                  </button>
+                </div>
+              </div>
+            )}
+            {!isResultPostLoading &&
+              !activeResultErrorCode &&
+              activeResultPost &&
+              (activeResultPost.status === 'scored' || activeResultPost.status === 'failed') && (
+              <ResultSummary
+                nickname={activeResultPost.nickname}
+                body={activeResultPost.body}
+                rank={activeResultPost.rank}
+                totalCount={activeResultPost.total_count}
+                averageScore={activeResultPost.average_score}
+                status={activeResultPost.status}
+                onShare={handleResultShare}
+                onClose={closeResultAndBackTop}
+              />
+            )}
+          </section>
+        )}
+
+        {viewMode !== 'judging' && isMyPostsOpen && (
           <div
             role="dialog"
             aria-modal="true"
@@ -1454,13 +1619,13 @@ function App() {
         )}
 
         <PrivacyPolicyModal
-          isOpen={viewMode === 'top' && isPrivacyPolicyOpen}
+          isOpen={viewMode !== 'judging' && isPrivacyPolicyOpen}
           onClose={closePrivacyPolicy}
           triggerRef={privacyPolicyTriggerRef}
         />
 
         <RankingModal
-          isOpen={viewMode === 'top' && isRankingModalOpen}
+          isOpen={viewMode !== 'judging' && isRankingModalOpen}
           onClose={closeRankingModal}
           triggerRef={rankingTriggerRef}
           myPostIds={myPostIds}
@@ -1468,17 +1633,7 @@ function App() {
           onSelectRankingPost={handleRankingPostClick}
         />
 
-        <ResultModal
-          isOpen={isResultModalOpen}
-          post={activeResultPost}
-          isLoading={isResultModalLoading}
-          errorCode={activeResultErrorCode}
-          onRetry={retryResultModal}
-          onPlayRetrySound={handlePlayRetrySound}
-          onRejudgeSuccess={handleResultRejudgeSuccess}
-          onClose={closeResultModal}
-        />
-        {viewMode === 'top' && isFooterActionSheetOpen && (
+        {viewMode !== 'judging' && isFooterActionSheetOpen && (
           <div
             role="dialog"
             aria-modal="true"
@@ -1594,12 +1749,62 @@ function App() {
             </div>
           </div>
         )}
+        {viewMode === 'result' && isRejudgeModalOpen && activeResultPost?.status === 'failed' && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="再審査確認"
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
+            onClick={closeRejudgeModal}
+            onKeyDown={(event) => {
+              if (event.key === DIALOG_CLOSE_KEY) {
+                event.preventDefault()
+                closeRejudgeModal()
+              }
+            }}
+          >
+            <div
+              className="glass-panel w-full max-w-sm rounded-2xl border border-white/20 p-5"
+              onClick={stopOverlayContentClick}
+            >
+              <h2 className="text-lg font-bold text-cyan-100">審査に失敗しました</h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-100">
+                判定の取得に失敗した審査員がいます。再審査を実行しますか？
+              </p>
+              {rejudgeErrorMessage && (
+                <p className="mt-2 text-sm text-rose-200">{rejudgeErrorMessage}</p>
+              )}
+              <div className="mt-4 flex justify-end gap-2">
+                <NeonButton
+                  type="button"
+                  variant="secondary"
+                  compactOnMobile={true}
+                  ariaLabel="閉じる"
+                  onClick={closeRejudgeModal}
+                  disabled={isRejudging}
+                >
+                  閉じる
+                </NeonButton>
+                <NeonButton
+                  type="button"
+                  variant="primary"
+                  compactOnMobile={true}
+                  ariaLabel="再審査する"
+                  onClick={handleResultRejudge}
+                  disabled={isRejudging}
+                >
+                  {isRejudging ? '再審査中...' : '再審査する'}
+                </NeonButton>
+              </div>
+            </div>
+          </div>
+        )}
         <div
           ref={footerDockRef}
           className={`fixed inset-x-0 z-30 pointer-events-none ${
-            viewMode === 'judging'
-              ? 'bottom-24 px-2 sm:bottom-24 sm:px-3 md:bottom-24 md:px-4 lg:bottom-10 lg:px-6'
-              : 'bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] px-2 sm:bottom-5 sm:px-3 md:bottom-6 md:px-4 lg:bottom-10 lg:px-6'
+            viewMode === 'top'
+              ? 'bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] px-2 sm:bottom-5 sm:px-3 md:bottom-6 md:px-4 lg:bottom-10 lg:px-6'
+              : 'bottom-24 px-2 sm:bottom-24 sm:px-3 md:bottom-24 md:px-4 lg:bottom-10 lg:px-6'
           }`}
         >
           <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-0">
@@ -1608,7 +1813,9 @@ function App() {
                 isJudging={viewMode === 'judging'}
                 isPostModalOpen={isPostModalOpen}
                 enableIdleBehavior={viewMode === 'top'}
-                judgments={activeResultPost?.judgments}
+                judgments={viewMode === 'judging' ? activeResultPost?.judgments : undefined}
+                resultMode={viewMode === 'result'}
+                resultJudgments={activeResultPost?.judgments}
                 judgingPhase={judgingPhase}
                 compactBottomSpacing={true}
               />

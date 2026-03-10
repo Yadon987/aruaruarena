@@ -46,8 +46,8 @@ describe('E25-01 RED: App Game Show Layout', () => {
     expect(soundButton).toHaveClass('neon-button-base')
   })
 
-  it('右下にランキング・その他のアイコンボタンを表示する', () => {
-    // 何を検証するか: 補助導線が右下固定のアイコンボタンとして表示されること
+  it('ランキング・その他のアイコンボタンを表示する', () => {
+    // 何を検証するか: 補助導線のアイコンボタンが表示されること
     render(<App />)
 
     const rankingButton = screen.getByRole('button', { name: 'ランキング' })

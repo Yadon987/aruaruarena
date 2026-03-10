@@ -3,8 +3,6 @@ import { DEFAULT_VOLUME } from '../../../hooks/useSound'
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap'
 import './AudioConsentModal.css'
 
-const CONSENT_DEFAULT_VOLUME = DEFAULT_VOLUME
-
 export type AudioConsentModalProps = {
   isOpen: boolean
   onConsent: (volume: number) => void
@@ -68,7 +66,7 @@ export function AudioConsentModal({ isOpen, onConsent }: AudioConsentModalProps)
           <button
             type="button"
             className="audio-consent-modal__button audio-consent-modal__button--primary"
-            onClick={() => onConsent(CONSENT_DEFAULT_VOLUME)}
+            onClick={() => onConsent(DEFAULT_VOLUME)}
           >
             はい
           </button>

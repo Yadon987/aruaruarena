@@ -68,8 +68,8 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     expect(result.current.variants.nakao.transition.duration).toBe(4.4)
   })
 
-  it('3人ともデスク後方からせり上がる入場アニメーションを持つ', async () => {
-    // 何を検証するか: E25-01の受け入れ基準として、全審査員が画面外から登場する演出を持つこと
+  it('各審査員がそれぞれ異なる方向から登場する入場アニメーションを持つ', async () => {
+    // 何を検証するか: E25-01の受け入れ基準として、審査員ごとに異なる登場演出を持つこと
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
 

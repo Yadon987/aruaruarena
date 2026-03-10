@@ -22,6 +22,7 @@ export function SoundSettingsPanel({
   const panelRef = useRef<HTMLDivElement | null>(null)
   const sliderRef = useRef<HTMLInputElement | null>(null)
   const onCloseRef = useRef(onClose)
+  const openerElementRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -52,13 +53,25 @@ export function SoundSettingsPanel({
   }, [containerRef, isOpen])
 
   useEffect(() => {
-    if (!isOpen) return
-    sliderRef.current?.focus()
+    if (isOpen) {
+      openerElementRef.current = document.activeElement as HTMLElement
+      sliderRef.current?.focus()
+      return
+    }
+
+    if (openerElementRef.current && document.body.contains(openerElementRef.current)) {
+      openerElementRef.current.focus()
+    }
+    openerElementRef.current = null
   }, [isOpen])
 
   if (!isOpen) return null
 
-  const icon = volume === 0 ? '🔇' : '🔊'
+  const icon = (() => {
+    if (volume <= 0) return '🔇'
+    if (volume < 0.34) return '🔈'
+    return '🔊'
+  })()
 
   return (
     <div

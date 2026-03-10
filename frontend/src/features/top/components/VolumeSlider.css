@@ -20,6 +20,17 @@
 @supports not (accent-color: auto) {
   .volume-slider__range {
     appearance: none;
+    background: transparent;
+  }
+
+  .volume-slider__range::-webkit-slider-runnable-track {
+    height: 6px;
+    border: 1px solid var(--sound-volume-track-border-color, #fda4af);
+    border-radius: 999px;
+    background: var(--sound-volume-track-color, #ffe4e6);
+  }
+
+  .volume-slider__range::-moz-range-track {
     height: 6px;
     border: 1px solid var(--sound-volume-track-border-color, #fda4af);
     border-radius: 999px;

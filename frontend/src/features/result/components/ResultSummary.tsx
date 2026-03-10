@@ -1,0 +1,79 @@
+interface ResultSummaryProps {
+  nickname: string
+  body: string
+  rank?: number
+  totalCount?: number
+  averageScore?: number
+  status: 'scored' | 'failed'
+  onShare: () => void
+  onClose: () => void
+}
+
+const FAILED_RANK_LABEL = '第---位'
+const FAILED_AVERAGE_LABEL = '--.-'
+
+export function ResultSummary({
+  nickname,
+  body,
+  rank,
+  totalCount,
+  averageScore,
+  status,
+  onShare,
+  onClose,
+}: ResultSummaryProps) {
+  const rankLabel =
+    status === 'scored' && typeof rank === 'number' ? `第${rank}位` : FAILED_RANK_LABEL
+  const totalLabel =
+    status === 'scored' && typeof totalCount === 'number' ? `${totalCount}件中` : '集計対象外'
+  const averageLabel =
+    status === 'scored' && typeof averageScore === 'number'
+      ? averageScore.toFixed(1)
+      : FAILED_AVERAGE_LABEL
+
+  return (
+    <section
+      className="glass-panel relative z-20 mx-auto w-full max-w-xl rounded-2xl border border-white/20 p-5 shadow-[0_18px_40px_rgba(8,15,40,0.35)]"
+      aria-label="審査結果サマリー"
+    >
+      <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100/85">
+        RESULT
+      </p>
+      <h2 className="mt-2 text-center text-2xl font-black text-white sm:text-3xl">
+        ★ <span className="gold-text">{nickname}</span> ★
+      </h2>
+      <p className="mt-3 text-center text-sm leading-relaxed text-slate-100 sm:text-base">
+        「{body}」
+      </p>
+
+      <div className="mt-5 flex flex-wrap items-end justify-center gap-x-6 gap-y-2 text-white">
+        <p className="text-sm font-semibold sm:text-base">
+          <span className="digital-score gold-text text-2xl">{rankLabel}</span>
+          <span className="ml-2 text-slate-100">{totalLabel}</span>
+        </p>
+        <p className="text-sm font-semibold sm:text-base">
+          平均 <span className="digital-score gold-text text-2xl">{averageLabel}</span> 点
+        </p>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={onShare}
+          aria-label="X でシェア"
+          className="neon-button-base neon-glow-pink px-7 py-3 text-base font-black tracking-wide sm:px-8"
+        >
+          𝕏 でシェア
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="トップへ戻る"
+          className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
+        >
+          トップへ戻る
+        </button>
+      </div>
+    </section>
+  )
+}

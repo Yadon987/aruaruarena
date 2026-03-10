@@ -156,6 +156,8 @@ export function PostFormModal({
                     value={nickname}
                     onChange={(event) => setNickname(event.target.value)}
                     className="mt-1 w-full rounded border px-3 py-2"
+                    minLength={TEXT_LENGTH.NICKNAME_MIN}
+                    maxLength={TEXT_LENGTH.NICKNAME_MAX}
                   />
                 </div>
 
@@ -172,6 +174,8 @@ export function PostFormModal({
                     onChange={(event) => setBody(event.target.value)}
                     className="mt-1 w-full rounded border px-3 py-2"
                     rows={3}
+                    minLength={TEXT_LENGTH.BODY_MIN}
+                    maxLength={TEXT_LENGTH.BODY_MAX}
                   />
                 </div>
 

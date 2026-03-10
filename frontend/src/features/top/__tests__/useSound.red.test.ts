@@ -33,8 +33,8 @@ describe('E18 RED: useSound', () => {
     vi.useRealTimers()
   })
 
-  it('初期値はvolume=0.6で開始する', async () => {
-    // 何を検証するか: 初回アクセス時に volume が 0.6 で初期化されること
+  it('初期値はDEFAULT_VOLUMEで開始する', async () => {
+    // 何を検証するか: 初回アクセス時に volume が DEFAULT_VOLUME で初期化されること
     const module = await loadUseSoundModule()
     const sound = module.createSoundController()
 

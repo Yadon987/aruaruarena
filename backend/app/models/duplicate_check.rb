@@ -61,7 +61,7 @@ class DuplicateCheck
   # @return [Boolean] 重複ありならtrue、なければfalse
   def self.exists_with_hash?(body_hash)
     record = find(body_hash)
-    return false if missing_expires_at?(body_hash, record)
+    return false unless valid_expires_at?(body_hash, record)
 
     record.expires_at.to_i > Time.now.to_i
   rescue Dynamoid::Errors::RecordNotFound
@@ -72,9 +72,9 @@ class DuplicateCheck
     false
   end
 
-  def self.missing_expires_at?(body_hash, record)
+  def self.valid_expires_at?(body_hash, record)
     expires_at = record&.expires_at
-    return false if expires_at
+    return true if expires_at
 
     body_hash_short = body_hash.to_s[0..15]
 
@@ -82,9 +82,9 @@ class DuplicateCheck
       '[DuplicateCheck#exists_with_hash?] expires_at is missing ' \
       "for body_hash=#{body_hash_short} post_id=#{record&.post_id}"
     )
-    true
+    false
   end
-  private_class_method :missing_expires_at?
+  private_class_method :valid_expires_at?
 
   # 重複チェックを登録
   # @param body [String] 本文（生値）

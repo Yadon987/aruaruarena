@@ -63,7 +63,7 @@ function writeVolume(value: number) {
   }
 }
 
-function hasConsent(): boolean {
+function readConsentFromStorage(): boolean {
   try {
     if (typeof localStorage === 'undefined') return false
     return localStorage.getItem(SOUND_CONSENT_KEY) === 'true'
@@ -99,7 +99,7 @@ function runFade(howl: Howl | null, from: number, to: number, durationMs: number
 
 export function createSoundController() {
   let volume = getOrInitVolume()
-  let hasConsented = hasConsent()
+  let hasConsented = readConsentFromStorage()
   let audioUnlocked = false
   let currentScene: Scene | null = null
   let currentBgm: Howl | null = null
