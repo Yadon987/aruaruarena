@@ -322,13 +322,6 @@ function App() {
     setHasAudioConsent(true)
   }, [sound])
 
-  useEffect(() => {
-    void queryClient.prefetchQuery({
-      queryKey: queryKeys.rankings.list(DEFAULT_RANKING_LIMIT),
-      queryFn: () => api.rankings.list(DEFAULT_RANKING_LIMIT),
-    })
-  }, [])
-
   const resultAudioScene = useMemo(() => {
     if (!isResultModalOpen || !activeResultPost) return null
     return activeResultPost.status === 'scored' ? 'success' : 'failed'
@@ -1014,6 +1007,16 @@ function App() {
     setIsRankingModalOpen(true)
   }
 
+  const prefetchRankings = useCallback(() => {
+    const queryKey = queryKeys.rankings.list(DEFAULT_RANKING_LIMIT)
+    if (queryClient.getQueryData(queryKey)) return
+
+    void queryClient.prefetchQuery({
+      queryKey,
+      queryFn: () => api.rankings.list(DEFAULT_RANKING_LIMIT),
+    })
+  }, [])
+
   const closeRankingModal = () => {
     setIsRankingModalOpen(false)
   }
@@ -1282,6 +1285,8 @@ function App() {
             <>
               <button
                 type="button"
+                onMouseEnter={prefetchRankings}
+                onFocus={prefetchRankings}
                 onClick={openRankingModal}
                 aria-label="ランキング"
                 title="ランキング"
