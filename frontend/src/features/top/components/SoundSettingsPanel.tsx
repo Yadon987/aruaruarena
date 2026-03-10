@@ -3,6 +3,7 @@ import { VolumeSlider } from './VolumeSlider'
 import './SoundSettingsPanel.css'
 
 const LOW_VOLUME_ICON_THRESHOLD = 0.34
+const HIGH_VOLUME_ICON_THRESHOLD = 0.67
 
 export type SoundSettingsPanelProps = {
   isOpen: boolean
@@ -66,11 +67,6 @@ export function SoundSettingsPanel({
         openerElementRef.current = null
       }
     }
-
-    if (openerElementRef.current && document.body.contains(openerElementRef.current)) {
-      openerElementRef.current.focus()
-    }
-    openerElementRef.current = null
   }, [isOpen])
 
   if (!isOpen) return null
@@ -78,7 +74,7 @@ export function SoundSettingsPanel({
   const icon = (() => {
     if (volume <= 0) return '🔇'
     if (volume < LOW_VOLUME_ICON_THRESHOLD) return '🔈'
-    if (volume < 0.67) return '🔉'
+    if (volume < HIGH_VOLUME_ICON_THRESHOLD) return '🔉'
     return '🔊'
   })()
 

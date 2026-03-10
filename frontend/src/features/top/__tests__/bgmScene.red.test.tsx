@@ -27,6 +27,10 @@ function clearAudioDebugEvents() {
   debugEvents.splice(0, debugEvents.length)
 }
 
+function isTopBgmEvent(event: AudioDebugEvent): boolean {
+  return event.type === 'bgm' && event.scene === 'top'
+}
+
 function setupRanking() {
   mockRankings([
     {
@@ -40,14 +44,10 @@ function setupRanking() {
 }
 
 async function enableSound() {
-  const beforeTopBgmCount = getAudioDebugEvents().filter(
-    (event) => event.type === 'bgm' && event.scene === 'top'
-  ).length
+  const beforeTopBgmCount = getAudioDebugEvents().filter(isTopBgmEvent).length
   fireEvent.pointerDown(document.body)
   await waitFor(() => {
-    const afterTopBgmCount = getAudioDebugEvents().filter(
-      (event) => event.type === 'bgm' && event.scene === 'top'
-    ).length
+    const afterTopBgmCount = getAudioDebugEvents().filter(isTopBgmEvent).length
     expect(afterTopBgmCount).toBeGreaterThan(beforeTopBgmCount)
   })
 }
@@ -69,7 +69,7 @@ async function openRankingResultModal(postDetail: Awaited<ReturnType<typeof api.
 describe('E18-01 RED: BGM scene integration', () => {
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('aruaru_sound_consent', 'true')
+    localStorage.setItem('aruaru_sound_modal_answered', 'true')
     localStorage.setItem('aruaru_sound_volume', '0.5')
     vi.clearAllMocks()
     vi.stubGlobal('__AUDIO_DEBUG__', [])

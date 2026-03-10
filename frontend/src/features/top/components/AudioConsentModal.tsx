@@ -24,7 +24,8 @@ export function AudioConsentModal({ isOpen, onConsent }: AudioConsentModalProps)
   useEffect(() => {
     if (!isOpen) return
 
-    previousActiveElementRef.current = document.activeElement as HTMLElement
+    previousActiveElementRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
     const rafId = window.requestAnimationFrame(() => {
       rejectButtonRef.current?.focus()
     })

@@ -53,8 +53,8 @@ describe('E18 RED: useSound', () => {
     expect(sound.volume).toBe(0)
   })
 
-  it('不正なlocalStorage値は0.6に正規化する', async () => {
-    // 何を検証するか: 不正値で起動した場合に 0.6 へ正規化して保存し直すこと
+  it('不正なlocalStorage値はDEFAULT_VOLUMEに正規化する', async () => {
+    // 何を検証するか: 不正値で起動した場合に DEFAULT_VOLUME へ正規化して保存し直すこと
     localStorage.setItem('aruaru_sound_volume', 'invalid')
 
     const module = await loadUseSoundModule()

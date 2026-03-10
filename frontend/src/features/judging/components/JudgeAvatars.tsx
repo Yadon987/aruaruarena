@@ -100,23 +100,23 @@ export function JudgeAvatars({
     isActive: resultMode,
   })
   const isJudgingActive = isJudging && !resultMode
-  const allowIdleSpeech = enableIdleBehavior && !resultMode
+  const effectiveEnableIdleBehavior = enableIdleBehavior && !resultMode
   const { currentSpeech, speakingJudge } = useJudgeSpeech({
     isJudging: isJudgingActive,
     isPostModalOpen,
-    allowIdleSpeech,
+    allowIdleSpeech: effectiveEnableIdleBehavior,
   })
   const resultSpeakingJudge = resultMode ? null : speakingJudge
   const { avatarStates } = useJudgeAvatarState({
     isJudging: isJudgingActive,
     isPostModalOpen,
     speakingJudge: resultSpeakingJudge,
-    allowIdleAnimation: allowIdleSpeech,
+    allowIdleAnimation: effectiveEnableIdleBehavior,
   })
 
   const judgmentMap = buildJudgmentMap(resultMode ? resultJudgments : judgments)
   const phase = resultMode ? 'complete' : resolvePhase(isJudgingActive, judgingPhase)
-  const showSpeech = resultMode ? true : phase !== 'complete' || allowIdleSpeech
+  const showSpeech = resultMode ? true : phase !== 'complete' || effectiveEnableIdleBehavior
   const effectiveHasEntered = resultMode ? true : hasEntered
 
   return (
@@ -137,7 +137,7 @@ export function JudgeAvatars({
                 currentSpeech,
                 isJudging: isJudgingActive,
                 isPostModalOpen,
-                enableIdleBehavior: allowIdleSpeech,
+                enableIdleBehavior: effectiveEnableIdleBehavior,
               })
 
           return (

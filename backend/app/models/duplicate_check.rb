@@ -53,7 +53,10 @@ class DuplicateCheck
   end
 
   class << self
-    alias check check?
+    def check(body)
+      Rails.logger.warn('[DuplicateCheck] `check` は非推奨です。`check?` を使用してください。')
+      check?(body)
+    end
   end
 
   # ハッシュ値での重複チェック（内部用またはハッシュが既にある場合）

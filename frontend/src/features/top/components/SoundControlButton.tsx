@@ -7,7 +7,12 @@ export type SoundControlButtonProps = {
 
 export function SoundControlButton({ volume, isOpen, onClick, panelId }: SoundControlButtonProps) {
   const isMuted = volume === 0
-  const icon = isMuted ? '🔇' : '🔊'
+  const icon = (() => {
+    if (isMuted) return '🔇'
+    if (volume < 0.34) return '🔈'
+    if (volume < 0.67) return '🔉'
+    return '🔊'
+  })()
 
   return (
     <button

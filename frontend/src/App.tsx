@@ -29,6 +29,7 @@ import { useAvatarImages } from './shared/hooks/useAvatarImages'
 import { ApiClientError, api } from './shared/services/api'
 import type { CreatePostResponse } from './shared/types/api'
 import type { JudgePersona, Post } from './shared/types/domain'
+import { countGraphemeClusters } from './shared/utils'
 import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
@@ -42,6 +43,7 @@ const SERVER_ERROR_STATUSES: ReadonlyArray<number> = [
 const MESSAGE_NICKNAME_REQUIRED = 'ニックネームを入力してください'
 const MESSAGE_NICKNAME_LENGTH = `ニックネームは${TEXT_LENGTH.NICKNAME_MIN}〜${TEXT_LENGTH.NICKNAME_MAX}文字で入力してください`
 const MESSAGE_BODY_LENGTH = `本文は${TEXT_LENGTH.BODY_MIN}〜${TEXT_LENGTH.BODY_MAX}文字で入力してください`
+const MESSAGE_BODY_REQUIRED = '本文を入力してください'
 const MESSAGE_SUCCESS = '投稿を受け付けました'
 const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
 const MESSAGE_MY_POST_DETAIL_FETCH_FAILED = '投稿詳細の取得に失敗しました'
@@ -223,17 +225,19 @@ function buildTransientErrorNotice(errorCount: number): string {
 function validateForm(nickname: string, body: string): ValidationErrors {
   const trimmedNickname = nickname.trim()
   const trimmedBody = body.trim()
-  const nicknameLength = trimmedNickname.length
-  const bodyLength = trimmedBody.length
+  const nicknameLength = countGraphemeClusters(trimmedNickname)
+  const bodyLength = countGraphemeClusters(trimmedBody)
 
   const nicknameError =
     nicknameLength < TEXT_LENGTH.NICKNAME_MIN || nicknameLength > TEXT_LENGTH.NICKNAME_MAX
       ? MESSAGE_NICKNAME_LENGTH
       : ''
   const bodyError =
-    bodyLength < TEXT_LENGTH.BODY_MIN || bodyLength > TEXT_LENGTH.BODY_MAX
-      ? MESSAGE_BODY_LENGTH
-      : ''
+    trimmedBody.length === 0
+      ? MESSAGE_BODY_REQUIRED
+      : bodyLength < TEXT_LENGTH.BODY_MIN || bodyLength > TEXT_LENGTH.BODY_MAX
+        ? MESSAGE_BODY_LENGTH
+        : ''
 
   return {
     nicknameError: trimmedNickname ? nicknameError : MESSAGE_NICKNAME_REQUIRED,
@@ -725,6 +729,9 @@ function App() {
     const extractedFailedPersonas = judgments
       ?.filter((judgment) => !(judgment.success ?? false))
       .map((judgment) => judgment.persona)
+    // judgments未取得時は既定順序の全員を再審査対象にし、
+    // 取得済みで失敗者があればその一覧を、
+    // 失敗者なしの場合は空配列として後続のエラーハンドリングへ進める。
     const failedPersonas: JudgePersona[] =
       judgments == null
         ? DEFAULT_FAILED_PERSONAS
@@ -1073,8 +1080,10 @@ function App() {
   }
 
   // App直下モーダルの内側クリックを無効化し、外側クリック閉鎖と挙動を分離する。
-  const stopOverlayContentClick = (event: ReactMouseEvent<HTMLDivElement>) => {
-    event.stopPropagation()
+  const stopOverlayContentClick = (event?: ReactMouseEvent<HTMLDivElement>) => {
+    if (event) {
+      event.stopPropagation()
+    }
   }
 
   const handleMyPostsTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -1751,18 +1760,26 @@ function App() {
             aria-modal="true"
             aria-label="再審査確認"
             tabIndex={-1}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
-            onClick={closeRejudgeModal}
             onKeyDown={(event) => {
               if (event.key === DIALOG_CLOSE_KEY) {
                 event.preventDefault()
                 closeRejudgeModal()
               }
             }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
+            onClick={closeRejudgeModal}
           >
             <div
               className="glass-panel w-full max-w-sm rounded-2xl border border-white/20 p-5"
               onClick={stopOverlayContentClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  stopOverlayContentClick()
+                }
+              }}
             >
               <h2 className="text-lg font-bold text-cyan-100">審査に失敗しました</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-100">

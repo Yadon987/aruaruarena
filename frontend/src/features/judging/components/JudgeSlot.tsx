@@ -75,9 +75,9 @@ const VIP_BULB_STEP_MS = Math.round(JUDGE_ENTRANCE.DURATION_MS / Math.max(VIP_BU
 /** 登場アニメーションのバリアント型 */
 type MotionImageProps = ComponentProps<typeof motion.img>
 type EntranceVariant = {
-  initial: unknown
-  animate: unknown
-  transition: unknown
+  initial: MotionImageProps['initial']
+  animate: MotionImageProps['animate']
+  transition: MotionImageProps['transition']
 }
 
 interface JudgeSlotProps {
@@ -188,9 +188,7 @@ export function JudgeSlot({
   const isSpeaking = Boolean(speechText && showSpeech)
   const isSpeakingAnimated = isSpeaking && hasEntered
   const [isFlashActive, setIsFlashActive] = useState(false)
-  const [isDewiSparkleActive, setIsDewiSparkleActive] = useState(
-    judge === 'dewi' && !prefersReducedMotion
-  )
+  const [isDewiSparkleActive, setIsDewiSparkleActive] = useState(false)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dewiSparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLit = isScoring || isComplete
@@ -234,7 +232,14 @@ export function JudgeSlot({
   }, [isComplete])
 
   useEffect(() => {
-    if (judge !== 'dewi') return
+    if (judge !== 'dewi') {
+      if (dewiSparkleTimerRef.current) {
+        clearTimeout(dewiSparkleTimerRef.current)
+        dewiSparkleTimerRef.current = null
+      }
+      setIsDewiSparkleActive(false)
+      return
+    }
     if (prefersReducedMotion) {
       setIsDewiSparkleActive(false)
       return
@@ -315,11 +320,9 @@ export function JudgeSlot({
               src={getAvatarImagePath(judge, avatarState)}
               alt={alt}
               style={{ width: 'var(--judge-avatar-width)', height: 'auto' }}
-              initial={
-                hasEntered ? undefined : (entranceVariant.initial as MotionImageProps['initial'])
-              }
-              animate={entranceVariant.animate as MotionImageProps['animate']}
-              transition={entranceVariant.transition as MotionImageProps['transition']}
+              initial={hasEntered ? false : entranceVariant.initial}
+              animate={entranceVariant.animate}
+              transition={entranceVariant.transition}
               draggable={false}
             />
           </div>

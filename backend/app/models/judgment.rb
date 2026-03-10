@@ -62,31 +62,13 @@ class Judgment
 
   # スコア範囲のバリデーション（成功時のみ必須）
   with_options if: :succeeded? do
-    validates :empathy,     presence: true,
-                            numericality: {
-                              only_integer: true, greater_than_or_equal_to: 0,
-                              less_than_or_equal_to: MAX_SCORE_PER_ITEM
-                            }
-    validates :humor,       presence: true,
-                            numericality: {
-                              only_integer: true, greater_than_or_equal_to: 0,
-                              less_than_or_equal_to: MAX_SCORE_PER_ITEM
-                            }
-    validates :brevity,     presence: true,
-                            numericality: {
-                              only_integer: true, greater_than_or_equal_to: 0,
-                              less_than_or_equal_to: MAX_SCORE_PER_ITEM
-                            }
-    validates :originality, presence: true,
-                            numericality: {
-                              only_integer: true, greater_than_or_equal_to: 0,
-                              less_than_or_equal_to: MAX_SCORE_PER_ITEM
-                            }
-    validates :expression,  presence: true,
-                            numericality: {
-                              only_integer: true, greater_than_or_equal_to: 0,
-                              less_than_or_equal_to: MAX_SCORE_PER_ITEM
-                            }
+    SCORE_FIELDS.each do |field|
+      validates field, presence: true,
+                      numericality: {
+                        only_integer: true, greater_than_or_equal_to: 0,
+                        less_than_or_equal_to: MAX_SCORE_PER_ITEM
+                      }
+    end
     validates :total_score, presence: true,
                             numericality: {
                               only_integer: true, greater_than_or_equal_to: 0,

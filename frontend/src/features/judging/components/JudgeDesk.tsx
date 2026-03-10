@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 import { useScoreRoulette } from '../../../shared/hooks/useScoreRoulette'
 import type { JudgePersona } from '../../../shared/types/domain'
+import { JUDGE_PERSONA_ORDER } from '../../../shared/constants/animations'
 
 export type JudgeDeskPhase = 'entrance' | 'speaking' | 'scoring' | 'complete'
 
@@ -18,7 +19,7 @@ type JudgeDeskProps = {
   phase: JudgeDeskPhase
 }
 
-const JUDGE_DISPLAY_ORDER: readonly JudgePersona[] = ['nakao', 'hiroyuki', 'dewi']
+const JUDGE_DISPLAY_ORDER: readonly JudgePersona[] = JUDGE_PERSONA_ORDER
 const SCORE_PLACEHOLDER = '00'
 const SCORE_NOT_AVAILABLE = 'N/A'
 const LIT_ON = 'true'

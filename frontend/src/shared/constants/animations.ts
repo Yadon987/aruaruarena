@@ -1,6 +1,8 @@
 /**
  * アニメーションの継続時間（秒）
  */
+import type { JudgePersona } from '../types/domain'
+
 export const DURATION = {
   /** 画面遷移アニメーションの時間 */
   PAGE_TRANSITION: 0.5,
@@ -42,6 +44,8 @@ export const TRANSITIONS = {
   fadeIn: { duration: DURATION.FADE_IN, ease: 'easeIn' },
 } as const
 
+export const JUDGE_PERSONA_ORDER: readonly JudgePersona[] = ['nakao', 'hiroyuki', 'dewi'] as const
+
 /**
  * アニメーションバリアント（初期状態・終了状態）
  */
@@ -65,6 +69,22 @@ export const VARIANTS = {
     exit: { opacity: OPACITY.HIDDEN },
   },
 } as const
+
+export type JudgeEntranceVariant = {
+  initial: Record<string, number>
+  animate: Record<string, number | readonly number[]>
+  transition: {
+    duration: number
+    ease: readonly number[]
+    times: readonly number[]
+  }
+}
+
+export type JudgeEntranceVariants = {
+  hiroyuki: JudgeEntranceVariant
+  dewi: JudgeEntranceVariant
+  nakao: JudgeEntranceVariant
+}
 
 /**
  * 審査員登場アニメーション関連の定数
@@ -119,7 +139,7 @@ export const JUDGE_ENTRANCE = {
         times: [0, 0.1, 0.2, 0.3, 0.42, 0.54, 0.66, 0.78, 0.9, 0.96, 1],
       },
     },
-  },
+  } satisfies JudgeEntranceVariants,
 } as const
 
 /**

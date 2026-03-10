@@ -22,11 +22,10 @@ export function VolumeSlider({ id, value, onChange, inputRef }: VolumeSliderProp
   const percent = Math.round(clamped * 100)
   const generatedId = useId().replace(/:/g, '')
   const sliderId = id ?? `sound-volume-slider-${generatedId}`
-  const labelId = `${sliderId}-label`
 
   return (
-    <label className="volume-slider" htmlFor={sliderId}>
-      <span id={labelId} className="volume-slider__label">
+    <label className="volume-slider">
+      <span className="volume-slider__label">
         {VOLUME_LABEL}
       </span>
       <input
@@ -37,9 +36,9 @@ export function VolumeSlider({ id, value, onChange, inputRef }: VolumeSliderProp
         max={100}
         step={1}
         value={percent}
+        aria-label={VOLUME_LABEL}
         onChange={(event) => onChange(clamp01(Number(event.target.value) / 100))}
         className="volume-slider__range"
-        aria-labelledby={labelId}
       />
       <span className="volume-slider__value">{percent}%</span>
     </label>

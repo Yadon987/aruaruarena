@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { JUDGE_SPEECH } from '../../../shared/constants/animations'
 import type { JudgePersona, Judgment } from '../../../shared/types/domain'
+import { JUDGE_PERSONA_ORDER } from '../../../shared/constants/animations'
 
-const RESULT_SPEECH_ORDER: readonly JudgePersona[] = ['nakao', 'hiroyuki', 'dewi']
+const RESULT_SPEECH_ORDER: readonly JudgePersona[] = JUDGE_PERSONA_ORDER
 const RESULT_SPEECH_INTERVAL_MS = JUDGE_SPEECH.DURATION_MS + 300
 
 type DisplayedComments = Partial<Record<JudgePersona, string>>
@@ -20,15 +21,6 @@ interface UseJudgeResultSpeechOptions {
 interface UseJudgeResultSpeechResult {
   displayedComments: DisplayedComments
   activeJudge: JudgePersona | null
-}
-
-function buildJudgmentsSignature(judgments?: Judgment[]): string {
-  if (!judgments || judgments.length === 0) return ''
-
-  return judgments
-    .map((judgment) => `${judgment.persona}:${judgment.comment}`)
-    .sort()
-    .join('|')
 }
 
 function buildOrderedComments(judgments?: Judgment[]): OrderedComment[] {
@@ -49,16 +41,12 @@ export function useJudgeResultSpeech({
 }: UseJudgeResultSpeechOptions): UseJudgeResultSpeechResult {
   const [displayedComments, setDisplayedComments] = useState<DisplayedComments>({})
   const [activeJudge, setActiveJudge] = useState<JudgePersona | null>(null)
-  const judgmentsSignature = useMemo(() => buildJudgmentsSignature(judgments), [judgments])
-  const orderedComments = useMemo(
-    () => buildOrderedComments(judgments),
-    [judgments, judgmentsSignature]
-  )
+  const orderedComments = useMemo(() => buildOrderedComments(judgments), [judgments])
 
   useEffect(() => {
     if (!isActive || orderedComments.length === 0) {
       setDisplayedComments((previous) => (Object.keys(previous).length === 0 ? previous : {}))
-      setActiveJudge(() => null)
+      setActiveJudge(null)
       return
     }
 

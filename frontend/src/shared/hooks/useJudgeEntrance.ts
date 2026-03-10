@@ -1,14 +1,21 @@
+import type { HTMLMotionProps } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
-import { JUDGE_ENTRANCE } from '../constants/animations'
+import { JUDGE_ENTRANCE, type JudgeEntranceVariants } from '../constants/animations'
 import { useReducedMotion } from './useReducedMotion'
 
 const ENTRANCE_DURATION_MS = JUDGE_ENTRANCE.DURATION_MS
 
-type JudgeEntranceVariants = typeof JUDGE_ENTRANCE.VARIANTS
+type MotionImageProps = HTMLMotionProps<'img'>
+type JudgeEntranceVariant = {
+  initial: MotionImageProps['initial']
+  animate: MotionImageProps['animate']
+  transition: MotionImageProps['transition']
+}
+type MotionCompatibleEntranceVariants = Record<keyof JudgeEntranceVariants, JudgeEntranceVariant>
 
 interface JudgeEntranceState {
   hasEntered: boolean
-  variants: JudgeEntranceVariants
+  variants: MotionCompatibleEntranceVariants
 }
 
 /**
@@ -38,6 +45,6 @@ export function useJudgeEntrance(): JudgeEntranceState {
     }
   }, [prefersReducedMotion])
 
-  const variants = JUDGE_ENTRANCE.VARIANTS
+  const variants: MotionCompatibleEntranceVariants = JUDGE_ENTRANCE.VARIANTS
   return { hasEntered, variants }
 }

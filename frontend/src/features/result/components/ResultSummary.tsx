@@ -11,6 +11,11 @@ interface ResultSummaryProps {
 
 const FAILED_RANK_LABEL = '第---位'
 const FAILED_AVERAGE_LABEL = '--.-'
+const FAILED_TOTAL_LABEL = '集計対象外'
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
 
 export function ResultSummary({
   nickname,
@@ -25,9 +30,9 @@ export function ResultSummary({
   const rankLabel =
     status === 'scored' && typeof rank === 'number' ? `第${rank}位` : FAILED_RANK_LABEL
   const totalLabel =
-    status === 'scored' && typeof totalCount === 'number' ? `${totalCount}件中` : '集計対象外'
+    status === 'scored' && typeof totalCount === 'number' ? `${totalCount}件中` : FAILED_TOTAL_LABEL
   const averageLabel =
-    status === 'scored' && typeof averageScore === 'number'
+    status === 'scored' && isFiniteNumber(averageScore)
       ? averageScore.toFixed(1)
       : FAILED_AVERAGE_LABEL
 
@@ -63,7 +68,7 @@ export function ResultSummary({
           aria-label="X でシェア"
           className="neon-button-base neon-glow-pink px-7 py-3 text-base font-black tracking-wide sm:px-8"
         >
-          𝕏 でシェア
+          X でシェア
         </button>
         <button
           type="button"
