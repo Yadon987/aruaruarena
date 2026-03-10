@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Api
+  # 投稿APIコントローラー
   class PostsController < ApplicationController
     before_action :validate_content_type, only: %i[create rejudge]
     # Cache-Control設定
@@ -294,11 +295,7 @@ module Api
 
       response.headers['Cache-Control'] = CACHE_CONTROL_POST_DETAIL
       # HEADリクエストでもbodyを含める（クローラー対応）
-      if request.head?
-        render body: html, content_type: 'text/html', status: :ok
-      else
-        render html: html.html_safe, content_type: 'text/html', status: :ok
-      end
+      render body: html, content_type: 'text/html', status: :ok
     end
 
     # 通常ユーザー向けJSONをレンダリング

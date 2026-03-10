@@ -60,7 +60,10 @@ class Post
                          range_key: :score_key
 
   # アソシエーション
+  # rubocop:disable Rails/HasManyOrHasOneDependent
+  # Dynamoidではdependentオプションがサポートされないため、before_destroyで制御する
   has_many :judgments
+  # rubocop:enable Rails/HasManyOrHasOneDependent
 
   # バリデーション
   validates :id,          presence: { message: 'を入力してください' }

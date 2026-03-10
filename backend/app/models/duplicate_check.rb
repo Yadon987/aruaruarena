@@ -47,9 +47,13 @@ class DuplicateCheck
   # 重複チェック（本文からハッシュ生成してチェック）
   # @param body [String] 本文（生値）
   # @return [Boolean] 重複ありならtrue、なければfalse
-  def self.check(body)
+  def self.check?(body)
     hash = generate_body_hash(body)
     exists_with_hash?(hash)
+  end
+
+  class << self
+    alias check check?
   end
 
   # ハッシュ値での重複チェック（内部用またはハッシュが既にある場合）
@@ -57,7 +61,9 @@ class DuplicateCheck
   # @return [Boolean] 重複ありならtrue、なければfalse
   def self.exists_with_hash?(body_hash)
     record = find(body_hash)
-    record&.expires_at&.to_i&.> Time.now.to_i
+    return false if missing_expires_at?(body_hash, record)
+
+    record.expires_at.to_i > Time.now.to_i
   rescue Dynamoid::Errors::RecordNotFound
     false
   rescue StandardError => e
@@ -65,6 +71,19 @@ class DuplicateCheck
     Rails.logger.error("[DuplicateCheck#exists_with_hash?] DynamoDB error: #{e.class} - #{e.message}")
     false
   end
+
+  def self.missing_expires_at?(body_hash, record)
+    return false unless record&.expires_at.nil?
+
+    body_hash_short = body_hash.to_s[0..15]
+
+    Rails.logger.warn(
+      '[DuplicateCheck#exists_with_hash?] expires_at is missing ' \
+      "for body_hash=#{body_hash_short} post_id=#{record&.post_id}"
+    )
+    true
+  end
+  private_class_method :missing_expires_at?
 
   # 重複チェックを登録
   # @param body [String] 本文（生値）

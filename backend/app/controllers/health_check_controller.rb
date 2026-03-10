@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# ヘルスチェック用コントローラー
 class HealthCheckController < ApplicationController
   # 必須環境変数のリスト
   REQUIRED_ENV_VARS = %w[

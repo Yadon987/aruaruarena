@@ -90,7 +90,7 @@ module DynamoDBTestHelpers
   def dynamodb_available?
     Timeout.timeout(20) { Dynamoid.adapter.list_tables }
     true
-  rescue Timeout::Error, StandardError
+  rescue StandardError
     false
   end
 
