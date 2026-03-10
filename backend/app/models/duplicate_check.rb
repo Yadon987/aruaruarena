@@ -75,9 +75,11 @@ class DuplicateCheck
   def self.missing_expires_at?(body_hash, record)
     return false unless record&.expires_at.nil?
 
+    body_hash_short = body_hash.to_s[0..15]
+
     Rails.logger.warn(
       '[DuplicateCheck#exists_with_hash?] expires_at is missing ' \
-      "for body_hash=#{body_hash} post_id=#{record&.post_id}"
+      "for body_hash=#{body_hash_short} post_id=#{record&.post_id}"
     )
     true
   end
