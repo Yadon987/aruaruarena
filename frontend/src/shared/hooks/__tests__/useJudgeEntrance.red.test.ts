@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { JUDGE_ENTRANCE } from '../../constants/animations'
 
 const ENTRANCE_DURATION_MS = JUDGE_ENTRANCE.DURATION_MS
+const NAKAO_ENTRANCE_DURATION_SEC = JUDGE_ENTRANCE.VARIANTS.nakao.transition.duration
 
 const useReducedMotionMock = vi.fn()
 vi.mock('../useReducedMotion', () => ({
@@ -34,7 +35,7 @@ describe('E24-01 RED: useJudgeEntrance', () => {
   })
 
   it(`${ENTRANCE_DURATION_MS}ms 経過で hasEntered=true になる`, async () => {
-    // 何を検証するか: 中尾彬風のアニメーション時間（4.4s）後に登場完了と判定されること
+    // 何を検証するか: 設定された登場アニメーション時間後に完了と判定されること
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
 
@@ -65,7 +66,9 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     expect(result.current.variants).toHaveProperty('hiroyuki')
     expect(result.current.variants).toHaveProperty('dewi')
     expect(result.current.variants).toHaveProperty('nakao')
-    expect(result.current.variants.nakao.transition.duration).toBe(4.4)
+    expect(result.current.variants.nakao.transition).toMatchObject({
+      duration: NAKAO_ENTRANCE_DURATION_SEC,
+    })
   })
 
   it('各審査員がそれぞれ異なる方向から登場する入場アニメーションを持つ', async () => {
@@ -73,12 +76,16 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
 
-    expect(result.current.variants.hiroyuki.initial.x).toBeLessThan(-50)
-    expect(result.current.variants.hiroyuki.initial.y).toBeGreaterThan(50)
-    expect(result.current.variants.dewi.initial.x).toBeGreaterThan(50)
-    expect(result.current.variants.dewi.initial.y).toBeLessThan(-50)
-    expect(result.current.variants.nakao.initial.x).toBeLessThan(-50)
-    expect(result.current.variants.nakao.initial.y).toBeGreaterThan(50)
+    const hiroyukiInitial = result.current.variants.hiroyuki.initial as { x: number; y: number }
+    const dewiInitial = result.current.variants.dewi.initial as { x: number; y: number }
+    const nakaoInitial = result.current.variants.nakao.initial as { x: number; y: number }
+
+    expect(hiroyukiInitial.x).toBeLessThan(-50)
+    expect(hiroyukiInitial.y).toBeGreaterThan(50)
+    expect(dewiInitial.x).toBeGreaterThan(50)
+    expect(dewiInitial.y).toBeLessThan(-50)
+    expect(nakaoInitial.x).toBeGreaterThan(50)
+    expect(nakaoInitial.y).toBeGreaterThan(50)
   })
 
   it('アンマウント時にタイマーがクリアされる', async () => {

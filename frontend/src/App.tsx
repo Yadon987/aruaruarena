@@ -81,6 +81,7 @@ const X_SHARE_BASE_URL = 'https://x.com/intent/tweet?text='
 const SHARE_HASHTAG = '#あるあるアリーナ'
 const SHARE_TARGET = '_blank'
 const SHARE_WINDOW_FEATURES = 'noopener,noreferrer'
+const DEFAULT_FAILED_PERSONAS: JudgePersona[] = ['hiroyuki', 'dewi', 'nakao']
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
 const SOUND_SE_SUBMIT = 'se_submit'
 const SOUND_SE_RETRY = 'se_retry'
@@ -720,17 +721,25 @@ function App() {
       console.error('再審査SEの再生に失敗しました', error)
     }
 
-    const extractedFailedPersonas = activeResultPost.judgments
+    const judgments = activeResultPost.judgments
+    const extractedFailedPersonas = judgments
       ?.filter((judgment) => !(judgment.success ?? false))
       .map((judgment) => judgment.persona)
-    const failedPersonas: JudgePersona[] = extractedFailedPersonas?.length
-      ? extractedFailedPersonas
-      : ['hiroyuki', 'dewi', 'nakao']
+    const failedPersonas: JudgePersona[] =
+      judgments == null
+        ? DEFAULT_FAILED_PERSONAS
+        : extractedFailedPersonas?.length
+          ? extractedFailedPersonas
+          : []
 
     setRejudgeErrorMessage('')
     setIsRejudging(true)
 
     try {
+      if (failedPersonas.length === 0) {
+        setRejudgeErrorMessage('再審査対象がありません')
+        return
+      }
       const response = await api.posts.rejudge(activeResultPost.id, failedPersonas)
       setIsRejudgeModalOpen(false)
       handleResultRejudgeSuccess({ ...activeResultPost, ...response })
@@ -755,19 +764,6 @@ function App() {
     }
     setIsRejudgeModalOpen(activeResultPost?.status === 'failed')
   }, [activeResultPost?.status, viewMode])
-
-  useEffect(() => {
-    if (viewMode !== 'result' || !activeResultPost || activeResultPost.status !== 'failed') return
-
-    const handleEsc = (event: globalThis.KeyboardEvent) => {
-      if (event.key === DIALOG_CLOSE_KEY) {
-        closeRejudgeModal()
-      }
-    }
-
-    window.addEventListener('keydown', handleEsc)
-    return () => window.removeEventListener('keydown', handleEsc)
-  }, [activeResultPost, closeRejudgeModal, viewMode])
 
   const closeResultAndBackTop = useCallback(() => {
     closeResultView()
@@ -1754,6 +1750,7 @@ function App() {
             role="dialog"
             aria-modal="true"
             aria-label="再審査確認"
+            tabIndex={-1}
             className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
             onClick={closeRejudgeModal}
             onKeyDown={(event) => {

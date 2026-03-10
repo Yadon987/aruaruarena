@@ -60,28 +60,27 @@ describe('E18 RED: Sound settings integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'はい' }))
 
     await waitFor(() => {
-      expect(localStorage.getItem('aruaru_sound_consent')).toBe('true')
+      expect(localStorage.getItem('aruaru_sound_modal_answered')).toBe('true')
       expect(localStorage.getItem('aruaru_sound_volume')).toBe('0.6')
     })
   })
 
-  it('拒否で音量0を保存する', async () => {
-    // 何を検証するか: 「いいえ」選択で音量0が保存されること
-    // 注: aruaru_sound_consent は「同意したか」ではなく「初回モーダルに回答済みか」を示す。
-    // TODO: 将来的にキー名を aruaru_sound_modal_answered へリネームする。
+  it('「いいえ」を選択しても回答済みを保存し、音量0を保存する', async () => {
+    // 何を検証するか: 「いいえ」選択時の回答済み状態を aruaru_sound_modal_answered で記録し、
+    // aruaru_sound_volume が0になることを確認する
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'いいえ' }))
 
     await waitFor(() => {
-      expect(localStorage.getItem('aruaru_sound_consent')).toBe('true')
+      expect(localStorage.getItem('aruaru_sound_modal_answered')).toBe('true')
       expect(localStorage.getItem('aruaru_sound_volume')).toBe('0')
     })
   })
 
   it('音量0ではミュートアイコンを表示する', async () => {
     // 何を検証するか: ボリューム0設定時にミュートアイコンへ切り替わること
-    localStorage.setItem('aruaru_sound_consent', 'true')
+    localStorage.setItem('aruaru_sound_modal_answered', 'true')
     localStorage.setItem('aruaru_sound_volume', '0')
 
     render(<App />)
@@ -92,7 +91,7 @@ describe('E18 RED: Sound settings integration', () => {
 
   it('設定パネルでスライダー操作すると保存値が更新される', async () => {
     // 何を検証するか: スライダー変更が localStorage とUIへ即時反映されること
-    localStorage.setItem('aruaru_sound_consent', 'true')
+    localStorage.setItem('aruaru_sound_modal_answered', 'true')
     localStorage.setItem('aruaru_sound_volume', '0.5')
 
     render(<App />)
@@ -109,7 +108,7 @@ describe('E18 RED: Sound settings integration', () => {
 
   it('音声ボタンを再度押すと設定パネルを閉じる', async () => {
     // 何を検証するか: 音声ボタンの2回目押下でパネルが閉じること
-    localStorage.setItem('aruaru_sound_consent', 'true')
+    localStorage.setItem('aruaru_sound_modal_answered', 'true')
     localStorage.setItem('aruaru_sound_volume', '0.5')
 
     render(<App />)
