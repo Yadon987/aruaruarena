@@ -8,6 +8,7 @@ import {
   type MouseEvent,
 } from 'react'
 import { DURATION, SCALE } from '../../../shared/constants/animations'
+import { TEXT_LENGTH } from '../../../shared/constants/validation'
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 
@@ -136,14 +137,19 @@ export function PostFormModal({
 
               <form aria-label="投稿フォーム" onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                  <p className="text-sm text-red-500" role="alert">
-                    {error}
-                  </p>
+                  <div className="text-sm text-red-500" role="alert">
+                    {error.split('\n').map((message) => (
+                      <p key={message}>{message}</p>
+                    ))}
+                  </div>
                 )}
                 <div>
                   <label htmlFor="nickname" className="block text-sm font-medium">
                     ニックネーム
                   </label>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {TEXT_LENGTH.NICKNAME_MIN}〜{TEXT_LENGTH.NICKNAME_MAX}文字で入力
+                  </p>
                   <input
                     id="nickname"
                     type="text"
@@ -157,6 +163,9 @@ export function PostFormModal({
                   <label htmlFor="body" className="block text-sm font-medium">
                     あるある
                   </label>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {TEXT_LENGTH.BODY_MIN}〜{TEXT_LENGTH.BODY_MAX}文字で入力
+                  </p>
                   <textarea
                     id="body"
                     value={body}

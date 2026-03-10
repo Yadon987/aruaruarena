@@ -23,6 +23,7 @@ import { createSoundController } from './hooks/useSound'
 import { queryClient } from './shared/config/queryClient'
 import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
 import { queryKeys } from './shared/constants/queryKeys'
+import { TEXT_LENGTH } from './shared/constants/validation'
 import { useAvatarImages } from './shared/hooks/useAvatarImages'
 import { ApiClientError, api } from './shared/services/api'
 import type { CreatePostResponse } from './shared/types/api'
@@ -31,7 +32,6 @@ import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
 const LEGACY_STORAGE_KEY = 'aruaruarena_my_posts'
-const MIN_BODY_LENGTH = 3
 const MAX_STORED_POST_IDS = 20
 const SERVER_ERROR_STATUSES: ReadonlyArray<number> = [
   HTTP_STATUS.INTERNAL_SERVER_ERROR,
@@ -39,7 +39,8 @@ const SERVER_ERROR_STATUSES: ReadonlyArray<number> = [
   HTTP_STATUS.SERVICE_UNAVAILABLE,
 ]
 const MESSAGE_NICKNAME_REQUIRED = 'ニックネームを入力してください'
-const MESSAGE_BODY_REQUIRED = '本文は3文字以上で入力してください'
+const MESSAGE_NICKNAME_LENGTH = `ニックネームは${TEXT_LENGTH.NICKNAME_MIN}〜${TEXT_LENGTH.NICKNAME_MAX}文字で入力してください`
+const MESSAGE_BODY_LENGTH = `本文は${TEXT_LENGTH.BODY_MIN}〜${TEXT_LENGTH.BODY_MAX}文字で入力してください`
 const MESSAGE_SUCCESS = '投稿を受け付けました'
 const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
 const MESSAGE_MY_POST_DETAIL_FETCH_FAILED = '投稿詳細の取得に失敗しました'
@@ -53,7 +54,6 @@ const MESSAGE_JUDGING_TIMEOUT_ERROR = '通信がタイムアウトしました'
 const MESSAGE_JUDGING_SERVER_ERROR = 'サーバーエラーが発生しました'
 const MESSAGE_JUDGING_CLIENT_ERROR = '投稿に失敗しました'
 const MESSAGE_JUDGING_UNKNOWN_ERROR = '投稿に失敗しました'
-const MESSAGE_INVALID_FORM_ERROR = 'ニックネームと本文を正しく入力してください。'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
 const ROOT_PATH = '/'
@@ -197,10 +197,24 @@ function buildTransientErrorNotice(errorCount: number): string {
 function validateForm(nickname: string, body: string): ValidationErrors {
   const trimmedNickname = nickname.trim()
   const trimmedBody = body.trim()
+  const nicknameLength = trimmedNickname.length
+  const bodyLength = trimmedBody.length
+
+  const nicknameError =
+    nicknameLength < TEXT_LENGTH.NICKNAME_MIN || nicknameLength > TEXT_LENGTH.NICKNAME_MAX
+      ? MESSAGE_NICKNAME_LENGTH
+      : ''
+  const bodyError =
+    bodyLength < TEXT_LENGTH.BODY_MIN || bodyLength > TEXT_LENGTH.BODY_MAX ? MESSAGE_BODY_LENGTH : ''
+
   return {
-    nicknameError: trimmedNickname ? '' : MESSAGE_NICKNAME_REQUIRED,
-    bodyError: trimmedBody.length >= MIN_BODY_LENGTH ? '' : MESSAGE_BODY_REQUIRED,
+    nicknameError: trimmedNickname ? nicknameError : MESSAGE_NICKNAME_REQUIRED,
+    bodyError,
   }
+}
+
+function buildValidationErrorMessage({ nicknameError, bodyError }: ValidationErrors): string {
+  return [nicknameError, bodyError].filter(Boolean).join('\n')
 }
 
 // APIクライアントの例外種別をUI文言へ変換する
@@ -804,7 +818,12 @@ function App() {
       setJudgingErrorMessage('')
 
       if (nextNicknameError || nextBodyError) {
-        setSubmitError(MESSAGE_INVALID_FORM_ERROR)
+        setSubmitError(
+          buildValidationErrorMessage({
+            nicknameError: nextNicknameError,
+            bodyError: nextBodyError,
+          })
+        )
         return
       }
 
