@@ -73,9 +73,12 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
 
-    expect(Math.abs(result.current.variants.hiroyuki.initial.y)).toBeGreaterThan(50)
-    expect(Math.abs(result.current.variants.dewi.initial.y)).toBeGreaterThan(50)
-    expect(Math.abs(result.current.variants.nakao.initial.y)).toBeGreaterThan(50)
+    expect(result.current.variants.hiroyuki.initial.x).toBeLessThan(-50)
+    expect(result.current.variants.hiroyuki.initial.y).toBeGreaterThan(50)
+    expect(result.current.variants.dewi.initial.x).toBeGreaterThan(50)
+    expect(result.current.variants.dewi.initial.y).toBeLessThan(-50)
+    expect(result.current.variants.nakao.initial.x).toBeLessThan(-50)
+    expect(result.current.variants.nakao.initial.y).toBeGreaterThan(50)
   })
 
   it('アンマウント時にタイマーがクリアされる', async () => {

@@ -70,8 +70,8 @@ export const VARIANTS = {
  * 審査員登場アニメーション関連の定数
  */
 export const JUDGE_ENTRANCE = {
-  /** 登場完了までの時間（ms）- 中尾彬風のアニメーション時間に合わせる */
-  DURATION_MS: 4400,
+  /** 登場完了までの時間（ms）- 最長の登場アニメーションに合わせる */
+  DURATION_MS: 4800,
   /** 各審査員の登場バリアント */
   VARIANTS: {
     hiroyuki: {
