@@ -74,7 +74,7 @@ module OgpTestHelpers
 
   # DynamoDBスロットリングエラーのモックを設定する
   def setup_dynamodb_throttling_mock(error_class = Aws::DynamoDB::Errors::ProvisionedThroughputExceededException)
-    allow(DuplicateCheck).to receive(:check).and_raise(error_class.new(nil, 'Throttling error'))
+    allow(DuplicateCheck).to receive(:exists_with_hash?).and_raise(error_class.new(nil, 'Throttling error'))
     allow(DuplicateCheck).to receive(:register).and_raise(error_class.new(nil, 'Throttling error'))
   end
 

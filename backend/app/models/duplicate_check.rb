@@ -83,6 +83,7 @@ class DuplicateCheck
     )
     true
   end
+  private_class_method :missing_expires_at?
 
   # 重複チェックを登録
   # @param body [String] 本文（生値）
