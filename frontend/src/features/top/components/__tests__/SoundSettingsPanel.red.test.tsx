@@ -8,7 +8,13 @@ describe('E31-01 RED: SoundSettingsPanel', () => {
     const onClose = vi.fn()
 
     render(
-      <SoundSettingsPanel isOpen={true} volume={0.5} onVolumeChange={vi.fn()} onClose={onClose} />
+      <SoundSettingsPanel
+        isOpen={true}
+        volume={0.5}
+        onVolumeChange={vi.fn()}
+        onClose={onClose}
+        panelId="test-sound-panel"
+      />
     )
 
     fireEvent.keyDown(document, { key: 'Escape' })
@@ -27,6 +33,7 @@ describe('E31-01 RED: SoundSettingsPanel', () => {
           volume={0.5}
           onVolumeChange={vi.fn()}
           onClose={onClose}
+          panelId="test-sound-panel"
         />
       </div>
     )

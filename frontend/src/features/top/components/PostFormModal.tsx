@@ -138,8 +138,8 @@ export function PostFormModal({
               <form aria-label="投稿フォーム" onSubmit={handleSubmit} className="space-y-4">
                 {error && (
                   <div className="text-sm text-red-500" role="alert">
-                    {error.split('\n').map((message) => (
-                      <p key={message}>{message}</p>
+                    {error.split('\n').map((message, index) => (
+                      <p key={`${message}-${index}`}>{message}</p>
                     ))}
                   </div>
                 )}

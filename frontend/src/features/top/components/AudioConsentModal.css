@@ -47,7 +47,8 @@
   font-weight: 700;
   color: #334155;
   background: #f8fafc;
-  transition: all 120ms ease;
+  cursor: pointer;
+  transition: background-color 120ms ease, filter 120ms ease;
 }
 
 .audio-consent-modal__button:hover {
@@ -62,4 +63,9 @@
 
 .audio-consent-modal__button--primary:hover {
   filter: brightness(1.05);
+}
+
+.audio-consent-modal__button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }

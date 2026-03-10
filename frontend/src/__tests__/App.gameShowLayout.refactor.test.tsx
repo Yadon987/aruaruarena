@@ -95,11 +95,11 @@ describe('App Game Show Layout Refactor', () => {
     // 何を検証するか: 同じトリガーの再押下で補助メニューを閉じられること
     render(<App />)
 
-    const settingsButton = screen.getByRole('button', { name: 'その他を開く' })
-    fireEvent.click(settingsButton)
+    const otherButton = screen.getByRole('button', { name: 'その他を開く' })
+    fireEvent.click(otherButton)
     expect(screen.getByRole('dialog', { name: '補助メニュー' })).toBeInTheDocument()
 
-    fireEvent.click(settingsButton)
+    fireEvent.click(otherButton)
     expect(screen.queryByRole('dialog', { name: '補助メニュー' })).not.toBeInTheDocument()
   })
 

@@ -57,6 +57,7 @@ const MESSAGE_JUDGING_UNKNOWN_ERROR = '投稿に失敗しました'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
 const ROOT_PATH = '/'
+const SOUND_SETTINGS_PANEL_ID = 'sound-settings-panel'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
@@ -468,8 +469,6 @@ function App() {
       setVolume(nextVolume)
       if (nextVolume > 0) {
         setIsSoundSettingsOpen(true)
-      }
-      if (nextVolume > 0) {
         sound.playSceneBgm(audioScene)
       }
     },
@@ -1247,12 +1246,14 @@ function App() {
               volume={volume}
               isOpen={isSoundSettingsOpen}
               onClick={handleSoundControlClick}
+              panelId={SOUND_SETTINGS_PANEL_ID}
             />
             <SoundSettingsPanel
               isOpen={isSoundSettingsOpen}
               volume={volume}
               onVolumeChange={handleVolumeChange}
               onClose={() => setIsSoundSettingsOpen(false)}
+              panelId={SOUND_SETTINGS_PANEL_ID}
               containerRef={soundSettingsContainerRef}
             />
           </div>

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type UseSoundModule = {
+  DEFAULT_VOLUME: number
   createSoundController: () => {
     volume: number
     hasConsented: boolean
@@ -37,7 +38,7 @@ describe('E18 RED: useSound', () => {
     const module = await loadUseSoundModule()
     const sound = module.createSoundController()
 
-    expect(sound.volume).toBe(0.6)
+    expect(sound.volume).toBe(module.DEFAULT_VOLUME)
     expect(sound.audioUnlocked).toBe(false)
     expect(sound.hasConsented).toBe(false)
   })
@@ -59,7 +60,7 @@ describe('E18 RED: useSound', () => {
     const module = await loadUseSoundModule()
     module.createSoundController()
 
-    expect(localStorage.getItem('aruaru_sound_volume')).toBe('0.6')
+    expect(localStorage.getItem('aruaru_sound_volume')).toBe(String(module.DEFAULT_VOLUME))
   })
 
   it('シーン変更時に500msクロスフェードを実行する', async () => {

@@ -531,6 +531,7 @@
   pointer-events: none;
 }
 
+/* 背もたれSVG版のみ baseスタイルを無効化するため、2クラス併用で上書きする。 */
 .judge-seat-back.judge-seat-backrest-shell {
   position: absolute;
   left: -4%;

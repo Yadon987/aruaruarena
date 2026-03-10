@@ -17,11 +17,12 @@ export function AudioConsentModal({ isOpen, onConsent }: AudioConsentModalProps)
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="audio-consent-title"
+        aria-describedby="audio-consent-description"
       >
         <h2 id="audio-consent-title" className="audio-consent-modal__title">
           音声を再生しますか？
         </h2>
-        <p className="audio-consent-modal__description">
+        <p id="audio-consent-description" className="audio-consent-modal__description">
           いつでも右上の音声ボタンから音量を調整できます。
         </p>
         <div className="audio-consent-modal__actions">

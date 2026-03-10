@@ -5,7 +5,7 @@ import { openPostDialog } from '../../../test/helpers'
 
 describe('E12-01 RED: TopPage レイアウト', () => {
   it('トップ画面に主要セクション・投稿ボタンが表示される', () => {
-    // 何を検証するか: 右上操作領域・投稿ボタン・右下補助導線が初期表示されること
+    // 何を検証するか: 右上操作領域・投稿ボタン・補助導線が初期表示されること
     render(<App />)
 
     expect(screen.queryByRole('banner')).not.toBeInTheDocument()

@@ -67,6 +67,7 @@ describe('E18 RED: Sound settings integration', () => {
 
   it('拒否で音量0を保存する', async () => {
     // 何を検証するか: 「いいえ」選択で音量0が保存されること
+    // 注: aruaru_sound_consent は「同意したか」ではなく「初回モーダルに回答済みか」を示す。
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'いいえ' }))
@@ -96,7 +97,7 @@ describe('E18 RED: Sound settings integration', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: '音声設定' }))
-    const slider = await screen.findByRole('slider', { name: '音量スライダー' })
+    const slider = await screen.findByRole('slider', { name: '音量' })
     fireEvent.change(slider, { target: { value: '20' } })
 
     await waitFor(() => {
