@@ -32,6 +32,7 @@ const AVATAR_BREATHING_CLASS = 'judge-avatar-speaking-breath'
 const ACTIVE_BACKREST_VARIANT: JudgeSeatBackrestVariant = 'royal-crown'
 const VIP_IDLE_CYCLE_MS = 5000
 const VIP_FLASH_TOTAL_MS = 1200
+const DEWI_SPARKLE_DURATION_MS = 5200
 const VIP_BULBS = [
   { left: 8, top: 8 },
   { left: 25, top: 5 },
@@ -47,6 +48,17 @@ const VIP_BULBS = [
   { left: 8, top: 88 },
   { left: 5, top: 60 },
   { left: 5, top: 30 },
+] as const
+const DEWI_SPARKLE_PARTICLES = [
+  { left: 8, top: 18, dx: -12, dy: -24, delay: 0.0, hue: 'gold' },
+  { left: 18, top: 10, dx: 8, dy: -28, delay: 0.16, hue: 'violet' },
+  { left: 32, top: 22, dx: -6, dy: -26, delay: 0.28, hue: 'cyan' },
+  { left: 44, top: 12, dx: 12, dy: -22, delay: 0.4, hue: 'pink' },
+  { left: 72, top: 10, dx: 8, dy: -30, delay: 0.64, hue: 'violet' },
+  { left: 86, top: 24, dx: -7, dy: -25, delay: 0.76, hue: 'cyan' },
+  { left: 20, top: 42, dx: -9, dy: -18, delay: 0.88, hue: 'pink' },
+  { left: 55, top: 44, dx: -8, dy: -19, delay: 1.12, hue: 'violet' },
+  { left: 84, top: 48, dx: -6, dy: -16, delay: 1.24, hue: 'pink' },
 ] as const
 const SCORE_PARTICLES = [
   { x: -34, y: -24 },
@@ -79,6 +91,8 @@ interface JudgeSlotProps {
   avatarState: AvatarState
   /** 登場アニメーションのバリアント */
   entranceVariant: EntranceVariant
+  /** 登場完了フラグ */
+  hasEntered: boolean
   /** 審査結果 */
   judgment?: JudgeDeskJudgment
   /** 審査フェーズ */
@@ -147,6 +161,7 @@ export function JudgeSlot({
   speechText,
   avatarState,
   entranceVariant,
+  hasEntered,
   judgment,
   phase,
   showSpeech,
@@ -171,8 +186,11 @@ export function JudgeSlot({
   const isScoring = phase === 'scoring'
   const isComplete = phase === 'complete'
   const isSpeaking = Boolean(speechText && showSpeech)
+  const isSpeakingAnimated = isSpeaking && hasEntered
   const [isFlashActive, setIsFlashActive] = useState(false)
+  const [isDewiSparkleActive, setIsDewiSparkleActive] = useState(judge === 'dewi' && !prefersReducedMotion)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dewiSparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLit = isScoring || isComplete
   const bulbStateClass = isFlashActive
     ? 'vip-bulbs-flash'
@@ -186,6 +204,12 @@ export function JudgeSlot({
       : 'vip-desk-idle'
   const scoreMotionClass = isRouletting ? 'score-rouletting' : isRevealed ? 'score-revealed' : ''
   const particleClass = isRevealed ? 'score-particles-active' : ''
+  const idleClassName = hasEntered && judge === 'hiroyuki' ? 'judge-avatar-hiroyuki-idle' : ''
+  const dewiEffectsClassName = judge === 'dewi' ? 'judge-avatar-dewi-effects' : ''
+  const sparkleClassName = isDewiSparkleActive ? 'judge-avatar-dewi-sparkle' : ''
+  const avatarEffectClassName = [dewiEffectsClassName, idleClassName, sparkleClassName]
+    .filter(Boolean)
+    .join(' ')
 
   useEffect(() => {
     const clearFlashTimer = () => {
@@ -206,6 +230,27 @@ export function JudgeSlot({
 
     return clearFlashTimer
   }, [isComplete])
+
+  useEffect(() => {
+    if (judge !== 'dewi') return
+    if (prefersReducedMotion) {
+      setIsDewiSparkleActive(false)
+      return
+    }
+
+    setIsDewiSparkleActive(true)
+    dewiSparkleTimerRef.current = setTimeout(() => {
+      setIsDewiSparkleActive(false)
+      dewiSparkleTimerRef.current = null
+    }, DEWI_SPARKLE_DURATION_MS)
+
+    return () => {
+      if (dewiSparkleTimerRef.current) {
+        clearTimeout(dewiSparkleTimerRef.current)
+        dewiSparkleTimerRef.current = null
+      }
+    }
+  }, [judge, prefersReducedMotion])
 
   return (
     <div
@@ -241,16 +286,39 @@ export function JudgeSlot({
           transform: 'translateY(calc(-1 * var(--judge-stack-offset-y)))',
         }}
       >
-        <div className={isSpeaking ? AVATAR_BREATHING_CLASS : ''}>
-          <motion.img
-            src={getAvatarImagePath(judge, avatarState)}
-            alt={alt}
-            style={{ width: 'var(--judge-avatar-width)', height: 'auto' }}
-            initial={entranceVariant.initial}
-            animate={entranceVariant.animate}
-            transition={entranceVariant.transition}
-            draggable={false}
-          />
+        <div className={avatarEffectClassName}>
+          {isDewiSparkleActive && (
+            <span className="judge-avatar-dewi-sparkle-layer" aria-hidden="true">
+              {DEWI_SPARKLE_PARTICLES.map((particle, index) => {
+                const style: CSSProperties = {
+                  left: `${particle.left}%`,
+                  top: `${particle.top}%`,
+                  ['--dewi-sparkle-dx' as string]: `${particle.dx}px`,
+                  ['--dewi-sparkle-dy' as string]: `${particle.dy}px`,
+                  ['--dewi-sparkle-delay' as string]: `${particle.delay}s`,
+                }
+
+                return (
+                  <span
+                    key={`dewi-sparkle-${index}`}
+                    className={`dewi-sparkle-particle dewi-sparkle-${particle.hue}`}
+                    style={style}
+                  />
+                )
+              })}
+            </span>
+          )}
+          <div className={isSpeakingAnimated ? AVATAR_BREATHING_CLASS : ''}>
+            <motion.img
+              src={getAvatarImagePath(judge, avatarState)}
+              alt={alt}
+              style={{ width: 'var(--judge-avatar-width)', height: 'auto' }}
+              initial={entranceVariant.initial}
+              animate={entranceVariant.animate}
+              transition={entranceVariant.transition}
+              draggable={false}
+            />
+          </div>
         </div>
       </div>
 

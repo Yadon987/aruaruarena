@@ -34,7 +34,7 @@ describe('E24-01 RED: useJudgeEntrance', () => {
   })
 
   it(`${ENTRANCE_DURATION_MS}ms 経過で hasEntered=true になる`, async () => {
-    // 何を検証するか: 中尾彬風のアニメーション時間（1.2s）後に登場完了と判定されること
+    // 何を検証するか: 中尾彬風のアニメーション時間（4.4s）後に登場完了と判定されること
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
 
@@ -65,17 +65,20 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     expect(result.current.variants).toHaveProperty('hiroyuki')
     expect(result.current.variants).toHaveProperty('dewi')
     expect(result.current.variants).toHaveProperty('nakao')
-    expect(result.current.variants.nakao.transition.duration).toBe(1.2)
+    expect(result.current.variants.nakao.transition.duration).toBe(4.4)
   })
 
   it('3人ともデスク後方からせり上がる入場アニメーションを持つ', async () => {
-    // 何を検証するか: E25-01の受け入れ基準として、全審査員の初期位置が y=100 のせり上がり演出に統一されること
+    // 何を検証するか: E25-01の受け入れ基準として、全審査員が画面外から登場する演出を持つこと
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
 
-    expect(result.current.variants.hiroyuki.initial.y).toBe(100)
-    expect(result.current.variants.dewi.initial.y).toBe(100)
-    expect(result.current.variants.nakao.initial.y).toBe(100)
+    expect(result.current.variants.hiroyuki.initial.x).toBeLessThan(-50)
+    expect(result.current.variants.hiroyuki.initial.y).toBeGreaterThan(50)
+    expect(result.current.variants.dewi.initial.x).toBeGreaterThan(50)
+    expect(result.current.variants.dewi.initial.y).toBeLessThan(-50)
+    expect(result.current.variants.nakao.initial.x).toBeLessThan(-50)
+    expect(result.current.variants.nakao.initial.y).toBeGreaterThan(50)
   })
 
   it('アンマウント時にタイマーがクリアされる', async () => {
