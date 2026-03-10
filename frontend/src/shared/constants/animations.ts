@@ -120,7 +120,7 @@ export const JUDGE_ENTRANCE = {
       },
     },
   },
-} as const
+}
 
 /**
  * 審査員発話アニメーション関連の定数

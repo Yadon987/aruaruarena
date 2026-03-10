@@ -34,7 +34,7 @@ describe('E24-01 RED: useJudgeEntrance', () => {
   })
 
   it(`${ENTRANCE_DURATION_MS}ms 経過で hasEntered=true になる`, async () => {
-    // 何を検証するか: 中尾彬風のアニメーション時間（4.0s）後に登場完了と判定されること
+    // 何を検証するか: 中尾彬風のアニメーション時間（4.4s）後に登場完了と判定されること
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
 

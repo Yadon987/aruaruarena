@@ -766,7 +766,7 @@
   opacity: 0;
   animation: dewi-sparkle-float 1.45s ease-out infinite;
   animation-delay: var(--dewi-sparkle-delay, 0s);
-  box-shadow: 0 0 9px currentColor;
+  box-shadow: 0 0 9px currentcolor;
 }
 
 .dewi-sparkle-gold {
@@ -1190,7 +1190,7 @@
   .neon-glow-pink,
   .neon-border-cyan,
   .neon-border-pink {
-    box-shadow: 0 0 2px currentColor;
+    box-shadow: 0 0 2px currentcolor;
   }
 
   .neon-text-cyan,
