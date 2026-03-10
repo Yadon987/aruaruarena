@@ -2,8 +2,13 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useReducedMotion } from '../useReducedMotion'
 
+type MediaQueryListMock = MediaQueryList & {
+  addListener: ReturnType<typeof vi.fn>
+  removeListener: ReturnType<typeof vi.fn>
+}
+
 describe('useReducedMotion', () => {
-  let mediaQueryListMock: any
+  let mediaQueryListMock: MediaQueryListMock
   const originalMatchMedia = window.matchMedia
 
   beforeEach(() => {

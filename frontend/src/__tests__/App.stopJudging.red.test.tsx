@@ -22,7 +22,9 @@ describe('E30-01 RED: 審査停止導線', () => {
     vi.spyOn(api.posts, 'get').mockImplementation(() => new Promise(() => {}))
 
     render(<App />)
-    expect(screen.queryByRole('button', { name: '審査を停止してホームに戻る' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: '審査を停止してホームに戻る' })
+    ).not.toBeInTheDocument()
 
     await openPostDialog()
     fillPostForm({ nickname: '停止太郎', body: '審査停止導線の表示確認' })

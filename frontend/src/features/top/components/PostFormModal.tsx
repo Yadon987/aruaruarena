@@ -1,12 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-  type MouseEvent,
-} from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { DURATION, SCALE } from '../../../shared/constants/animations'
 import { TEXT_LENGTH } from '../../../shared/constants/validation'
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap'
@@ -51,7 +44,8 @@ export function PostFormModal({
   const FALLBACK_FORM_VALUE = ''
   const [nickname, setNickname] = useState('')
   const [body, setBody] = useState('')
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(EMPTY_VALIDATION_ERRORS)
+  const [validationErrors, setValidationErrors] =
+    useState<ValidationErrors>(EMPTY_VALIDATION_ERRORS)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const previousActiveElementRef = useRef<HTMLElement | null>(null)
@@ -110,7 +104,7 @@ export function PostFormModal({
         ? MESSAGE_BODY_REQUIRED
         : bodyLength < TEXT_LENGTH.BODY_MIN || bodyLength > TEXT_LENGTH.BODY_MAX
           ? MESSAGE_BODY_LENGTH
-        : ''
+          : ''
 
     return { nicknameError, bodyError }
   }
@@ -135,14 +129,6 @@ export function PostFormModal({
 
   const handleBackdropClick = () => {
     onClose()
-  }
-
-  const handleDialogClick = (event: MouseEvent) => {
-    event.stopPropagation()
-  }
-
-  const handleDialogKeyDown = (_event: KeyboardEvent<HTMLDivElement>) => {
-    // no-op: onClick を持つ要素に対する a11y lint 要件を満たすために定義
   }
 
   const handleNicknameChange = (value: string) => {
@@ -170,18 +156,21 @@ export function PostFormModal({
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex h-full items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 flex h-full items-center justify-center p-4"
           data-testid="modal-overlay"
-          onClick={handleBackdropClick}
-          onKeyDown={handleDialogKeyDown}
         >
+          <button
+            type="button"
+            aria-label="投稿フォームを閉じる"
+            className="absolute inset-0 bg-black/60"
+            onClick={handleBackdropClick}
+          />
           <div
             ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="投稿フォーム"
-            onClick={handleDialogClick}
-            onKeyDown={handleDialogKeyDown}
+            className="relative z-10"
           >
             <motion.div
               initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}

@@ -76,7 +76,9 @@ describe('App Game Show Layout Refactor', () => {
     expect(screen.getByRole('dialog', { name: '補助メニュー' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '過去の投稿' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'プライバシーポリシー' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '問い合わせ（新しいタブで開く）' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: '問い合わせ（新しいタブで開く）' })
+    ).toBeInTheDocument()
   })
 
   it('ランキングボタンを再度押すとランキングモーダルを閉じる', () => {
@@ -112,7 +114,7 @@ describe('App Game Show Layout Refactor', () => {
     const dialog = screen.getByRole('dialog', { name: '自分の投稿' })
     expect(dialog).toBeInTheDocument()
 
-    fireEvent.click(dialog)
+    fireEvent.click(screen.getByRole('button', { name: '自分の投稿を閉じる' }))
 
     expect(screen.queryByRole('dialog', { name: '自分の投稿' })).not.toBeInTheDocument()
   })

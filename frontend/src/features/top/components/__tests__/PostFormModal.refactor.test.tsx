@@ -55,7 +55,9 @@ describe('PostFormModal Refactor', () => {
     )
 
     fireEvent.change(screen.getByLabelText('ニックネーム'), { target: { value: '下書き太郎' } })
-    fireEvent.change(screen.getByLabelText('あるある'), { target: { value: '閉じても保持される本文' } })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '閉じても保持される本文' },
+    })
 
     rerender(
       <PostFormModal

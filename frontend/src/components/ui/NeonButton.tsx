@@ -25,7 +25,8 @@ export const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(functio
 ) {
   const variantClass = variant === 'secondary' ? 'neon-glow-pink' : 'neon-glow-blue'
   const compactClass = compactOnMobile ? 'neon-button-compact-mobile' : ''
-  const className = `neon-button-base ${variantClass} ${compactClass} ${customClassName ?? ''}`.trim()
+  const className =
+    `neon-button-base ${variantClass} ${compactClass} ${customClassName ?? ''}`.trim()
 
   return (
     <button

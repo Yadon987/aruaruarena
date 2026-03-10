@@ -13,8 +13,7 @@ describe('useScoreRoulette', () => {
   })
 
   it('scoringフェーズでは60msごとに2桁数値が切り替わる', async () => {
-    vi
-      .spyOn(Math, 'random')
+    vi.spyOn(Math, 'random')
       .mockReturnValueOnce(0)
       .mockReturnValueOnce(0.55)
       .mockReturnValueOnce(0.9)

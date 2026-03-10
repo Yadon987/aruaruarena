@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { JUDGE_SPEECH } from '../../../shared/constants/animations'
+import { JUDGE_PERSONA_ORDER, JUDGE_SPEECH } from '../../../shared/constants/animations'
 import type { JudgePersona, Judgment } from '../../../shared/types/domain'
-import { JUDGE_PERSONA_ORDER } from '../../../shared/constants/animations'
 
 const RESULT_SPEECH_ORDER: readonly JudgePersona[] = JUDGE_PERSONA_ORDER
 const RESULT_SPEECH_INTERVAL_MS = JUDGE_SPEECH.DURATION_MS + 300

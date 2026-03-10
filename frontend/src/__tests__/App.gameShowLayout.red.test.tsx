@@ -39,7 +39,9 @@ describe('E25-01 RED: App Game Show Layout', () => {
     const postButton = screen.getByRole('button', { name: '投稿する' })
 
     expect(actionControls).toHaveClass('fixed')
-    expect(within(actionControls).queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
+    expect(
+      within(actionControls).queryByRole('button', { name: '投稿する' })
+    ).not.toBeInTheDocument()
     expect(postButton).toBeInTheDocument()
     expect(soundButton).toBeInTheDocument()
     expect(postButton).toHaveClass('neon-button-base')

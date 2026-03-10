@@ -161,13 +161,7 @@ describe('JudgeAvatars Refactor', () => {
 
   it('ホーム表示でもアバターサイズは共通仕様を維持する', async () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
-    render(
-      <JudgeAvatars
-        isJudging={false}
-        isPostModalOpen={false}
-        judgingPhase="complete"
-      />
-    )
+    render(<JudgeAvatars isJudging={false} isPostModalOpen={false} judgingPhase="complete" />)
 
     // 何を検証するか: 画面モードに依存せずアバターサイズが共通化されること
     const avatars = screen.getAllByRole('img')
@@ -209,13 +203,7 @@ describe('JudgeAvatars Refactor', () => {
       expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })
     })
 
-    rerender(
-      <JudgeAvatars
-        isJudging={true}
-        isPostModalOpen={false}
-        judgingPhase="speaking"
-      />
-    )
+    rerender(<JudgeAvatars isJudging={true} isPostModalOpen={false} judgingPhase="speaking" />)
     const compactAvatars = screen.getAllByRole('img')
     compactAvatars.forEach((avatar) => {
       expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })

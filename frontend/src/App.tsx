@@ -1,14 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import {
-  type KeyboardEvent,
-  type MouseEvent as ReactMouseEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
 import { RankingModal } from './features/ranking'
@@ -1070,21 +1062,17 @@ function App() {
     resetMyPostsModalState()
   }
 
-  const closeMyPosts = (restoreFocus: boolean = true) => {
-    setIsMyPostsOpen(false)
-    resetMyPostsModalState()
-    if (restoreFocus) {
-      // 明示クローズ時のみトリガーへ復帰し、結果モーダル遷移時はフォーカスを奪わない。
-      myPostsTriggerRef.current?.focus()
-    }
-  }
-
-  // App直下モーダルの内側クリックを無効化し、外側クリック閉鎖と挙動を分離する。
-  const stopOverlayContentClick = (event?: ReactMouseEvent<HTMLDivElement>) => {
-    if (event) {
-      event.stopPropagation()
-    }
-  }
+  const closeMyPosts = useCallback(
+    (restoreFocus: boolean = true) => {
+      setIsMyPostsOpen(false)
+      resetMyPostsModalState()
+      if (restoreFocus) {
+        // 明示クローズ時のみトリガーへ復帰し、結果モーダル遷移時はフォーカスを奪わない。
+        myPostsTriggerRef.current?.focus()
+      }
+    },
+    [resetMyPostsModalState]
+  )
 
   const handleMyPostsTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (OPEN_KEYS.includes(event.key as (typeof OPEN_KEYS)[number])) {
@@ -1322,6 +1310,45 @@ function App() {
   }, [isMyPostsOpen, prefetchMyPostsDetails, prefetchTargetPostIds])
 
   useEffect(() => {
+    if (!isMyPostsOpen) return
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== DIALOG_CLOSE_KEY) return
+      event.preventDefault()
+      closeMyPosts()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [closeMyPosts, isMyPostsOpen])
+
+  useEffect(() => {
+    if (!isStopJudgingConfirmOpen) return
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== DIALOG_CLOSE_KEY) return
+      event.preventDefault()
+      setIsStopJudgingConfirmOpen(false)
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isStopJudgingConfirmOpen])
+
+  useEffect(() => {
+    if (!isRejudgeModalOpen) return
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== DIALOG_CLOSE_KEY) return
+      event.preventDefault()
+      closeRejudgeModal()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [closeRejudgeModal, isRejudgeModalOpen])
+
+  useEffect(() => {
     if (viewMode !== 'top') {
       setFooterReservedSpace(FIXED_FOOTER_MIN_RESERVED_PX)
       return
@@ -1541,33 +1568,35 @@ function App() {
               !activeResultErrorCode &&
               activeResultPost &&
               (activeResultPost.status === 'scored' || activeResultPost.status === 'failed') && (
-              <ResultSummary
-                nickname={activeResultPost.nickname}
-                body={activeResultPost.body}
-                rank={activeResultPost.rank}
-                totalCount={activeResultPost.total_count}
-                averageScore={activeResultPost.average_score}
-                status={activeResultPost.status}
-                onShare={handleResultShare}
-                onClose={closeResultAndBackTop}
-              />
-            )}
+                <ResultSummary
+                  nickname={activeResultPost.nickname}
+                  body={activeResultPost.body}
+                  rank={activeResultPost.rank}
+                  totalCount={activeResultPost.total_count}
+                  averageScore={activeResultPost.average_score}
+                  status={activeResultPost.status}
+                  onShare={handleResultShare}
+                  onClose={closeResultAndBackTop}
+                />
+              )}
           </section>
         )}
 
         {viewMode !== 'judging' && isMyPostsOpen && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="自分の投稿"
-            tabIndex={-1}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => closeMyPosts()}
-            onKeyDown={(event) => {
-              if (event.key === DIALOG_CLOSE_KEY) closeMyPosts()
-            }}
-          >
-            <div className="w-full max-w-md rounded bg-white p-4" onClick={stopOverlayContentClick}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="自分の投稿を閉じる"
+              className="absolute inset-0 bg-black/50"
+              onClick={() => closeMyPosts()}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="自分の投稿"
+              tabIndex={-1}
+              className="relative z-10 w-full max-w-md rounded bg-white p-4"
+            >
               {selectedPost ? (
                 <MyPostDetail
                   post={selectedPost}
@@ -1639,23 +1668,14 @@ function App() {
         />
 
         {viewMode !== 'judging' && isFooterActionSheetOpen && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="補助メニュー"
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-3"
-            onClick={closeFooterActionSheet}
-            onKeyDown={(event) => {
-              if (event.key === DIALOG_CLOSE_KEY) {
-                event.preventDefault()
-                closeFooterActionSheet()
-              }
-            }}
-          >
-            <div
-              className="w-full max-w-md rounded-2xl border border-white/20 bg-slate-950/95 p-4 shadow-2xl"
-              onClick={stopOverlayContentClick}
-            >
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-3">
+            <button
+              type="button"
+              aria-label="補助メニューを閉じる"
+              className="absolute inset-0 bg-black/55"
+              onClick={closeFooterActionSheet}
+            />
+            <div className="w-full max-w-md rounded-2xl border border-white/20 bg-slate-950/95 p-4 shadow-2xl">
               <p className="mb-3 text-sm font-semibold text-cyan-100">補助メニュー</p>
               <div className="grid grid-cols-1 gap-2">
                 <NeonButton
@@ -1701,22 +1721,18 @@ function App() {
           </div>
         )}
         {viewMode === 'judging' && isStopJudgingConfirmOpen && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="審査停止確認"
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
-            onClick={() => setIsStopJudgingConfirmOpen(false)}
-            onKeyDown={(event) => {
-              if (event.key === DIALOG_CLOSE_KEY) {
-                event.preventDefault()
-                setIsStopJudgingConfirmOpen(false)
-              }
-            }}
-          >
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="審査停止確認を閉じる"
+              className="absolute inset-0 bg-black/60"
+              onClick={() => setIsStopJudgingConfirmOpen(false)}
+            />
             <div
               className="glass-panel w-full max-w-sm rounded p-4"
-              onClick={stopOverlayContentClick}
+              role="dialog"
+              aria-modal="true"
+              aria-label="審査停止確認"
             >
               <h2 className="mb-2 text-lg font-semibold text-cyan-100">審査を中止しますか？</h2>
               <p className="mb-4 text-sm text-slate-100">
@@ -1755,31 +1771,19 @@ function App() {
           </div>
         )}
         {viewMode === 'result' && isRejudgeModalOpen && activeResultPost?.status === 'failed' && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="再審査確認"
-            tabIndex={-1}
-            onKeyDown={(event) => {
-              if (event.key === DIALOG_CLOSE_KEY) {
-                event.preventDefault()
-                closeRejudgeModal()
-              }
-            }}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
-            onClick={closeRejudgeModal}
-          >
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="再審査確認を閉じる"
+              className="absolute inset-0 bg-black/60"
+              onClick={closeRejudgeModal}
+            />
             <div
               className="glass-panel w-full max-w-sm rounded-2xl border border-white/20 p-5"
-              onClick={stopOverlayContentClick}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  stopOverlayContentClick()
-                }
-              }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="再審査確認"
+              tabIndex={-1}
             >
               <h2 className="text-lg font-bold text-cyan-100">審査に失敗しました</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-100">

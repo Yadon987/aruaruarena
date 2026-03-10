@@ -53,12 +53,7 @@ export function RankingSection({
   const myPostIdSet = new Set(myPostIds)
 
   return (
-    <section
-      id="ranking-section"
-      role="region"
-      aria-label="ランキング表示エリア"
-      className="rounded border p-4"
-    >
+    <section id="ranking-section" aria-label="ランキング表示エリア" className="rounded border p-4">
       <h2 className="mb-4 text-lg font-semibold">ランキング</h2>
 
       {isLoading && <p>ランキングを読み込み中です...</p>}

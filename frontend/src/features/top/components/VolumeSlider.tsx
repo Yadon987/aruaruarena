@@ -25,9 +25,7 @@ export function VolumeSlider({ id, value, onChange, inputRef }: VolumeSliderProp
 
   return (
     <label className="volume-slider">
-      <span className="volume-slider__label">
-        {VOLUME_LABEL}
-      </span>
+      <span className="volume-slider__label">{VOLUME_LABEL}</span>
       <input
         id={sliderId}
         ref={inputRef}

@@ -77,7 +77,7 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     })
   })
 
-it('各審査員がそれぞれ異なる方向から登場する入場アニメーションを持つ', async () => {
+  it('各審査員がそれぞれ異なる方向から登場する入場アニメーションを持つ', async () => {
     // 何を検証するか: useJudgeEntrance が現在の JUDGE_ENTRANCE.VARIANTS を返すため、定義どおりの初期位置を確認する
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())

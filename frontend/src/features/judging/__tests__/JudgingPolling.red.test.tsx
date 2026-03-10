@@ -156,7 +156,9 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByText('通信が不安定です（1/4）。再接続を試しています...')).toBeInTheDocument()
+      expect(
+        screen.getByText('通信が不安定です（1/4）。再接続を試しています...')
+      ).toBeInTheDocument()
     })
   })
 

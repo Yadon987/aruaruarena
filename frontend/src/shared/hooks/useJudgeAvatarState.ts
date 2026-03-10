@@ -80,6 +80,9 @@ export function useJudgeAvatarState({
       return
     }
 
+    const startTimers = blinkStartTimerRef.current
+    const endTimers = blinkEndTimerRef.current
+
     const scheduleBlink = (judge: JudgePersona) => {
       const nextInterval = getRandomInterval(
         AVATAR_ANIMATION.BLINK_INTERVAL_MIN_MS,
@@ -108,8 +111,8 @@ export function useJudgeAvatarState({
     })
 
     return () => {
-      clearJudgeTimerMap(blinkStartTimerRef.current)
-      clearJudgeTimerMap(blinkEndTimerRef.current)
+      clearJudgeTimerMap(startTimers)
+      clearJudgeTimerMap(endTimers)
     }
   }, [isAnimationEnabled])
 

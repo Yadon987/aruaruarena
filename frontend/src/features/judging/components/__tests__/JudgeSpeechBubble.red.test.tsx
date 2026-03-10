@@ -32,7 +32,9 @@ describe('E24-05 RED: JudgeSpeechBubble', () => {
       vi.advanceTimersByTime(2500)
     })
     expect(screen.getByRole('status')).toHaveTextContent('それってあなたの感想ですよね')
-    expect(screen.getByText('それってあなたの感想ですよね', { selector: 'div' })).toBeInTheDocument()
+    expect(
+      screen.getByText('それってあなたの感想ですよね', { selector: 'div' })
+    ).toBeInTheDocument()
   })
 
   it('isVisible=false で吹き出しが非表示', async () => {

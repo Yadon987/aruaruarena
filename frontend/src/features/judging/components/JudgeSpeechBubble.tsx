@@ -28,7 +28,10 @@ export function JudgeSpeechBubble({ isVisible, text, judgeType, testId }: JudgeS
     text,
     isVisible,
     baseIntervalMs: TYPEWRITER_INTERVAL_MS,
-    maxDurationMs: Math.max(JUDGE_SPEECH.DURATION_MS - TYPEWRITER_MARGIN_MS, TYPEWRITER_INTERVAL_MS),
+    maxDurationMs: Math.max(
+      JUDGE_SPEECH.DURATION_MS - TYPEWRITER_MARGIN_MS,
+      TYPEWRITER_INTERVAL_MS
+    ),
   })
 
   return (

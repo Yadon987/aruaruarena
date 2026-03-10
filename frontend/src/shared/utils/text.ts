@@ -8,7 +8,10 @@
  */
 export function countGraphemeClusters(value: string): number {
   type IntlSegmenter = {
-    new (locales: string | string[] | undefined, options: { granularity: 'grapheme' }): {
+    new (
+      locales: string | string[] | undefined,
+      options: { granularity: 'grapheme' }
+    ): {
       segment: (text: string) => Iterable<unknown>
     }
   }

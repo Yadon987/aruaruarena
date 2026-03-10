@@ -151,16 +151,19 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
     render(<App />)
     await fillAndSubmitPost()
 
-    await waitFor(() => {
-      const bubble =
-        screen.queryByTestId('catchphrase-hiroyuki') ??
-        screen.queryByTestId('catchphrase-dewi') ??
-        screen.queryByTestId('catchphrase-nakao')
-      if (!bubble) {
-        throw new Error('catchphrase bubble is not rendered yet')
-      }
-      expect(bubble).toHaveTextContent(/\S/)
-    }, { timeout: 7000 })
+    await waitFor(
+      () => {
+        const bubble =
+          screen.queryByTestId('catchphrase-hiroyuki') ??
+          screen.queryByTestId('catchphrase-dewi') ??
+          screen.queryByTestId('catchphrase-nakao')
+        if (!bubble) {
+          throw new Error('catchphrase bubble is not rendered yet')
+        }
+        expect(bubble).toHaveTextContent(/\S/)
+      },
+      { timeout: 7000 }
+    )
   })
 
   it('審査完了で結果モーダルが表示される', { timeout: 15000 }, async () => {
