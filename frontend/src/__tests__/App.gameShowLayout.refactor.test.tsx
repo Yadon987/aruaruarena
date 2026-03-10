@@ -59,14 +59,13 @@ describe('App Game Show Layout Refactor', () => {
     })
   })
 
-  it('フッター常時表示が全サイズでランキングとその他の2アクションになる', () => {
-    // 何を検証するか: 画面幅に関わらずフッター導線が2ボタンで統一されること
+  it('右下固定でランキングとその他の2アクションを表示する', () => {
+    // 何を検証するか: 画面幅に関わらず補助導線が右下のアイコンボタンで統一されること
     render(<App />)
 
-    const footer = screen.getByRole('contentinfo')
-    expect(within(footer).getByRole('button', { name: 'ランキング' })).toBeInTheDocument()
-    expect(within(footer).getByRole('button', { name: 'その他を開く' })).toBeInTheDocument()
-    expect(within(footer).queryByRole('button', { name: '過去の投稿' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'ランキング' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'その他を開く' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '過去の投稿' })).not.toBeInTheDocument()
   })
 
   it('「その他」押下時に補助メニューの3導線が表示される', () => {

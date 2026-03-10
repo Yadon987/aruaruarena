@@ -53,15 +53,15 @@ describe('E18 RED: Sound settings integration', () => {
     expect(screen.getByRole('alertdialog', { name: '音声を再生しますか？' })).toBeInTheDocument()
   })
 
-  it('同意で初期音量0.5とconsent=trueを保存する', async () => {
-    // 何を検証するか: 「はい」選択で音量と同意状態が保存されること
+  it('同意で初期音量0.6とconsent=trueを保存する', async () => {
+    // 何を検証するか: 「はい」選択で音量0.6と同意状態が保存されること
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'はい' }))
 
     await waitFor(() => {
       expect(localStorage.getItem('aruaru_sound_consent')).toBe('true')
-      expect(localStorage.getItem('aruaru_sound_volume')).toBe('0.5')
+      expect(localStorage.getItem('aruaru_sound_volume')).toBe('0.6')
     })
   })
 

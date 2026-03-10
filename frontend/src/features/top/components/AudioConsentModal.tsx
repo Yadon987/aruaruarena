@@ -1,6 +1,6 @@
 import './AudioConsentModal.css'
 
-const CONSENT_DEFAULT_VOLUME = 0.5
+const CONSENT_DEFAULT_VOLUME = 0.6
 
 export type AudioConsentModalProps = {
   isOpen: boolean

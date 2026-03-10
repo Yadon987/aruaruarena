@@ -279,7 +279,6 @@ function App() {
   const privacyPolicyTriggerRef = useRef<HTMLButtonElement | null>(null)
   const rankingTriggerRef = useRef<HTMLButtonElement | null>(null)
   const footerActionSheetTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const footerRef = useRef<HTMLElement | null>(null)
   const footerDockRef = useRef<HTMLDivElement | null>(null)
   const soundSettingsContainerRef = useRef<HTMLDivElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
@@ -1007,6 +1006,12 @@ function App() {
     syncTopPath()
   }, [clearJudgingPolling, syncTopPath])
 
+  useEffect(() => {
+    if (viewMode !== 'top' || !isPostModalOpen) return
+    if (window.location.pathname === ROOT_PATH) return
+    syncTopPath()
+  }, [isPostModalOpen, syncTopPath, viewMode])
+
   const handlePostModalCloseWithDraft = useCallback((draft: { nickname: string; body: string }) => {
     const trimmedNickname = draft.nickname.trim()
     const trimmedBody = draft.body.trim()
@@ -1159,8 +1164,7 @@ function App() {
     }
 
     const dockElement = footerDockRef.current
-    const footerElement = footerRef.current
-    if (!dockElement || !footerElement) return
+    if (!dockElement) return
 
     const updateFooterReservedSpace = () => {
       const dockHeight = Math.ceil(dockElement.getBoundingClientRect().height)
@@ -1183,7 +1187,6 @@ function App() {
 
     const observer = new ResizeObserver(updateFooterReservedSpace)
     observer.observe(dockElement)
-    observer.observe(footerElement)
 
     return () => {
       observer.disconnect()
@@ -1209,21 +1212,47 @@ function App() {
       )}
       <div
         data-testid="top-action-controls"
-        className="fixed right-4 top-4 z-50 flex items-center sm:right-6 sm:top-6"
+        className="fixed right-4 top-4 z-50 sm:right-6 sm:top-6"
       >
-        <div ref={soundSettingsContainerRef} className="relative">
-          <SoundControlButton
-            volume={volume}
-            isOpen={isSoundSettingsOpen}
-            onClick={handleSoundControlClick}
-          />
-          <SoundSettingsPanel
-            isOpen={isSoundSettingsOpen}
-            volume={volume}
-            onVolumeChange={handleVolumeChange}
-            onClose={() => setIsSoundSettingsOpen(false)}
-            containerRef={soundSettingsContainerRef}
-          />
+        <div className="top-right-action-stack">
+          <div ref={soundSettingsContainerRef} className="relative">
+            <SoundControlButton
+              volume={volume}
+              isOpen={isSoundSettingsOpen}
+              onClick={handleSoundControlClick}
+            />
+            <SoundSettingsPanel
+              isOpen={isSoundSettingsOpen}
+              volume={volume}
+              onVolumeChange={handleVolumeChange}
+              onClose={() => setIsSoundSettingsOpen(false)}
+              containerRef={soundSettingsContainerRef}
+            />
+          </div>
+          {viewMode === 'top' && (
+            <>
+              <button
+                type="button"
+                onClick={openRankingModal}
+                aria-label="ランキング"
+                title="ランキング"
+                className="neon-button-base neon-glow-pink icon-action-button"
+                ref={rankingTriggerRef}
+              >
+                <span aria-hidden="true">🏆</span>
+              </button>
+              <button
+                type="button"
+                onClick={openFooterActionSheet}
+                aria-label="その他を開く"
+                title="その他"
+                className="neon-button-base neon-glow-pink icon-action-button"
+                ref={footerActionSheetTriggerRef}
+              >
+                <span aria-hidden="true">⚙️</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div
@@ -1397,7 +1426,7 @@ function App() {
             role="dialog"
             aria-modal="true"
             aria-label="補助メニュー"
-            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-3 sm:items-center"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-3"
             onClick={closeFooterActionSheet}
             onKeyDown={(event) => {
               if (event.key === DIALOG_CLOSE_KEY) {
@@ -1528,7 +1557,7 @@ function App() {
               />
             </div>
             {viewMode === 'top' && (
-              <div className="pointer-events-auto -mt-1 sm:-mt-2 md:-mt-3 lg:-mt-4">
+              <div className="pointer-events-auto mt-2 sm:mt-3 md:mt-4 lg:mt-5">
                 <NeonButton
                   type="button"
                   variant="primary"
@@ -1542,36 +1571,6 @@ function App() {
                   投稿する
                 </NeonButton>
               </div>
-            )}
-            {viewMode === 'top' && (
-              <footer
-                ref={footerRef}
-                role="contentinfo"
-                className="footer-main-actions-wrap pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
-              >
-                <div className="footer-main-actions-track">
-                  <NeonButton
-                    type="button"
-                    variant="secondary"
-                    className="footer-main-action-button"
-                    ariaLabel="ランキング"
-                    ref={rankingTriggerRef}
-                    onClick={openRankingModal}
-                  >
-                    ランキング
-                  </NeonButton>
-                  <NeonButton
-                    type="button"
-                    variant="primary"
-                    className="footer-main-action-button"
-                    ariaLabel="その他を開く"
-                    ref={footerActionSheetTriggerRef}
-                    onClick={openFooterActionSheet}
-                  >
-                    その他
-                  </NeonButton>
-                </div>
-              </footer>
             )}
           </div>
         </div>

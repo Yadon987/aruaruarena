@@ -59,6 +59,7 @@ describe('E30-02 RED: 下書き保持と審査停止3アクション', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '投稿フォーム' })).toBeInTheDocument()
     })
+    expect(window.location.pathname).toBe('/')
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('再投稿太郎')
     expect(screen.getByLabelText('あるある')).toHaveValue('再投稿で復元される本文')
   })

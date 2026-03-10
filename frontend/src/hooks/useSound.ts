@@ -2,7 +2,7 @@ import { Howl } from 'howler'
 
 const SOUND_VOLUME_KEY = 'aruaru_sound_volume'
 const SOUND_CONSENT_KEY = 'aruaru_sound_consent'
-const DEFAULT_VOLUME = 0.5
+const DEFAULT_VOLUME = 0.6
 const FADE_DURATION_MS = 500
 
 type Scene = 'top' | 'judging' | 'success' | 'failed'

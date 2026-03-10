@@ -46,19 +46,19 @@ describe('E25-01 RED: App Game Show Layout', () => {
     expect(soundButton).toHaveClass('neon-button-base')
   })
 
-  it('フッターは全サイズで「ランキング」「その他」の2ボタン構成になる', () => {
-    // 何を検証するか: 主要導線を2ボタンへ集約し、補助導線は「その他」に統合されること
+  it('右下にランキング・その他のアイコンボタンを表示する', () => {
+    // 何を検証するか: 補助導線が右下固定のアイコンボタンとして表示されること
     render(<App />)
 
-    const footer = screen.getByRole('contentinfo')
-    expect(footer).toHaveClass('flex-nowrap')
-    const rankingButton = within(footer).getByRole('button', { name: 'ランキング' })
-    const otherButton = within(footer).getByRole('button', { name: 'その他を開く' })
+    const rankingButton = screen.getByRole('button', { name: 'ランキング' })
+    const otherButton = screen.getByRole('button', { name: 'その他を開く' })
 
     expect(rankingButton).toBeInTheDocument()
     expect(otherButton).toBeInTheDocument()
     expect(rankingButton).toHaveClass('neon-button-base')
     expect(otherButton).toHaveClass('neon-button-base')
+    expect(rankingButton).toHaveClass('icon-action-button')
+    expect(otherButton).toHaveClass('icon-action-button')
   })
 
   it('「その他」内の問い合わせ押下でフォームURLを新規タブで開く', () => {

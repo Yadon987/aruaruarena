@@ -99,6 +99,7 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '再投稿する' }))
     expect(screen.getByRole('dialog', { name: '投稿フォーム' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/')
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('失敗太郎')
     expect(screen.getByLabelText('あるある')).toHaveValue('再投稿までの入力保持')
   })
@@ -142,6 +143,7 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '投稿フォーム' })).toBeInTheDocument()
     })
+    expect(window.location.pathname).toBe('/')
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('失敗太郎')
     expect(screen.getByLabelText('あるある')).toHaveValue('再投稿までの入力保持')
 

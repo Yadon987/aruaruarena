@@ -15,7 +15,7 @@ export function SoundControlButton({ volume, isOpen, onClick }: SoundControlButt
       aria-label="音声設定"
       aria-expanded={isOpen}
       title={isOpen ? '音量パネルを閉じる' : '音量パネルを開く'}
-      className="neon-button-base neon-glow-pink h-10 w-10 rounded-full p-0 text-lg"
+      className="neon-button-base neon-glow-pink icon-action-button"
     >
       <span aria-hidden="true">{icon}</span>
     </button>
