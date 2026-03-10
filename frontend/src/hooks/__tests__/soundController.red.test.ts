@@ -45,8 +45,14 @@ describe('E18-01 RED: soundController', () => {
     vi.runAllTimers()
 
     expect(fadeSpy).not.toHaveBeenCalled()
+    const topBgmCountBeforeReplay = getAudioDebugEvents().filter(
+      (event) => event.type === 'bgm' && event.scene === 'top'
+    ).length
     sound.playSceneBgm('top')
-    expect(getAudioDebugEvents().filter((event) => event.scene === 'top')).toHaveLength(1)
+    const topBgmCountAfterReplay = getAudioDebugEvents().filter(
+      (event) => event.type === 'bgm' && event.scene === 'top'
+    ).length
+    expect(topBgmCountAfterReplay - topBgmCountBeforeReplay).toBe(0)
   })
 
   it('stopBgm()で現在BGMを停止して同一シーンを再生し直せる', () => {

@@ -1,8 +1,11 @@
+import { type RefObject, useId } from 'react'
 import './VolumeSlider.css'
 
 export type VolumeSliderProps = {
+  id?: string
   value: number
   onChange: (value: number) => void
+  inputRef?: RefObject<HTMLInputElement | null>
 }
 
 function clamp01(value: number): number {
@@ -12,18 +15,21 @@ function clamp01(value: number): number {
   return value
 }
 
-export function VolumeSlider({ value, onChange }: VolumeSliderProps) {
+export function VolumeSlider({ id, value, onChange, inputRef }: VolumeSliderProps) {
   const clamped = clamp01(value)
   const percent = Math.round(clamped * 100)
-  const labelId = 'sound-volume-slider-label'
+  const generatedId = useId().replace(/:/g, '')
+  const sliderId = id ?? `sound-volume-slider-${generatedId}`
+  const labelId = `${sliderId}-label`
 
   return (
-    <label className="volume-slider" htmlFor="sound-volume-slider">
+    <label className="volume-slider" htmlFor={sliderId}>
       <span id={labelId} className="volume-slider__label">
         音量
       </span>
       <input
-        id="sound-volume-slider"
+        id={sliderId}
+        ref={inputRef}
         type="range"
         min={0}
         max={100}

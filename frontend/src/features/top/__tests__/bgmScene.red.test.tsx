@@ -40,9 +40,15 @@ function setupRanking() {
 }
 
 async function enableSound() {
+  const beforeTopBgmCount = getAudioDebugEvents().filter(
+    (event) => event.type === 'bgm' && event.scene === 'top'
+  ).length
   fireEvent.pointerDown(document.body)
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: '音声設定' })).toBeInTheDocument()
+    const afterTopBgmCount = getAudioDebugEvents().filter(
+      (event) => event.type === 'bgm' && event.scene === 'top'
+    ).length
+    expect(afterTopBgmCount).toBeGreaterThan(beforeTopBgmCount)
   })
 }
 

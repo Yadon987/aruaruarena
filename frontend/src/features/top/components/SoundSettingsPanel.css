@@ -12,6 +12,7 @@
     linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(255, 241, 245, 0.96))
   );
   box-shadow: var(--sound-panel-shadow, 0 14px 34px rgba(15, 23, 42, 0.18));
+
   --sound-settings-text-color: var(--sound-panel-text-color, #334155);
   animation: sound-settings-fade-in 160ms ease-out;
 }

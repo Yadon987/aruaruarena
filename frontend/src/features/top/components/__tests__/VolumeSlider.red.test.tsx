@@ -8,7 +8,7 @@ describe('E31-01 RED: VolumeSlider', () => {
     const onChange = vi.fn()
 
     render(<VolumeSlider value={0.5} onChange={onChange} />)
-    fireEvent.change(screen.getByRole('slider', { name: '音量スライダー' }), {
+    fireEvent.change(screen.getByRole('slider', { name: '音量' }), {
       target: { value: '30' },
     })
 

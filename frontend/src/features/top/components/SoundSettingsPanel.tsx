@@ -20,6 +20,7 @@ export function SoundSettingsPanel({
   containerRef,
 }: SoundSettingsPanelProps) {
   const panelRef = useRef<HTMLDivElement | null>(null)
+  const sliderRef = useRef<HTMLInputElement | null>(null)
   const onCloseRef = useRef(onClose)
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export function SoundSettingsPanel({
 
   useEffect(() => {
     if (!isOpen) return
-    panelRef.current?.querySelector<HTMLInputElement>('#sound-volume-slider')?.focus()
+    sliderRef.current?.focus()
   }, [isOpen])
 
   if (!isOpen) return null
@@ -73,7 +74,12 @@ export function SoundSettingsPanel({
         </span>
         <span className="sound-settings-panel__title">サウンド</span>
       </div>
-      <VolumeSlider value={volume} onChange={onVolumeChange} />
+      <VolumeSlider
+        id={`${panelId}-volume`}
+        value={volume}
+        onChange={onVolumeChange}
+        inputRef={sliderRef}
+      />
     </div>
   )
 }

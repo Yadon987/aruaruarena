@@ -64,7 +64,12 @@ const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
 const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
-const AI_TRANSIENT_ERROR_CODES = ['provider_error', 'connection_failed', 'timeout', 'secrets_fetch_failed']
+const AI_TRANSIENT_ERROR_CODES = [
+  'provider_error',
+  'connection_failed',
+  'timeout',
+  'secrets_fetch_failed',
+]
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
@@ -184,7 +189,8 @@ function resolveResultModalErrorCode(error: unknown): string {
 
 function isTransientJudgingPollingError(error: unknown): boolean {
   if (!(error instanceof ApiClientError)) return false
-  if (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT) return true
+  if (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT)
+    return true
   return AI_TRANSIENT_ERROR_CODES.includes(error.code)
 }
 
@@ -206,7 +212,9 @@ function validateForm(nickname: string, body: string): ValidationErrors {
       ? MESSAGE_NICKNAME_LENGTH
       : ''
   const bodyError =
-    bodyLength < TEXT_LENGTH.BODY_MIN || bodyLength > TEXT_LENGTH.BODY_MAX ? MESSAGE_BODY_LENGTH : ''
+    bodyLength < TEXT_LENGTH.BODY_MIN || bodyLength > TEXT_LENGTH.BODY_MAX
+      ? MESSAGE_BODY_LENGTH
+      : ''
 
   return {
     nicknameError: trimmedNickname ? nicknameError : MESSAGE_NICKNAME_REQUIRED,
@@ -248,13 +256,6 @@ function App() {
     soundControllerRef.current = createSoundController()
   }
   const sound = soundControllerRef.current
-  if (
-    import.meta.env.MODE === 'test' &&
-    !sound.hasConsented &&
-    !shouldShowAudioConsentModalInTest()
-  ) {
-    sound.setConsented()
-  }
   const [submitError, setSubmitError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -307,14 +308,26 @@ function App() {
   const submitAbortControllerRef = useRef<AbortController | null>(null)
   const submitRequestSeqRef = useRef(0)
   const activeResultErrorCode = resultModalErrorCode
+
+  useEffect(() => {
+    if (
+      import.meta.env.MODE !== 'test' ||
+      sound.hasConsented ||
+      shouldShowAudioConsentModalInTest()
+    ) {
+      return
+    }
+    sound.setConsented()
+    setHasAudioConsent(true)
+  }, [sound])
+
   const resultAudioScene = useMemo(() => {
     if (!isResultModalOpen || !activeResultPost) return null
     return activeResultPost.status === 'scored' ? 'success' : 'failed'
   }, [activeResultPost, isResultModalOpen])
   const audioScene = resultAudioScene ?? viewMode
   const isAudioConsentModalOpen =
-    !hasAudioConsent &&
-    (import.meta.env.MODE !== 'test' || shouldShowAudioConsentModalInTest())
+    !hasAudioConsent && (import.meta.env.MODE !== 'test' || shouldShowAudioConsentModalInTest())
   const syncMyPostIds = useCallback(() => setMyPostIds(readPostIds()), [])
   const setMyPostLoading = useCallback((postId: string, isLoading: boolean) => {
     setLoadingMyPostIds((prev) => {
@@ -1316,9 +1329,13 @@ function App() {
                   !
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">読み込みに失敗しました</h2>
+                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">
+                    読み込みに失敗しました
+                  </h2>
                   <p className="text-sm leading-relaxed text-slate-700">{judgingErrorMessage}</p>
-                  <p className="text-xs text-slate-500">通信状況をご確認のうえ、再度お試しください。</p>
+                  <p className="text-xs text-slate-500">
+                    通信状況をご確認のうえ、再度お試しください。
+                  </p>
                 </div>
               </div>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -1352,7 +1369,6 @@ function App() {
             <div className="mb-4">
               {successMessage && <p className="text-green-500">{successMessage}</p>}
             </div>
-
           </>
         )}
 
