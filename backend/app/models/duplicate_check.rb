@@ -61,16 +61,25 @@ class DuplicateCheck
   # @return [Boolean] 重複ありならtrue、なければfalse
   def self.exists_with_hash?(body_hash)
     record = find(body_hash)
-    expires_at = record&.expires_at
-    return false if expires_at.nil?
+    return false if missing_expires_at?(body_hash, record)
 
-    expires_at.to_i > Time.now.to_i
+    record.expires_at.to_i > Time.now.to_i
   rescue Dynamoid::Errors::RecordNotFound
     false
   rescue StandardError => e
     # フェイルオープン: DB障害時は重複なしと判定
     Rails.logger.error("[DuplicateCheck#exists_with_hash?] DynamoDB error: #{e.class} - #{e.message}")
     false
+  end
+
+  def self.missing_expires_at?(body_hash, record)
+    return false unless record&.expires_at.nil?
+
+    Rails.logger.warn(
+      '[DuplicateCheck#exists_with_hash?] expires_at is missing ' \
+      "for body_hash=#{body_hash} post_id=#{record&.post_id}"
+    )
+    true
   end
 
   # 重複チェックを登録

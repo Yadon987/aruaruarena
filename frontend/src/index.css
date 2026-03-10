@@ -544,14 +544,6 @@
   animation: none;
 }
 
-.judge-seat-backrest-tufted {
-  animation: none;
-}
-
-.judge-seat-backrest-marquee {
-  animation: none;
-}
-
 .judge-seat-backrest-bulb {
   animation: backrest-marquee-pulse 1.8s ease-in-out infinite;
   animation-delay: var(--marquee-delay, 0ms);
@@ -1107,6 +1099,12 @@
   .vip-bulbs-flash .vip-bulb {
     animation: none;
     opacity: 0.75;
+  }
+
+  .judge-seat-backrest-bulb {
+    animation: none;
+    opacity: 0.75;
+    filter: none;
   }
 
   .judge-avatar-speaking-breath {
