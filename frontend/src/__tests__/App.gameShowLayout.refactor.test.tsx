@@ -78,6 +78,31 @@ describe('App Game Show Layout Refactor', () => {
     expect(screen.getByRole('button', { name: 'プライバシーポリシー' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '問い合わせ（新しいタブで開く）' })).toBeInTheDocument()
   })
+
+  it('ランキングボタンを再度押すとランキングモーダルを閉じる', () => {
+    // 何を検証するか: 同じトリガーの再押下でモーダルを閉じられること
+    render(<App />)
+
+    const rankingButton = screen.getByRole('button', { name: 'ランキング' })
+    fireEvent.click(rankingButton)
+    expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+
+    fireEvent.click(rankingButton)
+    expect(screen.queryByRole('dialog', { name: 'ランキング' })).not.toBeInTheDocument()
+  })
+
+  it('その他ボタンを再度押すと補助メニューを閉じる', () => {
+    // 何を検証するか: 同じトリガーの再押下で補助メニューを閉じられること
+    render(<App />)
+
+    const settingsButton = screen.getByRole('button', { name: 'その他を開く' })
+    fireEvent.click(settingsButton)
+    expect(screen.getByRole('dialog', { name: '補助メニュー' })).toBeInTheDocument()
+
+    fireEvent.click(settingsButton)
+    expect(screen.queryByRole('dialog', { name: '補助メニュー' })).not.toBeInTheDocument()
+  })
+
   it('自分の投稿モーダルは外側クリックで閉じる', () => {
     // 何を検証するか: App直下モーダルでも外側クリック閉鎖の統一仕様を満たすこと
     render(<App />)

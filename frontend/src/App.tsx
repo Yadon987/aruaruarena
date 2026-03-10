@@ -964,6 +964,10 @@ function App() {
   }
 
   const openRankingModal = () => {
+    if (isRankingModalOpen) {
+      closeRankingModal()
+      return
+    }
     setIsFooterActionSheetOpen(false)
     setIsMyPostsOpen(false)
     setIsPrivacyPolicyOpen(false)
@@ -976,6 +980,10 @@ function App() {
   }
 
   const openFooterActionSheet = () => {
+    if (isFooterActionSheetOpen) {
+      closeFooterActionSheet()
+      return
+    }
     setIsMyPostsOpen(false)
     setIsPrivacyPolicyOpen(false)
     setIsRankingModalOpen(false)
