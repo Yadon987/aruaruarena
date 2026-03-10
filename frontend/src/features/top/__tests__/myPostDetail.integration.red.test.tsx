@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
 import { ApiClientError, api } from '../../../shared/services/api'
+import { openMyPostsDialog } from '../../../test/appTestHelpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -54,7 +55,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
+    await openMyPostsDialog()
 
     await waitFor(() => expect(getPostSpy).toHaveBeenCalledWith(MY_POST_ID))
     expect(await screen.findByText(/本文1/)).toBeInTheDocument()
@@ -80,7 +81,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
+    await openMyPostsDialog()
     fireEvent.click(await screen.findByRole('button', { name: MY_POST_ID }))
 
     await waitFor(() =>
@@ -98,10 +99,10 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
+    await openMyPostsDialog()
     fireEvent.click(await screen.findByRole('button', { name: MY_POST_ID }))
 
-    expect(await screen.findByText('投稿詳細の取得に失敗しました')).toBeInTheDocument()
+    expect(await screen.findByText('一時的なエラーです。時間をおいて再試行してください')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
   })
 
@@ -121,7 +122,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
+    await openMyPostsDialog()
 
     await screen.findByRole('heading', { name: '自分の投稿' })
     expect(getPostSpy).not.toHaveBeenCalled()
@@ -156,7 +157,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
+    await openMyPostsDialog()
 
     await waitFor(() => expect(maxInFlight).toBeGreaterThan(0))
     await waitFor(() => expect(maxInFlight).toBeLessThanOrEqual(3))

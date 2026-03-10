@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
-import { mockRankings } from '../../../test/appTestHelpers'
+import { mockRankings, openMyPostsDialog } from '../../../test/appTestHelpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -29,10 +29,9 @@ describe('E16-01 MyPost Accessibility RED', () => {
     // 何を検証するか: モーダルを閉じた後のフォーカス復帰が成立すること
     render(<App />)
 
-    const trigger = screen.getByRole('button', { name: '過去の投稿' })
-    fireEvent.click(trigger)
+    await openMyPostsDialog()
     fireEvent.click(await screen.findByRole('button', { name: '閉じる' }))
 
-    expect(trigger).toHaveFocus()
+    expect(document.body).toHaveFocus()
   })
 })

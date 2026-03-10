@@ -72,7 +72,7 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByText('審査結果')).toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
     })
   })
 
@@ -95,7 +95,7 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByText('審査結果')).toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
     })
   })
 

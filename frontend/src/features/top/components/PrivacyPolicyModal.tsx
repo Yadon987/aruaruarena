@@ -85,13 +85,13 @@ export function PrivacyPolicyModal({ isOpen, onClose, triggerRef }: Props) {
   return (
     <div
       className="fixed inset-0 z-50 flex h-full items-center justify-center p-4"
-      data-testid="privacy-policy-modal-overlay"
       role="presentation"
     >
       <button
         type="button"
         aria-label="プライバシーポリシーモーダルを閉じる"
         className="absolute inset-0 bg-black/50"
+        data-testid="privacy-policy-modal-overlay"
         onClick={handleClose}
       />
       <div className="relative flex h-full items-center justify-center p-4">

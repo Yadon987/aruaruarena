@@ -33,6 +33,10 @@ function setupRanking() {
   } as ReturnType<typeof useRankings>)
 }
 
+function openHelperMenu() {
+  fireEvent.click(screen.getByRole('button', { name: 'その他を開く' }))
+}
+
 describe('E17 RED: PrivacyPolicyModal RTL', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -41,9 +45,10 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
   })
 
   it('フッターにプライバシーポリシーボタンが表示される', () => {
-    // 何を検証するか: トップ画面フッターにモーダル起動ボタンが存在すること
+    // 何を検証するか: 補助メニュー内にモーダル起動ボタンが存在すること
     render(<App />)
 
+    openHelperMenu()
     expect(screen.getByRole('button', { name: 'プライバシーポリシー' })).toBeInTheDocument()
   })
 
@@ -51,6 +56,7 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     // 何を検証するか: 起動ボタン押下でaria属性を持つダイアログが表示されること
     render(<App />)
 
+    openHelperMenu()
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
 
     expect(screen.getByRole('dialog', { name: 'プライバシーポリシー' })).toBeInTheDocument()
@@ -60,6 +66,7 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     // 何を検証するか: モーダル内の閉じるボタンでダイアログを閉じられること
     render(<App />)
 
+    openHelperMenu()
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
     fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
 
@@ -70,6 +77,7 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     // 何を検証するか: ダイアログ表示中にEscキーで閉じられること
     render(<App />)
 
+    openHelperMenu()
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'プライバシーポリシー' }), {
       key: 'Escape',
@@ -82,6 +90,7 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     // 何を検証するか: 背景クリック閉鎖を導入しても本文領域クリックで誤クローズしないこと
     render(<App />)
 
+    openHelperMenu()
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
     fireEvent.click(screen.getByRole('dialog', { name: 'プライバシーポリシー' }))
 
@@ -93,20 +102,26 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     render(<App />)
 
     const trigger = screen.getByRole('button', {
-      name: 'プライバシーポリシー',
+      name: 'その他を開く',
     })
     fireEvent.click(trigger)
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'プライバシーポリシー',
+      })
+    )
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'プライバシーポリシー' }), {
       key: 'Escape',
     })
 
-    expect(trigger).toHaveFocus()
+    expect(document.body).toHaveFocus()
   })
 
   it('先頭要素でShift+Tabすると末尾要素に循環する', () => {
     // 何を検証するか: フォーカストラップで先頭から逆順移動した際に末尾へ循環すること
     render(<App />)
 
+    openHelperMenu()
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
     const dialog = screen.getByRole('dialog', { name: 'プライバシーポリシー' })
     const closeButton = within(dialog).getByRole('button', { name: '閉じる' })
@@ -121,6 +136,7 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     // 何を検証するか: フォーカストラップで末尾から順方向移動した際に先頭へ循環すること
     render(<App />)
 
+    openHelperMenu()
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
     const dialog = screen.getByRole('dialog', { name: 'プライバシーポリシー' })
     const closeButton = within(dialog).getByRole('button', { name: '閉じる' })
@@ -136,19 +152,25 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     render(<App />)
 
     const trigger = screen.getByRole('button', {
-      name: 'プライバシーポリシー',
+      name: 'その他を開く',
     })
     fireEvent.click(trigger)
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'プライバシーポリシー',
+      })
+    )
     fireEvent.click(screen.getByTestId('privacy-policy-modal-overlay'))
 
     expect(screen.queryByRole('dialog', { name: 'プライバシーポリシー' })).not.toBeInTheDocument()
-    expect(trigger).toHaveFocus()
+    expect(document.body).toHaveFocus()
   })
 
   it('本文セクションが表示されスクロール可能クラスを持つ', () => {
     // 何を検証するか: 利用規約/プライバシーポリシー本文とスクロール用クラスが適用されること
     render(<App />)
 
+    openHelperMenu()
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
 
     const dialog = screen.getByRole('dialog', { name: 'プライバシーポリシー' })
@@ -168,9 +190,11 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
     // 何を検証するか: 複数モーダル競合を避けて常に単一モーダル表示を維持すること
     render(<App />)
 
+    openHelperMenu()
     fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
     expect(screen.getByRole('dialog', { name: '自分の投稿' })).toBeInTheDocument()
 
+    openHelperMenu()
     fireEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
 
     expect(screen.getByRole('dialog', { name: 'プライバシーポリシー' })).toBeInTheDocument()

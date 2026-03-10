@@ -300,6 +300,8 @@ function App() {
   const [activeResultPost, setActiveResultPost] = useState<Post | null>(null)
   const [isResultPostLoading, setIsResultPostLoading] = useState(false)
   const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
+  const [isSharePending, setIsSharePending] = useState(false)
+  const [shareStatusMessage, setShareStatusMessage] = useState('')
   const [isRejudgeModalOpen, setIsRejudgeModalOpen] = useState(false)
   const [isRejudging, setIsRejudging] = useState(false)
   const [rejudgeErrorMessage, setRejudgeErrorMessage] = useState('')
@@ -371,6 +373,8 @@ function App() {
     setActiveResultPost(null)
     setIsResultPostLoading(false)
     setResultModalErrorCode(null)
+    setIsSharePending(false)
+    setShareStatusMessage('')
     setIsRejudgeModalOpen(false)
     setRejudgeErrorMessage('')
     setIsRejudging(false)
@@ -421,13 +425,15 @@ function App() {
       saveResultViewTrigger()
       setActiveResultPostId(postId)
       setResultModalErrorCode(null)
+      setIsSharePending(false)
+      setShareStatusMessage('')
       setRejudgeErrorMessage('')
       setIsRejudging(false)
       if (initialPost) {
         queryClient.setQueryData(queryKeys.posts.detail(postId), initialPost)
         setActiveResultPost(initialPost)
         setIsResultPostLoading(false)
-        setIsRejudgeModalOpen(initialPost.status === 'failed')
+        setIsRejudgeModalOpen(false)
       } else {
         setActiveResultPost(null)
         setIsRejudgeModalOpen(false)
@@ -474,7 +480,9 @@ function App() {
   }, [sound])
 
   const handleResultShare = useCallback(async () => {
-    if (!activeResultPost) return
+    if (!activeResultPost || isSharePending) return
+    setIsSharePending(true)
+    setShareStatusMessage('共有前に画像を確認しています...')
     const shareUrl = buildShareUrl(activeResultPost.body, activeResultPost.id)
     const openedWindow = window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
     if (openedWindow) return
@@ -490,7 +498,7 @@ function App() {
     if (window.confirm(MESSAGE_SHARE_NAVIGATE_CONFIRM)) {
       window.location.assign(shareUrl)
     }
-  }, [activeResultPost])
+  }, [activeResultPost, isSharePending])
 
   const handleAudioConsent = useCallback(
     (nextVolume: number) => {
@@ -725,7 +733,7 @@ function App() {
     // 取得済みで失敗者があればその一覧を、
     // 失敗者なしの場合は空配列として後続のエラーハンドリングへ進める。
     const failedPersonas: JudgePersona[] =
-      judgments == null
+      judgments == null || judgments.length === 0
         ? DEFAULT_FAILED_PERSONAS
         : extractedFailedPersonas?.length
           ? extractedFailedPersonas
@@ -759,15 +767,22 @@ function App() {
   useEffect(() => {
     if (viewMode !== 'result') {
       setIsRejudgeModalOpen(false)
-      return
     }
-    setIsRejudgeModalOpen(activeResultPost?.status === 'failed')
-  }, [activeResultPost?.status, viewMode])
+  }, [viewMode])
 
   const closeResultAndBackTop = useCallback(() => {
     closeResultView()
     syncTopPath()
   }, [closeResultView, syncTopPath])
+
+  const handleResultDialogKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key !== DIALOG_CLOSE_KEY) return
+      event.preventDefault()
+      closeResultAndBackTop()
+    },
+    [closeResultAndBackTop]
+  )
 
   const exitJudgingWithResult = useCallback(
     (post: Post) => {
@@ -1529,7 +1544,11 @@ function App() {
         {viewMode === 'result' && (
           <section
             data-testid="result-screen"
-            aria-label="審査結果"
+            role="dialog"
+            aria-modal="true"
+            aria-label="審査結果モーダル"
+            tabIndex={-1}
+            onKeyDown={handleResultDialogKeyDown}
             className="relative z-[120] mx-auto mt-16 w-full max-w-4xl px-1 pb-6 sm:mt-20"
           >
             {isResultPostLoading && !activeResultPost && (
@@ -1549,7 +1568,7 @@ function App() {
                     type="button"
                     variant="secondary"
                     compactOnMobile={true}
-                    ariaLabel="再試行する"
+                    ariaLabel="再試行"
                     onClick={retryResultViewFetch}
                   >
                     再試行
@@ -1576,7 +1595,12 @@ function App() {
                   averageScore={activeResultPost.average_score}
                   status={activeResultPost.status}
                   onShare={handleResultShare}
+                  onRejudge={handleResultRejudge}
                   onClose={closeResultAndBackTop}
+                  isRejudging={isRejudging}
+                  rejudgeErrorMessage={rejudgeErrorMessage}
+                  isSharePending={isSharePending}
+                  shareStatusMessage={shareStatusMessage}
                 />
               )}
           </section>
@@ -1675,7 +1699,12 @@ function App() {
               className="absolute inset-0 bg-black/55"
               onClick={closeFooterActionSheet}
             />
-            <div className="w-full max-w-md rounded-2xl border border-white/20 bg-slate-950/95 p-4 shadow-2xl">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="補助メニュー"
+              className="w-full max-w-md rounded-2xl border border-white/20 bg-slate-950/95 p-4 shadow-2xl"
+            >
               <p className="mb-3 text-sm font-semibold text-cyan-100">補助メニュー</p>
               <div className="grid grid-cols-1 gap-2">
                 <NeonButton

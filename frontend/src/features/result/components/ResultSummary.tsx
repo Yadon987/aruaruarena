@@ -7,6 +7,11 @@ interface ResultSummaryProps {
   status: 'scored' | 'failed'
   onShare: () => void
   onClose: () => void
+  onRejudge?: () => void
+  isRejudging?: boolean
+  rejudgeErrorMessage?: string
+  isSharePending?: boolean
+  shareStatusMessage?: string
 }
 
 const FAILED_RANK_LABEL = '第---位'
@@ -26,7 +31,14 @@ export function ResultSummary({
   status,
   onShare,
   onClose,
+  onRejudge,
+  isRejudging = false,
+  rejudgeErrorMessage = '',
+  isSharePending = false,
+  shareStatusMessage = '',
 }: ResultSummaryProps) {
+  const canShare = status === 'scored' && typeof rank === 'number' && rank <= 20
+  const canRejudge = status === 'failed' && typeof onRejudge === 'function'
   const rankLabel =
     status === 'scored' && typeof rank === 'number' ? `第${rank}位` : FAILED_RANK_LABEL
   const totalLabel =
@@ -57,19 +69,34 @@ export function ResultSummary({
           <span className="ml-2 text-slate-100">{totalLabel}</span>
         </p>
         <p className="text-sm font-semibold sm:text-base">
-          平均 <span className="digital-score gold-text text-2xl">{averageLabel}</span> 点
+          <span className="sr-only">{`平均点: ${averageLabel}`}</span>
+          平均点: <span className="digital-score gold-text text-2xl">{averageLabel}</span>
         </p>
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <button
-          type="button"
-          onClick={onShare}
-          aria-label="X でシェア"
-          className="neon-button-base neon-glow-pink px-7 py-3 text-base font-black tracking-wide sm:px-8"
-        >
-          X でシェア
-        </button>
+        {canRejudge && (
+          <button
+            type="button"
+            onClick={onRejudge}
+            aria-label="再審査する"
+            disabled={isRejudging}
+            className="neon-button-base neon-glow-pink px-7 py-3 text-base font-black tracking-wide disabled:cursor-not-allowed disabled:opacity-60 sm:px-8"
+          >
+            {isRejudging ? '再審査中...' : '再審査する'}
+          </button>
+        )}
+        {canShare && (
+          <button
+            type="button"
+            onClick={onShare}
+            aria-label="Xでシェア"
+            disabled={isSharePending}
+            className="neon-button-base neon-glow-pink px-7 py-3 text-base font-black tracking-wide disabled:cursor-not-allowed disabled:opacity-60 sm:px-8"
+          >
+            Xでシェア
+          </button>
+        )}
         <button
           type="button"
           onClick={onClose}
@@ -79,6 +106,16 @@ export function ResultSummary({
           トップへ戻る
         </button>
       </div>
+      {shareStatusMessage && (
+        <p className="mt-3 text-center text-sm font-semibold text-cyan-100">
+          {shareStatusMessage}
+        </p>
+      )}
+      {rejudgeErrorMessage && (
+        <p className="mt-3 text-center text-sm font-semibold text-rose-200">
+          {rejudgeErrorMessage}
+        </p>
+      )}
     </section>
   )
 }

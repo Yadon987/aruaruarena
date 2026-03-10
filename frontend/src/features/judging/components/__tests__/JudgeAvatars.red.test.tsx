@@ -96,17 +96,15 @@ describe('E24-04 RED: JudgeAvatars', () => {
     expect(container).toHaveClass('grid-cols-3')
   })
 
-  it('レスポンシブサイズ（w-28 md:w-48 lg:w-56）が適用される', async () => {
-    // 何を検証するか: Issue #150 のアバター拡大要件を満たすこと
+  it('レスポンシブサイズ指定の代わりに共通CSS変数幅が適用される', async () => {
+    // 何を検証するか: 画面幅に依存せず共通のアバター幅定義を使うこと
     const { JudgeAvatars } = await loadJudgeAvatars()
 
     render(<JudgeAvatars isJudging={false} isPostModalOpen={false} />)
 
     const avatars = screen.getAllByRole('img')
     avatars.forEach((avatar) => {
-      expect(avatar).toHaveClass('w-28')
-      expect(avatar.className).toMatch(/md:w-48/)
-      expect(avatar.className).toMatch(/lg:w-56/)
+      expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })
     })
   })
 

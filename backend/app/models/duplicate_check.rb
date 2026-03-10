@@ -52,13 +52,6 @@ class DuplicateCheck
     exists_with_hash?(hash)
   end
 
-  class << self
-    def check(body)
-      Rails.logger.warn('[DuplicateCheck] `check` は非推奨です。`check?` を使用してください。')
-      check?(body)
-    end
-  end
-
   # ハッシュ値での重複チェック（内部用またはハッシュが既にある場合）
   # @param body_hash [String] 本文ハッシュ
   # @return [Boolean] 重複ありならtrue、なければfalse

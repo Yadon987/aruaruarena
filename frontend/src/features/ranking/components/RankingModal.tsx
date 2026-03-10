@@ -94,12 +94,12 @@ export function RankingModal({
   return (
     <div
       className="fixed inset-0 z-50 flex h-full items-center justify-center p-4"
-      data-testid="ranking-modal-overlay"
     >
       <button
         type="button"
         aria-label="ランキングモーダルを閉じる"
         className="absolute inset-0 bg-black/50"
+        data-testid="ranking-modal-overlay"
         onClick={handleClose}
       />
       <div className="relative flex h-full items-center justify-center p-4">

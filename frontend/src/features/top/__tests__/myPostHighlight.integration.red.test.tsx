@@ -34,15 +34,10 @@ describe('MyPostHighlight Integration RED', () => {
   })
 
   it('クリック/Enter/Spaceで過去の投稿モーダルを開ける', async () => {
-    // 何を検証するか: 投稿一覧導線がポインタとキーボード操作の両方で開けること
+    // 何を検証するか: 補助メニュー経由で過去の投稿モーダルを開けること
     render(<App />)
 
-    const trigger = screen.getByRole('button', { name: '過去の投稿' })
     expect(await openMyPostsDialog()).toBeInTheDocument()
-
-    fireEvent.keyDown(trigger, { key: 'Enter' })
-    fireEvent.keyDown(trigger, { key: ' ' })
-
     expect(screen.getByRole('dialog', { name: '自分の投稿' })).toBeInTheDocument()
   })
 

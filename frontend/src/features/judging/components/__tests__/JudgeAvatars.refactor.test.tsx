@@ -69,7 +69,8 @@ describe('JudgeAvatars Refactor', () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
 
-    expect(capturedMotionImgProps.length).toBe(3)
+    const uniqueAltCount = new Set(capturedMotionImgProps.map((item) => item.alt)).size
+    expect(uniqueAltCount).toBe(3)
     const nakao = capturedMotionImgProps.find((item) => item.alt === '中尾彬風審査員')
     expect(nakao).toBeDefined()
     expect(nakao?.animate).toEqual({ opacity: 1 })

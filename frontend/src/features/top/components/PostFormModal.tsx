@@ -157,12 +157,12 @@ export function PostFormModal({
       {isOpen && (
         <div
           className="fixed inset-0 z-50 flex h-full items-center justify-center p-4"
-          data-testid="modal-overlay"
         >
           <button
             type="button"
-            aria-label="投稿フォームを閉じる"
+            aria-label="モーダルを閉じる"
             className="absolute inset-0 bg-black/60"
+            data-testid="modal-overlay"
             onClick={handleBackdropClick}
           />
           <div

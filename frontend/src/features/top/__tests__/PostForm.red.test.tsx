@@ -77,7 +77,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     await fillAndSubmitPostForm({ nickname: 'てすと太郎', body: 'あるあるネタです' })
 
     await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '再審査確認' })).toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
     })
     expect(screen.queryByText('投稿を受け付けました')).not.toBeInTheDocument()
   })
