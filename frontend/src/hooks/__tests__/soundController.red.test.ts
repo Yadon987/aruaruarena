@@ -29,21 +29,30 @@ describe('E18-01 RED: soundController', () => {
     vi.unstubAllGlobals()
   })
 
-  it('setMuted(true)で再生中BGMをフェードアウトして停止する', () => {
-    // 何を検証するか: ミュート化した瞬間に再生中BGMへフェードアウト停止処理が走ること
+  it('setVolume(0)で再生中BGMを停止する', () => {
+    // 何を検証するか: 音量0にした瞬間に再生中BGMが停止されること
     const fadeSpy = (globalThis as { __HOWLER_FADE_SPY__?: ReturnType<typeof vi.fn> })
       .__HOWLER_FADE_SPY__!
     const sound = createSoundController()
 
     sound.unlockAudio()
-    sound.setMuted(false)
+    sound.setConsented()
+    sound.setVolume(0.5)
     sound.playSceneBgm('top')
     fadeSpy.mockClear()
 
-    sound.setMuted(true)
+    sound.setVolume(0)
     vi.runAllTimers()
 
-    expect(fadeSpy).toHaveBeenCalledWith(0.5, 0, 500)
+    expect(fadeSpy).not.toHaveBeenCalled()
+    const topBgmCountBeforeReplay = getAudioDebugEvents().filter(
+      (event) => event.type === 'bgm' && event.scene === 'top'
+    ).length
+    sound.playSceneBgm('top')
+    const topBgmCountAfterReplay = getAudioDebugEvents().filter(
+      (event) => event.type === 'bgm' && event.scene === 'top'
+    ).length
+    expect(topBgmCountAfterReplay - topBgmCountBeforeReplay).toBe(0)
   })
 
   it('stopBgm()で現在BGMを停止して同一シーンを再生し直せる', () => {
@@ -51,7 +60,8 @@ describe('E18-01 RED: soundController', () => {
     const sound = createSoundController() as ExtendedSoundController
 
     sound.unlockAudio()
-    sound.setMuted(false)
+    sound.setConsented()
+    sound.setVolume(0.5)
     sound.playSceneBgm('top')
 
     expect(typeof sound.stopBgm).toBe('function')
@@ -72,7 +82,8 @@ describe('E18-01 RED: soundController', () => {
     const sound = createSoundController() as ExtendedSoundController
 
     sound.unlockAudio()
-    sound.setMuted(false)
+    sound.setConsented()
+    sound.setVolume(0.5)
     sound.playSceneBgm('top')
 
     expect(typeof sound.dispose).toBe('function')

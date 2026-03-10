@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type UseSoundModule = {
+  DEFAULT_VOLUME: number
   createSoundController: () => {
-    isMuted: boolean
+    volume: number
+    hasConsented: boolean
     audioUnlocked: boolean
-    setMuted: (value: boolean) => void
+    setVolume: (value: number) => void
+    setConsented: () => void
     unlockAudio: () => void
     playSceneBgm: (scene: 'top' | 'judging') => void
     playSe: (id: 'se_submit' | 'se_result_open' | 'se_retry') => void
@@ -30,33 +33,34 @@ describe('E18 RED: useSound', () => {
     vi.useRealTimers()
   })
 
-  it('初期値はミュートtrueで開始する', async () => {
-    // 何を検証するか: 初回アクセス時に isMuted が true で初期化されること
+  it('初期値はvolume=0.6で開始する', async () => {
+    // 何を検証するか: 初回アクセス時に volume が 0.6 で初期化されること
     const module = await loadUseSoundModule()
     const sound = module.createSoundController()
 
-    expect(sound.isMuted).toBe(true)
+    expect(sound.volume).toBe(module.DEFAULT_VOLUME)
     expect(sound.audioUnlocked).toBe(false)
+    expect(sound.hasConsented).toBe(false)
   })
 
-  it('localStorageがfalseならミュート解除状態を復元する', async () => {
-    // 何を検証するか: aruaru_sound_muted が false の場合に isMuted=false で復元されること
-    localStorage.setItem('aruaru_sound_muted', 'false')
+  it('localStorageが0なら無音状態を復元する', async () => {
+    // 何を検証するか: aruaru_sound_volume が 0 の場合に volume=0 で復元されること
+    localStorage.setItem('aruaru_sound_volume', '0')
 
     const module = await loadUseSoundModule()
     const sound = module.createSoundController()
 
-    expect(sound.isMuted).toBe(false)
+    expect(sound.volume).toBe(0)
   })
 
-  it('不正なlocalStorage値はtrueに正規化する', async () => {
-    // 何を検証するか: 不正値で起動した場合に true へ正規化して保存し直すこと
-    localStorage.setItem('aruaru_sound_muted', 'invalid')
+  it('不正なlocalStorage値は0.6に正規化する', async () => {
+    // 何を検証するか: 不正値で起動した場合に 0.6 へ正規化して保存し直すこと
+    localStorage.setItem('aruaru_sound_volume', 'invalid')
 
     const module = await loadUseSoundModule()
     module.createSoundController()
 
-    expect(localStorage.getItem('aruaru_sound_muted')).toBe('true')
+    expect(localStorage.getItem('aruaru_sound_volume')).toBe(String(module.DEFAULT_VOLUME))
   })
 
   it('シーン変更時に500msクロスフェードを実行する', async () => {
@@ -69,8 +73,8 @@ describe('E18 RED: useSound', () => {
     const module = await loadUseSoundModule()
     const sound = module.createSoundController()
     sound.unlockAudio()
-    expect(sound.audioUnlocked).toBe(true)
-    sound.setMuted(false)
+    sound.setConsented()
+    sound.setVolume(0.5)
     sound.playSceneBgm('top')
     sound.playSceneBgm('judging')
     vi.runAllTimers()
@@ -85,7 +89,8 @@ describe('E18 RED: useSound', () => {
     const module = await loadUseSoundModule()
     const sound = module.createSoundController()
     sound.unlockAudio()
-    sound.setMuted(false)
+    sound.setConsented()
+    sound.setVolume(0.5)
 
     await expect(Promise.resolve().then(() => sound.playSe('se_submit'))).resolves.toBeUndefined()
   })

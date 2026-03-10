@@ -29,7 +29,8 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
   it('API通信完了前に投稿モーダルが閉じて審査中画面へ遷移する', async () => {
     vi.spyOn(api.posts, 'create').mockImplementation(() => new Promise(() => {}))
     vi.spyOn(api.posts, 'get').mockImplementation(() => new Promise(() => {}))
-    localStorage.setItem('aruaru_sound_muted', 'false')
+    localStorage.setItem('aruaru_sound_consent', 'true')
+    localStorage.setItem('aruaru_sound_volume', '0.5')
 
     render(<App />)
     fireEvent.pointerDown(document.body)
@@ -98,6 +99,7 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '再投稿する' }))
     expect(screen.getByRole('dialog', { name: '投稿フォーム' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/')
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('失敗太郎')
     expect(screen.getByLabelText('あるある')).toHaveValue('再投稿までの入力保持')
   })
@@ -141,6 +143,7 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '投稿フォーム' })).toBeInTheDocument()
     })
+    expect(window.location.pathname).toBe('/')
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('失敗太郎')
     expect(screen.getByLabelText('あるある')).toHaveValue('再投稿までの入力保持')
 

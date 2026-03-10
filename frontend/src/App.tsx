@@ -13,14 +13,17 @@ import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
 import { RankingModal } from './features/ranking'
 import { ResultModal } from './features/result'
+import { AudioConsentModal } from './features/top/components/AudioConsentModal'
 import { MyPostDetail } from './features/top/components/MyPostDetail'
 import { PostFormModal } from './features/top/components/PostFormModal'
 import { PrivacyPolicyModal } from './features/top/components/PrivacyPolicyModal'
-import { SoundToggleButton } from './features/top/components/SoundToggleButton'
+import { SoundControlButton } from './features/top/components/SoundControlButton'
+import { SoundSettingsPanel } from './features/top/components/SoundSettingsPanel'
 import { createSoundController } from './hooks/useSound'
 import { queryClient } from './shared/config/queryClient'
 import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
 import { queryKeys } from './shared/constants/queryKeys'
+import { TEXT_LENGTH } from './shared/constants/validation'
 import { useAvatarImages } from './shared/hooks/useAvatarImages'
 import { ApiClientError, api } from './shared/services/api'
 import type { CreatePostResponse } from './shared/types/api'
@@ -29,7 +32,6 @@ import './App.css'
 
 const STORAGE_KEY = 'my_post_ids'
 const LEGACY_STORAGE_KEY = 'aruaruarena_my_posts'
-const MIN_BODY_LENGTH = 3
 const MAX_STORED_POST_IDS = 20
 const SERVER_ERROR_STATUSES: ReadonlyArray<number> = [
   HTTP_STATUS.INTERNAL_SERVER_ERROR,
@@ -37,7 +39,8 @@ const SERVER_ERROR_STATUSES: ReadonlyArray<number> = [
   HTTP_STATUS.SERVICE_UNAVAILABLE,
 ]
 const MESSAGE_NICKNAME_REQUIRED = 'ニックネームを入力してください'
-const MESSAGE_BODY_REQUIRED = '本文は3文字以上で入力してください'
+const MESSAGE_NICKNAME_LENGTH = `ニックネームは${TEXT_LENGTH.NICKNAME_MIN}〜${TEXT_LENGTH.NICKNAME_MAX}文字で入力してください`
+const MESSAGE_BODY_LENGTH = `本文は${TEXT_LENGTH.BODY_MIN}〜${TEXT_LENGTH.BODY_MAX}文字で入力してください`
 const MESSAGE_SUCCESS = '投稿を受け付けました'
 const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
 const MESSAGE_MY_POST_DETAIL_FETCH_FAILED = '投稿詳細の取得に失敗しました'
@@ -51,17 +54,22 @@ const MESSAGE_JUDGING_TIMEOUT_ERROR = '通信がタイムアウトしました'
 const MESSAGE_JUDGING_SERVER_ERROR = 'サーバーエラーが発生しました'
 const MESSAGE_JUDGING_CLIENT_ERROR = '投稿に失敗しました'
 const MESSAGE_JUDGING_UNKNOWN_ERROR = '投稿に失敗しました'
-const MESSAGE_INVALID_FORM_ERROR = 'ニックネームと本文を正しく入力してください。'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
 const ROOT_PATH = '/'
+const SOUND_SETTINGS_PANEL_ID = 'sound-settings-panel'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
 const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
-const AI_TRANSIENT_ERROR_CODES = ['provider_error', 'connection_failed', 'timeout', 'secrets_fetch_failed']
+const AI_TRANSIENT_ERROR_CODES = [
+  'provider_error',
+  'connection_failed',
+  'timeout',
+  'secrets_fetch_failed',
+]
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
@@ -78,6 +86,13 @@ type ValidationErrors = {
 }
 
 type ViewMode = 'top' | 'judging'
+
+function shouldShowAudioConsentModalInTest(): boolean {
+  return (
+    (globalThis as { __SHOW_AUDIO_CONSENT_MODAL_IN_TEST__?: boolean })
+      .__SHOW_AUDIO_CONSENT_MODAL_IN_TEST__ === true
+  )
+}
 
 function canOpenResultModalFromMyPost(post: Post): boolean {
   return (
@@ -174,7 +189,8 @@ function resolveResultModalErrorCode(error: unknown): string {
 
 function isTransientJudgingPollingError(error: unknown): boolean {
   if (!(error instanceof ApiClientError)) return false
-  if (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT) return true
+  if (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT)
+    return true
   return AI_TRANSIENT_ERROR_CODES.includes(error.code)
 }
 
@@ -188,10 +204,26 @@ function buildTransientErrorNotice(errorCount: number): string {
 function validateForm(nickname: string, body: string): ValidationErrors {
   const trimmedNickname = nickname.trim()
   const trimmedBody = body.trim()
+  const nicknameLength = trimmedNickname.length
+  const bodyLength = trimmedBody.length
+
+  const nicknameError =
+    nicknameLength < TEXT_LENGTH.NICKNAME_MIN || nicknameLength > TEXT_LENGTH.NICKNAME_MAX
+      ? MESSAGE_NICKNAME_LENGTH
+      : ''
+  const bodyError =
+    bodyLength < TEXT_LENGTH.BODY_MIN || bodyLength > TEXT_LENGTH.BODY_MAX
+      ? MESSAGE_BODY_LENGTH
+      : ''
+
   return {
-    nicknameError: trimmedNickname ? '' : MESSAGE_NICKNAME_REQUIRED,
-    bodyError: trimmedBody.length >= MIN_BODY_LENGTH ? '' : MESSAGE_BODY_REQUIRED,
+    nicknameError: trimmedNickname ? nicknameError : MESSAGE_NICKNAME_REQUIRED,
+    bodyError,
   }
+}
+
+function buildValidationErrorMessage({ nicknameError, bodyError }: ValidationErrors): string {
+  return [nicknameError, bodyError].filter(Boolean).join('\n')
 }
 
 // APIクライアントの例外種別をUI文言へ変換する
@@ -238,7 +270,9 @@ function App() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('top')
-  const [isMuted, setIsMuted] = useState(() => sound.isMuted)
+  const [volume, setVolume] = useState(() => sound.volume)
+  const [hasAudioConsent, setHasAudioConsent] = useState(() => sound.hasConsented)
+  const [isSoundSettingsOpen, setIsSoundSettingsOpen] = useState(false)
   const [isRankingModalOpen, setIsRankingModalOpen] = useState(false)
   const [isFooterActionSheetOpen, setIsFooterActionSheetOpen] = useState(false)
   const [isStopJudgingConfirmOpen, setIsStopJudgingConfirmOpen] = useState(false)
@@ -261,8 +295,8 @@ function App() {
   const privacyPolicyTriggerRef = useRef<HTMLButtonElement | null>(null)
   const rankingTriggerRef = useRef<HTMLButtonElement | null>(null)
   const footerActionSheetTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const footerRef = useRef<HTMLElement | null>(null)
   const footerDockRef = useRef<HTMLDivElement | null>(null)
+  const soundSettingsContainerRef = useRef<HTMLDivElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
   const resultRequestSeqRef = useRef(0)
   const previousResultModalOpenRef = useRef(false)
@@ -274,11 +308,26 @@ function App() {
   const submitAbortControllerRef = useRef<AbortController | null>(null)
   const submitRequestSeqRef = useRef(0)
   const activeResultErrorCode = resultModalErrorCode
+
+  useEffect(() => {
+    if (
+      import.meta.env.MODE !== 'test' ||
+      sound.hasConsented ||
+      shouldShowAudioConsentModalInTest()
+    ) {
+      return
+    }
+    sound.setConsented()
+    setHasAudioConsent(true)
+  }, [sound])
+
   const resultAudioScene = useMemo(() => {
     if (!isResultModalOpen || !activeResultPost) return null
     return activeResultPost.status === 'scored' ? 'success' : 'failed'
   }, [activeResultPost, isResultModalOpen])
   const audioScene = resultAudioScene ?? viewMode
+  const isAudioConsentModalOpen =
+    !hasAudioConsent && (import.meta.env.MODE !== 'test' || shouldShowAudioConsentModalInTest())
   const syncMyPostIds = useCallback(() => setMyPostIds(readPostIds()), [])
   const setMyPostLoading = useCallback((postId: string, isLoading: boolean) => {
     setLoadingMyPostIds((prev) => {
@@ -398,22 +447,58 @@ function App() {
     sound.playSe(SOUND_SE_RETRY)
   }, [sound])
 
-  const handleSoundToggle = useCallback(() => {
+  const handleAudioConsent = useCallback(
+    (nextVolume: number) => {
+      sound.unlockAudio()
+      sound.setConsented()
+      sound.setVolume(nextVolume)
+      setHasAudioConsent(true)
+      setVolume(nextVolume)
+
+      if (nextVolume > 0) {
+        sound.playSceneBgm(audioScene)
+      }
+    },
+    [audioScene, sound]
+  )
+
+  const handleSoundControlClick = useCallback(() => {
     sound.unlockAudio()
-    const nextMuted = !isMuted
-    sound.setMuted(nextMuted)
-    setIsMuted(nextMuted)
-    if (!nextMuted) {
-      sound.playSceneBgm(audioScene)
+    if (!hasAudioConsent) {
+      sound.setConsented()
+      setHasAudioConsent(true)
     }
-  }, [audioScene, isMuted, sound])
+    setIsSoundSettingsOpen((prev) => !prev)
+  }, [hasAudioConsent, sound])
+
+  const handleVolumeChange = useCallback(
+    (nextVolume: number) => {
+      sound.unlockAudio()
+      if (!hasAudioConsent) {
+        sound.setConsented()
+        setHasAudioConsent(true)
+      }
+      sound.setVolume(nextVolume)
+      setVolume(nextVolume)
+      if (nextVolume > 0) {
+        setIsSoundSettingsOpen(true)
+        sound.playSceneBgm(audioScene)
+      }
+    },
+    [audioScene, hasAudioConsent, sound]
+  )
+
+  useEffect(() => {
+    if (hasAudioConsent) return
+    setIsSoundSettingsOpen(false)
+  }, [hasAudioConsent])
 
   useEffect(() => {
     if (sound.audioUnlocked) return
 
     const handleUnlock = () => {
       sound.unlockAudio()
-      if (!sound.isMuted) {
+      if (sound.hasConsented && sound.volume > 0) {
         sound.playSceneBgm(audioScene)
       }
       document.removeEventListener('pointerdown', handleUnlock)
@@ -433,8 +518,14 @@ function App() {
   }, [audioScene, sound])
 
   useEffect(() => {
-    sound.playSceneBgm(audioScene)
-  }, [audioScene, sound])
+    if (!hasAudioConsent || volume === 0) {
+      sound.stopBgm()
+      return
+    }
+    if (sound.audioUnlocked) {
+      sound.playSceneBgm(audioScene)
+    }
+  }, [audioScene, hasAudioConsent, sound, volume])
 
   useEffect(() => {
     if (!previousResultModalOpenRef.current && isResultModalOpen) {
@@ -739,7 +830,12 @@ function App() {
       setJudgingErrorMessage('')
 
       if (nextNicknameError || nextBodyError) {
-        setSubmitError(MESSAGE_INVALID_FORM_ERROR)
+        setSubmitError(
+          buildValidationErrorMessage({
+            nicknameError: nextNicknameError,
+            bodyError: nextBodyError,
+          })
+        )
         return
       }
 
@@ -899,6 +995,10 @@ function App() {
   }
 
   const openRankingModal = () => {
+    if (isRankingModalOpen) {
+      closeRankingModal()
+      return
+    }
     setIsFooterActionSheetOpen(false)
     setIsMyPostsOpen(false)
     setIsPrivacyPolicyOpen(false)
@@ -911,6 +1011,10 @@ function App() {
   }
 
   const openFooterActionSheet = () => {
+    if (isFooterActionSheetOpen) {
+      closeFooterActionSheet()
+      return
+    }
     setIsMyPostsOpen(false)
     setIsPrivacyPolicyOpen(false)
     setIsRankingModalOpen(false)
@@ -940,6 +1044,12 @@ function App() {
     setIsPostModalOpen(true)
     syncTopPath()
   }, [clearJudgingPolling, syncTopPath])
+
+  useEffect(() => {
+    if (viewMode !== 'top' || !isPostModalOpen) return
+    if (window.location.pathname === ROOT_PATH) return
+    syncTopPath()
+  }, [isPostModalOpen, syncTopPath, viewMode])
 
   const handlePostModalCloseWithDraft = useCallback((draft: { nickname: string; body: string }) => {
     const trimmedNickname = draft.nickname.trim()
@@ -1093,8 +1203,7 @@ function App() {
     }
 
     const dockElement = footerDockRef.current
-    const footerElement = footerRef.current
-    if (!dockElement || !footerElement) return
+    if (!dockElement) return
 
     const updateFooterReservedSpace = () => {
       const dockHeight = Math.ceil(dockElement.getBoundingClientRect().height)
@@ -1117,7 +1226,6 @@ function App() {
 
     const observer = new ResizeObserver(updateFooterReservedSpace)
     observer.observe(dockElement)
-    observer.observe(footerElement)
 
     return () => {
       observer.disconnect()
@@ -1127,6 +1235,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AudioConsentModal isOpen={isAudioConsentModalOpen} onConsent={handleAudioConsent} />
       {viewMode === 'judging' && (
         <div className="fixed left-4 top-4 z-50 sm:left-6 sm:top-6">
           <NeonButton
@@ -1142,13 +1251,50 @@ function App() {
       )}
       <div
         data-testid="top-action-controls"
-        className="fixed right-4 top-4 z-50 flex items-center sm:right-6 sm:top-6"
+        className="fixed right-4 top-4 z-50 sm:right-6 sm:top-6"
       >
-        <SoundToggleButton
-          isMuted={isMuted}
-          onToggle={handleSoundToggle}
-          className="neon-button-base neon-glow-pink"
-        />
+        <div className="top-right-action-stack">
+          <div ref={soundSettingsContainerRef} className="relative">
+            <SoundControlButton
+              volume={volume}
+              isOpen={isSoundSettingsOpen}
+              onClick={handleSoundControlClick}
+              panelId={SOUND_SETTINGS_PANEL_ID}
+            />
+            <SoundSettingsPanel
+              isOpen={isSoundSettingsOpen}
+              volume={volume}
+              onVolumeChange={handleVolumeChange}
+              onClose={() => setIsSoundSettingsOpen(false)}
+              panelId={SOUND_SETTINGS_PANEL_ID}
+              containerRef={soundSettingsContainerRef}
+            />
+          </div>
+          {viewMode === 'top' && (
+            <>
+              <button
+                type="button"
+                onClick={openRankingModal}
+                aria-label="ランキング"
+                title="ランキング"
+                className="neon-button-base neon-glow-pink icon-action-button"
+                ref={rankingTriggerRef}
+              >
+                <span aria-hidden="true">🏆</span>
+              </button>
+              <button
+                type="button"
+                onClick={openFooterActionSheet}
+                aria-label="その他を開く"
+                title="その他"
+                className="neon-button-base neon-glow-pink icon-action-button"
+                ref={footerActionSheetTriggerRef}
+              >
+                <span aria-hidden="true">⚙️</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
       <div
         className="game-show-stage relative min-h-screen overflow-hidden px-6 pb-6"
@@ -1183,9 +1329,13 @@ function App() {
                   !
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">読み込みに失敗しました</h2>
+                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">
+                    読み込みに失敗しました
+                  </h2>
                   <p className="text-sm leading-relaxed text-slate-700">{judgingErrorMessage}</p>
-                  <p className="text-xs text-slate-500">通信状況をご確認のうえ、再度お試しください。</p>
+                  <p className="text-xs text-slate-500">
+                    通信状況をご確認のうえ、再度お試しください。
+                  </p>
                 </div>
               </div>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -1219,7 +1369,6 @@ function App() {
             <div className="mb-4">
               {successMessage && <p className="text-green-500">{successMessage}</p>}
             </div>
-
           </>
         )}
 
@@ -1321,7 +1470,7 @@ function App() {
             role="dialog"
             aria-modal="true"
             aria-label="補助メニュー"
-            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 p-3 sm:items-center"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-3"
             onClick={closeFooterActionSheet}
             onKeyDown={(event) => {
               if (event.key === DIALOG_CLOSE_KEY) {
@@ -1452,7 +1601,7 @@ function App() {
               />
             </div>
             {viewMode === 'top' && (
-              <div className="pointer-events-auto -mt-2 sm:-mt-3 md:-mt-4 lg:-mt-5">
+              <div className="pointer-events-auto mt-2 sm:mt-3 md:mt-4 lg:mt-5">
                 <NeonButton
                   type="button"
                   variant="primary"
@@ -1466,36 +1615,6 @@ function App() {
                   投稿する
                 </NeonButton>
               </div>
-            )}
-            {viewMode === 'top' && (
-              <footer
-                ref={footerRef}
-                role="contentinfo"
-                className="footer-main-actions-wrap pointer-events-auto w-full flex flex-nowrap items-center justify-center gap-1 px-1 sm:gap-2 sm:px-2 md:gap-3"
-              >
-                <div className="footer-main-actions-track">
-                  <NeonButton
-                    type="button"
-                    variant="secondary"
-                    className="footer-main-action-button"
-                    ariaLabel="ランキング"
-                    ref={rankingTriggerRef}
-                    onClick={openRankingModal}
-                  >
-                    ランキング
-                  </NeonButton>
-                  <NeonButton
-                    type="button"
-                    variant="primary"
-                    className="footer-main-action-button"
-                    ariaLabel="その他を開く"
-                    ref={footerActionSheetTriggerRef}
-                    onClick={openFooterActionSheet}
-                  >
-                    その他
-                  </NeonButton>
-                </div>
-              </footer>
             )}
           </div>
         </div>

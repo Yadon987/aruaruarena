@@ -40,9 +40,15 @@ function setupRanking() {
 }
 
 async function enableSound() {
-  fireEvent.click(screen.getByRole('button', { name: '音声OFF' }))
+  const beforeTopBgmCount = getAudioDebugEvents().filter(
+    (event) => event.type === 'bgm' && event.scene === 'top'
+  ).length
+  fireEvent.pointerDown(document.body)
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: '音声ON' })).toBeInTheDocument()
+    const afterTopBgmCount = getAudioDebugEvents().filter(
+      (event) => event.type === 'bgm' && event.scene === 'top'
+    ).length
+    expect(afterTopBgmCount).toBeGreaterThan(beforeTopBgmCount)
   })
 }
 
@@ -63,6 +69,8 @@ async function openRankingResultModal(postDetail: Awaited<ReturnType<typeof api.
 describe('E18-01 RED: BGM scene integration', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('aruaru_sound_consent', 'true')
+    localStorage.setItem('aruaru_sound_volume', '0.5')
     vi.clearAllMocks()
     vi.stubGlobal('__AUDIO_DEBUG__', [])
     setupRanking()

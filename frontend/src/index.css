@@ -168,6 +168,21 @@
   margin-top: var(--main-action-gap);
 }
 
+.icon-action-button {
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: 0.78rem;
+  padding: 0;
+  font-size: 1.125rem;
+}
+
+.top-right-action-stack {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
 .neon-button-base.footer-main-action-button {
   border-color: rgba(223, 163, 124, 0.42);
   background: linear-gradient(180deg, rgba(106, 31, 36, 0.94) 0%, rgba(79, 18, 27, 0.96) 100%);
@@ -516,6 +531,7 @@
   pointer-events: none;
 }
 
+/* 背もたれSVG版のみ baseスタイルを無効化するため、2クラス併用で上書きする。 */
 .judge-seat-back.judge-seat-backrest-shell {
   position: absolute;
   left: -4%;

@@ -1,10 +1,9 @@
 import { Howl } from 'howler'
 
-const SOUND_STORAGE_KEY = 'aruaru_sound_muted'
-const DEFAULT_MUTED = true
+const SOUND_VOLUME_KEY = 'aruaru_sound_volume'
+const SOUND_CONSENT_KEY = 'aruaru_sound_consent'
+export const DEFAULT_VOLUME = 0.6
 const FADE_DURATION_MS = 500
-const BGM_VOLUME = 0.5
-const SE_VOLUME = 0.7
 
 type Scene = 'top' | 'judging' | 'success' | 'failed'
 type SeId = 'se_submit' | 'se_result_open' | 'se_retry'
@@ -26,24 +25,57 @@ const SE_FILES: Record<SeId, string> = {
   se_retry: '/sounds/se_retry.mp3',
 }
 
-function getOrInitMutedState(): boolean {
-  try {
-    if (typeof localStorage === 'undefined') return DEFAULT_MUTED
-    const rawValue = localStorage.getItem(SOUND_STORAGE_KEY)
-    if (rawValue === 'true') return true
-    if (rawValue === 'false') return false
+function normalizeVolume(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_VOLUME
+  if (value < 0) return 0
+  if (value > 1) return 1
+  return Math.round(value * 100) / 100
+}
 
-    localStorage.setItem(SOUND_STORAGE_KEY, DEFAULT_MUTED ? 'true' : 'false')
-    return DEFAULT_MUTED
+function getOrInitVolume(): number {
+  try {
+    if (typeof localStorage === 'undefined') return DEFAULT_VOLUME
+
+    const rawValue = localStorage.getItem(SOUND_VOLUME_KEY)
+    if (rawValue === null) {
+      localStorage.setItem(SOUND_VOLUME_KEY, String(DEFAULT_VOLUME))
+      return DEFAULT_VOLUME
+    }
+
+    const parsed = Number(rawValue)
+    if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 1) {
+      return normalizeVolume(parsed)
+    }
+
+    localStorage.setItem(SOUND_VOLUME_KEY, String(DEFAULT_VOLUME))
+    return DEFAULT_VOLUME
   } catch {
-    return DEFAULT_MUTED
+    return DEFAULT_VOLUME
   }
 }
 
-function writeMutedState(isMuted: boolean) {
+function writeVolume(value: number) {
   try {
     if (typeof localStorage === 'undefined') return
-    localStorage.setItem(SOUND_STORAGE_KEY, isMuted ? 'true' : 'false')
+    localStorage.setItem(SOUND_VOLUME_KEY, String(normalizeVolume(value)))
+  } catch {
+    // ストレージ無効環境ではメモリ上の状態だけを維持する。
+  }
+}
+
+function hasConsent(): boolean {
+  try {
+    if (typeof localStorage === 'undefined') return false
+    return localStorage.getItem(SOUND_CONSENT_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function setConsent() {
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(SOUND_CONSENT_KEY, 'true')
   } catch {
     // ストレージ無効環境ではメモリ上の状態だけを維持する。
   }
@@ -66,16 +98,12 @@ function runFade(howl: Howl | null, from: number, to: number, durationMs: number
 }
 
 export function createSoundController() {
-  let isMuted = getOrInitMutedState()
+  let volume = getOrInitVolume()
+  let hasConsented = hasConsent()
   let audioUnlocked = false
   let currentScene: Scene | null = null
   let currentBgm: Howl | null = null
   let pendingTimeoutId: ReturnType<typeof setTimeout> | null = null
-
-  const restoreBgmVolume = () => {
-    if (!currentBgm) return
-    currentBgm.fade(currentBgm.volume(), BGM_VOLUME, 0)
-  }
 
   const clearPendingTimeout = () => {
     if (pendingTimeoutId !== null) {
@@ -99,31 +127,30 @@ export function createSoundController() {
   }
 
   return {
-    get isMuted() {
-      return isMuted
+    get volume() {
+      return volume
+    },
+    get hasConsented() {
+      return hasConsented
     },
     get audioUnlocked() {
       return audioUnlocked
     },
-    setMuted(nextMuted: boolean) {
-      isMuted = nextMuted
-      writeMutedState(nextMuted)
+    setConsented() {
+      hasConsented = true
+      setConsent()
+    },
+    setVolume(nextVolume: number) {
+      volume = normalizeVolume(nextVolume)
+      writeVolume(volume)
 
-      if (nextMuted && currentBgm) {
-        runFade(currentBgm, BGM_VOLUME, 0, FADE_DURATION_MS)
-        clearPendingTimeout()
-        pendingTimeoutId = setTimeout(() => {
-          stopBgm()
-        }, FADE_DURATION_MS)
+      if (volume === 0) {
+        stopBgm()
+        return
       }
 
-      if (!nextMuted) {
-        clearPendingTimeout()
-        restoreBgmVolume()
-      }
-
-      if (nextMuted && !currentBgm) {
-        currentScene = null
+      if (currentBgm) {
+        currentBgm.volume(volume)
       }
     },
     unlockAudio() {
@@ -132,14 +159,14 @@ export function createSoundController() {
     stopBgm,
     dispose,
     playSceneBgm(scene: Scene) {
-      if (!audioUnlocked || isMuted) return
+      if (!audioUnlocked || volume === 0) return
       if (currentScene === scene) return
 
       clearPendingTimeout()
 
       if (currentBgm) {
         const previousBgm = currentBgm
-        runFade(previousBgm, BGM_VOLUME, 0, FADE_DURATION_MS)
+        runFade(previousBgm, previousBgm.volume(), 0, FADE_DURATION_MS)
         setTimeout(() => {
           previousBgm.unload()
         }, FADE_DURATION_MS)
@@ -150,7 +177,7 @@ export function createSoundController() {
       const nextBgm = new Howl({
         src: [BGM_FILES[scene]],
         loop: scene !== 'success' && scene !== 'failed',
-        volume: BGM_VOLUME,
+        volume,
         onloaderror: () => {
           console.error('[Sound] BGM load error:', scene)
           if (currentBgm !== nextBgm) return
@@ -178,11 +205,11 @@ export function createSoundController() {
       pushAudioDebugEvent({ type: 'bgm', scene })
     },
     playSe(id: SeId) {
-      if (!audioUnlocked || isMuted) return
+      if (!audioUnlocked || volume === 0) return
 
       const se = new Howl({
         src: [SE_FILES[id]],
-        volume: SE_VOLUME,
+        volume,
         onloaderror: () => {
           console.error('[Sound] SE load error:', id)
         },

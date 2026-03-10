@@ -73,7 +73,8 @@ class DuplicateCheck
   end
 
   def self.missing_expires_at?(body_hash, record)
-    return false unless record&.expires_at.nil?
+    expires_at = record&.expires_at
+    return false if expires_at
 
     body_hash_short = body_hash.to_s[0..15]
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
@@ -91,7 +91,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     await submitPostForm()
 
     expect(api.posts.create).not.toHaveBeenCalled()
-    expect(screen.getByText('ニックネームと本文を正しく入力してください。')).toBeInTheDocument()
+    expect(screen.getByText('ニックネームを入力してください')).toBeInTheDocument()
   })
 
   it('本文3文字未満はAPIを呼ばずエラー表示する', async () => {
@@ -101,7 +101,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     await fillAndSubmitPostForm({ nickname: 'てすと太郎', body: '短い' })
 
     expect(api.posts.create).not.toHaveBeenCalled()
-    expect(screen.getByText('ニックネームと本文を正しく入力してください。')).toBeInTheDocument()
+    expect(screen.getByText('本文は3〜30文字で入力してください')).toBeInTheDocument()
   })
 
   it('trim後に空のニックネームはAPIを呼ばずエラー表示する', async () => {
@@ -111,7 +111,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     await fillAndSubmitPostForm({ nickname: '   ', body: 'あるあるネタです' })
 
     expect(api.posts.create).not.toHaveBeenCalled()
-    expect(screen.getByText('ニックネームと本文を正しく入力してください。')).toBeInTheDocument()
+    expect(screen.getByText('ニックネームを入力してください')).toBeInTheDocument()
   })
 
   it('trim後に空の本文はAPIを呼ばずエラー表示する', async () => {
@@ -121,7 +121,50 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     await fillAndSubmitPostForm({ nickname: 'てすと太郎', body: '   ' })
 
     expect(api.posts.create).not.toHaveBeenCalled()
-    expect(screen.getByText('ニックネームと本文を正しく入力してください。')).toBeInTheDocument()
+    expect(screen.getByText('本文は3〜30文字で入力してください')).toBeInTheDocument()
+  })
+
+  it('ニックネーム20文字超過はAPIを呼ばずエラー表示する', async () => {
+    // 何を検証するか: ニックネーム最大文字数超過時に送信を拒否すること
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: 'あ'.repeat(21), body: 'あるあるネタです' })
+
+    expect(api.posts.create).not.toHaveBeenCalled()
+    expect(screen.getByText('ニックネームは1〜20文字で入力してください')).toBeInTheDocument()
+  })
+
+  it('本文30文字超過はAPIを呼ばずエラー表示する', async () => {
+    // 何を検証するか: 本文最大文字数超過時に送信を拒否すること
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: 'てすと太郎', body: 'あ'.repeat(31) })
+
+    expect(api.posts.create).not.toHaveBeenCalled()
+    expect(screen.getByText('本文は3〜30文字で入力してください')).toBeInTheDocument()
+  })
+
+  it('投稿フォームに文字数ガイドを表示する', async () => {
+    // 何を検証するか: ニックネーム・本文の入力範囲ガイドをフォーム内に表示すること
+    render(<App />)
+    await openPostDialog()
+
+    expect(screen.getByText('1〜20文字で入力')).toBeInTheDocument()
+    expect(screen.getByText('3〜30文字で入力')).toBeInTheDocument()
+  })
+
+  it('ニックネーム未入力かつ本文不足時はエラーを段落分けで2件表示する', async () => {
+    // 何を検証するか: 複数バリデーション違反時にエラー文言が段落分けで表示されること
+    render(<App />)
+
+    await openPostDialog()
+    fillPostForm({ nickname: '', body: '短い' })
+    await submitPostForm()
+
+    const alert = screen.getByRole('alert')
+    expect(within(alert).getByText('ニックネームを入力してください')).toBeInTheDocument()
+    expect(within(alert).getByText('本文は3〜30文字で入力してください')).toBeInTheDocument()
+    expect(within(alert).getAllByText(/してください/)).toHaveLength(2)
   })
 
   it('送信中に再クリックしてもAPIを1回しか呼ばない', async () => {
