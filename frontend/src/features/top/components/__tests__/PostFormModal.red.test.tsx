@@ -107,8 +107,8 @@ describe('E24-06 RED: PostFormModal', () => {
     })
   })
 
-  it('背景が bg-black/60 で表示される', async () => {
-    // 何を検証するか: FR-04 - 背景が半透明の黒で表示されること
+  it('背景が統一オーバーレイクラスで表示される', async () => {
+    // 何を検証するか: FR-04 - 背景に統一モーダルオーバーレイが適用されること
     const { PostFormModal } = await loadPostFormModal()
 
     render(
@@ -121,7 +121,7 @@ describe('E24-06 RED: PostFormModal', () => {
     )
 
     const overlay = screen.getByTestId('modal-overlay')
-    expect(overlay).toHaveClass('bg-black/60')
+    expect(overlay).toHaveClass('modal-overlay-gorgeous')
   })
 
   it('isLoading=true で投稿ボタンが無効化される', async () => {

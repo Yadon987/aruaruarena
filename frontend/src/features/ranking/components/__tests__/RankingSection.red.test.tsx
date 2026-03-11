@@ -41,8 +41,8 @@ describe('RankingSection RED', () => {
     render(<RankingSection myPostIds={[]} onSelectRankingPost={vi.fn()} />)
 
     expect(screen.getByRole('region', { name: 'ランキング表示エリア' })).toBeInTheDocument()
-    expect(screen.getByText('1位 user-1')).toBeInTheDocument()
-    expect(screen.getByText('20位 user-20')).toBeInTheDocument()
+    expect(screen.getByText('user-1')).toBeInTheDocument()
+    expect(screen.getByText('user-20')).toBeInTheDocument()
   })
 
   it('ローディング状態を表示する', () => {
@@ -78,10 +78,11 @@ describe('RankingSection RED', () => {
   })
 
   it('自分の投稿をハイライト表示する', () => {
-    render(<RankingSection myPostIds={['id-3']} onSelectRankingPost={vi.fn()} />)
+    render(<RankingSection myPostIds={['id-10']} onSelectRankingPost={vi.fn()} />)
 
-    const myPostItem = screen.getByRole('button', { name: /^3位 user-3/ })
-    expect(myPostItem).toHaveClass('bg-yellow-100')
+    const myPostItem = screen.getByRole('button', { name: /^10位 user-10/ })
+    expect(myPostItem).toHaveClass('bg-amber-100/15')
+    expect(myPostItem).toHaveClass('border-amber-200/60')
     expect(screen.getByText('あなたの投稿')).toBeInTheDocument()
   })
 })

@@ -105,11 +105,10 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
       name: 'その他を開く',
     })
     fireEvent.click(trigger)
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'プライバシーポリシー',
-      })
-    )
+    const policyButton = screen.getByRole('button', {
+      name: 'プライバシーポリシー',
+    })
+    fireEvent.click(policyButton)
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'プライバシーポリシー' }), {
       key: 'Escape',
     })
@@ -155,11 +154,10 @@ describe('E17 RED: PrivacyPolicyModal RTL', () => {
       name: 'その他を開く',
     })
     fireEvent.click(trigger)
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'プライバシーポリシー',
-      })
-    )
+    const policyButton = screen.getByRole('button', {
+      name: 'プライバシーポリシー',
+    })
+    fireEvent.click(policyButton)
     fireEvent.click(screen.getByTestId('privacy-policy-modal-overlay'))
 
     expect(screen.queryByRole('dialog', { name: 'プライバシーポリシー' })).not.toBeInTheDocument()

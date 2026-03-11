@@ -4,8 +4,21 @@ import { vi } from 'vitest'
 
 type DivProps = HTMLAttributes<HTMLDivElement> & { children?: ReactNode }
 type SpanProps = HTMLAttributes<HTMLSpanElement> & { children?: ReactNode }
+type SectionProps = HTMLAttributes<HTMLElement> & { children?: ReactNode }
 type ImgProps = ImgHTMLAttributes<HTMLImageElement>
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { children?: ReactNode }
+
+type MotionComponentProps = HTMLAttributes<HTMLElement> & {
+  children?: ReactNode
+  initial?: unknown
+  animate?: unknown
+  transition?: unknown
+}
+
+const stripMotionProps = (props: MotionComponentProps): Record<string, unknown> => {
+  const { initial: _initial, animate: _animate, transition: _transition, ...domProps } = props
+  return domProps
+}
 
 export const capturedMotionImgProps: Array<Record<string, unknown>> = []
 
@@ -20,18 +33,26 @@ vi.mock('framer-motion', async () => {
     ...actual,
     motion: {
       ...actual.motion,
-      div: ({ children, ...props }: DivProps) => createElement('div', props, children),
+      div: ({ children, ...props }: MotionComponentProps) =>
+        createElement('div', stripMotionProps(props), children),
       img: ({ src, alt, ...props }: ImgProps) => {
         capturedMotionImgProps.push({ src, alt, ...props })
-        const { initial: _initial, animate: _animate, transition: _transition, ...domProps } =
-          props as ImgProps & {
-            initial?: unknown
-            animate?: unknown
-            transition?: unknown
-          }
+        const {
+          initial: _initial,
+          animate: _animate,
+          transition: _transition,
+          ...domProps
+        } = props as ImgProps & {
+          initial?: unknown
+          animate?: unknown
+          transition?: unknown
+        }
         return createElement('img', { src, alt, ...domProps })
       },
-      span: ({ children, ...props }: SpanProps) => createElement('span', props, children),
+      section: ({ children, ...props }: MotionComponentProps) =>
+        createElement('section', stripMotionProps(props), children),
+      span: ({ children, ...props }: MotionComponentProps) =>
+        createElement('span', stripMotionProps(props), children),
       button: ({ children, ...props }: ButtonProps) =>
         createElement('button', { type: props.type ?? 'button', ...props }, children),
     },

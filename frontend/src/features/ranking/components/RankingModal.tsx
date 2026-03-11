@@ -1,4 +1,7 @@
+import { motion } from 'framer-motion'
 import { type RefObject, useCallback, useEffect, useRef } from 'react'
+import { DURATION, SCALE } from '../../../shared/constants/animations'
+import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 import { RankingSection } from './RankingSection'
 
 type RankingModalProps = {
@@ -14,8 +17,9 @@ const KEY_ESCAPE = 'Escape'
 const KEY_TAB = 'Tab'
 const FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-const DIALOG_CONTAINER_CLASS = 'w-full max-w-2xl rounded bg-white p-4'
-const SCROLLABLE_SECTION_CLASS = 'max-h-[70vh] overflow-y-auto pr-2'
+const DIALOG_CONTAINER_CLASS =
+  'modal-gorgeous-base w-full max-w-[95vw] rounded-2xl p-4 text-slate-100 sm:max-w-2xl lg:max-w-3xl'
+const SCROLLABLE_SECTION_CLASS = 'modal-scroll-area max-h-[70vh] overflow-y-auto pr-2'
 
 export function RankingModal({
   isOpen,
@@ -27,6 +31,7 @@ export function RankingModal({
 }: RankingModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
+  const prefersReducedMotion = useReducedMotion()
 
   const handleClose = useCallback(() => {
     onClose()
@@ -92,18 +97,19 @@ export function RankingModal({
   if (!isOpen) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex h-full items-center justify-center p-4"
-    >
+    <div className="fixed inset-0 z-50 flex h-full items-center justify-center p-4">
       <button
         type="button"
         aria-label="ランキングモーダルを閉じる"
-        className="absolute inset-0 bg-black/50"
+        className="modal-overlay-gorgeous absolute inset-0"
         data-testid="ranking-modal-overlay"
         onClick={handleClose}
       />
-      <div className="relative flex h-full items-center justify-center p-4">
-        <div
+      <div className="relative flex h-full w-full items-center justify-center">
+        <motion.div
+          initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
+          animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
+          transition={{ duration: DURATION.MODAL }}
           ref={dialogRef}
           role="dialog"
           aria-modal="true"
@@ -111,12 +117,21 @@ export function RankingModal({
           tabIndex={-1}
           className={DIALOG_CONTAINER_CLASS}
         >
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">ランキング</h2>
-            <button ref={closeButtonRef} type="button" onClick={handleClose}>
-              閉じる
-            </button>
-          </div>
+          <div className="modal-header-gorgeous flex items-center justify-between gap-4">
+              <h2 className="gold-text text-lg font-semibold">ランキング</h2>
+              <button
+                ref={closeButtonRef}
+                type="button"
+                onClick={handleClose}
+                className="modal-close-gorgeous"
+                aria-label="閉じる"
+              >
+                <span aria-hidden="true" className="leading-none text-lg">
+                  ×
+                </span>
+                <span className="sr-only">閉じる</span>
+              </button>
+            </div>
 
           <div className={SCROLLABLE_SECTION_CLASS}>
             <RankingSection
@@ -125,7 +140,7 @@ export function RankingModal({
               polling={polling}
             />
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   )

@@ -39,7 +39,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
     } as ReturnType<typeof useRankings>)
   })
 
-  it('投稿一覧モーダル表示時に投稿詳細を取得して本文・平均点・順位・作成日時・ステータスを表示する', async () => {
+  it('投稿一覧モーダル表示時に投稿詳細を取得して本文・スコア・順位・作成日時・ステータスを表示する', async () => {
     // 何を検証するか: 投稿一覧モーダルがIDだけでなく投稿詳細を表示できること
     const getPostSpy = vi.spyOn(api.posts, 'get').mockResolvedValue({
       id: MY_POST_ID,
@@ -102,7 +102,9 @@ describe('E16-01 MyPostDetail Integration RED', () => {
     await openMyPostsDialog()
     fireEvent.click(await screen.findByRole('button', { name: MY_POST_ID }))
 
-    expect(await screen.findByText('一時的なエラーです。時間をおいて再試行してください')).toBeInTheDocument()
+    expect(
+      await screen.findByText('一時的なエラーです。時間をおいて再試行してください')
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
   })
 

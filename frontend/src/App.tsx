@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { motion } from 'framer-motion'
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
@@ -13,11 +14,13 @@ import { SoundControlButton } from './features/top/components/SoundControlButton
 import { SoundSettingsPanel } from './features/top/components/SoundSettingsPanel'
 import { createSoundController } from './hooks/useSound'
 import { queryClient } from './shared/config/queryClient'
+import { DURATION, SCALE } from './shared/constants/animations'
 import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
 import { DEFAULT_RANKING_LIMIT } from './shared/constants/query'
 import { queryKeys } from './shared/constants/queryKeys'
 import { TEXT_LENGTH } from './shared/constants/validation'
 import { useAvatarImages } from './shared/hooks/useAvatarImages'
+import { useReducedMotion } from './shared/hooks/useReducedMotion'
 import { ApiClientError, api } from './shared/services/api'
 import type { CreatePostResponse } from './shared/types/api'
 import type { JudgePersona, Post } from './shared/types/domain'
@@ -42,6 +45,7 @@ const MESSAGE_MY_POST_DETAIL_FETCH_FAILED = '投稿詳細の取得に失敗し�
 const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
 const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
+const MESSAGE_RESULT_NOT_FINAL = '採点結果がまだ確定していません。しばらく時間をおいて再試行してください。'
 const MESSAGE_JUDGING_FETCH_FAILED =
   '投稿情報の取得に失敗しました。トップへ戻って再度お試しください。'
 const MESSAGE_JUDGING_NETWORK_ERROR = 'ネットワークに接続できませんでした'
@@ -68,22 +72,12 @@ const AI_TRANSIENT_ERROR_CODES = [
 const RESULT_MODAL_ERROR_NOT_FOUND = 'NOT_FOUND'
 const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MESSAGE_REJUDGE_FAILED = '再審査に失敗しました。時間をおいて再度お試しください'
-const MESSAGE_SHARE_URL_COPIED = 'シェアURLをコピーしました。Xへ貼り付けて共有してください。'
-const MESSAGE_SHARE_NAVIGATE_CONFIRM =
-  'ポップアップがブロックされました。現在の画面を離れてシェアページを開きますか？'
-const X_SHARE_BASE_URL = 'https://x.com/intent/tweet?text='
-const SHARE_HASHTAG = '#あるあるアリーナ'
-const SHARE_TARGET = '_blank'
-const SHARE_WINDOW_FEATURES = 'noopener,noreferrer'
 const DEFAULT_FAILED_PERSONAS: JudgePersona[] = ['hiroyuki', 'dewi', 'nakao']
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
 const SOUND_SE_SUBMIT = 'se_submit'
 const SOUND_SE_RETRY = 'se_retry'
 const SOUND_SE_RESULT_OPEN = 'se_result_open'
 const CONTACT_FORM_URL = 'https://forms.gle/zLN3j3YF87qdULXB9'
-const FRONTEND_BASE_URL = (
-  import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'
-).replace(/\/$/, '')
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
 
@@ -105,6 +99,10 @@ function canOpenResultModalFromMyPost(post: Post): boolean {
   return (
     (post.status === 'scored' || post.status === 'failed') && typeof post.total_count === 'number'
   )
+}
+
+function isFinalResultPost(post: Post | null): post is Post & { status: 'scored' | 'failed' } {
+  return post !== null && (post.status === 'scored' || post.status === 'failed')
 }
 
 function shouldOpenResultModalOnMyPostError(status: number | undefined): boolean {
@@ -194,12 +192,6 @@ function resolveResultModalErrorCode(error: unknown): string {
   return RESULT_MODAL_ERROR_FETCH_FAILED
 }
 
-function buildShareUrl(postBody: string, postId: string): string {
-  const postUrl = `${FRONTEND_BASE_URL}/posts/${postId}`
-  const shareText = `${postBody} ${SHARE_HASHTAG} ${postUrl}`
-  return `${X_SHARE_BASE_URL}${encodeURIComponent(shareText)}`
-}
-
 function isTransientJudgingPollingError(error: unknown): boolean {
   if (!(error instanceof ApiClientError)) return false
   if (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT)
@@ -271,6 +263,7 @@ function App() {
     soundControllerRef.current = createSoundController()
   }
   const sound = soundControllerRef.current
+  const prefersReducedMotion = useReducedMotion()
   const [submitError, setSubmitError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -300,8 +293,6 @@ function App() {
   const [activeResultPost, setActiveResultPost] = useState<Post | null>(null)
   const [isResultPostLoading, setIsResultPostLoading] = useState(false)
   const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
-  const [isSharePending, setIsSharePending] = useState(false)
-  const [shareStatusMessage, setShareStatusMessage] = useState('')
   const [isRejudgeModalOpen, setIsRejudgeModalOpen] = useState(false)
   const [isRejudging, setIsRejudging] = useState(false)
   const [rejudgeErrorMessage, setRejudgeErrorMessage] = useState('')
@@ -373,8 +364,6 @@ function App() {
     setActiveResultPost(null)
     setIsResultPostLoading(false)
     setResultModalErrorCode(null)
-    setIsSharePending(false)
-    setShareStatusMessage('')
     setIsRejudgeModalOpen(false)
     setRejudgeErrorMessage('')
     setIsRejudging(false)
@@ -394,7 +383,7 @@ function App() {
     if (!force) {
       // 同一ID再表示ではキャッシュを優先し、不要な再取得を避ける。
       const cachedPost = queryClient.getQueryData<Post>(queryKeys.posts.detail(postId))
-      if (cachedPost) {
+      if (cachedPost && isFinalResultPost(cachedPost)) {
         if (requestSeq === resultRequestSeqRef.current) {
           setActiveResultPost(cachedPost)
           setIsResultPostLoading(false)
@@ -425,8 +414,6 @@ function App() {
       saveResultViewTrigger()
       setActiveResultPostId(postId)
       setResultModalErrorCode(null)
-      setIsSharePending(false)
-      setShareStatusMessage('')
       setRejudgeErrorMessage('')
       setIsRejudging(false)
       if (initialPost) {
@@ -478,27 +465,6 @@ function App() {
   const handlePlayRetrySound = useCallback(() => {
     sound.playSe(SOUND_SE_RETRY)
   }, [sound])
-
-  const handleResultShare = useCallback(async () => {
-    if (!activeResultPost || isSharePending) return
-    setIsSharePending(true)
-    setShareStatusMessage('共有前に画像を確認しています...')
-    const shareUrl = buildShareUrl(activeResultPost.body, activeResultPost.id)
-    const openedWindow = window.open(shareUrl, SHARE_TARGET, SHARE_WINDOW_FEATURES)
-    if (openedWindow) return
-
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      window.alert(MESSAGE_SHARE_URL_COPIED)
-      return
-    } catch {
-      // no-op: クリップボード非対応時は確認のうえ同一タブ遷移する。
-    }
-
-    if (window.confirm(MESSAGE_SHARE_NAVIGATE_CONFIRM)) {
-      window.location.assign(shareUrl)
-    }
-  }, [activeResultPost, isSharePending])
 
   const handleAudioConsent = useCallback(
     (nextVolume: number) => {
@@ -776,13 +742,20 @@ function App() {
   }, [closeResultView, syncTopPath])
 
   const handleResultDialogKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLElement>) => {
+    (event: globalThis.KeyboardEvent) => {
       if (event.key !== DIALOG_CLOSE_KEY) return
       event.preventDefault()
       closeResultAndBackTop()
     },
     [closeResultAndBackTop]
   )
+
+  useEffect(() => {
+    if (viewMode !== 'result') return
+
+    document.addEventListener('keydown', handleResultDialogKeyDown)
+    return () => document.removeEventListener('keydown', handleResultDialogKeyDown)
+  }, [handleResultDialogKeyDown, viewMode])
 
   const exitJudgingWithResult = useCallback(
     (post: Post) => {
@@ -1239,6 +1212,7 @@ function App() {
   }, [abortSubmitRequest, clearJudgingPolling, invalidateSubmitRequest, syncTopPath])
 
   const handleRankingPostClick = (postId: string) => {
+    setIsRankingModalOpen(false)
     enterResultView(postId)
   }
 
@@ -1542,13 +1516,12 @@ function App() {
         )}
 
         {viewMode === 'result' && (
-          <section
+          <div
             data-testid="result-screen"
             role="dialog"
             aria-modal="true"
             aria-label="審査結果モーダル"
             tabIndex={-1}
-            onKeyDown={handleResultDialogKeyDown}
             className="relative z-[120] mx-auto mt-16 w-full max-w-4xl px-1 pb-6 sm:mt-20"
           >
             {isResultPostLoading && !activeResultPost && (
@@ -1583,10 +1556,33 @@ function App() {
                 </div>
               </div>
             )}
+            {!isResultPostLoading && !activeResultErrorCode && !activeResultPost && (
+              <div className="glass-panel mx-auto w-full max-w-xl rounded-2xl p-6 text-center text-slate-100">
+                <p className="text-sm font-semibold text-rose-100">{MESSAGE_RESULT_NOT_FINAL}</p>
+                <div className="mt-4 flex items-center justify-center gap-3">
+                  <NeonButton
+                    type="button"
+                    variant="secondary"
+                    compactOnMobile={true}
+                    ariaLabel="再試行"
+                    onClick={retryResultViewFetch}
+                  >
+                    再試行
+                  </NeonButton>
+                  <button
+                    type="button"
+                    onClick={closeResultAndBackTop}
+                    className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
+                  >
+                    トップへ戻る
+                  </button>
+                </div>
+              </div>
+            )}
             {!isResultPostLoading &&
               !activeResultErrorCode &&
               activeResultPost &&
-              (activeResultPost.status === 'scored' || activeResultPost.status === 'failed') && (
+              isFinalResultPost(activeResultPost) && (
                 <ResultSummary
                   nickname={activeResultPost.nickname}
                   body={activeResultPost.body}
@@ -1594,16 +1590,39 @@ function App() {
                   totalCount={activeResultPost.total_count}
                   averageScore={activeResultPost.average_score}
                   status={activeResultPost.status}
-                  onShare={handleResultShare}
                   onRejudge={handleResultRejudge}
                   onClose={closeResultAndBackTop}
                   isRejudging={isRejudging}
                   rejudgeErrorMessage={rejudgeErrorMessage}
-                  isSharePending={isSharePending}
-                  shareStatusMessage={shareStatusMessage}
                 />
               )}
-          </section>
+            {!isResultPostLoading &&
+              !activeResultErrorCode &&
+              activeResultPost &&
+              !isFinalResultPost(activeResultPost) && (
+                <div className="glass-panel mx-auto w-full max-w-xl rounded-2xl p-6 text-center text-slate-100">
+                  <p className="text-sm font-semibold text-rose-100">{MESSAGE_RESULT_NOT_FINAL}</p>
+                  <div className="mt-4 flex items-center justify-center gap-3">
+                    <NeonButton
+                      type="button"
+                      variant="secondary"
+                      compactOnMobile={true}
+                      ariaLabel="再試行"
+                      onClick={retryResultViewFetch}
+                    >
+                      再試行
+                    </NeonButton>
+                    <button
+                      type="button"
+                      onClick={closeResultAndBackTop}
+                      className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
+                    >
+                      トップへ戻る
+                    </button>
+                  </div>
+                </div>
+              )}
+          </div>
         )}
 
         {viewMode !== 'judging' && isMyPostsOpen && (
@@ -1611,15 +1630,18 @@ function App() {
             <button
               type="button"
               aria-label="自分の投稿を閉じる"
-              className="absolute inset-0 bg-black/50"
+              className="modal-overlay-gorgeous absolute inset-0"
               onClick={() => closeMyPosts()}
             />
-            <div
+            <motion.div
+              initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
+              animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
+              transition={{ duration: DURATION.MODAL }}
               role="dialog"
               aria-modal="true"
               aria-label="自分の投稿"
               tabIndex={-1}
-              className="relative z-10 w-full max-w-md rounded bg-white p-4"
+              className="modal-gorgeous-base relative z-10 w-full max-w-md rounded-2xl p-4 text-slate-100"
             >
               {selectedPost ? (
                 <MyPostDetail
@@ -1629,16 +1651,31 @@ function App() {
                 />
               ) : (
                 <>
-                  <h2 className="mb-3 text-lg font-semibold">自分の投稿</h2>
-                  {myPostsError && <p className="mb-3">{myPostsError}</p>}
-                  {isLoadingPostDetail && <p className="mb-3">投稿詳細を読み込み中です...</p>}
+                  <div className="modal-header-gorgeous flex items-center justify-between gap-4">
+                    <h2 className="gold-text text-lg font-semibold">自分の投稿</h2>
+                    <button
+                      type="button"
+                      onClick={() => closeMyPosts()}
+                      className="text-sm font-semibold text-slate-300 transition hover:text-white"
+                    >
+                      閉じる
+                    </button>
+                  </div>
+                  {myPostsError && <p className="mb-3 text-rose-200">{myPostsError}</p>}
+                  {isLoadingPostDetail && (
+                    <p className="mb-3 text-slate-200">投稿詳細を読み込み中です...</p>
+                  )}
                   {displayMyPostIds.length === 0 ? (
-                    <p>投稿するとここに表示されます</p>
+                    <p className="text-slate-200">投稿するとここに表示されます</p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="modal-scroll-area max-h-[60vh] space-y-2 overflow-y-auto pr-1">
                       {displayMyPostIds.map((postId) => (
                         <li key={postId} data-testid="my-post-id-item">
-                          <button type="button" onClick={() => handleMyPostClick(postId)}>
+                          <button
+                            type="button"
+                            className="text-left font-semibold text-amber-100 underline-offset-2 hover:underline"
+                            onClick={() => handleMyPostClick(postId)}
+                          >
                             {postId}
                           </button>
                           {loadingMyPostIds.includes(postId) && <p>読み込み中...</p>}
@@ -1667,12 +1704,9 @@ function App() {
                       ))}
                     </ul>
                   )}
-                  <button type="button" onClick={() => closeMyPosts()} className="mt-4">
-                    閉じる
-                  </button>
                 </>
               )}
-            </div>
+            </motion.div>
           </div>
         )}
 
@@ -1696,16 +1730,21 @@ function App() {
             <button
               type="button"
               aria-label="補助メニューを閉じる"
-              className="absolute inset-0 bg-black/55"
+              className="modal-overlay-gorgeous absolute inset-0"
               onClick={closeFooterActionSheet}
             />
-            <div
+            <motion.div
+              initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
+              animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
+              transition={{ duration: DURATION.MODAL }}
               role="dialog"
               aria-modal="true"
               aria-label="補助メニュー"
-              className="w-full max-w-md rounded-2xl border border-white/20 bg-slate-950/95 p-4 shadow-2xl"
+              className="modal-gorgeous-base w-full max-w-md rounded-2xl p-4 text-slate-100 shadow-2xl"
             >
-              <p className="mb-3 text-sm font-semibold text-cyan-100">補助メニュー</p>
+              <div className="modal-header-gorgeous">
+                <p className="gold-text text-sm font-semibold">補助メニュー</p>
+              </div>
               <div className="grid grid-cols-1 gap-2">
                 <NeonButton
                   ref={myPostsTriggerRef}
@@ -1739,14 +1778,14 @@ function App() {
                 </NeonButton>
                 <button
                   type="button"
-                  className="mt-1 rounded border border-white/30 px-3 py-2 text-sm text-white/90"
+                  className="mt-1 rounded-xl border border-amber-200/35 bg-black/20 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-black/30"
                   aria-label="補助メニューを閉じる"
                   onClick={closeFooterActionSheet}
                 >
                   閉じる
                 </button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
         {viewMode === 'judging' && isStopJudgingConfirmOpen && (
@@ -1754,20 +1793,25 @@ function App() {
             <button
               type="button"
               aria-label="審査停止確認を閉じる"
-              className="absolute inset-0 bg-black/60"
+              className="modal-overlay-gorgeous absolute inset-0"
               onClick={() => setIsStopJudgingConfirmOpen(false)}
             />
-            <div
-              className="glass-panel w-full max-w-sm rounded p-4"
+            <motion.div
+              initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
+              animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
+              transition={{ duration: DURATION.MODAL }}
+              className="modal-gorgeous-base w-full max-w-sm rounded-2xl p-4 text-slate-100"
               role="dialog"
               aria-modal="true"
               aria-label="審査停止確認"
             >
-              <h2 className="mb-2 text-lg font-semibold text-cyan-100">審査を中止しますか？</h2>
+              <div className="modal-header-gorgeous">
+                <h2 className="gold-text text-lg font-semibold">審査を中止しますか？</h2>
+              </div>
               <p className="mb-4 text-sm text-slate-100">
                 中止する場合は投稿内容を破棄します。再投稿する場合は入力内容を保持したまま戻れます。
               </p>
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <NeonButton
                   type="button"
                   variant="secondary"
@@ -1796,7 +1840,7 @@ function App() {
                   中止する
                 </NeonButton>
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
         {viewMode === 'result' && isRejudgeModalOpen && activeResultPost?.status === 'failed' && (
@@ -1804,17 +1848,22 @@ function App() {
             <button
               type="button"
               aria-label="再審査確認を閉じる"
-              className="absolute inset-0 bg-black/60"
+              className="modal-overlay-gorgeous absolute inset-0"
               onClick={closeRejudgeModal}
             />
-            <div
-              className="glass-panel w-full max-w-sm rounded-2xl border border-white/20 p-5"
+            <motion.div
+              initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
+              animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
+              transition={{ duration: DURATION.MODAL }}
+              className="modal-gorgeous-base w-full max-w-sm rounded-2xl p-5 text-slate-100"
               role="dialog"
               aria-modal="true"
               aria-label="再審査確認"
               tabIndex={-1}
             >
-              <h2 className="text-lg font-bold text-cyan-100">審査に失敗しました</h2>
+              <div className="modal-header-gorgeous">
+                <h2 className="gold-text text-lg font-bold">審査に失敗しました</h2>
+              </div>
               <p className="mt-2 text-sm leading-relaxed text-slate-100">
                 判定の取得に失敗した審査員がいます。再審査を実行しますか？
               </p>
@@ -1843,7 +1892,7 @@ function App() {
                   {isRejudging ? '再審査中...' : '再審査する'}
                 </NeonButton>
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
         <div
