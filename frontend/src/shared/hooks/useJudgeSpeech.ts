@@ -78,7 +78,7 @@ export function useJudgeSpeech({
 
   const startSpeech = useCallback(() => {
     const judge = getRandomJudge()
-    const speech = getRandomSpeech(judge, Boolean(isLowScore))
+    const speech = getRandomSpeech(judge, isLowScore)
     setSpeakingJudge(judge)
     setCurrentSpeech(speech)
 

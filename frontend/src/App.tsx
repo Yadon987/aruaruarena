@@ -314,6 +314,7 @@ function App() {
   const resultDialogRef = useRef<HTMLDivElement | null>(null)
   const myPostsModalRef = useRef<HTMLDivElement | null>(null)
   const footerActionSheetModalRef = useRef<HTMLDivElement | null>(null)
+  const stopJudgingConfirmModalRef = useRef<HTMLDivElement | null>(null)
   const rejudgeModalRef = useRef<HTMLDivElement | null>(null)
   const resultRequestSeqRef = useRef(0)
   const previousResultViewActiveRef = useRef(false)
@@ -1177,6 +1178,12 @@ function App() {
     onEscape: closeRejudgeModal,
   })
 
+  useFocusTrap({
+    isActive: isStopJudgingConfirmOpen,
+    containerRef: stopJudgingConfirmModalRef,
+    onEscape: () => setIsStopJudgingConfirmOpen(false),
+  })
+
   useEffect(() => {
     if (!isFooterActionSheetOpen) return
     const rafId = window.requestAnimationFrame(() => {
@@ -1777,7 +1784,7 @@ function App() {
               onClick={() => setIsStopJudgingConfirmOpen(false)}
             />
             <motion.div
-              ref={rejudgeModalRef}
+              ref={stopJudgingConfirmModalRef}
               initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
               animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
               transition={{ duration: DURATION.MODAL }}
@@ -1833,6 +1840,7 @@ function App() {
               onClick={closeRejudgeModal}
             />
             <motion.div
+              ref={rejudgeModalRef}
               initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
               animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
               transition={{ duration: DURATION.MODAL }}
