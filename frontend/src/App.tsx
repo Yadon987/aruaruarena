@@ -757,6 +757,30 @@ function App() {
     return () => document.removeEventListener('keydown', handleResultDialogKeyDown)
   }, [handleResultDialogKeyDown, viewMode])
 
+  const notFinalResultNotice = (
+    <div className="glass-panel mx-auto w-full max-w-xl rounded-2xl p-6 text-center text-slate-100">
+      <p className="text-sm font-semibold text-rose-100">{MESSAGE_RESULT_NOT_FINAL}</p>
+      <div className="mt-4 flex items-center justify-center gap-3">
+        <NeonButton
+          type="button"
+          variant="secondary"
+          compactOnMobile={true}
+          ariaLabel="再試行"
+          onClick={retryResultViewFetch}
+        >
+          再試行
+        </NeonButton>
+        <button
+          type="button"
+          onClick={closeResultAndBackTop}
+          className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
+        >
+          トップへ戻る
+        </button>
+      </div>
+    </div>
+  )
+
   const exitJudgingWithResult = useCallback(
     (post: Post) => {
       clearJudgingPolling()
@@ -1556,29 +1580,10 @@ function App() {
                 </div>
               </div>
             )}
-            {!isResultPostLoading && !activeResultErrorCode && !activeResultPost && (
-              <div className="glass-panel mx-auto w-full max-w-xl rounded-2xl p-6 text-center text-slate-100">
-                <p className="text-sm font-semibold text-rose-100">{MESSAGE_RESULT_NOT_FINAL}</p>
-                <div className="mt-4 flex items-center justify-center gap-3">
-                  <NeonButton
-                    type="button"
-                    variant="secondary"
-                    compactOnMobile={true}
-                    ariaLabel="再試行"
-                    onClick={retryResultViewFetch}
-                  >
-                    再試行
-                  </NeonButton>
-                  <button
-                    type="button"
-                    onClick={closeResultAndBackTop}
-                    className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
-                  >
-                    トップへ戻る
-                  </button>
-                </div>
-              </div>
-            )}
+            {!isResultPostLoading &&
+              !activeResultErrorCode &&
+              !isFinalResultPost(activeResultPost) &&
+              notFinalResultNotice}
             {!isResultPostLoading &&
               !activeResultErrorCode &&
               activeResultPost &&
@@ -1595,32 +1600,6 @@ function App() {
                   isRejudging={isRejudging}
                   rejudgeErrorMessage={rejudgeErrorMessage}
                 />
-              )}
-            {!isResultPostLoading &&
-              !activeResultErrorCode &&
-              activeResultPost &&
-              !isFinalResultPost(activeResultPost) && (
-                <div className="glass-panel mx-auto w-full max-w-xl rounded-2xl p-6 text-center text-slate-100">
-                  <p className="text-sm font-semibold text-rose-100">{MESSAGE_RESULT_NOT_FINAL}</p>
-                  <div className="mt-4 flex items-center justify-center gap-3">
-                    <NeonButton
-                      type="button"
-                      variant="secondary"
-                      compactOnMobile={true}
-                      ariaLabel="再試行"
-                      onClick={retryResultViewFetch}
-                    >
-                      再試行
-                    </NeonButton>
-                    <button
-                      type="button"
-                      onClick={closeResultAndBackTop}
-                      className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
-                    >
-                      トップへ戻る
-                    </button>
-                  </div>
-                </div>
               )}
           </div>
         )}

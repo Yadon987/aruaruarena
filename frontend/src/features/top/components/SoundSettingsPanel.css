@@ -4,19 +4,22 @@
   right: 0;
   z-index: 90;
   width: 240px;
-  border: 1px solid rgba(255, 214, 120, 0.42);
+  border: 1px solid var(--gorgeous-glass-border-color);
   border-radius: 16px;
   padding: 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  background: var(--gorgeous-glass-surface);
+  -webkit-backdrop-filter: blur(var(--gorgeous-glass-blur));
+  backdrop-filter: blur(var(--gorgeous-glass-blur));
   box-shadow:
-    0 18px 40px rgba(8, 15, 40, 0.45),
-    0 0 0 1px rgba(255, 206, 92, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    var(--gorgeous-glass-shadow-outer),
+    var(--gorgeous-glass-shadow-outline),
+    var(--gorgeous-glass-shadow-inner);
 
   --sound-settings-text-color: #f8fbff;
   --sound-settings-title-color: #ffd978;
+  --sound-volume-accent-color: #ffd978;
+  --sound-volume-track-border-color: rgba(255, 214, 120, 0.42);
+  --sound-volume-track-color: rgba(255, 255, 255, 0.16);
 
   animation: sound-settings-fade-in 160ms ease-out;
 }

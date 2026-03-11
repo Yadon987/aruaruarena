@@ -20,9 +20,13 @@ export function MyPostDetail({ post, onBack, onClose }: Props) {
         <button
           type="button"
           onClick={onClose}
-          className="text-sm font-semibold text-slate-300 transition hover:text-white"
+          className="modal-close-gorgeous"
+          aria-label="閉じる"
         >
-          閉じる
+          <span aria-hidden="true" className="leading-none text-lg">
+            ×
+          </span>
+          <span className="sr-only">閉じる</span>
         </button>
       </div>
       <dl className="space-y-2">

@@ -6,6 +6,16 @@
   --font-digital: 'DSEG7-Classic', 'Orbitron', 'Courier New', monospace;
   --main-action-track-width: min(82vw, 18.25rem);
   --main-action-gap: 0.42rem;
+  --gorgeous-glass-border-color: rgba(255, 214, 120, 0.42);
+  --gorgeous-glass-surface: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  --gorgeous-glass-blur: 12px;
+  --gorgeous-glass-shadow-outer: 0 18px 40px rgba(8, 15, 40, 0.45);
+  --gorgeous-glass-shadow-outline: 0 0 0 1px rgba(255, 206, 92, 0.25);
+  --gorgeous-glass-shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.35);
   --judge-slot-scale: 0.8;
   --judge-avatar-width: calc(8.75rem * var(--judge-slot-scale));
   --judge-bubble-width: calc(12.5rem * var(--judge-slot-scale));
@@ -740,19 +750,15 @@
 }
 
 .modal-gorgeous-base {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.18) 0%,
-    rgba(255, 255, 255, 0.06) 100%
-  );
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 214, 120, 0.42);
+  background: var(--gorgeous-glass-surface);
+  backdrop-filter: blur(var(--gorgeous-glass-blur));
+  -webkit-backdrop-filter: blur(var(--gorgeous-glass-blur));
+  border: 1px solid var(--gorgeous-glass-border-color);
   border-radius: 1rem;
   box-shadow:
-    0 18px 40px rgba(8, 15, 40, 0.45),
-    0 0 0 1px rgba(255, 206, 92, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    var(--gorgeous-glass-shadow-outer),
+    var(--gorgeous-glass-shadow-outline),
+    var(--gorgeous-glass-shadow-inner);
 }
 
 .modal-header-gorgeous {

@@ -1,4 +1,3 @@
-import { type MouseEvent } from 'react'
 import { HTTP_STATUS } from '../../../shared/constants/api'
 import { DEFAULT_RANKING_LIMIT, MAX_RANKING_LIMIT } from '../../../shared/constants/query'
 import { useRankings } from '../../../shared/hooks/useRankings'
@@ -55,6 +54,22 @@ const RANKING_BADGE_CLASS_BY_RANK: Record<number, string> = {
   3: 'bg-amber-300/80 text-amber-950',
 } as const
 const RANKING_BADGE_CLASS_DEFAULT = 'bg-white/10 text-slate-100'
+const TOP3_ICONS: Record<number, string> = {
+  1: '🥇',
+  2: '🥈',
+  3: '🥉',
+}
+const TOP3_ROW_CLASSES: Record<number, string> = {
+  1: 'ranking-top-rank-row ranking-top-rank-row-1 pr-14',
+  2: 'ranking-top-rank-row ranking-top-rank-row-2 pr-14',
+  3: 'ranking-top-rank-row ranking-top-rank-row-3 pr-14',
+}
+const TOP3_ICON_CLASSES: Record<number, string> = {
+  1: 'ranking-top-rank-icon ranking-top-rank-icon-1',
+  2: 'ranking-top-rank-icon ranking-top-rank-icon-2',
+  3: 'ranking-top-rank-icon ranking-top-rank-icon-3',
+}
+
 function getRankingRowClass(rank: number, isMyPost: boolean) {
   const podiumClass = rank <= 3 ? RANKING_ROW_STYLE_BY_RANK[rank] : ''
   const highlightClass =
@@ -74,22 +89,15 @@ function getRankingBadgeClass(rank: number) {
 }
 
 function getRankingTop3Icon(rank: number) {
-  if (rank === 1) return '🥇'
-  if (rank === 2) return '🥈'
-  return '🥉'
+  return TOP3_ICONS[rank] ?? ''
 }
 
 function getRankingTop3RowClass(rank: number) {
-  if (rank === 1) return 'ranking-top-rank-row ranking-top-rank-row-1 pr-14'
-  if (rank === 2) return 'ranking-top-rank-row ranking-top-rank-row-2 pr-14'
-  if (rank === 3) return 'ranking-top-rank-row ranking-top-rank-row-3 pr-14'
-  return ''
+  return TOP3_ROW_CLASSES[rank] ?? ''
 }
 
 function getRankingTop3IconClass(rank: number) {
-  if (rank === 1) return 'ranking-top-rank-icon ranking-top-rank-icon-1'
-  if (rank === 2) return 'ranking-top-rank-icon ranking-top-rank-icon-2'
-  return 'ranking-top-rank-icon ranking-top-rank-icon-3'
+  return TOP3_ICON_CLASSES[rank] ?? TOP3_ICON_CLASSES[3]
 }
 
 export function RankingSection({
@@ -103,9 +111,7 @@ export function RankingSection({
   const displayRankings = buildDisplayRankings(data?.rankings)
   const myPostIdSet = new Set(myPostIds)
 
-  const handleSelectRankingPost = (event: MouseEvent<HTMLButtonElement>, postId: string) => {
-    event.preventDefault()
-    event.stopPropagation()
+  const handleSelectRankingPost = (postId: string) => {
     onSelectRankingPost(postId)
   }
 
@@ -136,12 +142,11 @@ export function RankingSection({
                   type="button"
                   data-testid="ranking-item"
                   className={`${getRankingRowClass(item.rank, isMyPost)} bg-black/10 text-slate-100 ${getRankingTop3RowClass(item.rank)}`}
-                  onClick={(event) => handleSelectRankingPost(event, item.id)}
+                  onClick={() => handleSelectRankingPost(item.id)}
                   aria-label={`${item.rank}位 ${item.nickname} 採点の詳細を確認`}
                 >
                   {isTopRank && (
                     <span
-                      style={{ position: 'absolute', top: '0.45rem', right: '0.45rem', left: 'auto' }}
                       className={`pointer-events-none z-10 border border-amber-100/35 bg-black/25 ${getRankingTop3IconClass(item.rank)} ranking-top-rank-tag font-black text-amber-100/90`}
                     >
                       {getRankingTop3Icon(item.rank)}
@@ -153,9 +158,7 @@ export function RankingSection({
                     >
                       {`${item.rank}位`}
                     </span>
-                    <p className="font-semibold text-amber-100">
-                      {item.nickname}
-                    </p>
+                    <p className="font-semibold text-amber-100">{item.nickname}</p>
                   </div>
                   <p className="mt-1 text-slate-100">{item.body}</p>
                   <p className="text-sm text-slate-300">

@@ -118,20 +118,20 @@ export function RankingModal({
           className={DIALOG_CONTAINER_CLASS}
         >
           <div className="modal-header-gorgeous flex items-center justify-between gap-4">
-              <h2 className="gold-text text-lg font-semibold">ランキング</h2>
-              <button
-                ref={closeButtonRef}
-                type="button"
-                onClick={handleClose}
-                className="modal-close-gorgeous"
-                aria-label="閉じる"
-              >
-                <span aria-hidden="true" className="leading-none text-lg">
-                  ×
-                </span>
-                <span className="sr-only">閉じる</span>
-              </button>
-            </div>
+            <h2 className="gold-text text-lg font-semibold">ランキング</h2>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={handleClose}
+              className="modal-close-gorgeous"
+              aria-label="閉じる"
+            >
+              <span aria-hidden="true" className="leading-none text-lg">
+                ×
+              </span>
+              <span className="sr-only">閉じる</span>
+            </button>
+          </div>
 
           <div className={SCROLLABLE_SECTION_CLASS}>
             <RankingSection

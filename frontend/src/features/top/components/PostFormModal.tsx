@@ -244,7 +244,7 @@ export function PostFormModal({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="neon-button-base neon-glow-blue w-full px-4 py-2 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="neon-button-base neon-glow-blue w-full px-4 py-2"
                 >
                   {isLoading ? '投稿中...' : '投稿'}
                 </button>
