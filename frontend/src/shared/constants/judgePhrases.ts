@@ -45,5 +45,11 @@ export const JUDGE_PHRASES: Record<JudgePersona, readonly string[]> = {
   ],
 } as const
 
+export const JUDGE_LOW_SCORE_PHRASES: Record<JudgePersona, readonly string[]> = {
+  hiroyuki: ['うーん、微妙ですね', 'もっと頑張りましょう', '......'],
+  dewi: ['お粗末ですわ...', '期待外れですの', '......'],
+  nakao: ['なんだよ...', '野暮だねぇ', '......'],
+}
+
 /** 審査員IDの配列 */
 export const JUDGES: readonly JudgePersona[] = typedKeys(JUDGE_PHRASES)

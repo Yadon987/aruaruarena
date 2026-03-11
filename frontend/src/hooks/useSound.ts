@@ -8,7 +8,7 @@ const LEGACY_SOUND_MODAL_ANSWERED_KEY = 'aruaru_sound_consent'
 export const DEFAULT_VOLUME = 0.6
 const FADE_DURATION_MS = 500
 
-type Scene = 'top' | 'judging' | 'success' | 'failed'
+type Scene = 'top' | 'judging' | 'success' | 'low_score' | 'failed'
 type SeId = 'se_submit' | 'se_result_open' | 'se_retry'
 
 type DebugEvent = { type: 'bgm'; scene: Scene } | { type: 'se'; id: SeId }
@@ -19,6 +19,7 @@ const BGM_FILES: Record<Scene, string> = {
   top: '/sounds/radetzky_march.mp3',
   judging: '/sounds/CanCan.mp3',
   success: '/sounds/pomp_and_circumstance.mp3',
+  low_score: '/sounds/fate_theme.mp3',
   failed: '/sounds/fate_theme.mp3',
 }
 
@@ -189,7 +190,7 @@ export function createSoundController() {
       currentScene = scene
       const nextBgm = new Howl({
         src: [BGM_FILES[scene]],
-        loop: scene !== 'success' && scene !== 'failed',
+        loop: scene !== 'success' && scene !== 'low_score' && scene !== 'failed',
         volume,
         onloaderror: () => {
           console.error('[Sound] BGM load error:', scene)
@@ -206,7 +207,7 @@ export function createSoundController() {
           currentScene = null
         },
         onend: () => {
-          if (scene !== 'success' && scene !== 'failed') return
+          if (scene !== 'success' && scene !== 'low_score' && scene !== 'failed') return
           if (currentBgm !== nextBgm) return
           nextBgm.unload()
           currentBgm = null

@@ -33,8 +33,15 @@ vi.mock('framer-motion', async () => {
       div: ({ children, ...props }: MotionComponentProps) =>
         createElement('div', stripMotionProps(props), children),
       img: ({ src, alt, ...props }: ImgProps) => {
-        const domProps = stripMotionProps(props as MotionComponentProps)
+        const motionProps = props as MotionComponentProps
+        const domProps = stripMotionProps(motionProps)
         capturedMotionImgProps.push({ src, alt, ...domProps })
+        capturedMotionImgProps[capturedMotionImgProps.length - 1] = {
+          ...capturedMotionImgProps[capturedMotionImgProps.length - 1],
+          initial: motionProps.initial,
+          animate: motionProps.animate,
+          transition: motionProps.transition,
+        }
         return createElement('img', { src, alt, ...domProps })
       },
       section: ({ children, ...props }: MotionComponentProps) =>

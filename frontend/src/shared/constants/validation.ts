@@ -25,6 +25,14 @@ export const SCORE = {
 } as const
 
 /**
+ * スコア閾値
+ */
+export const SCORE_THRESHOLDS = {
+  /** 低得点（以下） */
+  LOW: 60,
+} as const
+
+/**
  * 文字数制限の定数
  */
 export const TEXT_LENGTH = {

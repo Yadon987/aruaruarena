@@ -4,6 +4,7 @@ import type { ComponentProps, CSSProperties } from 'react'
 import { JUDGE_ENTRANCE } from '../../../shared/constants/animations'
 import type { AvatarState } from '../../../shared/constants/avatar'
 import { getAvatarImagePath } from '../../../shared/constants/avatar'
+import { SCORE_THRESHOLDS } from '../../../shared/constants/validation'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 import { useScoreRoulette } from '../../../shared/hooks/useScoreRoulette'
 import type { JudgePersona } from '../../../shared/types/domain'
@@ -187,6 +188,10 @@ export function JudgeSlot({
   const isComplete = phase === 'complete'
   const isSpeaking = Boolean(speechText && showSpeech)
   const isSpeakingAnimated = isSpeaking && hasEntered
+  const isLowScore =
+    !scoreState.isFailed &&
+    scoreState.finalScoreLabel !== null &&
+    Number(scoreState.finalScoreLabel) <= SCORE_THRESHOLDS.LOW
   const [isFlashActive, setIsFlashActive] = useState(false)
   const [isDewiSparkleActive, setIsDewiSparkleActive] = useState(false)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -202,7 +207,13 @@ export function JudgeSlot({
     : isScoring
       ? 'vip-desk-scoring'
       : 'vip-desk-idle'
-  const scoreMotionClass = isRouletting ? 'score-rouletting' : isRevealed ? 'score-revealed' : ''
+  const scoreMotionClass = isRouletting
+    ? 'score-rouletting'
+    : isRevealed
+      ? isLowScore
+        ? 'score-revealed score-low-revealed'
+        : 'score-revealed'
+      : ''
   const particleClass = isRevealed ? 'score-particles-active' : ''
   const idleClassName = hasEntered && judge === 'hiroyuki' ? 'judge-avatar-hiroyuki-idle' : ''
   const dewiEffectsClassName = judge === 'dewi' ? 'judge-avatar-dewi-effects' : ''
