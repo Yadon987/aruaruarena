@@ -100,6 +100,8 @@ interface JudgeSlotProps {
   phase: JudgeDeskPhase
   /** スピーチを表示するか */
   showSpeech: boolean
+  /** 低得点表示を有効化する */
+  isLowScore?: boolean
 }
 
 /**
@@ -166,6 +168,7 @@ export function JudgeSlot({
   judgment,
   phase,
   showSpeech,
+  isLowScore = false,
 }: JudgeSlotProps) {
   const prefersReducedMotion = useReducedMotion()
   const scoreState = resolveScoreState(judgment)
@@ -188,10 +191,11 @@ export function JudgeSlot({
   const isComplete = phase === 'complete'
   const isSpeaking = Boolean(speechText && showSpeech)
   const isSpeakingAnimated = isSpeaking && hasEntered
-  const isLowScore =
+  const isLowScoreSlot =
     !scoreState.isFailed &&
     scoreState.finalScoreLabel !== null &&
     Number(scoreState.finalScoreLabel) <= SCORE_THRESHOLDS.LOW
+  const shouldShowLowScore = isLowScore || isLowScoreSlot
   const [isFlashActive, setIsFlashActive] = useState(false)
   const [isDewiSparkleActive, setIsDewiSparkleActive] = useState(false)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -210,7 +214,7 @@ export function JudgeSlot({
   const scoreMotionClass = isRouletting
     ? 'score-rouletting'
     : isRevealed
-      ? isLowScore
+      ? shouldShowLowScore
         ? 'score-revealed score-low-revealed'
         : 'score-revealed'
       : ''

@@ -91,7 +91,7 @@ export type JudgeEntranceVariants = {
  */
 export const JUDGE_ENTRANCE = {
   /** 登場完了までの時間（ms）- 最長の登場アニメーションに合わせる */
-  DURATION_MS: 4800,
+  DURATION_MS: 4400,
   /** 各審査員の登場バリアント */
   VARIANTS: {
     hiroyuki: {

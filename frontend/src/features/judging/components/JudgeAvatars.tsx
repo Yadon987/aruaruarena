@@ -15,6 +15,7 @@ interface JudgeAvatarsProps {
   compactBottomSpacing?: boolean
   resultMode?: boolean
   resultJudgments?: Judgment[]
+  isLowScore?: boolean
 }
 
 /** 審査員設定（表示順: 中尾 -> ひろゆき -> デヴィ） */
@@ -93,6 +94,7 @@ export function JudgeAvatars({
   compactBottomSpacing = false,
   resultMode = false,
   resultJudgments,
+  isLowScore = false,
 }: JudgeAvatarsProps) {
   const { hasEntered, variants: entranceVariants } = useJudgeEntrance()
   const { displayedComments } = useJudgeResultSpeech({
@@ -105,6 +107,7 @@ export function JudgeAvatars({
     isJudging: isJudgingActive,
     isPostModalOpen,
     allowIdleSpeech: effectiveEnableIdleBehavior,
+    isLowScore,
   })
   const resultSpeakingJudge = resultMode ? null : speakingJudge
   const { avatarStates } = useJudgeAvatarState({
@@ -150,6 +153,7 @@ export function JudgeAvatars({
               entranceVariant={entrance}
               hasEntered={effectiveHasEntered}
               judgment={judgmentMap.get(judge.id)}
+              isLowScore={isLowScore}
               phase={phase}
               showSpeech={showSpeech}
             />

@@ -65,6 +65,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     await openRankingResultFromTopRanking()
 
+    expect(await screen.findByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+
     expect(
       await screen.findByText(
         '採点結果がまだ確定していません。しばらく時間をおいて再試行してください。'

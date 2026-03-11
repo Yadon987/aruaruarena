@@ -133,4 +133,10 @@
   .audio-consent-modal__button {
     transition: none;
   }
+
+  .audio-consent-modal__button:hover,
+  .audio-consent-modal__button:active {
+    transform: none;
+    filter: none;
+  }
 }
