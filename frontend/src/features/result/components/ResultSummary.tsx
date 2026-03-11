@@ -56,14 +56,21 @@ export function ResultSummary({
         「{body}」
       </p>
 
-      <div className="mt-5 flex flex-wrap items-end justify-center gap-x-6 gap-y-2 text-white">
-        <p className="text-sm font-semibold sm:text-base">
-          <span className="digital-score gold-text text-2xl">{rankLabel}</span>
-          <span className="ml-2 text-slate-100">{totalLabel}</span>
+      <div className="result-summary-stats mt-5">
+        <p className="result-summary-stat">
+          <span className="sr-only">{`順位 ${rankLabel} ${totalLabel}`}</span>
+          <span className="result-summary-label">順位</span>
+          <span className="result-summary-value">{rankLabel}</span>
+          <span className="result-summary-separator" aria-hidden="true">
+            /
+          </span>
+          <span className="result-summary-sub-label">{totalLabel}</span>
         </p>
-        <p className="text-sm font-semibold sm:text-base">
+        <p className="result-summary-stat">
           <span className="sr-only">{`スコア: ${averageLabel}`}</span>
-          スコア: <span className="digital-score gold-text text-2xl">{averageLabel}</span>
+          <span className="result-summary-label">スコア:</span>
+          {' '}
+          <span className="result-summary-value">{averageLabel}</span>
         </p>
       </div>
 

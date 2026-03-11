@@ -1889,7 +1889,9 @@ function App() {
           className={`fixed inset-x-0 z-30 pointer-events-none ${
             viewMode === 'top'
               ? 'bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] px-2 sm:bottom-5 sm:px-3 md:bottom-6 md:px-4 lg:bottom-10 lg:px-6'
-              : 'bottom-24 px-2 sm:bottom-24 sm:px-3 md:bottom-24 md:px-4 lg:bottom-10 lg:px-6'
+              : viewMode === 'result'
+                ? 'bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] px-2 sm:bottom-8 sm:px-3 md:bottom-10 md:px-4 lg:bottom-12 lg:px-6'
+                : 'bottom-24 px-2 sm:bottom-24 sm:px-3 md:bottom-24 md:px-4 lg:bottom-10 lg:px-6'
           }`}
         >
           <div className="mx-auto w-full max-w-6xl flex flex-col items-center gap-0">
