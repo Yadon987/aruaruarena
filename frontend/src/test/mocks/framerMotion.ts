@@ -2,9 +2,6 @@ import { createElement, Fragment } from 'react'
 import type { ButtonHTMLAttributes, HTMLAttributes, ImgHTMLAttributes, ReactNode } from 'react'
 import { vi } from 'vitest'
 
-type DivProps = HTMLAttributes<HTMLDivElement> & { children?: ReactNode }
-type SpanProps = HTMLAttributes<HTMLSpanElement> & { children?: ReactNode }
-type SectionProps = HTMLAttributes<HTMLElement> & { children?: ReactNode }
 type ImgProps = ImgHTMLAttributes<HTMLImageElement>
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { children?: ReactNode }
 
