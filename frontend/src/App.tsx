@@ -18,8 +18,9 @@ import { DURATION, SCALE } from './shared/constants/animations'
 import { API_ERROR_CODE, HTTP_STATUS } from './shared/constants/api'
 import { DEFAULT_RANKING_LIMIT } from './shared/constants/query'
 import { queryKeys } from './shared/constants/queryKeys'
-import { TEXT_LENGTH } from './shared/constants/validation'
+import { SCORE_THRESHOLDS, TEXT_LENGTH } from './shared/constants/validation'
 import { useAvatarImages } from './shared/hooks/useAvatarImages'
+import { useFocusTrap } from './shared/hooks/useFocusTrap'
 import { useReducedMotion } from './shared/hooks/useReducedMotion'
 import { ApiClientError, api } from './shared/services/api'
 import type { CreatePostResponse } from './shared/types/api'
@@ -45,7 +46,8 @@ const MESSAGE_MY_POST_DETAIL_FETCH_FAILED = '投稿詳細の取得に失敗し�
 const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
 const MESSAGE_POST_DETAIL_SERVER_ERROR = '一時的なエラーです。時間をおいて再試行してください'
 const MESSAGE_POST_DETAIL_NETWORK_ERROR = 'ネットワーク接続を確認してください'
-const MESSAGE_RESULT_NOT_FINAL = '採点結果がまだ確定していません。しばらく時間をおいて再試行してください。'
+const MESSAGE_RESULT_NOT_FINAL =
+  '採点結果がまだ確定していません。しばらく時間をおいて再試行してください。'
 const MESSAGE_JUDGING_FETCH_FAILED =
   '投稿情報の取得に失敗しました。トップへ戻って再度お試しください。'
 const MESSAGE_JUDGING_NETWORK_ERROR = 'ネットワークに接続できませんでした'
@@ -77,6 +79,7 @@ const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
 const SOUND_SE_SUBMIT = 'se_submit'
 const SOUND_SE_RETRY = 'se_retry'
 const SOUND_SE_RESULT_OPEN = 'se_result_open'
+const LOW_SCORE_THRESHOLD = SCORE_THRESHOLDS.LOW
 const CONTACT_FORM_URL = 'https://forms.gle/zLN3j3YF87qdULXB9'
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
@@ -308,6 +311,11 @@ function App() {
   const footerDockRef = useRef<HTMLDivElement | null>(null)
   const soundSettingsContainerRef = useRef<HTMLDivElement | null>(null)
   const resultTriggerRef = useRef<HTMLElement | null>(null)
+  const resultDialogRef = useRef<HTMLDivElement | null>(null)
+  const myPostsModalRef = useRef<HTMLDivElement | null>(null)
+  const footerActionSheetModalRef = useRef<HTMLDivElement | null>(null)
+  const stopJudgingConfirmModalRef = useRef<HTMLDivElement | null>(null)
+  const rejudgeModalRef = useRef<HTMLDivElement | null>(null)
   const resultRequestSeqRef = useRef(0)
   const previousResultViewActiveRef = useRef(false)
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -333,7 +341,16 @@ function App() {
 
   const resultAudioScene = useMemo(() => {
     if (viewMode !== 'result' || !activeResultPost) return null
-    return activeResultPost.status === 'scored' ? 'success' : 'failed'
+    if (!isFinalResultPost(activeResultPost)) {
+      return 'judging'
+    }
+    if (activeResultPost.status === 'failed') return 'failed'
+
+    const avgScore = activeResultPost.average_score
+    if (avgScore !== undefined && avgScore <= LOW_SCORE_THRESHOLD) {
+      return 'low_score'
+    }
+    return 'success'
   }, [activeResultPost, viewMode])
   const audioScene = resultAudioScene ?? (viewMode === 'result' ? 'top' : viewMode)
   const isAudioConsentModalOpen =
@@ -741,22 +758,6 @@ function App() {
     syncTopPath()
   }, [closeResultView, syncTopPath])
 
-  const handleResultDialogKeyDown = useCallback(
-    (event: globalThis.KeyboardEvent) => {
-      if (event.key !== DIALOG_CLOSE_KEY) return
-      event.preventDefault()
-      closeResultAndBackTop()
-    },
-    [closeResultAndBackTop]
-  )
-
-  useEffect(() => {
-    if (viewMode !== 'result') return
-
-    document.addEventListener('keydown', handleResultDialogKeyDown)
-    return () => document.removeEventListener('keydown', handleResultDialogKeyDown)
-  }, [handleResultDialogKeyDown, viewMode])
-
   const notFinalResultNotice = (
     <div className="glass-panel mx-auto w-full max-w-xl rounded-2xl p-6 text-center text-slate-100">
       <p className="text-sm font-semibold text-rose-100">{MESSAGE_RESULT_NOT_FINAL}</p>
@@ -1153,6 +1154,36 @@ function App() {
     footerActionSheetTriggerRef.current?.focus()
   }
 
+  useFocusTrap({
+    isActive: viewMode === 'result' && !isRejudgeModalOpen,
+    containerRef: resultDialogRef,
+    onEscape: closeResultAndBackTop,
+  })
+
+  useFocusTrap({
+    isActive: viewMode !== 'judging' && isMyPostsOpen,
+    containerRef: myPostsModalRef,
+    onEscape: closeMyPosts,
+  })
+
+  useFocusTrap({
+    isActive: viewMode !== 'judging' && isFooterActionSheetOpen,
+    containerRef: footerActionSheetModalRef,
+    onEscape: closeFooterActionSheet,
+  })
+
+  useFocusTrap({
+    isActive: isRejudgeModalOpen,
+    containerRef: rejudgeModalRef,
+    onEscape: closeRejudgeModal,
+  })
+
+  useFocusTrap({
+    isActive: isStopJudgingConfirmOpen,
+    containerRef: stopJudgingConfirmModalRef,
+    onEscape: () => setIsStopJudgingConfirmOpen(false),
+  })
+
   useEffect(() => {
     if (!isFooterActionSheetOpen) return
     const rafId = window.requestAnimationFrame(() => {
@@ -1323,19 +1354,6 @@ function App() {
   }, [isMyPostsOpen, prefetchMyPostsDetails, prefetchTargetPostIds])
 
   useEffect(() => {
-    if (!isMyPostsOpen) return
-
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== DIALOG_CLOSE_KEY) return
-      event.preventDefault()
-      closeMyPosts()
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [closeMyPosts, isMyPostsOpen])
-
-  useEffect(() => {
     if (!isStopJudgingConfirmOpen) return
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -1347,19 +1365,6 @@ function App() {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isStopJudgingConfirmOpen])
-
-  useEffect(() => {
-    if (!isRejudgeModalOpen) return
-
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== DIALOG_CLOSE_KEY) return
-      event.preventDefault()
-      closeRejudgeModal()
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [closeRejudgeModal, isRejudgeModalOpen])
 
   useEffect(() => {
     if (viewMode !== 'top') {
@@ -1545,6 +1550,7 @@ function App() {
             role="dialog"
             aria-modal="true"
             aria-label="審査結果モーダル"
+            ref={resultDialogRef}
             tabIndex={-1}
             className="relative z-[120] mx-auto mt-16 w-full max-w-4xl px-1 pb-6 sm:mt-20"
           >
@@ -1613,6 +1619,7 @@ function App() {
               onClick={() => closeMyPosts()}
             />
             <motion.div
+              ref={myPostsModalRef}
               initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
               animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
               transition={{ duration: DURATION.MODAL }}
@@ -1713,6 +1720,7 @@ function App() {
               onClick={closeFooterActionSheet}
             />
             <motion.div
+              ref={footerActionSheetModalRef}
               initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
               animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
               transition={{ duration: DURATION.MODAL }}
@@ -1776,6 +1784,7 @@ function App() {
               onClick={() => setIsStopJudgingConfirmOpen(false)}
             />
             <motion.div
+              ref={stopJudgingConfirmModalRef}
               initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
               animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
               transition={{ duration: DURATION.MODAL }}
@@ -1831,6 +1840,7 @@ function App() {
               onClick={closeRejudgeModal}
             />
             <motion.div
+              ref={rejudgeModalRef}
               initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
               animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
               transition={{ duration: DURATION.MODAL }}
@@ -1891,6 +1901,12 @@ function App() {
                 judgments={viewMode === 'judging' ? activeResultPost?.judgments : undefined}
                 resultMode={viewMode === 'result'}
                 resultJudgments={activeResultPost?.judgments}
+                isLowScore={
+                  isFinalResultPost(activeResultPost) &&
+                  activeResultPost.status === 'scored' &&
+                  activeResultPost.average_score !== undefined &&
+                  activeResultPost.average_score <= LOW_SCORE_THRESHOLD
+                }
                 judgingPhase={judgingPhase}
                 compactBottomSpacing={true}
               />

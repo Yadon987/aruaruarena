@@ -155,7 +155,10 @@ export function PostFormModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div key="post-form-modal" className="fixed inset-0 z-50 flex h-full items-center justify-center p-4">
+        <div
+          key="post-form-modal"
+          className="fixed inset-0 z-50 flex h-full items-center justify-center p-4"
+        >
           <div
             aria-hidden="true"
             role="presentation"

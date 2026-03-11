@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { JUDGE_SPEECH } from '../constants/animations'
-import { JUDGE_PHRASES, JUDGES } from '../constants/judgePhrases'
+import { JUDGE_LOW_SCORE_PHRASES, JUDGE_PHRASES, JUDGES } from '../constants/judgePhrases'
 import type { JudgePersona } from '../types/domain'
 
 const SPEECH_INTERVAL_MIN = JUDGE_SPEECH.INTERVAL_MIN_MS
@@ -12,6 +12,7 @@ interface UseJudgeSpeechOptions {
   isJudging: boolean
   isPostModalOpen: boolean
   allowIdleSpeech?: boolean
+  isLowScore?: boolean
 }
 
 interface JudgeSpeechState {
@@ -26,6 +27,7 @@ export function useJudgeSpeech({
   isJudging,
   isPostModalOpen,
   allowIdleSpeech = false,
+  isLowScore = false,
 }: UseJudgeSpeechOptions): JudgeSpeechState {
   const [currentSpeech, setCurrentSpeech] = useState<string | null>(null)
   const [speakingJudge, setSpeakingJudge] = useState<JudgePersona | null>(null)
@@ -62,8 +64,8 @@ export function useJudgeSpeech({
     return JUDGES[index]
   }, [])
 
-  const getRandomSpeech = useCallback((judge: JudgePersona): string => {
-    const phrases = JUDGE_PHRASES[judge]
+  const getRandomSpeech = useCallback((judge: JudgePersona, isLowScore: boolean): string => {
+    const phrases = isLowScore ? JUDGE_LOW_SCORE_PHRASES[judge] : JUDGE_PHRASES[judge]
     if (!phrases || phrases.length === 0) {
       return '...'
     }
@@ -76,7 +78,7 @@ export function useJudgeSpeech({
 
   const startSpeech = useCallback(() => {
     const judge = getRandomJudge()
-    const speech = getRandomSpeech(judge)
+    const speech = getRandomSpeech(judge, isLowScore)
     setSpeakingJudge(judge)
     setCurrentSpeech(speech)
 
@@ -85,7 +87,7 @@ export function useJudgeSpeech({
       setSpeakingJudge(null)
       scheduleNextSpeechRef.current()
     }, SPEECH_DURATION_MS)
-  }, [getRandomJudge, getRandomSpeech])
+  }, [getRandomJudge, getRandomSpeech, isLowScore])
 
   const scheduleNextSpeech = useCallback(() => {
     intervalTimerRef.current = setTimeout(() => {

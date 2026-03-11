@@ -42,7 +42,7 @@ function resolveRankingErrorMessage(error: unknown): string {
 }
 
 const RANKING_ROW_CLASS =
-  'relative w-full overflow-hidden cursor-pointer rounded-xl border p-3 text-left transition duration-200 ease-out focus-visible:outline-none hover:-translate-y-1 hover:bg-white/5 hover:shadow-[0_18px_35px_rgba(255,214,120,0.25)]'
+  'relative w-full overflow-hidden cursor-pointer rounded-xl border p-3 text-left transition duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 hover:-translate-y-1 hover:bg-white/5 hover:shadow-[0_18px_35px_rgba(255,214,120,0.25)]'
 const RANKING_ROW_STYLE_BY_RANK: Record<number, string> = {
   1: 'bg-gradient-to-br from-amber-200/55 via-amber-100/30 to-black/20 border-amber-200/90 shadow-[0_24px_50px_rgba(251,191,36,0.42)] ring-2 ring-amber-200/45',
   2: 'bg-gradient-to-br from-amber-300/28 via-amber-200/18 to-black/20 border-amber-200/70 shadow-[0_18px_38px_rgba(251,191,36,0.24)]',

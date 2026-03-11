@@ -1,6 +1,13 @@
-import { createElement, Fragment } from 'react'
+import { createElement, forwardRef, Fragment } from 'react'
 import type { ButtonHTMLAttributes, HTMLAttributes, ImgHTMLAttributes, ReactNode } from 'react'
 import { vi } from 'vitest'
+
+const MotionSectionMock = forwardRef<HTMLElement, MotionComponentProps>(
+  ({ children, ...props }, ref) =>
+    createElement('section', { ...stripMotionProps(props), ref }, children)
+)
+
+MotionSectionMock.displayName = 'MockMotionSection'
 
 type ImgProps = ImgHTMLAttributes<HTMLImageElement>
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { children?: ReactNode }
@@ -9,11 +16,18 @@ type MotionComponentProps = HTMLAttributes<HTMLElement> & {
   children?: ReactNode
   initial?: unknown
   animate?: unknown
+  exit?: unknown
   transition?: unknown
 }
 
 const stripMotionProps = (props: MotionComponentProps): Record<string, unknown> => {
-  const { initial: _initial, animate: _animate, transition: _transition, ...domProps } = props
+  const {
+    initial: _initial,
+    animate: _animate,
+    exit: _exit,
+    transition: _transition,
+    ...domProps
+  } = props
   return domProps
 }
 
@@ -33,12 +47,20 @@ vi.mock('framer-motion', async () => {
       div: ({ children, ...props }: MotionComponentProps) =>
         createElement('div', stripMotionProps(props), children),
       img: ({ src, alt, ...props }: ImgProps) => {
-        const domProps = stripMotionProps(props as MotionComponentProps)
-        capturedMotionImgProps.push({ src, alt, ...domProps })
+        const motionProps = props as MotionComponentProps
+        const domProps = stripMotionProps(motionProps)
+        capturedMotionImgProps.push({
+          src,
+          alt,
+          ...domProps,
+          initial: motionProps.initial,
+          animate: motionProps.animate,
+          exit: motionProps.exit,
+          transition: motionProps.transition,
+        })
         return createElement('img', { src, alt, ...domProps })
       },
-      section: ({ children, ...props }: MotionComponentProps) =>
-        createElement('section', stripMotionProps(props), children),
+      section: MotionSectionMock,
       span: ({ children, ...props }: MotionComponentProps) =>
         createElement('span', stripMotionProps(props), children),
       button: ({ children, ...props }: ButtonProps) =>
