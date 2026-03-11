@@ -60,9 +60,9 @@ export function MyPostDetail({ post, onBack, onClose }: Props) {
         <div className="mt-4">
           <h3 className="mb-2 font-semibold text-amber-100">審査結果</h3>
           <ul className="space-y-2">
-            {post.judgments.map((judgment) => (
+            {post.judgments.map((judgment, index) => (
               <li
-                key={judgment.persona}
+                key={`${judgment.persona}-${index}`}
                 className="rounded-xl border border-amber-200/25 bg-black/15 p-2"
               >
                 <p>{judgment.persona}</p>
