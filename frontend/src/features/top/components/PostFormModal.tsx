@@ -156,11 +156,12 @@ export function PostFormModal({
     <AnimatePresence>
       {isOpen && (
         <div key="post-form-modal" className="fixed inset-0 z-50 flex h-full items-center justify-center p-4">
-          <div
-            aria-hidden="true"
-            role="presentation"
+          <button
+            type="button"
+            aria-label="モーダルを閉じる"
             className="modal-overlay-gorgeous absolute inset-0"
             data-testid="modal-overlay"
+            tabIndex={-1}
             onClick={handleBackdropClick}
           />
           <div
