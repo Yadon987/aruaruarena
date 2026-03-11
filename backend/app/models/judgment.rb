@@ -64,10 +64,10 @@ class Judgment
   with_options if: :succeeded? do
     SCORE_FIELDS.each do |field|
       validates field, presence: true,
-                      numericality: {
-                        only_integer: true, greater_than_or_equal_to: 0,
-                        less_than_or_equal_to: MAX_SCORE_PER_ITEM
-                      }
+                       numericality: {
+                         only_integer: true, greater_than_or_equal_to: 0,
+                         less_than_or_equal_to: MAX_SCORE_PER_ITEM
+                       }
     end
     validates :total_score, presence: true,
                             numericality: {
