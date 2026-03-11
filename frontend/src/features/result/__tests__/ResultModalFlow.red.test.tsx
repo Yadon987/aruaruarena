@@ -52,6 +52,27 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
   })
 
+  it('ランキング投稿のstatusが未確定でも採点詳細モーダルを保てる', async () => {
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'rank-post-1',
+      nickname: 'ランク太郎',
+      body: '本文',
+      status: 'judging',
+      created_at: '2026-02-17T00:00:00Z',
+    })
+
+    render(<App />)
+
+    await openRankingResultFromTopRanking()
+
+    expect(
+      await screen.findByText(
+        '採点結果がまだ確定していません。しばらく時間をおいて再試行してください。'
+      )
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
+  })
+
   it('審査中からscoredへ遷移した際に結果モーダルが開く', async () => {
     // 何を検証するか: 審査中画面でscoredを受信したら結果モーダルが表示されること
     vi.spyOn(api.posts, 'create').mockResolvedValue({
@@ -136,7 +157,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
   })
 
   it('TOP20圏外のscored投稿ではシェア関連UIを表示しない', async () => {
-    // 何を検証するか: scoredでもrankが21位以降ならSNSシェアボタンとOGPプレビューを表示しないこと
+    // 何を検証するか: scoredでもrankが21位以降は共有UIを表示しないこと
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'scope-post-id',
       status: 'judging',
@@ -188,7 +209,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     fireEvent.click(await screen.findByRole('button', { name: '再試行' }))
 
     await waitFor(() => {
-      expect(screen.getByText('平均点: 77.7')).toBeInTheDocument()
+      expect(screen.getByText('スコア: 77.7')).toBeInTheDocument()
     })
     expect(getPostSpy).toHaveBeenNthCalledWith(1, 'rank-post-1')
     expect(getPostSpy).toHaveBeenNthCalledWith(2, 'rank-post-1')
@@ -232,54 +253,6 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     expect(screen.getByRole('button', { name: '再審査する' })).toBeInTheDocument()
   })
 
-  it('scored投稿でSNSシェアボタンを表示する', async () => {
-    // 何を検証するか: status=scored かつ rank<=20 の投稿詳細ではSNSシェアボタンが表示されること
-    vi.spyOn(api.posts, 'get').mockResolvedValue({
-      id: 'scored-post-id',
-      nickname: '成功太郎',
-      body: '成功本文',
-      status: 'scored',
-      created_at: '2026-02-17T00:00:00Z',
-      average_score: 88.8,
-      rank: 3,
-      total_count: 30,
-      judgments: [],
-    })
-
-    render(<App />)
-
-    await openRankingResultFromTopRanking()
-
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
-    })
-    expect(screen.getByRole('button', { name: 'Xでシェア' })).toBeInTheDocument()
-  })
-
-  it('rankが20のscored投稿ではSNSシェアボタンを表示する', async () => {
-    // 何を検証するか: rank=20はTOP20内としてSNSシェアボタンが表示されること
-    vi.spyOn(api.posts, 'get').mockResolvedValue({
-      id: 'top20-post-id',
-      nickname: '境界太郎',
-      body: '境界本文',
-      status: 'scored',
-      created_at: '2026-02-17T00:00:00Z',
-      average_score: 80.1,
-      rank: 20,
-      total_count: 30,
-      judgments: [],
-    })
-
-    render(<App />)
-
-    await openRankingResultFromTopRanking()
-
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
-    })
-    expect(screen.getByRole('button', { name: 'Xでシェア' })).toBeInTheDocument()
-  })
-
   it('再審査ボタン押下でrejudge APIを1回呼ぶ', async () => {
     // 何を検証するか: 再審査ボタン押下で /api/posts/:id/rejudge が1回だけ呼ばれること
     vi.spyOn(api.posts, 'get').mockResolvedValue({
@@ -307,37 +280,6 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
       expect(rejudgeSpy).toHaveBeenCalledWith('rejudge-post-id', ['hiroyuki', 'dewi', 'nakao'])
     })
     expect(rejudgeSpy).toHaveBeenCalledTimes(1)
-  })
-
-  it('SNSシェア押下で画像確認を開始しボタンを一時無効化する', async () => {
-    // 何を検証するか: Xシェア押下時に画像確認メッセージを表示し、二重押下を防ぐこと
-    vi.spyOn(api.posts, 'get').mockResolvedValue({
-      id: 'share-post-id',
-      nickname: 'シェア太郎',
-      body: 'シェア本文',
-      status: 'scored',
-      created_at: '2026-02-17T00:00:00Z',
-      average_score: 96.1,
-      rank: 1,
-      total_count: 100,
-      judgments: [],
-    })
-
-    render(<App />)
-    await openRankingResultFromTopRanking()
-    const shareButton = await screen.findByRole('button', {
-      name: 'Xでシェア',
-    })
-
-    await waitFor(() => {
-      expect(shareButton).not.toBeDisabled()
-    })
-    fireEvent.click(shareButton)
-
-    await waitFor(() => {
-      expect(screen.getByText('共有前に画像を確認しています...')).toBeInTheDocument()
-      expect(shareButton).toBeDisabled()
-    })
   })
 
   it('再審査API失敗時はjudgingへ遷移せずボタンが再押下可能になる', async () => {

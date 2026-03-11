@@ -155,13 +155,11 @@ export function PostFormModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div
-          className="fixed inset-0 z-50 flex h-full items-center justify-center p-4"
-        >
-          <button
-            type="button"
-            aria-label="モーダルを閉じる"
-            className="absolute inset-0 bg-black/60"
+        <div key="post-form-modal" className="fixed inset-0 z-50 flex h-full items-center justify-center p-4">
+          <div
+            aria-hidden="true"
+            role="presentation"
+            className="modal-overlay-gorgeous absolute inset-0"
             data-testid="modal-overlay"
             onClick={handleBackdropClick}
           />
@@ -177,23 +175,27 @@ export function PostFormModal({
               animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
               exit={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
               transition={{ duration: DURATION.MODAL }}
-              className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+              className="modal-gorgeous-base w-full max-w-md rounded-2xl p-6 text-slate-100 shadow-xl"
             >
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">投稿する</h2>
+              <div className="modal-header-gorgeous flex items-center justify-between gap-4">
+                <h2 className="gold-text text-lg font-semibold">投稿する</h2>
                 <button
                   ref={closeButtonRef}
                   type="button"
                   onClick={onClose}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="modal-close-gorgeous"
+                  aria-label="閉じる"
                 >
-                  閉じる
+                  <span aria-hidden="true" className="leading-none text-lg">
+                    ×
+                  </span>
+                  <span className="sr-only">閉じる</span>
                 </button>
               </div>
 
               <form aria-label="投稿フォーム" onSubmit={handleSubmit} className="space-y-4">
                 {alertMessages.length > 0 && (
-                  <div className="text-sm text-red-500" role="alert">
+                  <div className="text-sm text-rose-200" role="alert">
                     {alertMessages.map((item) => (
                       <p id={item.id} key={item.id}>
                         {item.message}
@@ -202,10 +204,10 @@ export function PostFormModal({
                   </div>
                 )}
                 <div>
-                  <label htmlFor="nickname" className="block text-sm font-medium">
+                  <label htmlFor="nickname" className="block text-sm font-medium text-slate-100">
                     ニックネーム
                   </label>
-                  <p id="nickname-help" className="mt-1 text-xs text-slate-500">
+                  <p id="nickname-help" className="mt-1 text-xs text-slate-300/70">
                     {TEXT_LENGTH.NICKNAME_MIN}〜{TEXT_LENGTH.NICKNAME_MAX}文字で入力
                   </p>
                   <input
@@ -213,34 +215,36 @@ export function PostFormModal({
                     type="text"
                     value={nickname}
                     onChange={(event) => handleNicknameChange(event.target.value)}
-                    className="mt-1 w-full rounded border px-3 py-2"
+                    className="modal-input-gorgeous mt-1 w-full px-3 py-2"
                     aria-describedby={nicknameDescribedBy.join(' ')}
                     aria-invalid={validationErrors.nicknameError.length > 0}
+                    placeholder="ニックネームを入力"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="body" className="block text-sm font-medium">
+                  <label htmlFor="body" className="block text-sm font-medium text-slate-100">
                     あるある
                   </label>
-                  <p id="body-help" className="mt-1 text-xs text-slate-500">
+                  <p id="body-help" className="mt-1 text-xs text-slate-300/70">
                     {TEXT_LENGTH.BODY_MIN}〜{TEXT_LENGTH.BODY_MAX}文字で入力
                   </p>
                   <textarea
                     id="body"
                     value={body}
                     onChange={(event) => handleBodyChange(event.target.value)}
-                    className="mt-1 w-full rounded border px-3 py-2"
+                    className="modal-input-gorgeous mt-1 w-full px-3 py-2"
                     rows={3}
                     aria-describedby={bodyDescribedBy.join(' ')}
                     aria-invalid={validationErrors.bodyError.length > 0}
+                    placeholder="あるあるを入力"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:bg-gray-300"
+                  className="neon-button-base neon-glow-blue w-full px-4 py-2"
                 >
                   {isLoading ? '投稿中...' : '投稿'}
                 </button>

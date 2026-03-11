@@ -5,38 +5,54 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(10, 22, 40, 0.65);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
 @supports not (backdrop-filter: blur(4px)) {
   .audio-consent-modal-backdrop {
-    background: rgba(15, 23, 42, 0.75);
+    background: rgba(10, 22, 40, 0.82);
   }
 }
 
 .audio-consent-modal {
   width: min(100%, 360px);
+  position: relative;
   border-radius: 16px;
-  border: 1px solid var(--audio-consent-modal-border-color, rgba(203, 213, 225, 0.8));
-  background: var(--audio-consent-modal-bg-color, #ffffff);
-  box-shadow: var(--audio-consent-modal-shadow, 0 18px 40px rgba(15, 23, 42, 0.28));
+  border: 1px solid var(--gorgeous-glass-border-color);
+  background: var(--gorgeous-glass-surface);
+  -webkit-backdrop-filter: blur(var(--gorgeous-glass-blur));
+  backdrop-filter: blur(var(--gorgeous-glass-blur));
+  box-shadow:
+    var(--gorgeous-glass-shadow-outer),
+    var(--gorgeous-glass-shadow-outline),
+    var(--gorgeous-glass-shadow-inner);
   padding: 20px;
+  color: #f8fbff;
+}
+
+.audio-consent-modal__header {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 214, 120, 0.25);
 }
 
 .audio-consent-modal__title {
   margin: 0;
   font-size: 20px;
   font-weight: 800;
-  color: #0f172a;
+  color: #ffd978;
+  text-shadow:
+    0 0 8px rgba(255, 217, 120, 0.7),
+    0 0 16px rgba(255, 169, 67, 0.52);
 }
 
 .audio-consent-modal__description {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 14px;
   line-height: 1.5;
-  color: #475569;
+  color: rgba(248, 251, 255, 0.84);
 }
 
 .audio-consent-modal__actions {
@@ -55,54 +71,66 @@
 .audio-consent-modal__button {
   -webkit-appearance: none;
   appearance: none;
-  border: 1px solid #cbd5e1;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 212, 120, 0.9);
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 14px;
   font-weight: 700;
   font-family: inherit;
   line-height: normal;
-  color: #334155;
-  background: #f8fafc;
+  color: #ffe7c2;
+  background:
+    radial-gradient(120% 140% at 15% 0%, rgba(255, 214, 214, 0.34) 0%, rgba(255, 214, 214, 0) 34%),
+    linear-gradient(180deg, rgba(151, 28, 36, 0.98) 0%, rgba(120, 16, 29, 0.98) 54%, rgba(82, 8, 20, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 196, 196, 0.34),
+    inset 0 -2px 0 rgba(34, 4, 8, 0.6),
+    0 8px 18px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(255, 191, 111, 0.38);
   cursor: pointer;
   transition:
-    background-color 120ms ease,
-    filter 120ms ease;
+    filter 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
 }
 
 .audio-consent-modal__button:hover {
-  background: #eef2ff;
+  transform: translateY(-1px);
+  filter: brightness(1.08) saturate(1.04);
 }
 
 .audio-consent-modal__button:active {
-  background: #e0e7ff;
+  transform: translateY(0);
+  filter: brightness(0.96);
+}
+
+.audio-consent-modal__button--secondary {
+  border-color: rgba(255, 226, 139, 0.95);
+  color: #4f2f00;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 10px rgba(255, 236, 177, 0.4);
+  background: linear-gradient(180deg, rgba(255, 248, 214, 0.98) 0%, rgba(244, 213, 122, 0.98) 46%, rgba(214, 160, 50, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    inset 0 -2px 0 rgba(120, 79, 0, 0.38),
+    0 7px 18px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 218, 120, 0.42);
 }
 
 .audio-consent-modal__button--primary {
-  border-color: #fb7185;
-  color: #fff;
-  background: linear-gradient(90deg, #fb7185, #f43f5e);
-}
-
-.audio-consent-modal__button--primary:hover {
-  filter: brightness(1.05);
-}
-
-.audio-consent-modal__button--primary:active {
-  filter: brightness(0.95);
+  border-color: rgba(255, 212, 120, 0.9);
 }
 
 .audio-consent-modal__button:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid rgba(255, 214, 120, 0.82);
   outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .audio-consent-modal__button {
     transition: none;
-  }
-
-  .audio-consent-modal__button--primary:hover {
-    filter: none;
   }
 }
