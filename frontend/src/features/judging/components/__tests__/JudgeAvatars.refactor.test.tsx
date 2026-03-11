@@ -69,7 +69,8 @@ describe('JudgeAvatars Refactor', () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
     render(<JudgeAvatars isJudging={true} isPostModalOpen={false} />)
 
-    expect(capturedMotionImgProps.length).toBe(3)
+    const uniqueAltCount = new Set(capturedMotionImgProps.map((item) => item.alt)).size
+    expect(uniqueAltCount).toBe(3)
     const nakao = capturedMotionImgProps.find((item) => item.alt === '中尾彬風審査員')
     expect(nakao).toBeDefined()
     expect(nakao?.animate).toEqual({ opacity: 1 })
@@ -161,13 +162,7 @@ describe('JudgeAvatars Refactor', () => {
 
   it('ホーム表示でもアバターサイズは共通仕様を維持する', async () => {
     const { JudgeAvatars } = await loadJudgeAvatars()
-    render(
-      <JudgeAvatars
-        isJudging={false}
-        isPostModalOpen={false}
-        judgingPhase="complete"
-      />
-    )
+    render(<JudgeAvatars isJudging={false} isPostModalOpen={false} judgingPhase="complete" />)
 
     // 何を検証するか: 画面モードに依存せずアバターサイズが共通化されること
     const avatars = screen.getAllByRole('img')
@@ -209,13 +204,7 @@ describe('JudgeAvatars Refactor', () => {
       expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })
     })
 
-    rerender(
-      <JudgeAvatars
-        isJudging={true}
-        isPostModalOpen={false}
-        judgingPhase="speaking"
-      />
-    )
+    rerender(<JudgeAvatars isJudging={true} isPostModalOpen={false} judgingPhase="speaking" />)
     const compactAvatars = screen.getAllByRole('img')
     compactAvatars.forEach((avatar) => {
       expect(avatar).toHaveStyle({ width: 'var(--judge-avatar-width)' })

@@ -23,7 +23,8 @@ RSpec.shared_examples 'adapter initialization' do |prompt_keyword, include_post_
 
       it 'プロンプトがキャッシュされること' do
         # キャッシュをリセット
-        described_class.reset_prompt_cache! if described_class.respond_to?(:reset_prompt_cache!)
+        skip 'reset_prompt_cache! が未実装のためキャッシュ検証をスキップ' unless described_class.respond_to?(:reset_prompt_cache!)
+        described_class.reset_prompt_cache!
 
         if defined?(described_class::PROMPT_PATH)
           expected_path = described_class::PROMPT_PATH

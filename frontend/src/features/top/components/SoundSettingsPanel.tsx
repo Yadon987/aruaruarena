@@ -2,6 +2,9 @@ import { type RefObject, useEffect, useRef } from 'react'
 import { VolumeSlider } from './VolumeSlider'
 import './SoundSettingsPanel.css'
 
+const LOW_VOLUME_ICON_THRESHOLD = 0.34
+const HIGH_VOLUME_ICON_THRESHOLD = 0.67
+
 export type SoundSettingsPanelProps = {
   isOpen: boolean
   volume: number
@@ -22,6 +25,7 @@ export function SoundSettingsPanel({
   const panelRef = useRef<HTMLDivElement | null>(null)
   const sliderRef = useRef<HTMLInputElement | null>(null)
   const onCloseRef = useRef(onClose)
+  const openerElementRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -52,13 +56,27 @@ export function SoundSettingsPanel({
   }, [containerRef, isOpen])
 
   useEffect(() => {
-    if (!isOpen) return
-    sliderRef.current?.focus()
+    if (isOpen) {
+      openerElementRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null
+      sliderRef.current?.focus()
+      return () => {
+        if (openerElementRef.current && document.body.contains(openerElementRef.current)) {
+          openerElementRef.current.focus()
+        }
+        openerElementRef.current = null
+      }
+    }
   }, [isOpen])
 
   if (!isOpen) return null
 
-  const icon = volume === 0 ? '🔇' : '🔊'
+  const icon = (() => {
+    if (volume <= 0) return '🔇'
+    if (volume < LOW_VOLUME_ICON_THRESHOLD) return '🔈'
+    if (volume < HIGH_VOLUME_ICON_THRESHOLD) return '🔉'
+    return '🔊'
+  })()
 
   return (
     <div

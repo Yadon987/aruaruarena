@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RANKING_POLLING_INTERVAL_MS } from '../../constants/query'
 import { ApiClientError, api } from '../../services/api'
+import type { GetRankingResponse } from '../../types/api'
 import { useRankings } from '../useRankings'
 
 // api モジュールのモック化
@@ -45,11 +46,19 @@ describe('useRankings', () => {
 
   it('useRankings が useQuery を正しく呼び出し、データを返す', async () => {
     // 検証内容: 正常系データ取得
-    const mockData = {
-      rankings: [{ id: '1', nickname: 'test' }],
+    const mockData: GetRankingResponse = {
+      rankings: [
+        {
+          rank: 1,
+          id: '1',
+          nickname: 'test',
+          body: 'テスト投稿',
+          average_score: 75,
+        },
+      ],
       total_count: 1,
     }
-    rankingsListMock.mockResolvedValue(mockData as any)
+    rankingsListMock.mockResolvedValue(mockData)
 
     const { result } = renderHook(() => useRankings(10), { wrapper })
 
@@ -76,7 +85,7 @@ describe('useRankings', () => {
 
   it('limitパラメータがAPI呼び出しに正しく渡される', async () => {
     // 検証内容: limitパラメータの伝達
-    const mockData = { rankings: [], total_count: 0 }
+    const mockData: GetRankingResponse = { rankings: [], total_count: 0 }
     rankingsListMock.mockResolvedValue(mockData)
 
     const limit = 15
@@ -89,7 +98,7 @@ describe('useRankings', () => {
 
   it('異なるlimitでクエリキーが変わる', async () => {
     // 検証内容: limitによるクエリキーの変化（キャッシュ分離）
-    const mockData = { rankings: [], total_count: 0 }
+    const mockData: GetRankingResponse = { rankings: [], total_count: 0 }
     rankingsListMock.mockResolvedValue(mockData)
 
     const { result: result1 } = renderHook(() => useRankings(10), { wrapper })
@@ -112,7 +121,8 @@ describe('useRankings', () => {
 
     it('polling=trueのとき定期的に再取得される', async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true })
-      rankingsListMock.mockResolvedValue({ rankings: [], total_count: 0 } as any)
+      const pollingMockResponse: GetRankingResponse = { rankings: [], total_count: 0 }
+      rankingsListMock.mockResolvedValue(pollingMockResponse)
 
       const { result } = renderHook(() => useRankings(20, { polling: true }), {
         wrapper,
@@ -128,7 +138,8 @@ describe('useRankings', () => {
 
     it('polling=falseのとき一定時間後も1回のみ取得される', async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true })
-      rankingsListMock.mockResolvedValue({ rankings: [], total_count: 0 } as any)
+      const pollingMockResponse: GetRankingResponse = { rankings: [], total_count: 0 }
+      rankingsListMock.mockResolvedValue(pollingMockResponse)
 
       const { result } = renderHook(() => useRankings(20, { polling: false }), { wrapper })
 
@@ -145,10 +156,8 @@ describe('useRankings', () => {
       [0, 1], // 最小値1への丸め
       [99, 20], // 最大値20への丸め
     ])('limit=%i のとき、安全な範囲(%i)に丸めてAPIを呼ぶ', async (inputLimit, expectedLimit) => {
-      rankingsListMock.mockResolvedValue({
-        rankings: [],
-        total_count: 0,
-      } as any)
+      const limitMockResponse: GetRankingResponse = { rankings: [], total_count: 0 }
+      rankingsListMock.mockResolvedValue(limitMockResponse)
 
       renderHook(() => useRankings(inputLimit), { wrapper })
 
@@ -159,10 +168,11 @@ describe('useRankings', () => {
     it.each([Number.NaN, Number.POSITIVE_INFINITY])(
       'limit=%p のときデフォルト値(20)でAPIを呼ぶ',
       async (invalidLimit) => {
-        rankingsListMock.mockResolvedValue({
+        const invalidLimitMockResponse: GetRankingResponse = {
           rankings: [],
           total_count: 0,
-        } as any)
+        }
+        rankingsListMock.mockResolvedValue(invalidLimitMockResponse)
 
         renderHook(() => useRankings(invalidLimit), { wrapper })
 

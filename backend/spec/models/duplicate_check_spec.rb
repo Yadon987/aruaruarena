@@ -24,18 +24,18 @@ RSpec.describe DuplicateCheck, type: :model do
     end
   end
 
-  describe '#check' do
+  describe '#check?' do
     # レコードが存在する場合、trueを返す
     it 'レコードが存在する場合、trueを返すこと' do
       body = 'テスト投稿'
       hash = described_class.generate_body_hash(body)
       create(:duplicate_check, body_hash: hash, post_id: 'test_id', expires_at: Time.now.to_i + 1000)
-      expect(described_class.check(body)).to be true
+      expect(described_class.check?(body)).to be true
     end
 
     # レコードが存在しない場合、falseを返す
     it 'レコードが存在しない場合、falseを返すこと' do
-      expect(described_class.check('nonexistent_body')).to be false
+      expect(described_class.check?('nonexistent_body')).to be false
     end
   end
 

@@ -1,7 +1,10 @@
 import { Howl } from 'howler'
 
 const SOUND_VOLUME_KEY = 'aruaru_sound_volume'
-const SOUND_CONSENT_KEY = 'aruaru_sound_consent'
+const SOUND_MODAL_ANSWERED_KEY = 'aruaru_sound_modal_answered'
+// 旧実装では `aruaru_sound_consent` が modal 回答済みを保存していたため
+// 下位互換のため引き続き参照して移行する。
+const LEGACY_SOUND_MODAL_ANSWERED_KEY = 'aruaru_sound_consent'
 export const DEFAULT_VOLUME = 0.6
 const FADE_DURATION_MS = 500
 
@@ -63,10 +66,19 @@ function writeVolume(value: number) {
   }
 }
 
-function hasConsent(): boolean {
+function readConsentFromStorage(): boolean {
   try {
     if (typeof localStorage === 'undefined') return false
-    return localStorage.getItem(SOUND_CONSENT_KEY) === 'true'
+    const answered = localStorage.getItem(SOUND_MODAL_ANSWERED_KEY)
+    if (answered === 'true') return true
+
+    // 旧キーも「同意」ではなく「モーダル回答済み」を意味する値として扱う。
+    if (localStorage.getItem(LEGACY_SOUND_MODAL_ANSWERED_KEY) === 'true') {
+      localStorage.setItem(SOUND_MODAL_ANSWERED_KEY, 'true')
+      return true
+    }
+
+    return false
   } catch {
     return false
   }
@@ -75,7 +87,8 @@ function hasConsent(): boolean {
 function setConsent() {
   try {
     if (typeof localStorage === 'undefined') return
-    localStorage.setItem(SOUND_CONSENT_KEY, 'true')
+    localStorage.setItem(SOUND_MODAL_ANSWERED_KEY, 'true')
+    localStorage.setItem(LEGACY_SOUND_MODAL_ANSWERED_KEY, 'true')
   } catch {
     // ストレージ無効環境ではメモリ上の状態だけを維持する。
   }
@@ -99,7 +112,7 @@ function runFade(howl: Howl | null, from: number, to: number, durationMs: number
 
 export function createSoundController() {
   let volume = getOrInitVolume()
-  let hasConsented = hasConsent()
+  let hasConsented = readConsentFromStorage()
   let audioUnlocked = false
   let currentScene: Scene | null = null
   let currentBgm: Howl | null = null

@@ -53,7 +53,15 @@ describe('E04-04: ディレクトリ構成の整備', () => {
     })
 
     it('shared/ に必要なサブディレクトリが含まれている', () => {
-      const expectedSharedDirs = ['components', 'config', 'constants', 'hooks', 'services', 'types', 'utils']
+      const expectedSharedDirs = [
+        'components',
+        'config',
+        'constants',
+        'hooks',
+        'services',
+        'types',
+        'utils',
+      ]
       expectSubdirectories(srcDir, 'shared', expectedSharedDirs)
     })
   })

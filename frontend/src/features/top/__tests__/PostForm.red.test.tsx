@@ -104,6 +104,41 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     expect(screen.getByText('本文は3〜30文字で入力してください')).toBeInTheDocument()
   })
 
+  it('入力時に本文文字数不足エラーを表示する', async () => {
+    // 何を検証するか: 送信前でも入力差し替え時点でエラーメッセージが表示されること
+    render(<App />)
+
+    await openPostDialog()
+    fillPostForm({ nickname: 'てすと太郎', body: '短い' })
+
+    expect(screen.getByText('本文は3〜30文字で入力してください')).toBeInTheDocument()
+  })
+
+  it('本文の文字数はgraphemeクラスタ数で判定する', async () => {
+    // 何を検証するか: 絵文字の結合文字を1文字として扱うとき3文字基準に通ること
+    render(<App />)
+
+    vi.mocked(api.posts.create).mockResolvedValue({
+      id: 'post-emoji',
+      status: 'judging',
+    })
+
+    await openPostDialog()
+    fillPostForm({ nickname: 'てすと太郎', body: '👨‍👩‍👧‍👦👨‍👩‍👧‍👦' })
+    await submitPostForm()
+
+    expect(api.posts.create).not.toHaveBeenCalled()
+    expect(screen.getByText('本文は3〜30文字で入力してください')).toBeInTheDocument()
+
+    fillPostForm({
+      nickname: 'てすと太郎',
+      body: '👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦',
+    })
+    await submitPostForm()
+
+    expect(api.posts.create).toHaveBeenCalled()
+  })
+
   it('trim後に空のニックネームはAPIを呼ばずエラー表示する', async () => {
     // 何を検証するか: 空白のみニックネーム入力時に送信を拒否すること
     render(<App />)
@@ -121,7 +156,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     await fillAndSubmitPostForm({ nickname: 'てすと太郎', body: '   ' })
 
     expect(api.posts.create).not.toHaveBeenCalled()
-    expect(screen.getByText('本文は3〜30文字で入力してください')).toBeInTheDocument()
+    expect(screen.getByText('本文を入力してください')).toBeInTheDocument()
   })
 
   it('ニックネーム20文字超過はAPIを呼ばずエラー表示する', async () => {
@@ -162,9 +197,8 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
     await submitPostForm()
 
     const alert = screen.getByRole('alert')
-    expect(within(alert).getByText('ニックネームを入力してください')).toBeInTheDocument()
-    expect(within(alert).getByText('本文は3〜30文字で入力してください')).toBeInTheDocument()
-    expect(within(alert).getAllByText(/してください/)).toHaveLength(2)
+    expect(within(alert).getAllByText('ニックネームを入力してください')).toHaveLength(1)
+    expect(within(alert).getAllByText('本文は3〜30文字で入力してください')).toHaveLength(1)
   })
 
   it('送信中に再クリックしてもAPIを1回しか呼ばない', async () => {

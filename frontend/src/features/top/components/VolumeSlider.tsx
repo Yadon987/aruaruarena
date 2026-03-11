@@ -8,6 +8,8 @@ export type VolumeSliderProps = {
   inputRef?: RefObject<HTMLInputElement | null>
 }
 
+const VOLUME_LABEL = '音量'
+
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0
   if (value < 0) return 0
@@ -20,13 +22,10 @@ export function VolumeSlider({ id, value, onChange, inputRef }: VolumeSliderProp
   const percent = Math.round(clamped * 100)
   const generatedId = useId().replace(/:/g, '')
   const sliderId = id ?? `sound-volume-slider-${generatedId}`
-  const labelId = `${sliderId}-label`
 
   return (
-    <label className="volume-slider" htmlFor={sliderId}>
-      <span id={labelId} className="volume-slider__label">
-        音量
-      </span>
+    <label className="volume-slider">
+      <span className="volume-slider__label">{VOLUME_LABEL}</span>
       <input
         id={sliderId}
         ref={inputRef}
@@ -35,9 +34,9 @@ export function VolumeSlider({ id, value, onChange, inputRef }: VolumeSliderProp
         max={100}
         step={1}
         value={percent}
+        aria-label={VOLUME_LABEL}
         onChange={(event) => onChange(clamp01(Number(event.target.value) / 100))}
         className="volume-slider__range"
-        aria-labelledby={labelId}
       />
       <span className="volume-slider__value">{percent}%</span>
     </label>

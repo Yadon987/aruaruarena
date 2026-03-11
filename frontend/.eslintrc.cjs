@@ -29,13 +29,19 @@ module.exports = {
 	],
 	rules: {
 		"react/react-in-jsx-scope": "off",
-		"@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+		"@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
 		"import/order": ["error", { alphabetize: { order: "asc" } }],
 		"prettier/prettier": "error",
 	},
 	settings: {
 		react: {
 			version: "detect",
+		},
+		"import/resolver": {
+			typescript: {
+				alwaysTryTypes: true,
+				project: "./tsconfig.json",
+			},
 		},
 	},
 };

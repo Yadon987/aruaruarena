@@ -81,8 +81,8 @@ describe('E30-02 RED: 下書き保持と審査停止3アクション', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
-      expect(window.location.pathname).toBe('/')
     })
+    expect(window.location.pathname).toBe('/')
 
     await openPostDialog()
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('')

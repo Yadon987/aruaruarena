@@ -2,8 +2,19 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useReducedMotion } from '../useReducedMotion'
 
+type MediaQueryListMock = {
+  matches: boolean
+  media: string
+  onchange: ((this: MediaQueryList, ev: MediaQueryListEvent) => void) | null
+  addListener: ReturnType<typeof vi.fn>
+  removeListener: ReturnType<typeof vi.fn>
+  addEventListener: ReturnType<typeof vi.fn>
+  removeEventListener: ReturnType<typeof vi.fn>
+  dispatchEvent: ReturnType<typeof vi.fn>
+}
+
 describe('useReducedMotion', () => {
-  let mediaQueryListMock: any
+  let mediaQueryListMock: MediaQueryListMock
   const originalMatchMedia = window.matchMedia
 
   beforeEach(() => {
@@ -20,7 +31,7 @@ describe('useReducedMotion', () => {
     }
 
     // window.matchMedia のモック設定
-    window.matchMedia = vi.fn().mockReturnValue(mediaQueryListMock)
+    window.matchMedia = vi.fn().mockReturnValue(mediaQueryListMock as unknown as MediaQueryList)
   })
 
   afterEach(() => {

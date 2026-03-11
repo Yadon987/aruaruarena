@@ -14,6 +14,7 @@
   box-shadow: var(--sound-panel-shadow, 0 14px 34px rgba(15, 23, 42, 0.18));
 
   --sound-settings-text-color: var(--sound-panel-text-color, #334155);
+  --sound-settings-title-color: var(--sound-panel-title-color, var(--sound-settings-text-color, #0f172a));
 
   animation: sound-settings-fade-in 160ms ease-out;
 }
@@ -32,7 +33,7 @@
 .sound-settings-panel__title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--sound-panel-title-color, #0f172a);
+  color: var(--sound-settings-title-color);
 }
 
 @keyframes sound-settings-fade-in {

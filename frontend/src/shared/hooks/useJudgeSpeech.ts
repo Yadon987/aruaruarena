@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { JUDGE_SPEECH } from '../constants/animations'
 import { JUDGE_PHRASES, JUDGES } from '../constants/judgePhrases'
 import type { JudgePersona } from '../types/domain'
@@ -33,8 +33,9 @@ export function useJudgeSpeech({
   const intervalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const durationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSpeechRef = useRef<string | null>(null)
+  const scheduleNextSpeechRef = useRef(() => {})
 
-  const clearAllTimers = () => {
+  const clearAllTimers = useCallback(() => {
     if (intervalTimerRef.current) {
       clearTimeout(intervalTimerRef.current)
       intervalTimerRef.current = null
@@ -43,25 +44,25 @@ export function useJudgeSpeech({
       clearTimeout(durationTimerRef.current)
       durationTimerRef.current = null
     }
-  }
+  }, [])
 
-  const getRandomInterval = (): number => {
+  const getRandomInterval = useCallback((): number => {
     if (allowIdleSpeech && !isJudging) {
       return Math.max(0, IDLE_SPEECH_CYCLE_MS - SPEECH_DURATION_MS)
     }
 
     return SPEECH_INTERVAL_MIN + Math.random() * (SPEECH_INTERVAL_MAX - SPEECH_INTERVAL_MIN)
-  }
+  }, [allowIdleSpeech, isJudging])
 
-  const getRandomJudge = (): JudgePersona => {
+  const getRandomJudge = useCallback((): JudgePersona => {
     if (JUDGES.length === 0) {
       throw new Error('No judges configured')
     }
     const index = Math.floor(Math.random() * JUDGES.length)
     return JUDGES[index]
-  }
+  }, [])
 
-  const getRandomSpeech = (judge: JudgePersona): string => {
+  const getRandomSpeech = useCallback((judge: JudgePersona): string => {
     const phrases = JUDGE_PHRASES[judge]
     if (!phrases || phrases.length === 0) {
       return '...'
@@ -71,9 +72,9 @@ export function useJudgeSpeech({
     const speech = pool[Math.floor(Math.random() * pool.length)]
     lastSpeechRef.current = speech
     return speech
-  }
+  }, [])
 
-  const startSpeech = () => {
+  const startSpeech = useCallback(() => {
     const judge = getRandomJudge()
     const speech = getRandomSpeech(judge)
     setSpeakingJudge(judge)
@@ -82,17 +83,20 @@ export function useJudgeSpeech({
     durationTimerRef.current = setTimeout(() => {
       setCurrentSpeech(null)
       setSpeakingJudge(null)
-      scheduleNextSpeech()
+      scheduleNextSpeechRef.current()
     }, SPEECH_DURATION_MS)
-  }
+  }, [getRandomJudge, getRandomSpeech])
 
-  const scheduleNextSpeech = () => {
+  const scheduleNextSpeech = useCallback(() => {
     intervalTimerRef.current = setTimeout(() => {
       startSpeech()
     }, getRandomInterval())
-  }
+  }, [getRandomInterval, startSpeech])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    scheduleNextSpeechRef.current = scheduleNextSpeech
+  }, [scheduleNextSpeech])
+
   useEffect(() => {
     if ((!isJudging && !allowIdleSpeech) || isPostModalOpen) {
       clearAllTimers()
@@ -107,7 +111,7 @@ export function useJudgeSpeech({
     return () => {
       clearAllTimers()
     }
-  }, [allowIdleSpeech, isJudging, isPostModalOpen])
+  }, [allowIdleSpeech, clearAllTimers, isJudging, isPostModalOpen, scheduleNextSpeech])
 
   return { currentSpeech, speakingJudge }
 }

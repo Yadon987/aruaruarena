@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
+import { openMyPostsDialog } from '../../../test/appTestHelpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -17,7 +18,7 @@ describe('MyPostStorage Refactor', () => {
 
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '過去の投稿' }))
+    await openMyPostsDialog()
 
     expect((await screen.findAllByTestId('my-post-id-item')).length).toBe(2)
     expect(screen.getAllByRole('button', { name: 'id-1' })).toHaveLength(1)

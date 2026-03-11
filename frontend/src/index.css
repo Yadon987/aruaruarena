@@ -178,7 +178,6 @@
 
 .top-right-action-stack {
   display: flex;
-  flex-direction: row;
   align-items: flex-end;
   gap: 0.5rem;
 }
@@ -757,6 +756,9 @@
 }
 
 .dewi-sparkle-particle {
+  --dewi-sparkle-color: rgba(255, 224, 120, 0.98);
+  --dewi-sparkle-stop-1: rgba(255, 247, 201, 1);
+  --dewi-sparkle-stop-2: rgba(255, 210, 120, 0.96);
   position: absolute;
   width: 0.44rem;
   height: 0.44rem;
@@ -766,27 +768,33 @@
   opacity: 0;
   animation: dewi-sparkle-float 1.45s ease-out infinite;
   animation-delay: var(--dewi-sparkle-delay, 0s);
+  color: var(--dewi-sparkle-color);
+  background: linear-gradient(145deg, var(--dewi-sparkle-stop-1), var(--dewi-sparkle-stop-2));
   box-shadow: 0 0 9px currentcolor;
 }
 
 .dewi-sparkle-gold {
-  color: rgba(255, 224, 120, 0.98);
-  background: linear-gradient(145deg, rgba(255, 247, 201, 1), rgba(255, 210, 120, 0.96));
+  --dewi-sparkle-color: rgba(255, 224, 120, 0.98);
+  --dewi-sparkle-stop-1: rgba(255, 247, 201, 1);
+  --dewi-sparkle-stop-2: rgba(255, 210, 120, 0.96);
 }
 
 .dewi-sparkle-violet {
-  color: rgba(190, 130, 255, 0.95);
-  background: linear-gradient(145deg, rgba(230, 198, 255, 1), rgba(170, 114, 255, 0.96));
+  --dewi-sparkle-color: rgba(190, 130, 255, 0.95);
+  --dewi-sparkle-stop-1: rgba(230, 198, 255, 1);
+  --dewi-sparkle-stop-2: rgba(170, 114, 255, 0.96);
 }
 
 .dewi-sparkle-cyan {
-  color: rgba(102, 226, 255, 0.95);
-  background: linear-gradient(145deg, rgba(214, 250, 255, 1), rgba(102, 226, 255, 0.94));
+  --dewi-sparkle-color: rgba(102, 226, 255, 0.95);
+  --dewi-sparkle-stop-1: rgba(214, 250, 255, 1);
+  --dewi-sparkle-stop-2: rgba(102, 226, 255, 0.94);
 }
 
 .dewi-sparkle-pink {
-  color: rgba(255, 188, 236, 0.95);
-  background: linear-gradient(145deg, rgba(255, 225, 244, 1), rgba(255, 164, 224, 0.95));
+  --dewi-sparkle-color: rgba(255, 188, 236, 0.95);
+  --dewi-sparkle-stop-1: rgba(255, 225, 244, 1);
+  --dewi-sparkle-stop-2: rgba(255, 164, 224, 0.95);
 }
 
 @keyframes vip-roulette {

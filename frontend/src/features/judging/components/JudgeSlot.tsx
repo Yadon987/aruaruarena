@@ -1,11 +1,11 @@
+import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { ComponentProps, CSSProperties } from 'react'
-import { motion } from 'framer-motion'
-import { getAvatarImagePath } from '../../../shared/constants/avatar'
 import { JUDGE_ENTRANCE } from '../../../shared/constants/animations'
+import type { AvatarState } from '../../../shared/constants/avatar'
+import { getAvatarImagePath } from '../../../shared/constants/avatar'
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 import { useScoreRoulette } from '../../../shared/hooks/useScoreRoulette'
-import type { AvatarState } from '../../../shared/constants/avatar'
 import type { JudgePersona } from '../../../shared/types/domain'
 import type { JudgeDeskJudgment, JudgeDeskPhase } from './JudgeDesk'
 import type { JudgeSeatBackrestVariant } from './JudgeSeatBackrest'
@@ -188,7 +188,7 @@ export function JudgeSlot({
   const isSpeaking = Boolean(speechText && showSpeech)
   const isSpeakingAnimated = isSpeaking && hasEntered
   const [isFlashActive, setIsFlashActive] = useState(false)
-  const [isDewiSparkleActive, setIsDewiSparkleActive] = useState(judge === 'dewi' && !prefersReducedMotion)
+  const [isDewiSparkleActive, setIsDewiSparkleActive] = useState(false)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dewiSparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLit = isScoring || isComplete
@@ -232,7 +232,14 @@ export function JudgeSlot({
   }, [isComplete])
 
   useEffect(() => {
-    if (judge !== 'dewi') return
+    if (judge !== 'dewi') {
+      if (dewiSparkleTimerRef.current) {
+        clearTimeout(dewiSparkleTimerRef.current)
+        dewiSparkleTimerRef.current = null
+      }
+      setIsDewiSparkleActive(false)
+      return
+    }
     if (prefersReducedMotion) {
       setIsDewiSparkleActive(false)
       return
@@ -313,7 +320,7 @@ export function JudgeSlot({
               src={getAvatarImagePath(judge, avatarState)}
               alt={alt}
               style={{ width: 'var(--judge-avatar-width)', height: 'auto' }}
-              initial={entranceVariant.initial}
+              initial={hasEntered ? false : entranceVariant.initial}
               animate={entranceVariant.animate}
               transition={entranceVariant.transition}
               draggable={false}

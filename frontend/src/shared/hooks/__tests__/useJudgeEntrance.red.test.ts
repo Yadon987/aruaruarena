@@ -3,11 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { JUDGE_ENTRANCE } from '../../constants/animations'
 
 const ENTRANCE_DURATION_MS = JUDGE_ENTRANCE.DURATION_MS
+const NAKAO_ENTRANCE_TRANSITION_DURATION_SEC = 4.4
 
 const useReducedMotionMock = vi.fn()
 vi.mock('../useReducedMotion', () => ({
   useReducedMotion: () => useReducedMotionMock(),
 }))
+
+function isPoint(value: unknown): value is { x: number; y: number } {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as { x?: unknown; y?: unknown }
+  return typeof candidate.x === 'number' && typeof candidate.y === 'number'
+}
 
 const loadUseJudgeEntrance = async () => {
   return import('../useJudgeEntrance')
@@ -34,7 +41,7 @@ describe('E24-01 RED: useJudgeEntrance', () => {
   })
 
   it(`${ENTRANCE_DURATION_MS}ms 経過で hasEntered=true になる`, async () => {
-    // 何を検証するか: 中尾彬風のアニメーション時間（4.4s）後に登場完了と判定されること
+    // 何を検証するか: 設定された登場アニメーション時間後に完了と判定されること
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
 
@@ -65,20 +72,34 @@ describe('E24-01 RED: useJudgeEntrance', () => {
     expect(result.current.variants).toHaveProperty('hiroyuki')
     expect(result.current.variants).toHaveProperty('dewi')
     expect(result.current.variants).toHaveProperty('nakao')
-    expect(result.current.variants.nakao.transition.duration).toBe(4.4)
+    expect(result.current.variants.nakao.transition).toMatchObject({
+      duration: NAKAO_ENTRANCE_TRANSITION_DURATION_SEC,
+    })
   })
 
-  it('3人ともデスク後方からせり上がる入場アニメーションを持つ', async () => {
-    // 何を検証するか: E25-01の受け入れ基準として、全審査員が画面外から登場する演出を持つこと
+  it('各審査員がそれぞれ異なる方向から登場する入場アニメーションを持つ', async () => {
+    // 何を検証するか: useJudgeEntrance が現在の JUDGE_ENTRANCE.VARIANTS を返すため、定義どおりの初期位置を確認する
     const { useJudgeEntrance } = await loadUseJudgeEntrance()
     const { result } = renderHook(() => useJudgeEntrance())
 
-    expect(result.current.variants.hiroyuki.initial.x).toBeLessThan(-50)
-    expect(result.current.variants.hiroyuki.initial.y).toBeGreaterThan(50)
-    expect(result.current.variants.dewi.initial.x).toBeGreaterThan(50)
-    expect(result.current.variants.dewi.initial.y).toBeLessThan(-50)
-    expect(result.current.variants.nakao.initial.x).toBeLessThan(-50)
-    expect(result.current.variants.nakao.initial.y).toBeGreaterThan(50)
+    const hiroyukiInitial = result.current.variants.hiroyuki.initial
+    const dewiInitial = result.current.variants.dewi.initial
+    const nakaoInitial = result.current.variants.nakao.initial
+    expect(isPoint(hiroyukiInitial)).toBe(true)
+    expect(isPoint(dewiInitial)).toBe(true)
+    expect(isPoint(nakaoInitial)).toBe(true)
+    if (!isPoint(hiroyukiInitial) || !isPoint(dewiInitial) || !isPoint(nakaoInitial)) return
+
+    const { x: hiroyukiX, y: hiroyukiY } = hiroyukiInitial
+    const { x: dewiX, y: dewiY } = dewiInitial
+    const { x: nakaoX, y: nakaoY } = nakaoInitial
+
+    expect(hiroyukiX).toBeLessThan(-50)
+    expect(hiroyukiY).toBeGreaterThan(50)
+    expect(dewiX).toBeGreaterThan(50)
+    expect(dewiY).toBeLessThan(-50)
+    expect(nakaoX).toBeLessThan(-50)
+    expect(nakaoY).toBeGreaterThan(50)
   })
 
   it('アンマウント時にタイマーがクリアされる', async () => {

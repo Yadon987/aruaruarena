@@ -294,7 +294,7 @@ module Api
       html = OgpMetaTagService.generate_html(post:, base_url:)
 
       response.headers['Cache-Control'] = CACHE_CONTROL_POST_DETAIL
-      # HEADリクエストでもbodyを含める（クローラー対応）
+      # HEADリクエストでも同じパスを通る（Railsが自動的にbodyを除去）
       render body: html, content_type: 'text/html', status: :ok
     end
 

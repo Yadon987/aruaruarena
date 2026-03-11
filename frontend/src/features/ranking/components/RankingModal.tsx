@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type MouseEvent, type RefObject, useEffect, useRef } from 'react'
+import { type RefObject, useCallback, useEffect, useRef } from 'react'
 import { RankingSection } from './RankingSection'
 
 type RankingModalProps = {
@@ -11,8 +11,6 @@ type RankingModalProps = {
 }
 
 const KEY_ESCAPE = 'Escape'
-const KEY_ENTER = 'Enter'
-const KEY_SPACE = ' '
 const KEY_TAB = 'Tab'
 const FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -30,77 +28,80 @@ export function RankingModal({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
 
+  const handleClose = useCallback(() => {
+    onClose()
+    triggerRef?.current?.focus()
+  }, [onClose, triggerRef])
+
+  const getFocusableElements = useCallback((): HTMLElement[] => {
+    return Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
+  }, [])
+
+  const handleEscapeKey = useCallback(
+    (event: globalThis.KeyboardEvent): boolean => {
+      if (event.key !== KEY_ESCAPE) return false
+      event.preventDefault()
+      handleClose()
+      return true
+    },
+    [handleClose]
+  )
+
+  const handleFocusTrap = useCallback(
+    (event: globalThis.KeyboardEvent) => {
+      if (event.key !== KEY_TAB) return
+
+      const focusableElements = getFocusableElements()
+      if (focusableElements.length === 0) return
+
+      const first = focusableElements[0]
+      const last = focusableElements[focusableElements.length - 1]
+      const active = document.activeElement
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault()
+        last.focus()
+        return
+      }
+
+      if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    },
+    [getFocusableElements]
+  )
+
   useEffect(() => {
     if (!isOpen) return
     closeButtonRef.current?.focus()
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (handleEscapeKey(event)) return
+      handleFocusTrap(event)
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [handleEscapeKey, handleFocusTrap, isOpen])
+
   if (!isOpen) return null
-
-  const handleClose = () => {
-    onClose()
-    triggerRef?.current?.focus()
-  }
-
-  const getFocusableElements = (): HTMLElement[] => {
-    return Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
-  }
-
-  const handleEscapeKey = (event: KeyboardEvent<HTMLDivElement>): boolean => {
-    if (event.key !== KEY_ESCAPE) return false
-    event.preventDefault()
-    handleClose()
-    return true
-  }
-
-  const handleFocusTrap = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== KEY_TAB) return
-
-    const focusableElements = getFocusableElements()
-    if (focusableElements.length === 0) return
-
-    const first = focusableElements[0]
-    const last = focusableElements[focusableElements.length - 1]
-    const active = document.activeElement
-
-    if (event.shiftKey && active === first) {
-      event.preventDefault()
-      last.focus()
-      return
-    }
-
-    if (!event.shiftKey && active === last) {
-      event.preventDefault()
-      first.focus()
-    }
-  }
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (handleEscapeKey(event)) return
-    handleFocusTrap(event)
-  }
-
-  const handleOverlayKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget) return
-    if (event.key !== KEY_ENTER && event.key !== KEY_SPACE) return
-    event.preventDefault()
-    handleClose()
-  }
-
-  // モーダル本体クリックでは閉じず、背景クリックのみで閉じる仕様に固定する。
-  const handleDialogClick = (event: MouseEvent<HTMLDivElement>) => {
-    event.stopPropagation()
-  }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex h-full items-center justify-center bg-black/50 p-4"
-      data-testid="ranking-modal-overlay"
-      role="button"
-      tabIndex={0}
-      onClick={handleClose}
-      onKeyDown={handleOverlayKeyDown}
+      className="fixed inset-0 z-50 flex h-full items-center justify-center p-4"
     >
+      <button
+        type="button"
+        aria-label="ランキングモーダルを閉じる"
+        className="absolute inset-0 bg-black/50"
+        data-testid="ranking-modal-overlay"
+        onClick={handleClose}
+      />
       <div className="relative flex h-full items-center justify-center p-4">
         <div
           ref={dialogRef}
@@ -108,8 +109,6 @@ export function RankingModal({
           aria-modal="true"
           aria-label="ランキング"
           tabIndex={-1}
-          onClick={handleDialogClick}
-          onKeyDown={handleKeyDown}
           className={DIALOG_CONTAINER_CLASS}
         >
           <div className="mb-4 flex items-center justify-between">

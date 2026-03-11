@@ -39,15 +39,17 @@ describe('E25-01 RED: App Game Show Layout', () => {
     const postButton = screen.getByRole('button', { name: '投稿する' })
 
     expect(actionControls).toHaveClass('fixed')
-    expect(within(actionControls).queryByRole('button', { name: '投稿する' })).not.toBeInTheDocument()
+    expect(
+      within(actionControls).queryByRole('button', { name: '投稿する' })
+    ).not.toBeInTheDocument()
     expect(postButton).toBeInTheDocument()
     expect(soundButton).toBeInTheDocument()
     expect(postButton).toHaveClass('neon-button-base')
     expect(soundButton).toHaveClass('neon-button-base')
   })
 
-  it('右下にランキング・その他のアイコンボタンを表示する', () => {
-    // 何を検証するか: 補助導線が右下固定のアイコンボタンとして表示されること
+  it('ランキング・その他のアイコンボタンを表示する', () => {
+    // 何を検証するか: 補助導線のアイコンボタンが表示されること
     render(<App />)
 
     const rankingButton = screen.getByRole('button', { name: 'ランキング' })
