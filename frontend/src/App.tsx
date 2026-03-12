@@ -69,7 +69,8 @@ const SOUND_SETTINGS_PANEL_ID = 'sound-settings-panel'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
-const JUDGING_POLLING_TIMEOUT_MS = 60000
+const JUDGING_POLLING_TIMEOUT_MS =
+  import.meta.env.MODE === 'development' && !isMockApiEnabled() ? 120000 : 60000
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
 const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
 const HEALTH_CHECK_TIMEOUT_MS = 3000
@@ -210,6 +211,14 @@ function isTransientJudgingPollingError(error: unknown): boolean {
   return AI_TRANSIENT_ERROR_CODES.includes(error.code)
 }
 
+function shouldResolvePollingErrorViaHealth(reasonError: unknown): boolean {
+  return (
+    reasonError instanceof ApiClientError &&
+    (reasonError.code === API_ERROR_CODE.NETWORK_ERROR ||
+      reasonError.code === API_ERROR_CODE.TIMEOUT)
+  )
+}
+
 function buildTransientErrorNotice(errorCount: number): string {
   if (errorCount >= JUDGING_TRANSIENT_ERROR_MAX_RETRIES - 1) {
     return `通信が不安定です（${errorCount}/${JUDGING_TRANSIENT_ERROR_MAX_RETRIES}）。まもなくタイムアウトします。`
@@ -270,8 +279,14 @@ async function resolveJudgingPollingErrorMessage(reason: 'timeout' | 'generic'):
     if (isLocalWorkerUnavailable(health)) {
       return MESSAGE_JUDGING_LOCAL_WORKER_NOT_RUNNING
     }
-  } catch {
-    // health check が失敗した場合は既存の一般エラー文言へフォールバックする。
+  } catch (error) {
+    // 開発環境では health 到達不可を backend 未起動として案内し、切り分けを容易にする。
+    if (
+      error instanceof ApiClientError &&
+      (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT)
+    ) {
+      return MESSAGE_JUDGING_BACKEND_NOT_RUNNING
+    }
   }
 
   return MESSAGE_JUDGING_FETCH_FAILED
@@ -925,7 +940,7 @@ function App() {
       if (pollingRequestInFlightRef.current) return
 
       const elapsed = Date.now() - pollingStartedAtRef.current
-      // 監視上限（JUDGING_POLLING_TIMEOUT_MS。現在は60秒）を超えた場合はAPIを呼ばずに終端する。
+      // 監視上限（JUDGING_POLLING_TIMEOUT_MS）を超えた場合はAPIを呼ばずに終端する。
       if (elapsed >= JUDGING_POLLING_TIMEOUT_MS) {
         await handleJudgingFetchFailed('timeout')
         return
@@ -968,15 +983,19 @@ function App() {
             pollingTransientErrorCountRef.current >= JUDGING_TRANSIENT_ERROR_MAX_RETRIES ||
             transientElapsed >= JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS
           ) {
-            await handleJudgingFetchFailed()
+            await handleJudgingFetchFailed(
+              shouldResolvePollingErrorViaHealth(error) ? 'timeout' : 'generic'
+            )
           }
           return
         }
 
         const retryElapsed = Date.now() - pollingStartedAtRef.current
-        // 500系/通信系は監視上限（JUDGING_POLLING_TIMEOUT_MS。現在は60秒）内で再試行し、超過時のみ終了する。
+        // 500系/通信系は監視上限（JUDGING_POLLING_TIMEOUT_MS）内で再試行し、超過時のみ終了する。
         if (retryElapsed >= JUDGING_POLLING_TIMEOUT_MS) {
-          await handleJudgingFetchFailed()
+          await handleJudgingFetchFailed(
+            shouldResolvePollingErrorViaHealth(error) ? 'timeout' : 'generic'
+          )
         }
       } finally {
         if (pollingAbortControllerRef.current === abortController) {
