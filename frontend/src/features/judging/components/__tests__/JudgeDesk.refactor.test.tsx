@@ -63,6 +63,6 @@ describe('JudgeDesk Refactor', () => {
       />
     )
 
-    expect(screen.getByLabelText('中尾彬審査員のスコア: 判定対象外')).toBeInTheDocument()
+    expect(screen.getByLabelText('中尾彬審査員のスコア: 失敗')).toBeInTheDocument()
   })
 })
