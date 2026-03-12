@@ -211,6 +211,14 @@ function isTransientJudgingPollingError(error: unknown): boolean {
   return AI_TRANSIENT_ERROR_CODES.includes(error.code)
 }
 
+function shouldResolvePollingErrorViaHealth(reasonError: unknown): boolean {
+  return (
+    reasonError instanceof ApiClientError &&
+    (reasonError.code === API_ERROR_CODE.NETWORK_ERROR ||
+      reasonError.code === API_ERROR_CODE.TIMEOUT)
+  )
+}
+
 function buildTransientErrorNotice(errorCount: number): string {
   if (errorCount >= JUDGING_TRANSIENT_ERROR_MAX_RETRIES - 1) {
     return `通信が不安定です（${errorCount}/${JUDGING_TRANSIENT_ERROR_MAX_RETRIES}）。まもなくタイムアウトします。`
@@ -975,7 +983,9 @@ function App() {
             pollingTransientErrorCountRef.current >= JUDGING_TRANSIENT_ERROR_MAX_RETRIES ||
             transientElapsed >= JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS
           ) {
-            await handleJudgingFetchFailed()
+            await handleJudgingFetchFailed(
+              shouldResolvePollingErrorViaHealth(error) ? 'timeout' : 'generic'
+            )
           }
           return
         }
@@ -983,7 +993,9 @@ function App() {
         const retryElapsed = Date.now() - pollingStartedAtRef.current
         // 500系/通信系は監視上限（JUDGING_POLLING_TIMEOUT_MS）内で再試行し、超過時のみ終了する。
         if (retryElapsed >= JUDGING_POLLING_TIMEOUT_MS) {
-          await handleJudgingFetchFailed()
+          await handleJudgingFetchFailed(
+            shouldResolvePollingErrorViaHealth(error) ? 'timeout' : 'generic'
+          )
         }
       } finally {
         if (pollingAbortControllerRef.current === abortController) {
