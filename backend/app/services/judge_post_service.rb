@@ -41,7 +41,9 @@ class JudgePostService
   # @return [void]
   def execute
     return if @post.nil?
-    return skip_processed_post unless claim_post_for_judging!
+
+    claim_result = claim_post_for_judging!
+    return skip_by_claim_result(claim_result) unless claim_result == :claimed
 
     # スレッドセーフにクラスを事前にロード/解決しておく
     resolved_judges = JUDGES.map do |judge|
@@ -237,8 +239,20 @@ class JudgePostService
     nil
   end
 
+  def skip_claimed_post
+    Rails.logger.info("[JudgePostService] スキップ(claim競合): post_id=#{@post.id}, status=#{@post.status}")
+    nil
+  end
+
+  def skip_by_claim_result(claim_result)
+    return skip_processed_post if claim_result == :already_processed
+    return skip_claimed_post if claim_result == :claimed_by_other
+
+    skip_processed_post
+  end
+
   def claim_post_for_judging!
-    return false if @post.status != Post::STATUS_JUDGING
+    return :already_processed if @post.status != Post::STATUS_JUDGING
 
     now = Time.current.to_i
     Dynamoid.adapter.client.update_item(
@@ -256,9 +270,9 @@ class JudgePostService
         ':expired_at' => now - CLAIM_STALE_SECONDS
       }
     )
-    true
+    :claimed
   rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-    false
+    :claimed_by_other
   end
 
   def build_judgment_attrs(result)

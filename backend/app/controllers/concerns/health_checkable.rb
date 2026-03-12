@@ -34,4 +34,64 @@ module HealthCheckable
 
     LocalJudgmentWorkerHeartbeatService.current_status
   end
+
+  def health_check_response
+    missing_vars = AiSecretHealthCheckService.missing_env_vars(required_env_vars)
+    worker_status = build_worker_status
+    return missing_env_response(missing_vars, worker_status) if missing_vars.any?
+    return worker_unhealthy_response(worker_status) if worker_unhealthy?(worker_status)
+
+    ok_response(worker_status)
+  end
+
+  def worker_unhealthy?(worker_status)
+    worker_status&.dig('status') == 'unhealthy'
+  end
+
+  def missing_env_response(missing_vars, worker_status)
+    Rails.logger.error("[HealthCheck] Missing required env vars: #{missing_vars.join(', ')}")
+    response_with_status(missing_env_payload(missing_vars, worker_status), :service_unavailable)
+  end
+
+  def worker_unhealthy_response(worker_status)
+    Rails.logger.error("[HealthCheck] Local judgment worker unavailable: #{worker_status['reason']}")
+    response_with_status(worker_unhealthy_payload(worker_status), :service_unavailable)
+  end
+
+  def ok_response(worker_status)
+    response_with_status(ok_payload(worker_status), :ok)
+  end
+
+  def response_with_status(payload, http_status)
+    { payload: payload, http_status: http_status }
+  end
+
+  def missing_env_payload(missing_vars, worker_status)
+    {
+      status: 'unhealthy',
+      error: 'Missing required environment variables',
+      missing: missing_vars,
+      timestamp: Time.current,
+      worker: worker_status
+    }
+  end
+
+  def worker_unhealthy_payload(worker_status)
+    {
+      status: 'unhealthy',
+      error: 'Local judgment worker is not running',
+      environment: Rails.env,
+      timestamp: Time.current,
+      worker: worker_status
+    }
+  end
+
+  def ok_payload(worker_status)
+    {
+      status: 'ok',
+      environment: Rails.env,
+      timestamp: Time.current,
+      worker: worker_status
+    }
+  end
 end

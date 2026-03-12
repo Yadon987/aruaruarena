@@ -158,7 +158,10 @@ RSpec.describe JudgePostService do
       end
 
       it 'claim競合時は審査をスキップすること' do
-        allow(service).to receive(:claim_post_for_judging!).and_return(false)
+        allow(service).to receive(:claim_post_for_judging!).and_return(:claimed_by_other)
+        expect(Rails.logger).to receive(:info).with(
+          /\[JudgePostService\] スキップ\(claim競合\): post_id=#{post.id}, status=judging/
+        )
         expect_any_instance_of(GeminiAdapter).not_to receive(:judge)
         expect_any_instance_of(DewiAdapter).not_to receive(:judge)
         expect_any_instance_of(OpenAiAdapter).not_to receive(:judge)
