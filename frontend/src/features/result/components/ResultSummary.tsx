@@ -11,9 +11,8 @@ interface ResultSummaryProps {
   rejudgeErrorMessage?: string
 }
 
-const FAILED_RANK_LABEL = '第---位'
 const FAILED_AVERAGE_LABEL = '--.-'
-const FAILED_TOTAL_LABEL = '集計対象外'
+const FAILED_RANK_DISPLAY = '---位'
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
@@ -23,7 +22,6 @@ export function ResultSummary({
   nickname,
   body,
   rank,
-  totalCount,
   averageScore,
   status,
   onClose,
@@ -33,9 +31,7 @@ export function ResultSummary({
 }: ResultSummaryProps) {
   const canRejudge = status === 'failed' && typeof onRejudge === 'function'
   const rankLabel =
-    status === 'scored' && typeof rank === 'number' ? `第${rank}位` : FAILED_RANK_LABEL
-  const totalLabel =
-    status === 'scored' && typeof totalCount === 'number' ? `${totalCount}件中` : FAILED_TOTAL_LABEL
+    status === 'scored' && typeof rank === 'number' ? `${rank}位` : FAILED_RANK_DISPLAY
   const averageLabel =
     status === 'scored' && isFiniteNumber(averageScore)
       ? averageScore.toFixed(1)
@@ -57,19 +53,14 @@ export function ResultSummary({
       </p>
 
       <div className="result-summary-stats mt-5">
-        <p className="result-summary-stat">
-          <span className="sr-only">{`順位 ${rankLabel} ${totalLabel}`}</span>
+        <p className="result-summary-stat result-summary-rank-line">
+          <span className="sr-only">{`順位 ${rankLabel}`}</span>
           <span className="result-summary-label">順位</span>
           <span className="result-summary-value">{rankLabel}</span>
-          <span className="result-summary-separator" aria-hidden="true">
-            /
-          </span>
-          <span className="result-summary-sub-label">{totalLabel}</span>
         </p>
-        <p className="result-summary-stat">
+        <p className="result-summary-stat result-summary-score-line">
           <span className="sr-only">{`スコア: ${averageLabel}`}</span>
           <span className="result-summary-label">スコア:</span>
-          {' '}
           <span className="result-summary-value">{averageLabel}</span>
         </p>
       </div>

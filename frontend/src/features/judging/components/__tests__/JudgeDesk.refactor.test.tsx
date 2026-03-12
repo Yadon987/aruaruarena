@@ -48,8 +48,8 @@ describe('JudgeDesk Refactor', () => {
     expect(desk).not.toHaveClass('judge-desk-shell-compact')
   })
 
-  it('success=falseならN/Aを表示する', async () => {
-    // 何を検証するか: 審査失敗時（success=false）はスコア有無に関係なくN/A表示になること
+  it('success=falseなら失敗を表示する', async () => {
+    // 何を検証するか: 審査失敗時（success=false）はスコア有無に関係なく失敗表示になること
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(

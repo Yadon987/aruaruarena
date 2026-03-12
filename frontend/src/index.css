@@ -1529,6 +1529,57 @@
   color: rgba(190, 230, 255, 0.8);
 }
 
+@media (max-width: 768px) {
+  .result-summary-stats {
+    grid-template-columns: max-content max-content;
+    justify-content: center;
+    align-items: baseline;
+    gap: 0.22rem;
+  }
+
+  .result-summary-stat {
+    gap: 0.14rem;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    line-height: 1;
+    min-width: 0;
+  }
+
+  .result-summary-label,
+  .result-summary-sub-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+  }
+
+  .result-summary-value {
+    font-size: clamp(1.3rem, 7.6vw, 1.8rem);
+    letter-spacing: 0.02em;
+  }
+
+  .result-summary-separator {
+    font-size: 0.68rem;
+  }
+
+  .result-summary-rank-line .result-summary-value {
+    font-size: clamp(1.18rem, 6.6vw, 1.52rem);
+    letter-spacing: 0.01em;
+  }
+
+  .result-summary-rank-line .result-summary-label,
+  .result-summary-rank-line .result-summary-sub-label {
+    font-size: 0.56rem;
+    letter-spacing: 0.02em;
+  }
+
+  .result-summary-rank-line .result-summary-separator {
+    font-size: 0.6rem;
+  }
+
+  .result-summary-score-line .result-summary-value {
+    font-size: clamp(1.16rem, 6.3vw, 1.46rem);
+  }
+}
+
 .digital-score {
   font-family: var(--font-digital);
   font-size: calc(3.45rem * var(--judge-slot-scale));

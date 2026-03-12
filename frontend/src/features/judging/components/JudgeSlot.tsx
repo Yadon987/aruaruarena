@@ -28,7 +28,7 @@ const JUDGE_NAMEPLATES: Record<JudgePersona, string> = {
 }
 
 const SCORE_PLACEHOLDER = '00'
-const SCORE_NOT_AVAILABLE = 'N/A'
+const SCORE_NOT_AVAILABLE = '失敗'
 const AVATAR_BREATHING_CLASS = 'judge-avatar-speaking-breath'
 const ACTIVE_BACKREST_VARIANT: JudgeSeatBackrestVariant = 'royal-crown'
 const VIP_IDLE_CYCLE_MS = 5000

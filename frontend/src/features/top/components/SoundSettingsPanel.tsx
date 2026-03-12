@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef } from 'react'
+import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react'
 import { VolumeSlider } from './VolumeSlider'
 import './SoundSettingsPanel.css'
 
@@ -26,6 +26,7 @@ export function SoundSettingsPanel({
   const sliderRef = useRef<HTMLInputElement | null>(null)
   const onCloseRef = useRef(onClose)
   const openerElementRef = useRef<HTMLElement | null>(null)
+  const [horizontalShift, setHorizontalShift] = useState(0)
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -69,6 +70,41 @@ export function SoundSettingsPanel({
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) {
+      setHorizontalShift(0)
+      return
+    }
+
+    const adjustPositionWithinViewport = () => {
+      const panel = panelRef.current
+      if (!panel) return
+
+      const viewportMargin = 8
+      const rect = panel.getBoundingClientRect()
+      let shift = 0
+
+      if (rect.left < viewportMargin) {
+        shift += viewportMargin - rect.left
+      }
+      if (rect.right > window.innerWidth - viewportMargin) {
+        shift -= rect.right - (window.innerWidth - viewportMargin)
+      }
+
+      setHorizontalShift(shift)
+    }
+
+    const rafId = window.requestAnimationFrame(adjustPositionWithinViewport)
+    window.addEventListener('resize', adjustPositionWithinViewport)
+    window.addEventListener('orientationchange', adjustPositionWithinViewport)
+
+    return () => {
+      window.cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', adjustPositionWithinViewport)
+      window.removeEventListener('orientationchange', adjustPositionWithinViewport)
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const icon = (() => {
@@ -78,11 +114,16 @@ export function SoundSettingsPanel({
     return '🔊'
   })()
 
+  const panelStyle = {
+    '--sound-settings-shift-x': `${horizontalShift}px`,
+  } as CSSProperties
+
   return (
     <div
       id={panelId}
       ref={panelRef}
       className="sound-settings-panel"
+      style={panelStyle}
       role="dialog"
       aria-label="音声設定パネル"
     >
