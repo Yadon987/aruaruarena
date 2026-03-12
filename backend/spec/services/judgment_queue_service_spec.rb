@@ -40,5 +40,32 @@ RSpec.describe JudgmentQueueService, dynamodb: false do
 
       expect { described_class.enqueue('post-123') }.to raise_error(RuntimeError, 'SQS_QUEUE_URL が設定されていません')
     end
+
+    it 'ローカルワーカーモードでは SQS へ送信しないこと' do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new('development'))
+      allow(ENV).to receive(:[]).with('LOCAL_JUDGE_WORKER').and_return('true')
+      allow(LocalJudgmentWorkerHeartbeatService).to receive(:current_status).and_return({
+        'status' => 'ok'
+      })
+
+      described_class.enqueue('post-123')
+
+      expect(http_client).not_to have_received(:request)
+    end
+
+    it 'ローカルワーカー未起動時は非同期フォールバックで審査を開始すること' do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new('development'))
+      allow(ENV).to receive(:[]).with('LOCAL_JUDGE_WORKER').and_return('true')
+      allow(LocalJudgmentWorkerHeartbeatService).to receive(:current_status).and_return({
+        'status' => 'unhealthy'
+      })
+      allow(JudgePostService).to receive(:call)
+
+      described_class.enqueue('post-123')
+      sleep 0.05
+
+      expect(JudgePostService).to have_received(:call).with('post-123')
+      expect(http_client).not_to have_received(:request)
+    end
   end
 end

@@ -4,8 +4,16 @@ import 'dseg/css/dseg.css'
 import App from './App.tsx'
 import './index.css'
 
+function shouldUseMockApi(): boolean {
+  const value = import.meta.env.VITE_USE_MOCK_API
+  if (value == null || value.trim() === '') return false
+
+  const normalized = value.toLowerCase().trim()
+  return normalized === '1' || normalized === 'true' || normalized === 'on' || normalized === 'yes'
+}
+
 async function enableMocking() {
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV && shouldUseMockApi()) {
     try {
       const { mswWorker } = await import('./mocks/browser')
       await mswWorker.start({ onUnhandledRequest: 'bypass' })

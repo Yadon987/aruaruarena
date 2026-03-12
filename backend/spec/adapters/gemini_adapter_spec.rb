@@ -603,6 +603,38 @@ RSpec.describe GeminiAdapter do
       expect(result.succeeded).to be true
       expect(result.comment).to eq('代替成功')
     end
+
+    it 'Geminiのprovider_error時はGroq互換へフォールバックすること' do
+      primary_request = { mode: 'primary' }
+      fallback_adapter = instance_double(HiroyukiFallbackAdapter)
+      fallback_result = BaseAiAdapter::JudgmentResult.new(
+        succeeded: true,
+        error_code: nil,
+        scores: {
+          empathy: 12,
+          humor: 11,
+          brevity: 13,
+          originality: 14,
+          expression: 15
+        },
+        comment: '認証エラー時の代替成功'
+      )
+
+      allow(adapter).to receive(:build_request).and_return(primary_request)
+      allow(adapter).to receive(:execute_request).with(primary_request).and_raise(
+        Faraday::ClientError.new(
+          'Client error: 400',
+          response: { status: 400, body: '{"error":{"message":"API Key not found"}}' }
+        )
+      )
+      allow(HiroyukiFallbackAdapter).to receive(:new).with(context: :default).and_return(fallback_adapter)
+      allow(fallback_adapter).to receive(:judge).with('テスト投稿', persona: 'hiroyuki').and_return(fallback_result)
+
+      result = adapter.send(:call_ai_api, 'テスト投稿', 'hiroyuki')
+
+      expect(result.succeeded).to be true
+      expect(result.comment).to eq('認証エラー時の代替成功')
+    end
   end
 
   it_behaves_like 'adapter api key validation', 'GEMINI_API_KEY'

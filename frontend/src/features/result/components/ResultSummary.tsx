@@ -90,9 +90,12 @@ export function ResultSummary({
           type="button"
           onClick={onClose}
           aria-label="トップへ戻る"
-          className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
+          className="neon-button-base result-summary-back-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
         >
-          トップへ戻る
+          <span aria-hidden="true" className="result-summary-back-icon">
+            🏮
+          </span>
+          <span>トップへ戻る</span>
         </button>
       </div>
       {rejudgeErrorMessage && (

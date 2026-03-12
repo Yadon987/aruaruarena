@@ -23,7 +23,7 @@ import { useAvatarImages } from './shared/hooks/useAvatarImages'
 import { useFocusTrap } from './shared/hooks/useFocusTrap'
 import { useReducedMotion } from './shared/hooks/useReducedMotion'
 import { ApiClientError, api } from './shared/services/api'
-import type { CreatePostResponse } from './shared/types/api'
+import type { CreatePostResponse, GetHealthResponse } from './shared/types/api'
 import type { JudgePersona, Post } from './shared/types/domain'
 import { countGraphemeClusters } from './shared/utils'
 import './App.css'
@@ -40,7 +40,6 @@ const MESSAGE_NICKNAME_REQUIRED = 'ニックネームを入力してください
 const MESSAGE_NICKNAME_LENGTH = `ニックネームは${TEXT_LENGTH.NICKNAME_MIN}〜${TEXT_LENGTH.NICKNAME_MAX}文字で入力してください`
 const MESSAGE_BODY_LENGTH = `本文は${TEXT_LENGTH.BODY_MIN}〜${TEXT_LENGTH.BODY_MAX}文字で入力してください`
 const MESSAGE_BODY_REQUIRED = '本文を入力してください'
-const MESSAGE_SUCCESS = '投稿を受け付けました'
 const MESSAGE_POST_NOT_FOUND = '投稿が見つかりませんでした'
 const MESSAGE_MY_POST_DETAIL_FETCH_FAILED = '投稿詳細の取得に失敗しました'
 const MESSAGE_POST_DETAIL_RATE_LIMITED = 'アクセスが集中しています。時間をおいて再度お試しください'
@@ -51,10 +50,18 @@ const MESSAGE_RESULT_NOT_FINAL =
 const MESSAGE_JUDGING_FETCH_FAILED =
   '投稿情報の取得に失敗しました。トップへ戻って再度お試しください。'
 const MESSAGE_JUDGING_NETWORK_ERROR = 'ネットワークに接続できませんでした'
+const MESSAGE_JUDGING_BACKEND_NOT_RUNNING =
+  'backendに接続できませんでした。backend を起動してください（bundle exec rails s）'
+const MESSAGE_JUDGING_LOCAL_WORKER_NOT_RUNNING =
+  'ローカル審査ワーカーが停止しています。bundle exec ruby scripts/run_judgment_worker.rb を起動してください'
 const MESSAGE_JUDGING_TIMEOUT_ERROR = '通信がタイムアウトしました'
 const MESSAGE_JUDGING_SERVER_ERROR = 'サーバーエラーが発生しました'
 const MESSAGE_JUDGING_CLIENT_ERROR = '投稿に失敗しました'
 const MESSAGE_JUDGING_UNKNOWN_ERROR = '投稿に失敗しました'
+const MESSAGE_JUDGING_RETRY_GUIDE = '通信状況をご確認のうえ、再度お試しください。'
+const MESSAGE_JUDGING_BACKEND_GUIDE = 'backend を起動後に、再度お試しください。'
+const MESSAGE_JUDGING_LOCAL_WORKER_GUIDE =
+  'backend を起動したうえで、ローカル審査ワーカーも起動してから再度お試しください。'
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
 const ROOT_PATH = '/'
@@ -65,6 +72,7 @@ const JUDGING_POLLING_INTERVAL_MS = 3000
 const JUDGING_POLLING_TIMEOUT_MS = 60000
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
 const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
+const HEALTH_CHECK_TIMEOUT_MS = 3000
 const AI_TRANSIENT_ERROR_CODES = [
   'provider_error',
   'connection_failed',
@@ -236,11 +244,56 @@ function buildValidationErrorMessage({ nicknameError, bodyError }: ValidationErr
   return [nicknameError, bodyError].filter(Boolean).join('\n')
 }
 
+function isMockApiEnabled(): boolean {
+  const value = import.meta.env.VITE_USE_MOCK_API
+  if (typeof value !== 'string') return false
+
+  const normalized = value.trim().toLowerCase()
+  return normalized === '1' || normalized === 'true' || normalized === 'on' || normalized === 'yes'
+}
+
+function isDevelopmentRealApiMode(): boolean {
+  return import.meta.env.DEV && !isMockApiEnabled()
+}
+
+function isLocalWorkerUnavailable(health: GetHealthResponse): boolean {
+  return health.worker?.mode === 'local_worker' && health.worker.status === 'unhealthy'
+}
+
+async function resolveJudgingPollingErrorMessage(reason: 'timeout' | 'generic'): Promise<string> {
+  if (!isDevelopmentRealApiMode() || reason !== 'timeout') {
+    return MESSAGE_JUDGING_FETCH_FAILED
+  }
+
+  try {
+    const health = await api.health.get({ timeout: HEALTH_CHECK_TIMEOUT_MS })
+    if (isLocalWorkerUnavailable(health)) {
+      return MESSAGE_JUDGING_LOCAL_WORKER_NOT_RUNNING
+    }
+  } catch {
+    // health check が失敗した場合は既存の一般エラー文言へフォールバックする。
+  }
+
+  return MESSAGE_JUDGING_FETCH_FAILED
+}
+
+function resolveJudgingErrorGuide(message: string): string {
+  if (message === MESSAGE_JUDGING_BACKEND_NOT_RUNNING) {
+    return MESSAGE_JUDGING_BACKEND_GUIDE
+  }
+  if (message === MESSAGE_JUDGING_LOCAL_WORKER_NOT_RUNNING) {
+    return MESSAGE_JUDGING_LOCAL_WORKER_GUIDE
+  }
+  return MESSAGE_JUDGING_RETRY_GUIDE
+}
+
 // APIクライアントの例外種別をUI文言へ変換する
 function resolveJudgingSubmitErrorMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
     if (error.code === API_ERROR_CODE.NETWORK_ERROR) {
-      return MESSAGE_JUDGING_NETWORK_ERROR
+      return isDevelopmentRealApiMode()
+        ? MESSAGE_JUDGING_BACKEND_NOT_RUNNING
+        : MESSAGE_JUDGING_NETWORK_ERROR
     }
     if (error.code === API_ERROR_CODE.TIMEOUT || error.status === HTTP_STATUS.REQUEST_TIMEOUT) {
       return MESSAGE_JUDGING_TIMEOUT_ERROR
@@ -268,7 +321,6 @@ function App() {
   const sound = soundControllerRef.current
   const prefersReducedMotion = useReducedMotion()
   const [submitError, setSubmitError] = useState('')
-  const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPostModalOpen, setIsPostModalOpen] = useState(false)
   const [myPostIds, setMyPostIds] = useState<string[]>(() => readPostIds())
@@ -321,6 +373,7 @@ function App() {
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartedAtRef = useRef<number>(0)
   const pollingAbortControllerRef = useRef<AbortController | null>(null)
+  const pollingRequestInFlightRef = useRef(false)
   const pollingTransientErrorCountRef = useRef<number>(0)
   const pollingTransientErrorStartedAtRef = useRef<number>(0)
   const submitAbortControllerRef = useRef<AbortController | null>(null)
@@ -614,6 +667,7 @@ function App() {
       pollingAbortControllerRef.current.abort()
       pollingAbortControllerRef.current = null
     }
+    pollingRequestInFlightRef.current = false
     pollingStartedAtRef.current = 0
     pollingTransientErrorCountRef.current = 0
     pollingTransientErrorStartedAtRef.current = 0
@@ -667,7 +721,6 @@ function App() {
 
       if (response.status === 'failed') {
         // failed応答は結果画面へ直接遷移し、ポーリングは中断する。
-        setSuccessMessage('')
         setJudgingErrorMessage('')
         enterResultView(response.id)
         setIsJudgingPollingReady(false)
@@ -675,7 +728,6 @@ function App() {
       }
 
       // 審査中/queued など成功側は、暫定情報を残して審査待ちへ進める。
-      setSuccessMessage(MESSAGE_SUCCESS)
       enterJudgingMode(response.id, true)
     },
     [enterResultView, syncJudgingPath, syncMyPostIds, enterJudgingMode]
@@ -686,7 +738,6 @@ function App() {
     console.error('Post creation failed:', error)
     setJudgingErrorMessage(resolveJudgingSubmitErrorMessage(error))
     setIsJudgingPollingReady(false)
-    setSuccessMessage('')
   }, [])
 
   const handleResultRejudgeSuccess = useCallback(
@@ -792,12 +843,11 @@ function App() {
     [clearJudgingPolling, enterResultView]
   )
 
-  const exitJudgingWithError = useCallback(() => {
+  const exitJudgingWithError = useCallback((message: string = MESSAGE_JUDGING_FETCH_FAILED) => {
     clearJudgingPolling()
     setViewMode('judging')
     setIsJudgingPollingReady(false)
-    setSuccessMessage('')
-    setJudgingErrorMessage(MESSAGE_JUDGING_FETCH_FAILED)
+    setJudgingErrorMessage(message)
   }, [clearJudgingPolling])
   const exitJudgingWithResultRef = useRef(exitJudgingWithResult)
   const exitJudgingWithErrorRef = useRef(exitJudgingWithError)
@@ -852,25 +902,32 @@ function App() {
     if (viewMode !== 'judging' || !judgingPostId || !isJudgingPollingReady) return
 
     let isDisposed = false
+    let isFailing = false
 
-    const handleJudgingFetchFailed = () => {
+    const handleJudgingFetchFailed = async (reason: 'timeout' | 'generic' = 'generic') => {
+      if (isDisposed || isFailing) return
+      isFailing = true
+      const message = await resolveJudgingPollingErrorMessage(reason)
       if (isDisposed) return
-      exitJudgingWithErrorRef.current()
+      exitJudgingWithErrorRef.current(message)
     }
 
     const fetchPost = async () => {
+      // 前回の取得中は次周期をスキップして、中断による取りこぼしを防ぐ。
+      if (pollingRequestInFlightRef.current) return
+
       const elapsed = Date.now() - pollingStartedAtRef.current
       // 監視上限（JUDGING_POLLING_TIMEOUT_MS。現在は60秒）を超えた場合はAPIを呼ばずに終端する。
       if (elapsed >= JUDGING_POLLING_TIMEOUT_MS) {
-        handleJudgingFetchFailed()
+        await handleJudgingFetchFailed('timeout')
         return
       }
 
-      try {
-        pollingAbortControllerRef.current?.abort()
-        const abortController = new AbortController()
-        pollingAbortControllerRef.current = abortController
+      pollingRequestInFlightRef.current = true
+      const abortController = new AbortController()
+      pollingAbortControllerRef.current = abortController
 
+      try {
         const response = await api.posts.get(judgingPostId, {
           signal: abortController.signal,
         })
@@ -903,7 +960,7 @@ function App() {
             pollingTransientErrorCountRef.current >= JUDGING_TRANSIENT_ERROR_MAX_RETRIES ||
             transientElapsed >= JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS
           ) {
-            handleJudgingFetchFailed()
+            await handleJudgingFetchFailed()
           }
           return
         }
@@ -911,8 +968,13 @@ function App() {
         const retryElapsed = Date.now() - pollingStartedAtRef.current
         // 500系/通信系は監視上限（JUDGING_POLLING_TIMEOUT_MS。現在は60秒）内で再試行し、超過時のみ終了する。
         if (retryElapsed >= JUDGING_POLLING_TIMEOUT_MS) {
-          handleJudgingFetchFailed()
+          await handleJudgingFetchFailed()
         }
+      } finally {
+        if (pollingAbortControllerRef.current === abortController) {
+          pollingAbortControllerRef.current = null
+        }
+        pollingRequestInFlightRef.current = false
       }
     }
 
@@ -945,7 +1007,6 @@ function App() {
       )
 
       setSubmitError('')
-      setSuccessMessage('')
       setJudgingErrorMessage('')
 
       if (nextNicknameError || nextBodyError) {
@@ -1195,7 +1256,6 @@ function App() {
   const retryPostSubmit = useCallback(() => {
     // 再投稿は入力復元を前提に、トップの投稿モーダルへ復帰するだけの導線に限定する。
     clearJudgingPolling()
-    setSuccessMessage('')
     setSubmitError('')
     setViewMode('top')
     setIsPostModalOpen(true)
@@ -1222,7 +1282,6 @@ function App() {
   const backToTopFromJudgingError = useCallback(() => {
     clearJudgingPolling()
     setSubmitError('')
-    setSuccessMessage('')
     setJudgingErrorMessage('')
     setViewMode('top')
     setIsPostModalOpen(false)
@@ -1232,7 +1291,6 @@ function App() {
   const resetToTopAfterJudgingStop = useCallback(() => {
     setPendingFormData(null)
     setSubmitError('')
-    setSuccessMessage('')
     setJudgingErrorMessage('')
     setJudgingPostId('')
     setIsJudgingPollingReady(false)
@@ -1256,7 +1314,6 @@ function App() {
     invalidateSubmitRequest()
     setIsSubmitting(false)
     setSubmitError('')
-    setSuccessMessage('')
     setJudgingErrorMessage('')
     setJudgingPostId('')
     setIsJudgingPollingReady(false)
@@ -1506,7 +1563,7 @@ function App() {
                   </h2>
                   <p className="text-sm leading-relaxed text-slate-700">{judgingErrorMessage}</p>
                   <p className="text-xs text-slate-500">
-                    通信状況をご確認のうえ、再度お試しください。
+                    {resolveJudgingErrorGuide(judgingErrorMessage)}
                   </p>
                 </div>
               </div>
@@ -1526,7 +1583,7 @@ function App() {
           </section>
         )}
 
-        {viewMode === 'top' && (
+            {viewMode === 'top' && (
           <>
             <PostFormModal
               isOpen={isPostModalOpen}
@@ -1538,9 +1595,6 @@ function App() {
               initialNickname={pendingFormData?.nickname ?? ''}
               initialBody={pendingFormData?.body ?? ''}
             />
-            <div className="mb-4">
-              {successMessage && <p className="text-green-500">{successMessage}</p>}
-            </div>
           </>
         )}
 

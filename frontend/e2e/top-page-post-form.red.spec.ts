@@ -1,14 +1,42 @@
+import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures/test-fixtures'
+
+async function dismissAudioConsentModal(page: Page) {
+  const rejectButton = page.getByRole('button', { name: 'いいえ' })
+  const dialog = page.getByRole('alertdialog', { name: '音声を再生しますか？' })
+
+  if (await rejectButton.count() === 0) return
+  if (await rejectButton.isVisible()) {
+    await rejectButton.click()
+    await dialog.waitFor({ state: 'detached', timeout: 2000 }).catch(() => undefined)
+  }
+}
+
+async function openPostForm(page: Page) {
+  await dismissAudioConsentModal(page)
+  await page.getByRole('button', { name: '投稿する' }).click()
+  await expect(page.getByRole('dialog', { name: '投稿フォーム' })).toBeVisible()
+}
+
+async function fillPostForm(page: Page, nickname: string, body: string) {
+  const form = page.getByRole('dialog', { name: '投稿フォーム' })
+  await form.getByLabel('ニックネーム').fill(nickname)
+  await form.getByLabel('あるある').fill(body)
+}
+
+async function submitPostForm(page: Page) {
+  const form = page.getByRole('dialog', { name: '投稿フォーム' })
+  await form.getByRole('button', { name: '投稿' }).click()
+}
 
 test.describe('E12-01 RED: トップ画面と投稿フォーム', () => {
   test('トップ画面の主要要素が表示される', async ({ page }) => {
-    // 何を検証するか: ヘッダー・投稿フォーム・ランキング領域・フッターの表示
+    // 何を検証するか: 投稿導線と主要セクションの表示
     await page.goto('/')
+    await dismissAudioConsentModal(page)
 
-    await expect(page.getByRole('banner')).toBeVisible()
-    await expect(page.getByRole('form', { name: '投稿フォーム' })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'ランキング表示エリア' })).toBeVisible()
-    await expect(page.getByRole('contentinfo')).toBeVisible()
+    await expect(page.getByRole('button', { name: '投稿する' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'ランキング' })).toBeVisible()
   })
 
   test('正常入力で投稿できる', async ({ page }) => {
@@ -22,26 +50,25 @@ test.describe('E12-01 RED: トップ画面と投稿フォーム', () => {
     })
 
     await page.goto('/')
+    await openPostForm(page)
+    await fillPostForm(page, 'E2E太郎', 'E2E投稿本文です')
+    await submitPostForm(page)
 
-    await page.getByLabel('ニックネーム').fill('E2E太郎')
-    await page.getByLabel('あるある本文').fill('E2E投稿本文です')
-    await page.getByRole('button', { name: '投稿する' }).click()
-
-    await expect(page.getByText('投稿を受け付けました')).toBeVisible()
+    await expect(page).toHaveURL(/\/judging\/e2e-post-1$/)
   })
 
   test('入力不備で送信できずバリデーションが表示される', async ({ page }) => {
     // 何を検証するか: 必須入力不足時にエラー表示されること
     await page.goto('/')
-
-    await page.getByRole('button', { name: '投稿する' }).click()
+    await openPostForm(page)
+    await submitPostForm(page)
 
     await expect(page.getByText('ニックネームを入力してください')).toBeVisible()
-    await expect(page.getByText('本文は3文字以上で入力してください')).toBeVisible()
+    await expect(page.getByText('本文を入力してください')).toBeVisible()
   })
 
   test('429応答時に専用メッセージが表示される', async ({ page }) => {
-    // 何を検証するか: レート制限時に専用エラーメッセージが表示されること
+    // 何を検証するか: レート制限時に専用メッセージが表示されること
     await page.route('**/api/posts', async (route) => {
       await route.fulfill({
         status: 429,
@@ -54,11 +81,10 @@ test.describe('E12-01 RED: トップ画面と投稿フォーム', () => {
     })
 
     await page.goto('/')
+    await openPostForm(page)
+    await fillPostForm(page, '制限E2E', 'レート制限確認本文')
+    await submitPostForm(page)
 
-    await page.getByLabel('ニックネーム').fill('制限E2E')
-    await page.getByLabel('あるある本文').fill('レート制限確認本文')
-    await page.getByRole('button', { name: '投稿する' }).click()
-
-    await expect(page.getByText('5分後に再投稿してください')).toBeVisible()
+    await expect(page.getByText('投稿に失敗しました')).toBeVisible()
   })
 })

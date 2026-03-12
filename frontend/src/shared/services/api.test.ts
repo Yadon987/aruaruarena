@@ -85,6 +85,30 @@ describe('E04-06: API Client', () => {
 
       expect(fetchMock).toHaveBeenCalledWith('/api/rankings?limit=10', expect.any(Object))
     })
+
+    it('health: 503でもレスポンス本文を返す', async () => {
+      const mockResponse = {
+        status: 'unhealthy',
+        environment: 'development',
+        timestamp: '2026-03-12T07:00:00+09:00',
+        error: 'Local judgment worker is not running',
+        worker: {
+          mode: 'local_worker',
+          status: 'unhealthy',
+          command: 'bundle exec ruby scripts/run_judgment_worker.rb',
+        },
+      }
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => mockResponse,
+      })
+
+      const result = await api.health.get()
+
+      expect(fetchMock).toHaveBeenCalledWith('/api/health', expect.any(Object))
+      expect(result).toEqual(mockResponse)
+    })
   })
 
   describe('異常系 (Error Path)', () => {

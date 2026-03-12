@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { HttpResponse, http } from 'msw'
+import { delay, HttpResponse, http } from 'msw'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { mswServer } from '../../../mocks/server'
@@ -15,6 +15,7 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     mswServer.resetHandlers()
     localStorage.clear()
     getPostSpy.mockClear()
+    vi.useRealTimers()
     window.history.replaceState({}, '', '/')
   })
 
@@ -98,6 +99,36 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
     })
   })
+
+  it('応答がポーリング間隔より遅くても同一リクエストの完了を待って結果表示する', async () => {
+    // 何を検証するか: 3秒超の遅い応答でも次周期で中断せず、1回の取得で結果へ遷移すること
+    mswServer.use(
+      http.get('/api/posts/:id', async () => {
+        await delay(3500)
+
+        return HttpResponse.json({
+          id: 'polling-test',
+          nickname: 'RED太郎',
+          body: '本文',
+          status: 'scored',
+          created_at: '2026-03-12T00:00:00Z',
+        })
+      })
+    )
+
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+      },
+      { timeout: 7000 }
+    )
+
+    expect(getPostSpy).toHaveBeenCalledTimes(1)
+  }, 9000)
 
   it('GET /api/posts/:id が404のとき審査エラーパネルを表示する', async () => {
     // 何を検証するか: 404応答時に審査待機を停止して審査エラー導線を表示すること
@@ -203,6 +234,54 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
       ).toBeInTheDocument()
     })
   })
+
+  it('ローカル審査ワーカー停止中はタイムアウト後に専用メッセージを表示する', async () => {
+    mswServer.use(
+      http.get('/api/posts/:id', () => {
+        return HttpResponse.json({
+          id: 'polling-test',
+          nickname: 'RED太郎',
+          body: '本文',
+          status: 'judging',
+          created_at: '2026-03-12T07:00:00+09:00',
+        })
+      }),
+      http.get('/api/health', () => {
+        return HttpResponse.json(
+          {
+            status: 'unhealthy',
+            environment: 'development',
+            timestamp: '2026-03-12T07:01:00+09:00',
+            error: 'Local judgment worker is not running',
+            worker: {
+              mode: 'local_worker',
+              status: 'unhealthy',
+              reason: 'heartbeat_missing',
+              command: 'bundle exec ruby scripts/run_judgment_worker.rb',
+            },
+          },
+          { status: 503 }
+        )
+      })
+    )
+
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
+
+    const baseTime = Date.now()
+    const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => baseTime + 61_000)
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'ローカル審査ワーカーが停止しています。bundle exec ruby scripts/run_judgment_worker.rb を起動してください'
+        )
+      ).toBeInTheDocument()
+    }, { timeout: 5000 })
+
+    dateNowSpy.mockRestore()
+  }, 10000)
 
   it('不正な投稿IDではポーリングせず審査エラーパネルを表示する', async () => {
     // 何を検証するか: 不正IDの場合にGETを呼ばず審査エラー導線を表示すること

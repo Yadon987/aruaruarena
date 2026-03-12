@@ -216,6 +216,9 @@ class GeminiAdapter < BaseAiAdapter
     return result unless invalid_response_result?(result)
 
     provider_fallback_result(post_content, persona)
+  rescue Faraday::ClientError, Faraday::ServerError, Faraday::TimeoutError, Faraday::ConnectionFailed => e
+    Rails.logger.warn("Gemini provider系エラーのためGroq互換へフォールバックします: #{e.class}")
+    provider_fallback_result(post_content, persona, original_error: e)
   end
 
   # Gemini APIキーを返す
@@ -342,11 +345,18 @@ class GeminiAdapter < BaseAiAdapter
     build_judgment_result(parse_result)
   end
 
-  def provider_fallback_result(post_content, persona)
-    Rails.logger.warn('Gemini invalid_response継続のためGroq互換へフォールバックします')
+  def provider_fallback_result(post_content, persona, original_error: nil)
+    if original_error
+      Rails.logger.warn('Gemini provider系エラー継続のためGroq互換へフォールバックします')
+    else
+      Rails.logger.warn('Gemini invalid_response継続のためGroq互換へフォールバックします')
+    end
+
     HiroyukiFallbackAdapter.new(context: request_context).judge(post_content, persona: persona)
   rescue StandardError => e
     Rails.logger.error("Gemini代替プロバイダ失敗: #{e.class} - #{e.message}")
+    return handle_error(original_error) if original_error
+
     invalid_response_error
   end
 

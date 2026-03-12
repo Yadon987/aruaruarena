@@ -402,11 +402,19 @@ DYNAMODB_ENDPOINT=http://localhost:8000
 GEMINI_API_KEY=your-gemini-key
 GLM_API_KEY=your-glm-key
 GROQ_API_KEY=your-groq-key
+CEREBRAS_API_KEY=your-cerebras-key
+LOCAL_JUDGE_WORKER=true
+SYNCHRONOUS_JUDGE=false
+SQS_QUEUE_URL=https://sqs.ap-northeast-1.amazonaws.com/<account-id>/judgment-queue
 
 # Frontend
 VITE_API_BASE_URL=/api
 VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
+
+補足: ローカルDynamoDBを使う開発環境では `LOCAL_JUDGE_WORKER=true` を有効にし、  
+別プロセスのローカルワーカーで `judging` 投稿を処理します。  
+`SQS` を使う構成に戻すと AWS 側ワーカーとローカル DB が分断されるため、そのままでは整合しません。
 
 ### 3. バックエンドのセットアップ
 
@@ -422,6 +430,12 @@ bundle exec rails dynamoid:create_tables
 
 # サーバー起動
 bundle exec rails s
+
+# ローカル審査ワーカー起動
+bundle exec ruby scripts/run_judgment_worker.rb
+
+# 開発環境変数の事前チェック
+bundle exec ruby scripts/check_dev_environment.rb
 ```
 
 ### 4. フロントエンドのセットアップ

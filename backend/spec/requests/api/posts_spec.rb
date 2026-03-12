@@ -14,6 +14,12 @@ RSpec.describe 'API::Posts', type: :request do
     end
 
     let(:valid_headers) { { 'Content-Type' => 'application/json' } }
+    let(:flat_valid_params) do
+      {
+        nickname: '太郎',
+        body: 'スヌーズ押して二度寝'
+      }
+    end
     let(:valid_params) do
       {
         post: {
@@ -32,6 +38,11 @@ RSpec.describe 'API::Posts', type: :request do
         json = response.parsed_body
         expect(json['id']).to be_present
         expect(json['status']).to eq('judging')
+      end
+
+      it 'フラット形式のパラメータで投稿が作成される（201 Created）' do
+        post '/api/posts', params: flat_valid_params.to_json, headers: valid_headers
+        expect(response).to have_http_status(:created)
       end
 
       # 検証: 日本語入力の確認
