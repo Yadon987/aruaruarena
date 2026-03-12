@@ -11,7 +11,7 @@ class HealthCheckController < ApplicationController
   ].freeze
 
   def index
-    missing_vars = required_env_vars.select { |var| ENV[var].to_s.strip == '' }
+    missing_vars = AiSecretHealthCheckService.missing_env_vars(required_env_vars)
     worker_status = build_worker_status
 
     if missing_vars.any?

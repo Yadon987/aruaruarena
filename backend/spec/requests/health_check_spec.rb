@@ -120,5 +120,44 @@ RSpec.describe 'Health Check', type: :request do
         expect(json['missing']).to be_present
       end
     end
+
+    context 'Secrets Managerが有効な場合' do
+      before do
+        ENV['SECRETS_MANAGER_ENABLED'] = 'true'
+        ENV['SECRET_KEY_BASE'] = 'test_secret'
+        ENV['DYNAMODB_TABLE_POSTS'] = 'test_table'
+        ENV['SQS_QUEUE_URL'] = 'https://sqs.test'
+        ENV['GEMINI_API_KEY'] = ''
+        ENV['CEREBRAS_API_KEY'] = ''
+        ENV['GROQ_API_KEY'] = ''
+        ENV['GEMINI_SECRET_ARN'] = 'arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:aruaruarena/ai-keys/gemini-dev-AbCd12'
+        ENV['CEREBRAS_SECRET_ARN'] = 'arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:aruaruarena/ai-keys/cerebras-dev-AbCd12'
+        ENV['GROQ_SECRET_ARN'] = 'arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:aruaruarena/ai-keys/groq-dev-AbCd12'
+        allow(SecretsManagerClient).to receive(:get_api_key).and_return('resolved-key')
+      end
+
+      after do
+        ENV.delete('SECRETS_MANAGER_ENABLED')
+        ENV.delete('SECRET_KEY_BASE') if ENV['SECRET_KEY_BASE'] == 'test_secret'
+        ENV.delete('DYNAMODB_TABLE_POSTS') if ENV['DYNAMODB_TABLE_POSTS'] == 'test_table'
+        ENV.delete('SQS_QUEUE_URL') if ENV['SQS_QUEUE_URL'] == 'https://sqs.test'
+        ENV.delete('GEMINI_API_KEY')
+        ENV.delete('CEREBRAS_API_KEY')
+        ENV.delete('GROQ_API_KEY')
+        ENV.delete('GEMINI_SECRET_ARN')
+        ENV.delete('CEREBRAS_SECRET_ARN')
+        ENV.delete('GROQ_SECRET_ARN')
+      end
+
+      it 'APIキー本体が空でもSecrets Managerで解決できればステータスOKを返すこと' do
+        get '/health'
+
+        expect(response).to have_http_status(:ok)
+        expect(SecretsManagerClient).to have_received(:get_api_key).with(
+          secret_arn: ENV['GEMINI_SECRET_ARN'],
+          env_key: 'GEMINI_API_KEY'
+        )
+      end
+    end
   end
 end
