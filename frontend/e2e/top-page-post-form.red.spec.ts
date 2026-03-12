@@ -8,7 +8,7 @@ async function dismissAudioConsentModal(page: Page) {
   if (await rejectButton.count() === 0) return
   if (await rejectButton.isVisible()) {
     await rejectButton.click()
-    await dialog.waitFor({ state: 'detached', timeout: 2000 }).catch(() => undefined)
+    await dialog.waitFor({ state: 'detached', timeout: 2000 })
   }
 }
 

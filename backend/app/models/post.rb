@@ -28,6 +28,7 @@ class Post
   STATUS_SCORED = 'scored'
   STATUS_FAILED = 'failed'
   STATUSES = [STATUS_JUDGING, STATUS_SCORED, STATUS_FAILED].freeze
+  CLAIM_FIELD = 'judging_claimed_at'
 
   # スコア計算定数
   SCORE_MULTIPLIER = 10

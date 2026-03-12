@@ -6,8 +6,8 @@ RSpec.describe LocalJudgmentWorkerService, dynamodb: false do
   describe '#run_once' do
     let(:logger) { instance_double(Logger, info: nil, error: nil) }
     let(:scope) { double('Dynamoid::Criteria::Chain') }
-    let(:older_post) { instance_double(Post, id: 'post-1', created_at: '10') }
-    let(:newer_post) { instance_double(Post, id: 'post-2', created_at: '20') }
+    let(:older_post) { instance_double(Post, id: 'post-1', created_at: Time.zone.at(10)) }
+    let(:newer_post) { instance_double(Post, id: 'post-2', created_at: Time.zone.at(20)) }
     let(:service) { described_class.new(logger: logger, poll_interval: 0, batch_size: 10) }
 
     before do

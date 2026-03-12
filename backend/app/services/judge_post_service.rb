@@ -24,7 +24,6 @@ class JudgePostService
   EXECUTOR_THREAD_COUNT = JUDGES.size
   EXECUTOR_MAX_QUEUE = JUDGES.size
   EXECUTOR_SHUTDOWN_WAIT_SECONDS = 5
-  CLAIM_FIELD = 'judging_claimed_at'
   CLAIM_STALE_SECONDS = 300
 
   # 初期化
@@ -249,7 +248,7 @@ class JudgePostService
       condition_expression: '#status = :judging AND (attribute_not_exists(#claim) OR #claim < :expired_at)',
       expression_attribute_names: {
         '#status' => 'status',
-        '#claim' => CLAIM_FIELD
+        '#claim' => Post::CLAIM_FIELD
       },
       expression_attribute_values: {
         ':judging' => Post::STATUS_JUDGING,
