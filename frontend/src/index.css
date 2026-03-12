@@ -1529,7 +1529,7 @@
   color: rgba(190, 230, 255, 0.8);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 639px) {
   .result-summary-stats {
     grid-template-columns: max-content max-content;
     justify-content: center;

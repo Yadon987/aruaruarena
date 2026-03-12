@@ -1,5 +1,6 @@
 .sound-settings-panel {
   --sound-settings-shift-x: 0px;
+
   position: absolute;
   top: 48px;
   right: 0;

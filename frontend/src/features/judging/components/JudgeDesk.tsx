@@ -77,7 +77,7 @@ function buildScoreStateAriaLabel({
   finalScoreLabel: string | null
 }): string {
   if (isFailed) {
-    return `${JUDGE_LABELS[judge]}審査員のスコア: 判定対象外`
+    return `${JUDGE_LABELS[judge]}審査員のスコア: ${SCORE_NOT_AVAILABLE}`
   }
   if (isRouletting) {
     return `${JUDGE_LABELS[judge]}審査員のスコアを集計中`

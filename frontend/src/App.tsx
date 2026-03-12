@@ -1503,57 +1503,55 @@ function App() {
           </NeonButton>
         </div>
       )}
-      {viewMode !== 'result' && (
-        <div
-          data-testid="top-action-controls"
-          className="fixed right-4 top-4 z-50 sm:right-6 sm:top-6"
-        >
-          <div className="top-right-action-stack">
-            <div ref={soundSettingsContainerRef} className="relative">
-              <SoundControlButton
-                volume={volume}
-                isOpen={isSoundSettingsOpen}
-                onClick={handleSoundControlClick}
-                panelId={SOUND_SETTINGS_PANEL_ID}
-              />
-              <SoundSettingsPanel
-                isOpen={isSoundSettingsOpen}
-                volume={volume}
-                onVolumeChange={handleVolumeChange}
-                onClose={() => setIsSoundSettingsOpen(false)}
-                panelId={SOUND_SETTINGS_PANEL_ID}
-                containerRef={soundSettingsContainerRef}
-              />
-            </div>
-            {viewMode !== 'judging' && (
-              <>
-                <button
-                  type="button"
-                  onMouseEnter={prefetchRankings}
-                  onFocus={prefetchRankings}
-                  onClick={openRankingModal}
-                  aria-label="ランキング"
-                  title="ランキング"
-                  className="neon-button-base neon-glow-pink icon-action-button"
-                  ref={rankingTriggerRef}
-                >
-                  <span aria-hidden="true">🏆</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={openFooterActionSheet}
-                  aria-label="その他を開く"
-                  title="その他"
-                  className="neon-button-base neon-glow-pink icon-action-button"
-                  ref={footerActionSheetTriggerRef}
-                >
-                  <span aria-hidden="true">⚙️</span>
-                </button>
-              </>
-            )}
+      <div
+        data-testid="top-action-controls"
+        className="fixed right-4 top-4 z-50 sm:right-6 sm:top-6"
+      >
+        <div className="top-right-action-stack">
+          <div ref={soundSettingsContainerRef} className="relative">
+            <SoundControlButton
+              volume={volume}
+              isOpen={isSoundSettingsOpen}
+              onClick={handleSoundControlClick}
+              panelId={SOUND_SETTINGS_PANEL_ID}
+            />
+            <SoundSettingsPanel
+              isOpen={isSoundSettingsOpen}
+              volume={volume}
+              onVolumeChange={handleVolumeChange}
+              onClose={() => setIsSoundSettingsOpen(false)}
+              panelId={SOUND_SETTINGS_PANEL_ID}
+              containerRef={soundSettingsContainerRef}
+            />
           </div>
+          {viewMode !== 'judging' && viewMode !== 'result' && (
+            <>
+              <button
+                type="button"
+                onMouseEnter={prefetchRankings}
+                onFocus={prefetchRankings}
+                onClick={openRankingModal}
+                aria-label="ランキング"
+                title="ランキング"
+                className="neon-button-base neon-glow-pink icon-action-button"
+                ref={rankingTriggerRef}
+              >
+                <span aria-hidden="true">🏆</span>
+              </button>
+              <button
+                type="button"
+                onClick={openFooterActionSheet}
+                aria-label="その他を開く"
+                title="その他"
+                className="neon-button-base neon-glow-pink icon-action-button"
+                ref={footerActionSheetTriggerRef}
+              >
+                <span aria-hidden="true">⚙️</span>
+              </button>
+            </>
+          )}
         </div>
-      )}
+      </div>
       <div
         className="game-show-stage relative min-h-screen overflow-hidden px-6 pb-6"
         style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
@@ -1612,7 +1610,7 @@ function App() {
           </section>
         )}
 
-            {viewMode === 'top' && (
+        {viewMode === 'top' && (
           <>
             <PostFormModal
               isOpen={isPostModalOpen}

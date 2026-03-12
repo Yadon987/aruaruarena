@@ -30,8 +30,7 @@ export function ResultSummary({
   rejudgeErrorMessage = '',
 }: ResultSummaryProps) {
   const canRejudge = status === 'failed' && typeof onRejudge === 'function'
-  const rankLabel =
-    status === 'scored' && typeof rank === 'number' ? `${rank}位` : FAILED_RANK_DISPLAY
+  const rankLabel = status === 'scored' && isFiniteNumber(rank) ? `${rank}位` : FAILED_RANK_DISPLAY
   const averageLabel =
     status === 'scored' && isFiniteNumber(averageScore)
       ? averageScore.toFixed(1)
