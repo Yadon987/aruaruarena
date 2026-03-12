@@ -45,7 +45,7 @@ module HealthCheckable
   end
 
   def worker_unhealthy?(worker_status)
-    worker_status&.dig('status') == 'unhealthy'
+    worker_status&.[]('status') == 'unhealthy'
   end
 
   def missing_env_response(missing_vars, worker_status)
