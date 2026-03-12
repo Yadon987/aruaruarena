@@ -69,7 +69,8 @@ const SOUND_SETTINGS_PANEL_ID = 'sound-settings-panel'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
-const JUDGING_POLLING_TIMEOUT_MS = 60000
+const JUDGING_POLLING_TIMEOUT_MS =
+  import.meta.env.MODE === 'development' && !isMockApiEnabled() ? 120000 : 60000
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
 const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
 const HEALTH_CHECK_TIMEOUT_MS = 3000
@@ -925,7 +926,7 @@ function App() {
       if (pollingRequestInFlightRef.current) return
 
       const elapsed = Date.now() - pollingStartedAtRef.current
-      // 監視上限（JUDGING_POLLING_TIMEOUT_MS。現在は60秒）を超えた場合はAPIを呼ばずに終端する。
+      // 監視上限（JUDGING_POLLING_TIMEOUT_MS）を超えた場合はAPIを呼ばずに終端する。
       if (elapsed >= JUDGING_POLLING_TIMEOUT_MS) {
         await handleJudgingFetchFailed('timeout')
         return
@@ -974,7 +975,7 @@ function App() {
         }
 
         const retryElapsed = Date.now() - pollingStartedAtRef.current
-        // 500系/通信系は監視上限（JUDGING_POLLING_TIMEOUT_MS。現在は60秒）内で再試行し、超過時のみ終了する。
+        // 500系/通信系は監視上限（JUDGING_POLLING_TIMEOUT_MS）内で再試行し、超過時のみ終了する。
         if (retryElapsed >= JUDGING_POLLING_TIMEOUT_MS) {
           await handleJudgingFetchFailed()
         }
