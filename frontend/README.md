@@ -102,7 +102,18 @@ className = 'bg-error-500' // #ef4444
 
 ```env
 VITE_API_BASE_URL=/api
+VITE_USE_MOCK_API=false
+VITE_API_PROXY_TARGET=http://localhost:3000
 ```
+
+`VITE_USE_MOCK_API` は以下で切り替えます。
+
+- `true`: 開発時にMSW（モック）を有効化
+- `false`: 開発サーバーを本番と同等にし、実際のAPIへ接続
+
+`VITE_API_BASE_URL` は `/api` にして `VITE_API_PROXY_TARGET` で
+開発時のバックエンドAPIを指定する構成です。  
+必要なら本番接続先を直接指定しても、`VITE_API_BASE_URL` に本番のURLを設定してください。
 
 詳しくは `.env.example` を参照してください。
 

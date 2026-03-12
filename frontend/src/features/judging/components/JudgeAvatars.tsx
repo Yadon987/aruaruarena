@@ -154,6 +154,7 @@ export function JudgeAvatars({
               hasEntered={effectiveHasEntered}
               judgment={judgmentMap.get(judge.id)}
               isLowScore={isLowScore}
+              resultMode={resultMode}
               phase={phase}
               showSpeech={showSpeech}
             />

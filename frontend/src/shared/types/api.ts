@@ -58,3 +58,22 @@ export interface GetRankingResponse {
   rankings: RankingItem[]
   total_count: number
 }
+
+export interface HealthWorkerStatus {
+  mode: 'local_worker'
+  status: 'ok' | 'unhealthy'
+  command: string
+  pid?: number | null
+  updated_at?: string | null
+  processed_count?: number | null
+  reason?: string | null
+}
+
+export interface GetHealthResponse {
+  status: 'ok' | 'unhealthy'
+  environment?: string
+  timestamp: string
+  error?: string
+  missing?: string[]
+  worker?: HealthWorkerStatus
+}

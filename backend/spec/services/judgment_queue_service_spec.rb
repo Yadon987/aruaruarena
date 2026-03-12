@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
+require 'timeout'
 
 RSpec.describe JudgmentQueueService, dynamodb: false do
   describe '.enqueue' do
@@ -39,6 +40,39 @@ RSpec.describe JudgmentQueueService, dynamodb: false do
       allow(ENV).to receive(:fetch).with('SQS_QUEUE_URL').and_yield
 
       expect { described_class.enqueue('post-123') }.to raise_error(RuntimeError, 'SQS_QUEUE_URL が設定されていません')
+    end
+
+    it 'ローカルワーカーモードでは SQS へ送信しないこと' do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new('development'))
+      allow(ENV).to receive(:[]).with('LOCAL_JUDGE_WORKER').and_return('true')
+      allow(LocalJudgmentWorkerHeartbeatService).to receive(:current_status).and_return({
+                                                                                          'status' => 'ok'
+                                                                                        })
+
+      described_class.enqueue('post-123')
+
+      expect(http_client).not_to have_received(:request)
+    end
+
+    it 'ローカルワーカー未起動時は非同期フォールバックで審査を開始すること' do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new('development'))
+      allow(ENV).to receive(:[]).with('LOCAL_JUDGE_WORKER').and_return('true')
+      allow(LocalJudgmentWorkerHeartbeatService).to receive(:current_status).and_return({
+                                                                                          'status' => 'unhealthy'
+                                                                                        })
+      called = false
+      allow(JudgePostService).to receive(:call) do
+        called = true
+      end
+
+      described_class.enqueue('post-123')
+
+      Timeout.timeout(1) do
+        sleep 0.01 until called
+      end
+
+      expect(JudgePostService).to have_received(:call).with('post-123')
+      expect(http_client).not_to have_received(:request)
     end
   end
 end

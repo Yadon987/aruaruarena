@@ -136,7 +136,11 @@ module Api
     end
 
     def post_params
-      params.expect(post: %i[nickname body])
+      if params[:post].present?
+        params[:post].permit(:nickname, :body)
+      else
+        params.permit(:nickname, :body)
+      end
     end
 
     def rejudge_params

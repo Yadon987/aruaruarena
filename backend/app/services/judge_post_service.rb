@@ -24,6 +24,7 @@ class JudgePostService
   EXECUTOR_THREAD_COUNT = JUDGES.size
   EXECUTOR_MAX_QUEUE = JUDGES.size
   EXECUTOR_SHUTDOWN_WAIT_SECONDS = 5
+  CLAIM_STALE_SECONDS = 300
 
   # 初期化
   #
@@ -40,7 +41,9 @@ class JudgePostService
   # @return [void]
   def execute
     return if @post.nil?
-    return skip_processed_post if @post.status != Post::STATUS_JUDGING
+
+    claim_result = claim_post_for_judging!
+    return skip_by_claim_result(claim_result) unless claim_result == :claimed
 
     # スレッドセーフにクラスを事前にロード/解決しておく
     resolved_judges = JUDGES.map do |judge|
@@ -234,6 +237,42 @@ class JudgePostService
   def skip_processed_post
     Rails.logger.info("[JudgePostService] スキップ(処理済み): post_id=#{@post.id}, status=#{@post.status}")
     nil
+  end
+
+  def skip_claimed_post
+    Rails.logger.info("[JudgePostService] スキップ(claim競合): post_id=#{@post.id}, status=#{@post.status}")
+    nil
+  end
+
+  def skip_by_claim_result(claim_result)
+    return skip_processed_post if claim_result == :already_processed
+    return skip_claimed_post if claim_result == :claimed_by_other
+
+    skip_processed_post
+  end
+
+  def claim_post_for_judging!
+    return :already_processed if @post.status != Post::STATUS_JUDGING
+
+    now = Time.current.to_i
+    Dynamoid.adapter.client.update_item(
+      table_name: Post.table_name,
+      key: { id: @post.id },
+      update_expression: 'SET #claim = :now',
+      condition_expression: '#status = :judging AND (attribute_not_exists(#claim) OR #claim < :expired_at)',
+      expression_attribute_names: {
+        '#status' => 'status',
+        '#claim' => Post::CLAIM_FIELD
+      },
+      expression_attribute_values: {
+        ':judging' => Post::STATUS_JUDGING,
+        ':now' => now,
+        ':expired_at' => now - CLAIM_STALE_SECONDS
+      }
+    )
+    :claimed
+  rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
+    :claimed_by_other
   end
 
   def build_judgment_attrs(result)

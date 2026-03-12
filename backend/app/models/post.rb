@@ -28,6 +28,7 @@ class Post
   STATUS_SCORED = 'scored'
   STATUS_FAILED = 'failed'
   STATUSES = [STATUS_JUDGING, STATUS_SCORED, STATUS_FAILED].freeze
+  CLAIM_FIELD = 'judging_claimed_at'
 
   # スコア計算定数
   SCORE_MULTIPLIER = 10
@@ -108,10 +109,12 @@ class Post
   # ステータスを更新してscore_keyを設定
   # @param new_status [String] 新しいステータス
   def update_status!(new_status)
+    claimed_at = current_claimed_at
     self.status = new_status
     # scored以外はscore_keyをクリア（GSIからの除外）
     self.score_key = (generate_score_key if status == STATUS_SCORED)
     save!
+    clear_claim_field!(claimed_at) unless status == STATUS_JUDGING
   end
 
   # ランキング順位を計算する
@@ -224,6 +227,32 @@ class Post
   end
 
   private
+
+  def clear_claim_field!(claimed_at)
+    return if claimed_at.nil?
+
+    Dynamoid.adapter.client.update_item(
+      table_name: self.class.table_name,
+      key: { id: id },
+      update_expression: 'REMOVE #claim',
+      condition_expression: '#status <> :judging AND #claim = :claimed_at',
+      expression_attribute_names: {
+        '#status' => 'status',
+        '#claim' => CLAIM_FIELD
+      },
+      expression_attribute_values: {
+        ':judging' => STATUS_JUDGING,
+        ':claimed_at' => claimed_at
+      }
+    )
+  rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
+    nil
+  end
+
+  def current_claimed_at
+    item = Dynamoid.adapter.client.get_item(table_name: self.class.table_name, key: { id: id }).item
+    item&.[](CLAIM_FIELD)
+  end
 
   # 入力のサニタイズ（前後の空白のみ除去）
   #

@@ -160,6 +160,37 @@ RSpec.describe Post, type: :model do
       expect(failed_post.status).to eq('scored')
       expect(failed_post.score_key).to be_present
     end
+
+    it 'judging以外へ遷移するとclaim属性が削除されること' do
+      client = Dynamoid.adapter.client
+      client.update_item(
+        table_name: Post.table_name,
+        key: { id: post.id },
+        update_expression: "SET #{Post::CLAIM_FIELD} = :claimed_at",
+        expression_attribute_values: { ':claimed_at' => Time.current.to_i }
+      )
+
+      post.update_status!('failed')
+
+      item = client.get_item(table_name: Post.table_name, key: { id: post.id }).item
+      expect(item).not_to have_key(Post::CLAIM_FIELD)
+    end
+
+    it 'judgingのまま更新した場合はclaim属性を保持すること' do
+      client = Dynamoid.adapter.client
+      claimed_at = Time.current.to_i
+      client.update_item(
+        table_name: Post.table_name,
+        key: { id: post.id },
+        update_expression: "SET #{Post::CLAIM_FIELD} = :claimed_at",
+        expression_attribute_values: { ':claimed_at' => claimed_at }
+      )
+
+      post.update_status!(Post::STATUS_JUDGING)
+
+      item = client.get_item(table_name: Post.table_name, key: { id: post.id }).item
+      expect(item[Post::CLAIM_FIELD]).to eq(claimed_at)
+    end
   end
 
   describe '#calculate_rank' do

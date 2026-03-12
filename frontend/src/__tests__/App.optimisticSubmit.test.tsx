@@ -89,7 +89,11 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
     await submitPostForm({ waitForSubmit: () => Promise.resolve() })
 
     await waitFor(() => {
-      expect(screen.getByText('ネットワークに接続できませんでした')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'backendに接続できませんでした。backend を起動してください（bundle exec rails s）'
+        )
+      ).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '再投稿する' })).toBeInTheDocument()
     })
     expect(console.error).toHaveBeenCalledWith(
@@ -134,7 +138,11 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
     await submitPostForm({ waitForSubmit: () => Promise.resolve() })
 
     await waitFor(() => {
-      expect(screen.getByText('ネットワークに接続できませんでした')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'backendに接続できませんでした。backend を起動してください（bundle exec rails s）'
+        )
+      ).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '再投稿する' })).toBeInTheDocument()
     })
 

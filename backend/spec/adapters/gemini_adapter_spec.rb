@@ -14,7 +14,7 @@ RSpec.describe GeminiAdapter do
   end
 
   describe '初期化' do
-    it_behaves_like 'adapter initialization', 'ひろゆき風', false
+    it_behaves_like 'adapter initialization', 'ひろゆき風', true
   end
 
   describe '#client' do
@@ -603,6 +603,38 @@ RSpec.describe GeminiAdapter do
       expect(result.succeeded).to be true
       expect(result.comment).to eq('代替成功')
     end
+
+    it 'Geminiのprovider_error時はGroq互換へフォールバックすること' do
+      primary_request = { mode: 'primary' }
+      fallback_adapter = instance_double(HiroyukiFallbackAdapter)
+      fallback_result = BaseAiAdapter::JudgmentResult.new(
+        succeeded: true,
+        error_code: nil,
+        scores: {
+          empathy: 12,
+          humor: 11,
+          brevity: 13,
+          originality: 14,
+          expression: 15
+        },
+        comment: '認証エラー時の代替成功'
+      )
+
+      allow(adapter).to receive(:build_request).and_return(primary_request)
+      allow(adapter).to receive(:execute_request).with(primary_request).and_raise(
+        Faraday::ClientError.new(
+          'Client error: 400',
+          response: { status: 400, body: '{"error":{"message":"API Key not found"}}' }
+        )
+      )
+      allow(HiroyukiFallbackAdapter).to receive(:new).with(context: :default).and_return(fallback_adapter)
+      allow(fallback_adapter).to receive(:judge).with('テスト投稿', persona: 'hiroyuki').and_return(fallback_result)
+
+      result = adapter.send(:call_ai_api, 'テスト投稿', 'hiroyuki')
+
+      expect(result.succeeded).to be true
+      expect(result.comment).to eq('認証エラー時の代替成功')
+    end
   end
 
   it_behaves_like 'adapter api key validation', 'GEMINI_API_KEY'
@@ -717,50 +749,50 @@ RSpec.describe GeminiAdapter do
 
     it 'リトライ時にWARNレベルでログを出力すること' do
       adapter = described_class.new
+      fallback_adapter = instance_double(HiroyukiFallbackAdapter)
+      fallback_result = BaseAiAdapter::JudgmentResult.new(
+        succeeded: true,
+        error_code: nil,
+        scores: {
+          empathy: 15,
+          humor: 15,
+          brevity: 15,
+          originality: 15,
+          expression: 15
+        },
+        comment: '代替成功'
+      )
+      warn_messages = []
+
       allow(adapter).to receive(:build_request).and_return({})
-
-      # 初回はエラー、2回目は成功
       allow(adapter).to receive(:execute_request).and_raise(Faraday::TimeoutError)
-      allow(adapter).to receive(:retry_sleep) # sleepをスキップ
-
-      # リトライログの確認
-      expect(Rails.logger).to receive(:warn).with(%r{リトライ 1/2: Faraday::TimeoutError})
-
-      # loop/retryのテスト用モック
-      call_count = 0
-      allow(adapter).to receive(:execute_request) do
-        call_count += 1
-        raise Faraday::TimeoutError if call_count == 1
-
-        instance_double(Faraday::Response, status: 200, body: '{}')
-      end
-
-      valid_scores = {
-        empathy: 15,
-        humor: 15,
-        brevity: 15,
-        originality: 15,
-        expression: 15
-      }
-      allow(adapter).to receive(:parse_response).and_return({ scores: valid_scores, comment: 'test' })
-      allow(adapter).to receive(:apply_persona_bias!) { |result, _| result }
+      allow(HiroyukiFallbackAdapter).to receive(:new).with(context: :default).and_return(fallback_adapter)
+      allow(fallback_adapter).to receive(:judge).and_return(fallback_result)
+      allow(Rails.logger).to receive(:warn) { |message| warn_messages << message if message.present? }
 
       adapter.judge('テスト投稿', persona: 'hiroyuki')
+
+      expect(warn_messages).to include(a_string_matching(/Gemini provider系エラーのためGroq互換へフォールバックします/))
+      expect(warn_messages).to include(a_string_matching(/Gemini provider系エラー継続のためGroq互換へフォールバックします/))
     end
 
     it 'APIエラー時にERRORレベルでログを出力すること' do
       adapter = described_class.new
+      fallback_adapter = instance_double(HiroyukiFallbackAdapter)
+      error_messages = []
       allow(adapter).to receive(:build_request).and_return({})
 
       # レート制限エラー
       allow(adapter).to receive(:execute_request).and_raise(Faraday::ClientError.new('rate limit',
                                                                                      response: { status: 429 }))
-      allow(adapter).to receive(:retry_sleep)
-
-      # ERRORログの確認（with_retryとhandle_errorで2回出力される可能性があるため、at_least(:once)）
-      expect(Rails.logger).to receive(:error).with(/審査失敗: Faraday::ClientError/).at_least(:once)
+      allow(HiroyukiFallbackAdapter).to receive(:new).with(context: :default).and_return(fallback_adapter)
+      allow(fallback_adapter).to receive(:judge).and_raise(StandardError, 'fallback failed')
+      allow(Rails.logger).to receive(:error) { |message| error_messages << message if message.present? }
 
       adapter.judge('テスト投稿', persona: 'hiroyuki')
+
+      expect(error_messages).to include(a_string_matching(/Gemini代替プロバイダ失敗: StandardError - fallback failed/))
+      expect(error_messages).to include(a_string_matching(/審査失敗: Faraday::ClientError/))
     end
   end
 

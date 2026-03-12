@@ -3,6 +3,7 @@ import type {
   ApiError,
   CreatePostRequest,
   CreatePostResponse,
+  GetHealthResponse,
   GetPostResponse,
   GetRankingResponse,
 } from '../types/api'
@@ -99,8 +100,12 @@ async function parseResponseBody<T>(response: Response): Promise<T> {
  * @returns パースされたレスポンスデータ
  * @throws ApiClientError - ネットワークエラー、HTTPエラー、タイムアウト時
  */
-async function request<T>(path: string, options?: RequestInit & { timeout?: number }): Promise<T> {
+async function request<T>(
+  path: string,
+  options?: RequestInit & { timeout?: number; skipHttpError?: boolean }
+): Promise<T> {
   const timeout = options?.timeout ?? API_TIMEOUT.DEFAULT
+  const skipHttpError = options?.skipHttpError ?? false
   const controller = new AbortController()
   const externalSignal = options?.signal
   const hasExternalSignal = typeof externalSignal !== 'undefined'
@@ -122,7 +127,8 @@ async function request<T>(path: string, options?: RequestInit & { timeout?: numb
   }
 
   try {
-    const { timeout: _timeout, headers: customHeaders, ...restOptions } = options ?? {}
+    const { timeout: _timeout, headers: customHeaders, skipHttpError: _skip, ...restOptions } =
+      options ?? {}
     const mergedHeaders = new Headers(customHeaders)
     const body = restOptions.body
     const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
@@ -143,7 +149,7 @@ async function request<T>(path: string, options?: RequestInit & { timeout?: numb
       signal: controller.signal,
     })
 
-    if (!response.ok) {
+    if (!response.ok && !skipHttpError) {
       await handleHttpError(response)
     }
 
@@ -195,5 +201,13 @@ export const api = {
   rankings: {
     list: (limit: number = API_DEFAULTS.RANKING_LIMIT) =>
       request<GetRankingResponse>(`/rankings?limit=${limit}`),
+  },
+  health: {
+    get: (options?: RequestInit & { timeout?: number }) =>
+      request<GetHealthResponse>('/health', {
+        ...options,
+        cache: 'no-store',
+        skipHttpError: true,
+      }),
   },
 }
