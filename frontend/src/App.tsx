@@ -1524,7 +1524,7 @@ function App() {
               containerRef={soundSettingsContainerRef}
             />
           </div>
-          {viewMode !== 'judging' && (
+          {viewMode !== 'judging' && viewMode !== 'result' && (
             <>
               <button
                 type="button"
@@ -1610,7 +1610,7 @@ function App() {
           </section>
         )}
 
-            {viewMode === 'top' && (
+        {viewMode === 'top' && (
           <>
             <PostFormModal
               isOpen={isPostModalOpen}

@@ -21,7 +21,7 @@ type JudgeDeskProps = {
 
 const JUDGE_DISPLAY_ORDER: readonly JudgePersona[] = JUDGE_PERSONA_ORDER
 const SCORE_PLACEHOLDER = '00'
-const SCORE_NOT_AVAILABLE = 'N/A'
+const SCORE_NOT_AVAILABLE = '失敗'
 const LIT_ON = 'true'
 const LIT_OFF = 'false'
 const SCORE_LIGHT_INTERVAL_MS = 300
@@ -77,7 +77,7 @@ function buildScoreStateAriaLabel({
   finalScoreLabel: string | null
 }): string {
   if (isFailed) {
-    return `${JUDGE_LABELS[judge]}審査員のスコア: 判定対象外`
+    return `${JUDGE_LABELS[judge]}審査員のスコア: ${SCORE_NOT_AVAILABLE}`
   }
   if (isRouletting) {
     return `${JUDGE_LABELS[judge]}審査員のスコアを集計中`

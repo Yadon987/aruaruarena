@@ -28,7 +28,7 @@ const JUDGE_NAMEPLATES: Record<JudgePersona, string> = {
 }
 
 const SCORE_PLACEHOLDER = '00'
-const SCORE_NOT_AVAILABLE = 'N/A'
+const SCORE_NOT_AVAILABLE = '失敗'
 const AVATAR_BREATHING_CLASS = 'judge-avatar-speaking-breath'
 const ACTIVE_BACKREST_VARIANT: JudgeSeatBackrestVariant = 'royal-crown'
 const VIP_IDLE_CYCLE_MS = 5000
@@ -145,7 +145,7 @@ function buildScoreStateAriaLabel({
   finalScoreLabel: string | null
 }): string {
   if (isFailed) {
-    return `${JUDGE_LABELS[judge]}審査員のスコア: 判定対象外`
+    return `${JUDGE_LABELS[judge]}審査員のスコア: ${SCORE_NOT_AVAILABLE}`
   }
   if (isRouletting) {
     return `${JUDGE_LABELS[judge]}審査員のスコアを集計中`

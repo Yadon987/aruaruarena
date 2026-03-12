@@ -35,8 +35,8 @@ describe('E25-01 RED: JudgeDesk', () => {
     })
   })
 
-  it('scoringフェーズで失敗審査員はN/Aを表示する', async () => {
-    // 何を検証するか: E25-01の受け入れ基準として、success=false の審査員が N/A 表示になること
+  it('scoringフェーズで失敗審査員は失敗を表示する', async () => {
+    // 何を検証するか: E25-01の受け入れ基準として、success=false の審査員が失敗表示になること
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(
@@ -50,7 +50,7 @@ describe('E25-01 RED: JudgeDesk', () => {
       />
     )
 
-    expect(screen.getAllByText('N/A')).toHaveLength(2)
+    expect(screen.getAllByText('失敗')).toHaveLength(2)
   })
 
   it('scoringフェーズでスコアが左から順に点灯する', async () => {
@@ -132,7 +132,7 @@ describe('E25-01 RED: JudgeDesk', () => {
   })
 
   it('未確定と失敗でも「点」を表示しルートとパネルのglass-panel適用位置が正しい', async () => {
-    // 何を検証するか: Issue #150 の台座分離要件と境界表示（00/N-A）を満たすこと
+    // 何を検証するか: Issue #150 の台座分離要件と境界表示（00/失敗）を満たすこと
     const { JudgeDesk } = await loadJudgeDesk()
 
     render(
@@ -150,7 +150,7 @@ describe('E25-01 RED: JudgeDesk', () => {
       expect(panel).toHaveClass('glass-panel')
     })
 
-    expect(within(panels[0]).getByText('N/A')).toBeInTheDocument()
+    expect(within(panels[0]).getByText('失敗')).toBeInTheDocument()
     expect(within(panels[1]).getByText('00')).toBeInTheDocument()
     expect(within(panels[2]).getByText('00')).toBeInTheDocument()
     expect(screen.queryByText('点')).not.toBeInTheDocument()
