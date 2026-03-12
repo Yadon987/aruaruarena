@@ -85,6 +85,6 @@ test.describe('E12-01 RED: トップ画面と投稿フォーム', () => {
     await fillPostForm(page, '制限E2E', 'レート制限確認本文')
     await submitPostForm(page)
 
-    await expect(page.getByText('投稿に失敗しました')).toBeVisible()
+    await expect(page.getByText('アクセスが集中しています。時間をおいて再度お試しください')).toBeVisible()
   })
 })

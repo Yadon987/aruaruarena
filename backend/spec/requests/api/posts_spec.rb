@@ -43,6 +43,10 @@ RSpec.describe 'API::Posts', type: :request do
       it 'フラット形式のパラメータで投稿が作成される（201 Created）' do
         post '/api/posts', params: flat_valid_params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
+
+        json = response.parsed_body
+        expect(json['id']).to be_present
+        expect(json['status']).to eq('judging')
       end
 
       # 検証: 日本語入力の確認
@@ -196,9 +200,27 @@ RSpec.describe 'API::Posts', type: :request do
       end
 
       # 検証: 空ボディ
-      it 'リクエストボディが空で400 BAD_REQUEST' do
+      it 'リクエストボディが空で422 VALIDATION_ERROR' do
         post '/api/posts', params: '', headers: valid_headers
-        expect(response).to have_http_status(:bad_request)
+        expect(response).to have_http_status(:unprocessable_content)
+        json = response.parsed_body
+        expect(json['code']).to eq('VALIDATION_ERROR')
+      end
+
+      it 'postキーがなくnickname/body以外のみのリクエストで422 VALIDATION_ERROR' do
+        post '/api/posts', params: { invalid: { nickname: '太郎', body: '本文' } }.to_json, headers: valid_headers
+
+        expect(response).to have_http_status(:unprocessable_content)
+        json = response.parsed_body
+        expect(json['code']).to eq('VALIDATION_ERROR')
+      end
+
+      it 'フラット形式でnicknameキーが不足した場合は422 VALIDATION_ERROR' do
+        post '/api/posts', params: { body: '本文' }.to_json, headers: valid_headers
+
+        expect(response).to have_http_status(:unprocessable_content)
+        json = response.parsed_body
+        expect(json['code']).to eq('VALIDATION_ERROR')
       end
 
       # 検証: Content-Type検証

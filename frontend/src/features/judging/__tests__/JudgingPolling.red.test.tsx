@@ -271,16 +271,17 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     const baseTime = Date.now()
     const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => baseTime + 61_000)
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(
-          'ローカル審査ワーカーが停止しています。bundle exec ruby scripts/run_judgment_worker.rb を起動してください'
-        )
-      ).toBeInTheDocument()
-    }, { timeout: 5000 })
-
-    dateNowSpy.mockRestore()
+    try {
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            'ローカル審査ワーカーが停止しています。bundle exec ruby scripts/run_judgment_worker.rb を起動してください'
+          )
+        ).toBeInTheDocument()
+      }, { timeout: 5000 })
+    } finally {
+      dateNowSpy.mockRestore()
+    }
   }, 10000)
 
   it('不正な投稿IDではポーリングせず審査エラーパネルを表示する', async () => {

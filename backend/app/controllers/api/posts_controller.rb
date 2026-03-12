@@ -137,7 +137,7 @@ module Api
 
     def post_params
       if params[:post].present?
-        params.expect(post: %i[nickname body])
+        params[:post].permit(:nickname, :body)
       else
         params.permit(:nickname, :body)
       end

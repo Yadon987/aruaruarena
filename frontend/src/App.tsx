@@ -295,6 +295,9 @@ function resolveJudgingSubmitErrorMessage(error: unknown): string {
         ? MESSAGE_JUDGING_BACKEND_NOT_RUNNING
         : MESSAGE_JUDGING_NETWORK_ERROR
     }
+    if (error.code === API_ERROR_CODE.RATE_LIMITED || error.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
+      return MESSAGE_POST_DETAIL_RATE_LIMITED
+    }
     if (error.code === API_ERROR_CODE.TIMEOUT || error.status === HTTP_STATUS.REQUEST_TIMEOUT) {
       return MESSAGE_JUDGING_TIMEOUT_ERROR
     }
@@ -664,10 +667,15 @@ function App() {
       pollingTimerRef.current = null
     }
     if (pollingAbortControllerRef.current) {
-      pollingAbortControllerRef.current.abort()
-      pollingAbortControllerRef.current = null
+      const abortController = pollingAbortControllerRef.current
+      abortController.abort()
+      if (pollingAbortControllerRef.current === abortController) {
+        pollingAbortControllerRef.current = null
+        pollingRequestInFlightRef.current = false
+      }
+    } else {
+      pollingRequestInFlightRef.current = false
     }
-    pollingRequestInFlightRef.current = false
     pollingStartedAtRef.current = 0
     pollingTransientErrorCountRef.current = 0
     pollingTransientErrorStartedAtRef.current = 0
@@ -973,8 +981,8 @@ function App() {
       } finally {
         if (pollingAbortControllerRef.current === abortController) {
           pollingAbortControllerRef.current = null
+          pollingRequestInFlightRef.current = false
         }
-        pollingRequestInFlightRef.current = false
       }
     }
 

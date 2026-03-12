@@ -157,6 +157,18 @@ RSpec.describe JudgePostService do
         service.execute
       end
 
+      it 'claim競合時は審査をスキップすること' do
+        allow(service).to receive(:claim_post_for_judging!).and_return(false)
+        expect_any_instance_of(GeminiAdapter).not_to receive(:judge)
+        expect_any_instance_of(DewiAdapter).not_to receive(:judge)
+        expect_any_instance_of(OpenAiAdapter).not_to receive(:judge)
+
+        service.execute
+
+        post.reload
+        expect(post.status).to eq('judging')
+      end
+
       # 何を検証するか: 全員失敗時にstatus: failedになること
       it '全員失敗時にstatus: failedになること' do
         allow(Rails.logger).to receive(:warn)

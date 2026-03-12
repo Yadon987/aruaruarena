@@ -43,7 +43,25 @@ class LocalJudgmentWorkerHeartbeatService
 
     def write_payload(payload)
       FileUtils.mkdir_p(HEARTBEAT_PATH.dirname)
-      File.write(HEARTBEAT_PATH, JSON.generate(payload))
+      temp_path = heartbeat_temp_path
+      write_temp_payload(temp_path, JSON.generate(payload))
+
+      File.rename(temp_path, HEARTBEAT_PATH)
+    rescue StandardError
+      FileUtils.rm_f(temp_path) if defined?(temp_path) && temp_path
+      raise
+    end
+
+    def heartbeat_temp_path
+      HEARTBEAT_PATH.dirname.join(".#{HEARTBEAT_PATH.basename}.tmp-#{Process.pid}-#{SecureRandom.hex(4)}")
+    end
+
+    def write_temp_payload(path, json)
+      File.open(path, 'w') do |file|
+        file.write(json)
+        file.flush
+        file.fsync
+      end
     end
 
     def read_payload

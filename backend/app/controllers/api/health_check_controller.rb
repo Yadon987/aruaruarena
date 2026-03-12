@@ -64,6 +64,7 @@ module Api
     end
 
     def build_worker_status
+      return nil if synchronous_mode?
       return nil unless local_worker_mode?
 
       LocalJudgmentWorkerHeartbeatService.current_status

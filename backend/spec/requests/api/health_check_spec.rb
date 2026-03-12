@@ -58,13 +58,15 @@ RSpec.describe 'Api::HealthCheck', type: :request do
       end
 
       it 'ワーカー稼働中なら SQS_QUEUE_URL が未設定でもステータスOKを返すこと' do
-        allow(LocalJudgmentWorkerHeartbeatService).to receive(:current_status).and_return({
-          'mode' => 'local_worker',
-          'status' => 'ok',
-          'pid' => 12_345,
-          'updated_at' => '2026-03-12T07:00:00+09:00',
-          'command' => 'bundle exec ruby scripts/run_judgment_worker.rb'
-        })
+        allow(LocalJudgmentWorkerHeartbeatService).to receive(:current_status).and_return(
+          {
+            'mode' => 'local_worker',
+            'status' => 'ok',
+            'pid' => 12_345,
+            'updated_at' => '2026-03-12T07:00:00+09:00',
+            'command' => 'bundle exec ruby scripts/run_judgment_worker.rb'
+          }
+        )
 
         get '/api/health'
         expect(response).to have_http_status(:ok)
@@ -77,12 +79,14 @@ RSpec.describe 'Api::HealthCheck', type: :request do
       end
 
       it 'ワーカー停止中ならステータス503を返すこと' do
-        allow(LocalJudgmentWorkerHeartbeatService).to receive(:current_status).and_return({
-          'mode' => 'local_worker',
-          'status' => 'unhealthy',
-          'reason' => 'heartbeat_missing',
-          'command' => 'bundle exec ruby scripts/run_judgment_worker.rb'
-        })
+        allow(LocalJudgmentWorkerHeartbeatService).to receive(:current_status).and_return(
+          {
+            'mode' => 'local_worker',
+            'status' => 'unhealthy',
+            'reason' => 'heartbeat_missing',
+            'command' => 'bundle exec ruby scripts/run_judgment_worker.rb'
+          }
+        )
 
         get '/api/health'
         expect(response).to have_http_status(:service_unavailable)
@@ -95,6 +99,26 @@ RSpec.describe 'Api::HealthCheck', type: :request do
           'status' => 'unhealthy',
           'reason' => 'heartbeat_missing'
         )
+      end
+
+      it '同期実行モードが有効ならワーカーステータス判定をスキップすること' do
+        ENV['SYNCHRONOUS_JUDGE'] = 'true'
+        allow(LocalJudgmentWorkerHeartbeatService).to receive(:current_status).and_return(
+          {
+            'mode' => 'local_worker',
+            'status' => 'unhealthy',
+            'reason' => 'heartbeat_missing'
+          }
+        )
+
+        get '/api/health'
+        expect(response).to have_http_status(:ok)
+
+        json = response.parsed_body
+        expect(json['status']).to eq('ok')
+        expect(json['worker']).to be_nil
+      ensure
+        ENV.delete('SYNCHRONOUS_JUDGE')
       end
     end
 
@@ -138,9 +162,12 @@ RSpec.describe 'Api::HealthCheck', type: :request do
         ENV['GEMINI_API_KEY'] = ''
         ENV['CEREBRAS_API_KEY'] = ''
         ENV['GROQ_API_KEY'] = ''
-        ENV['GEMINI_SECRET_ARN'] = 'arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:aruaruarena/ai-keys/gemini-dev-AbCd12'
-        ENV['CEREBRAS_SECRET_ARN'] = 'arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:aruaruarena/ai-keys/cerebras-dev-AbCd12'
-        ENV['GROQ_SECRET_ARN'] = 'arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:aruaruarena/ai-keys/groq-dev-AbCd12'
+        ENV['GEMINI_SECRET_ARN'] =
+          'arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:aruaruarena/ai-keys/gemini-dev-AbCd12'
+        ENV['CEREBRAS_SECRET_ARN'] =
+          'arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:aruaruarena/ai-keys/cerebras-dev-AbCd12'
+        ENV['GROQ_SECRET_ARN'] =
+          'arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:aruaruarena/ai-keys/groq-dev-AbCd12'
         allow(SecretsManagerClient).to receive(:get_api_key).and_return('resolved-key')
       end
 
@@ -162,8 +189,16 @@ RSpec.describe 'Api::HealthCheck', type: :request do
 
         expect(response).to have_http_status(:ok)
         expect(SecretsManagerClient).to have_received(:get_api_key).with(
-          secret_arn: ENV['GEMINI_SECRET_ARN'],
+          secret_arn: ENV.fetch('GEMINI_SECRET_ARN', nil),
           env_key: 'GEMINI_API_KEY'
+        )
+        expect(SecretsManagerClient).to have_received(:get_api_key).with(
+          secret_arn: ENV.fetch('CEREBRAS_SECRET_ARN', nil),
+          env_key: 'CEREBRAS_API_KEY'
+        )
+        expect(SecretsManagerClient).to have_received(:get_api_key).with(
+          secret_arn: ENV.fetch('GROQ_SECRET_ARN', nil),
+          env_key: 'GROQ_API_KEY'
         )
       end
     end
