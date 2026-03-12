@@ -271,8 +271,14 @@ async function resolveJudgingPollingErrorMessage(reason: 'timeout' | 'generic'):
     if (isLocalWorkerUnavailable(health)) {
       return MESSAGE_JUDGING_LOCAL_WORKER_NOT_RUNNING
     }
-  } catch {
-    // health check が失敗した場合は既存の一般エラー文言へフォールバックする。
+  } catch (error) {
+    // 開発環境では health 到達不可を backend 未起動として案内し、切り分けを容易にする。
+    if (
+      error instanceof ApiClientError &&
+      (error.code === API_ERROR_CODE.NETWORK_ERROR || error.code === API_ERROR_CODE.TIMEOUT)
+    ) {
+      return MESSAGE_JUDGING_BACKEND_NOT_RUNNING
+    }
   }
 
   return MESSAGE_JUDGING_FETCH_FAILED
