@@ -67,31 +67,58 @@ module HealthCheckable
   end
 
   def missing_env_payload(missing_vars, worker_status)
-    {
-      status: 'unhealthy',
-      error: 'Missing required environment variables',
-      missing: missing_vars,
-      timestamp: Time.current,
-      worker: worker_status
-    }
+    payload = service_unavailable_payload
+    return payload unless detailed_health_response?
+
+    merge_detailed_payload(payload,
+                           error: 'Missing required environment variables',
+                           missing: missing_vars,
+                           environment: Rails.env,
+                           worker: sanitized_worker_status(worker_status))
   end
 
   def worker_unhealthy_payload(worker_status)
-    {
-      status: 'unhealthy',
-      error: 'Local judgment worker is not running',
-      environment: Rails.env,
-      timestamp: Time.current,
-      worker: worker_status
-    }
+    payload = service_unavailable_payload
+    return payload unless detailed_health_response?
+
+    merge_detailed_payload(payload,
+                           error: 'Local judgment worker is not running',
+                           environment: Rails.env,
+                           worker: sanitized_worker_status(worker_status))
   end
 
   def ok_payload(worker_status)
-    {
+    payload = {
       status: 'ok',
+      timestamp: Time.current
+    }
+    return payload unless detailed_health_response?
+
+    payload.merge(
       environment: Rails.env,
-      timestamp: Time.current,
-      worker: worker_status
+      worker: sanitized_worker_status(worker_status)
+    )
+  end
+
+  def detailed_health_response?
+    Rails.env.development? || ENV['HEALTH_CHECK_VERBOSE'] == 'true'
+  end
+
+  def sanitized_worker_status(worker_status)
+    return nil unless worker_status
+
+    worker_status.slice('mode', 'status', 'reason', 'updated_at', 'processed_count')
+  end
+
+  def merge_detailed_payload(payload, **details)
+    payload.merge(details)
+  end
+
+  def service_unavailable_payload
+    {
+      status: 'unhealthy',
+      error: 'Service unavailable',
+      timestamp: Time.current
     }
   end
 end

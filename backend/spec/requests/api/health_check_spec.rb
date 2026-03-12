@@ -31,8 +31,9 @@ RSpec.describe 'Api::HealthCheck', type: :request do
 
         json = response.parsed_body
         expect(json['status']).to eq('ok')
-        expect(json['environment']).to be_present
         expect(json['timestamp']).to be_present
+        expect(json).not_to have_key('environment')
+        expect(json).not_to have_key('worker')
       end
     end
 
@@ -147,8 +148,9 @@ RSpec.describe 'Api::HealthCheck', type: :request do
 
         json = response.parsed_body
         expect(json['status']).to eq('unhealthy')
-        expect(json['error']).to eq('Missing required environment variables')
-        expect(json['missing']).to contain_exactly('DYNAMODB_TABLE_POSTS', 'SQS_QUEUE_URL', 'CEREBRAS_API_KEY')
+        expect(json['error']).to eq('Service unavailable')
+        expect(json).not_to have_key('missing')
+        expect(json).not_to have_key('worker')
         expect(json['timestamp']).to be_present
       end
     end

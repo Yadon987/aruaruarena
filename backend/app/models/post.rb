@@ -113,6 +113,7 @@ class Post
     # scored以外はscore_keyをクリア（GSIからの除外）
     self.score_key = (generate_score_key if status == STATUS_SCORED)
     save!
+    clear_claim_field! unless status == STATUS_JUDGING
   end
 
   # ランキング順位を計算する
@@ -225,6 +226,14 @@ class Post
   end
 
   private
+
+  def clear_claim_field!
+    Dynamoid.adapter.client.update_item(
+      table_name: self.class.table_name,
+      key: { id: id },
+      update_expression: "REMOVE #{CLAIM_FIELD}"
+    )
+  end
 
   # 入力のサニタイズ（前後の空白のみ除去）
   #

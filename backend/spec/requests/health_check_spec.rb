@@ -29,8 +29,9 @@ RSpec.describe 'Health Check', type: :request do
 
         json = response.parsed_body
         expect(json['status']).to eq('ok')
-        expect(json['environment']).to be_present
         expect(json['timestamp']).to be_present
+        expect(json).not_to have_key('environment')
+        expect(json).not_to have_key('worker')
       end
     end
 
@@ -140,8 +141,9 @@ RSpec.describe 'Health Check', type: :request do
 
         json = response.parsed_body
         expect(json['status']).to eq('unhealthy')
-        expect(json['error']).to eq('Missing required environment variables')
-        expect(json['missing']).to be_present
+        expect(json['error']).to eq('Service unavailable')
+        expect(json).not_to have_key('missing')
+        expect(json).not_to have_key('worker')
       end
     end
 
