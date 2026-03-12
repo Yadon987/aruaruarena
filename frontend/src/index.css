@@ -29,36 +29,36 @@
 .game-show-stage {
   position: relative;
   background-color: #0a1628;
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
-    image-set(
-      url('/images/stage-bg.webp') type('image/webp'),
-      url('/images/stage-bg.png') type('image/png')
-    );
-  background-size: cover;
-  background-position: center bottom;
   background-repeat: no-repeat;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 639px) {
   .game-show-stage {
     background-image:
       linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
-      image-set(
-        url('/images/stage-bg-mobile.webp') type('image/webp'),
-        url('/images/stage-bg-mobile.png') type('image/png')
-      );
+      url('/images/stage-bg-mobile.webp');
+    background-size: cover;
+    background-position: center center;
   }
 }
 
-@media (min-width: 769px) and (max-width: 1200px) {
+@media (min-width: 640px) and (max-width: 1023px) {
   .game-show-stage {
     background-image:
       linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
-      image-set(
-        url('/images/stage-bg-tablet.webp') type('image/webp'),
-        url('/images/stage-bg-tablet.png') type('image/png')
-      );
+      url('/images/stage-bg-tablet.webp');
+    background-size: cover;
+    background-position: center center;
+  }
+}
+
+@media (min-width: 1024px) {
+  .game-show-stage {
+    background-image:
+      linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
+      url('/images/stage-bg.webp');
+    background-size: cover;
+    background-position: center bottom;
   }
 }
 
