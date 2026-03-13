@@ -10,7 +10,6 @@ require 'uri'
 class JudgmentQueueService
   API_VERSION = '2012-11-05'
   CONTENT_TYPE = 'application/x-www-form-urlencoded; charset=utf-8'
-  LOCAL_FALLBACK_THREAD_NAME = 'local-judgment-fallback'
 
   class << self
     delegate :enqueue, to: :new
@@ -43,7 +42,7 @@ class JudgmentQueueService
   end
 
   def register_for_local_worker(post_id)
-    return enqueue_local_fallback(post_id) unless local_worker_available?
+    return StartLocalJudgmentFallbackService.call(post_id) unless local_worker_available?
 
     Rails.logger.info("[JudgmentQueueService] ローカルワーカーモードで審査待ち登録: post_id=#{post_id}")
     nil
@@ -51,26 +50,6 @@ class JudgmentQueueService
 
   def local_worker_available?
     LocalJudgmentWorkerHeartbeatService.current_status['status'] == 'ok'
-  end
-
-  def enqueue_local_fallback(post_id)
-    Rails.logger.warn(
-      "[JudgmentQueueService] ローカルワーカー未起動のため非同期フォールバックを実行: post_id=#{post_id}"
-    )
-
-    thread = Thread.new do
-      Thread.current.name = LOCAL_FALLBACK_THREAD_NAME if Thread.current.respond_to?(:name=)
-      Rails.application.executor.wrap do
-        JudgePostService.call(post_id)
-      end
-    rescue StandardError => e
-      Rails.logger.error(
-        "[JudgmentQueueService] ローカルフォールバック審査に失敗: post_id=#{post_id}, " \
-        "error=#{e.class} - #{e.message}"
-      )
-    end
-    thread.report_on_exception = false if thread.respond_to?(:report_on_exception=)
-    nil
   end
 
   def queue_url

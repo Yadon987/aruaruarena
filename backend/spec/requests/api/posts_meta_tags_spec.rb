@@ -68,6 +68,24 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
         expect(response.body).to include('<meta property="og:title"')
       end
 
+      it 'Googlebotとしてリクエストした場合、OGPタグを含むHTMLが返ること' do
+        # 何を検証するか: Googlebotに対してもRails側でOGP HTMLが返ること
+        get "/api/posts/#{scored_post.id}", headers: { 'User-Agent' => 'Mozilla/5.0 (compatible; Googlebot/2.1)' }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.content_type).to include('text/html')
+        expect(response.body).to include('<meta property="og:title"')
+      end
+
+      it 'LinkedInBotとしてリクエストした場合、OGPタグを含むHTMLが返ること' do
+        # 何を検証するか: LinkedInBotに対してもRails側でOGP HTMLが返ること
+        get "/api/posts/#{scored_post.id}", headers: { 'User-Agent' => 'LinkedInBot/1.0' }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.content_type).to include('text/html')
+        expect(response.body).to include('<meta property="og:title"')
+      end
+
       it 'og:titleに正しいタイトルが含まれること' do
         # 何を検証するか: タイトルが正しく設定されていること
         get "/api/posts/#{scored_post.id}", headers: { 'User-Agent' => 'Twitterbot/1.0' }
@@ -87,6 +105,14 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
         get "/api/posts/#{scored_post.id}", headers: { 'User-Agent' => 'Twitterbot/1.0' }
 
         expect(response.body).to include("/ogp/posts/#{scored_post.id}.png")
+      end
+
+      it 'og:image の画像サイズメタタグが含まれること' do
+        # 何を検証するか: クローラーに画像サイズが明示されること
+        get "/api/posts/#{scored_post.id}", headers: { 'User-Agent' => 'Twitterbot/1.0' }
+
+        expect(response.body).to match(/property="og:image:width"[^>]*content="1200"/)
+        expect(response.body).to match(/property="og:image:height"[^>]*content="630"/)
       end
 
       it 'twitter:imageに正しい画像パスが含まれること' do

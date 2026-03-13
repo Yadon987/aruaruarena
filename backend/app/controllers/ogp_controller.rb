@@ -13,7 +13,7 @@ class OgpController < ApplicationController
   LAMBY_BASE64_HEADER = '1'
 
   # デフォルトOGP画像のパス
-  DEFAULT_OGP_IMAGE_PATH = Rails.root.join('app/assets/images/default_ogp.png')
+  DEFAULT_OGP_IMAGE_PATH = Rails.root.join('app/assets/images/base_ogp.png')
 
   # rubocop:disable Metrics/MethodLength
   # rubocop:disable Metrics/AbcSize

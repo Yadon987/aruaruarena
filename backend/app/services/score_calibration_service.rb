@@ -25,20 +25,24 @@ class ScoreCalibrationService
     # @param post [Post] 対象投稿
     # @return [Float] 校正後スコア
     def calibrate(raw_score:, post:)
-      raw = raw_score.to_f.round(ROUND_PRECISION)
-      return raw unless enabled?
-      return raw unless sufficient_history?
+      raw = normalize_score(raw_score)
+      return raw unless calibration_ready?
 
-      top_ratio = top_ratio_by_score(raw_score: raw, post:)
-      target = target_score_for(top_ratio)
-      blended = (raw * (1.0 - blend_weight)) + (target * blend_weight)
-      clamp_score(blended)
+      clamp_score(blended_score(raw:, post:))
     rescue StandardError => e
       Rails.logger.warn("[ScoreCalibrationService] 校正をスキップ: #{e.class} - #{e.message}")
-      raw_score.to_f.round(ROUND_PRECISION)
+      normalize_score(raw_score)
     end
 
     private
+
+    def normalize_score(raw_score)
+      raw_score.to_f.round(ROUND_PRECISION)
+    end
+
+    def calibration_ready?
+      enabled? && sufficient_history?
+    end
 
     def enabled?
       ENV.fetch(ENABLE_ENV_KEY, 'false') == 'true'
@@ -55,7 +59,7 @@ class ScoreCalibrationService
 
     def blend_weight
       value = ENV.fetch(BLEND_WEIGHT_ENV_KEY, DEFAULT_BLEND_WEIGHT).to_f
-      [[value, 0.0].max, 1.0].min
+      value.clamp(0.0, 1.0)
     end
 
     # 上位比率（1.0が最上位、0.0が最下位に近い）
@@ -70,6 +74,12 @@ class ScoreCalibrationService
                          .count
 
       1.0 - (higher_count.to_f / total)
+    end
+
+    def blended_score(raw:, post:)
+      top_ratio = top_ratio_by_score(raw_score: raw, post:)
+      target = target_score_for(top_ratio)
+      (raw * (1.0 - blend_weight)) + (target * blend_weight)
     end
 
     def score_key_for(raw_score:, post:)
@@ -90,12 +100,12 @@ class ScoreCalibrationService
       end
     end
 
-    def lerp(min, max, t)
-      min + ((max - min) * [[t, 0.0].max, 1.0].min)
+    def lerp(min, max, ratio)
+      min + ((max - min) * ratio.clamp(0.0, 1.0))
     end
 
     def clamp_score(score)
-      [[score, MIN_SCORE].max, MAX_SCORE].min.round(ROUND_PRECISION)
+      score.clamp(MIN_SCORE, MAX_SCORE).round(ROUND_PRECISION)
     end
   end
 end

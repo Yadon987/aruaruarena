@@ -33,7 +33,10 @@ class UploadOgpImageService
     # Postオブジェクトまたはpost_idを受け取る
     # DynamoDBの結果的整合性問題を回避するため、Postオブジェクトを直接渡すことを推奨
     def call(post_or_id, s3_client: nil)
-      return false if bucket_name.empty?
+      if bucket_name.empty?
+        Rails.logger.error('[UploadOgpImageService] OGP_S3_BUCKET environment variable is not set')
+        return false
+      end
 
       new(post_or_id, s3_client: s3_client || build_s3_client).execute
     end

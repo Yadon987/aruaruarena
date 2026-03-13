@@ -104,6 +104,7 @@ className = 'bg-error-500' // #ef4444
 VITE_API_BASE_URL=/api
 VITE_USE_MOCK_API=false
 VITE_API_PROXY_TARGET=http://localhost:3000
+VITE_FRONTEND_BASE_URL=http://localhost:5173
 ```
 
 `VITE_USE_MOCK_API` は以下で切り替えます。
@@ -114,6 +115,9 @@ VITE_API_PROXY_TARGET=http://localhost:3000
 `VITE_API_BASE_URL` は `/api` にして `VITE_API_PROXY_TARGET` で
 開発時のバックエンドAPIを指定する構成です。  
 必要なら本番接続先を直接指定しても、`VITE_API_BASE_URL` に本番のURLを設定してください。
+
+`VITE_FRONTEND_BASE_URL` は OGP の絶対 URL 生成に使用します。  
+本番では `https://aruaruarena.com` のように、公開ドメインを設定してください。
 
 詳しくは `.env.example` を参照してください。
 

@@ -145,7 +145,9 @@ RSpec.configure do |config|
   config.define_derived_metadata(file_path: %r{/spec/services/ai_secret_health_check_service_spec\.rb\z/}) do |meta|
     meta[:dynamodb] = false
   end
-  config.define_derived_metadata(file_path: %r{/spec/services/local_judgment_worker_heartbeat_service_spec\.rb\z/}) do |meta|
+  config.define_derived_metadata(
+    file_path: %r{/spec/services/local_judgment_worker_heartbeat_service_spec\.rb\z}
+  ) do |meta|
     meta[:dynamodb] = false
   end
   config.define_derived_metadata(file_path: %r{/spec/requests/(api/)?health_check_spec\.rb\z/}) do |meta|

@@ -88,7 +88,7 @@ module OgpTestHelpers
   # @param exist [Boolean] 画像が存在するかどうか
   # 何を検証するか: デフォルト画像のパスは定数として定義し、ユーザー入力を含まないためパストラバーサル攻撃のリスクはない
   def setup_default_ogp_image_exist_mock(exist: true)
-    default_path = Rails.root.join('app/assets/images/default_ogp.png')
+    default_path = OgpController::DEFAULT_OGP_IMAGE_PATH
     # 既存のsetup_file_exist_mocksを呼び出してから、デフォルト画像パスをオーバーライド
     allow(File).to receive(:exist?).with(default_path.to_s).and_return(exist)
   end

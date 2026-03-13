@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 interface ResultSummaryProps {
   nickname: string
   body: string
@@ -9,6 +11,8 @@ interface ResultSummaryProps {
   onRejudge?: () => void
   isRejudging?: boolean
   rejudgeErrorMessage?: string
+  onShareToX?: () => void
+  ogpPreviewUrl?: string
 }
 
 const FAILED_AVERAGE_LABEL = '--.-'
@@ -28,8 +32,12 @@ export function ResultSummary({
   onRejudge,
   isRejudging = false,
   rejudgeErrorMessage = '',
+  onShareToX,
+  ogpPreviewUrl,
 }: ResultSummaryProps) {
+  const [isOgpPreviewVisible, setIsOgpPreviewVisible] = useState(false)
   const canRejudge = status === 'failed' && typeof onRejudge === 'function'
+  const canPreviewOgp = typeof ogpPreviewUrl === 'string' && ogpPreviewUrl.length > 0
   const rankLabel = status === 'scored' && isFiniteNumber(rank) ? `${rank}位` : FAILED_RANK_DISPLAY
   const averageLabel =
     status === 'scored' && isFiniteNumber(averageScore)
@@ -64,7 +72,50 @@ export function ResultSummary({
         </p>
       </div>
 
+      {canPreviewOgp && isOgpPreviewVisible && (
+        <div className="mt-6 rounded-2xl border border-cyan-200/30 bg-slate-950/35 p-4">
+          <p className="mb-3 text-sm font-bold tracking-[0.08em] text-cyan-100">シェア画像プレビュー</p>
+          <img
+            src={ogpPreviewUrl}
+            alt={`${nickname}さんのOGP画像プレビュー`}
+            data-testid="ogp-preview"
+            className="h-auto w-full rounded-xl border border-white/15 object-cover shadow-[0_16px_32px_rgba(15,23,42,0.32)]"
+          />
+        </div>
+      )}
+
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+        {canPreviewOgp && (
+          <button
+            type="button"
+            onClick={() => setIsOgpPreviewVisible((prev) => !prev)}
+            aria-expanded={isOgpPreviewVisible}
+            aria-label={isOgpPreviewVisible ? 'シェア画像を閉じる' : 'シェア画像を表示'}
+            className="neon-button-base result-summary-back-button result-summary-share-image-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
+          >
+            <span aria-hidden="true" className="result-summary-back-icon">
+              🖼
+            </span>
+            {isOgpPreviewVisible ? 'シェア画像を閉じる' : 'シェア画像'}
+          </button>
+        )}
+        {typeof onShareToX === 'function' && (
+          <button
+            type="button"
+            onClick={onShareToX}
+            aria-label="Xでシェア"
+            className="neon-button-base result-summary-back-button result-summary-x-share-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="result-summary-back-icon mr-2 h-[1.05rem] w-[1.05rem] fill-current"
+            >
+              <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.847h-7.406l-5.8-7.584-6.639 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932zM17.61 20.644h2.039L6.486 3.24H4.298z" />
+            </svg>
+            <span>でシェア</span>
+          </button>
+        )}
         {canRejudge && (
           <button
             type="button"
@@ -79,13 +130,13 @@ export function ResultSummary({
         <button
           type="button"
           onClick={onClose}
-          aria-label="トップへ戻る"
+          aria-label="トップへ"
           className="neon-button-base result-summary-back-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
         >
           <span aria-hidden="true" className="result-summary-back-icon">
             🏮
           </span>
-          <span>トップへ戻る</span>
+          <span>トップへ</span>
         </button>
       </div>
       {rejudgeErrorMessage && (
