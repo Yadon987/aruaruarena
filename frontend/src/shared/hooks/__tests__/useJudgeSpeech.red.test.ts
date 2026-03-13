@@ -96,8 +96,8 @@ describe('E24-03 RED: useJudgeSpeech', () => {
     randomSpy.mockRestore()
   })
 
-  it('同一審査員の連続選択は許容される', async () => {
-    // 何を検証するか: 同じ審査員が連続して選ばれる可能性があること（FR-10）
+  it('同じ審査員は連続して選ばれない', async () => {
+    // 何を検証するか: 直前に発話した審査員は次回選択対象から除外されること
     const { useJudgeSpeech } = await loadUseJudgeSpeech()
     const randomSpy = vi.spyOn(Math, 'random')
     randomSpy.mockReturnValue(0.1)
@@ -114,7 +114,8 @@ describe('E24-03 RED: useJudgeSpeech', () => {
     })
     const secondJudge = result.current.speakingJudge
 
-    expect([firstJudge, secondJudge]).toContain('hiroyuki')
+    expect(firstJudge).toBe('hiroyuki')
+    expect(secondJudge).not.toBe(firstJudge)
     randomSpy.mockRestore()
   })
 
@@ -152,5 +153,31 @@ describe('E24-03 RED: useJudgeSpeech', () => {
 
     expect(clearTimeoutSpy).toHaveBeenCalled()
     clearTimeoutSpy.mockRestore()
+  })
+
+  it('isPostModalOpen=true になると直前の審査員記録がリセットされる', async () => {
+    // 何を検証するか: 投稿モーダル表示で発話状態と直前審査員の記録が初期化されること
+    const { useJudgeSpeech } = await loadUseJudgeSpeech()
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1)
+    const { result, rerender } = renderHook(
+      ({ isPostModalOpen }) => useJudgeSpeech({ isJudging: true, isPostModalOpen }),
+      { initialProps: { isPostModalOpen: false } }
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(result.current.speakingJudge).toBe('hiroyuki')
+
+    rerender({ isPostModalOpen: true })
+    expect(result.current.speakingJudge).toBeNull()
+
+    rerender({ isPostModalOpen: false })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+
+    expect(result.current.speakingJudge).toBe('hiroyuki')
+    randomSpy.mockRestore()
   })
 })

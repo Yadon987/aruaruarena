@@ -69,6 +69,7 @@ const SOUND_SETTINGS_PANEL_ID = 'sound-settings-panel'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
+const MINIMUM_JUDGING_DURATION_MS = 7500
 const JUDGING_POLLING_TIMEOUT_MS =
   import.meta.env.MODE === 'development' && !isMockApiEnabled() ? 120000 : 60000
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
@@ -368,7 +369,10 @@ function resolveJudgingSubmitErrorMessage(error: unknown): string {
         ? MESSAGE_JUDGING_BACKEND_NOT_RUNNING
         : MESSAGE_JUDGING_NETWORK_ERROR
     }
-    if (error.code === API_ERROR_CODE.RATE_LIMITED || error.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
+    if (
+      error.code === API_ERROR_CODE.RATE_LIMITED ||
+      error.status === HTTP_STATUS.TOO_MANY_REQUESTS
+    ) {
       return MESSAGE_POST_DETAIL_RATE_LIMITED
     }
     if (error.code === API_ERROR_CODE.TIMEOUT || error.status === HTTP_STATUS.REQUEST_TIMEOUT) {
@@ -453,9 +457,58 @@ function App() {
   const pollingRequestInFlightRef = useRef(false)
   const pollingTransientErrorCountRef = useRef<number>(0)
   const pollingTransientErrorStartedAtRef = useRef<number>(0)
+  const minimumJudgingEndsAtRef = useRef(0)
+  const minimumJudgingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const minimumJudgingWaitResolverRef = useRef<((canProceed: boolean) => void) | null>(null)
+  const minimumJudgingSessionRef = useRef(0)
   const submitAbortControllerRef = useRef<AbortController | null>(null)
   const submitRequestSeqRef = useRef(0)
   const activeResultErrorCode = resultModalErrorCode
+
+  const clearMinimumJudgingDuration = useCallback((invalidate: boolean = true) => {
+    if (minimumJudgingTimerRef.current) {
+      clearTimeout(minimumJudgingTimerRef.current)
+      minimumJudgingTimerRef.current = null
+    }
+    if (minimumJudgingWaitResolverRef.current) {
+      const resolve = minimumJudgingWaitResolverRef.current
+      minimumJudgingWaitResolverRef.current = null
+      resolve(false)
+    }
+    if (invalidate) {
+      minimumJudgingSessionRef.current += 1
+    }
+    minimumJudgingEndsAtRef.current = 0
+  }, [])
+
+  const beginMinimumJudgingDuration = useCallback(() => {
+    clearMinimumJudgingDuration(false)
+    minimumJudgingSessionRef.current += 1
+    minimumJudgingEndsAtRef.current = Date.now() + MINIMUM_JUDGING_DURATION_MS
+  }, [clearMinimumJudgingDuration])
+
+  const waitForMinimumJudgingDuration = useCallback(async () => {
+    const minimumEndsAt = minimumJudgingEndsAtRef.current
+    const sessionId = minimumJudgingSessionRef.current
+
+    if (minimumEndsAt === 0) {
+      return true
+    }
+
+    const remaining = minimumEndsAt - Date.now()
+    if (remaining <= 0) {
+      return minimumJudgingSessionRef.current === sessionId
+    }
+
+    return new Promise<boolean>((resolve) => {
+      minimumJudgingWaitResolverRef.current = resolve
+      minimumJudgingTimerRef.current = setTimeout(() => {
+        minimumJudgingTimerRef.current = null
+        minimumJudgingWaitResolverRef.current = null
+        resolve(minimumJudgingSessionRef.current === sessionId)
+      }, remaining)
+    })
+  }, [])
 
   useEffect(() => {
     if (
@@ -558,11 +611,7 @@ function App() {
   }, [])
 
   const enterResultView = useCallback(
-    (
-      postId: string,
-      initialPost?: Post | null,
-      options?: { source?: ResultViewSource }
-    ) => {
+    (postId: string, initialPost?: Post | null, options?: { source?: ResultViewSource }) => {
       saveResultViewTrigger()
       setActiveResultPostId(postId)
       setResultModalErrorCode(null)
@@ -781,10 +830,11 @@ function App() {
 
   useEffect(() => {
     return () => {
+      clearMinimumJudgingDuration()
       abortSubmitRequest()
       sound.dispose()
     }
-  }, [abortSubmitRequest, sound])
+  }, [abortSubmitRequest, clearMinimumJudgingDuration, sound])
 
   const enterJudgingMode = useCallback((postId: string, isPollingReady: boolean = true) => {
     setJudgingPostId(postId)
@@ -796,13 +846,14 @@ function App() {
   const startJudgingSubmission = useCallback(
     (temporaryPostId: string, nickname: string, body: string) => {
       // API確定前に審査中画面へ先に遷移し、体感速度を落とさずフィードバックする。
+      beginMinimumJudgingDuration()
       setPendingFormData({ nickname, body })
       sound.playSe(SOUND_SE_SUBMIT)
       setIsPostModalOpen(false)
       enterJudgingMode(temporaryPostId, false)
       syncJudgingPath(temporaryPostId)
     },
-    [enterJudgingMode, sound, syncJudgingPath]
+    [beginMinimumJudgingDuration, enterJudgingMode, sound, syncJudgingPath]
   )
 
   const applyJudgingSubmitSuccess = useCallback(
@@ -817,32 +868,52 @@ function App() {
       if (response.status === 'failed') {
         // failed応答は結果画面へ直接遷移し、ポーリングは中断する。
         setJudgingErrorMessage('')
-        enterResultView(response.id, null, { source: 'judging' })
+        clearJudgingPolling()
+        setPendingFormData(null)
         setIsJudgingPollingReady(false)
+        void (async () => {
+          const canProceed = await waitForMinimumJudgingDuration()
+          if (!canProceed) return
+          clearMinimumJudgingDuration(false)
+          enterResultView(response.id, null, { source: 'judging' })
+        })()
         return
       }
 
       // 審査中/queued など成功側は、暫定情報を残して審査待ちへ進める。
       enterJudgingMode(response.id, true)
     },
-    [enterResultView, syncJudgingPath, syncMyPostIds, enterJudgingMode]
+    [
+      clearJudgingPolling,
+      clearMinimumJudgingDuration,
+      enterResultView,
+      syncJudgingPath,
+      syncMyPostIds,
+      enterJudgingMode,
+      waitForMinimumJudgingDuration,
+    ]
   )
 
-  const applyJudgingSubmitFailure = useCallback((error: unknown) => {
-    // API失敗時は入力値を保持したまま、再投稿導線へ戻す。
-    console.error('Post creation failed:', error)
-    setJudgingErrorMessage(resolveJudgingSubmitErrorMessage(error))
-    setIsJudgingPollingReady(false)
-  }, [])
+  const applyJudgingSubmitFailure = useCallback(
+    (error: unknown) => {
+      // API失敗時は入力値を保持したまま、再投稿導線へ戻す。
+      console.error('Post creation failed:', error)
+      clearMinimumJudgingDuration()
+      setJudgingErrorMessage(resolveJudgingSubmitErrorMessage(error))
+      setIsJudgingPollingReady(false)
+    },
+    [clearMinimumJudgingDuration]
+  )
 
   const handleResultRejudgeSuccess = useCallback(
     (post: Post) => {
       // 再審査開始がAPIで確定した場合のみ、審査中画面へ遷移する。
+      beginMinimumJudgingDuration()
       closeResultView()
       enterJudgingMode(post.id)
       syncJudgingPath(post.id)
     },
-    [closeResultView, enterJudgingMode, syncJudgingPath]
+    [beginMinimumJudgingDuration, closeResultView, enterJudgingMode, syncJudgingPath]
   )
 
   const handleResultRejudge = useCallback(async () => {
@@ -929,21 +1000,33 @@ function App() {
   )
 
   const exitJudgingWithResult = useCallback(
-    (post: Post) => {
+    async (post: Post) => {
       clearJudgingPolling()
+      const canProceed = await waitForMinimumJudgingDuration()
+      if (!canProceed) return
+      clearMinimumJudgingDuration(false)
       setPendingFormData(null)
       setIsJudgingPollingReady(false)
       enterResultView(post.id, post, { source: 'judging' })
     },
-    [clearJudgingPolling, enterResultView]
+    [
+      clearJudgingPolling,
+      clearMinimumJudgingDuration,
+      enterResultView,
+      waitForMinimumJudgingDuration,
+    ]
   )
 
-  const exitJudgingWithError = useCallback((message: string = MESSAGE_JUDGING_FETCH_FAILED) => {
-    clearJudgingPolling()
-    setViewMode('judging')
-    setIsJudgingPollingReady(false)
-    setJudgingErrorMessage(message)
-  }, [clearJudgingPolling])
+  const exitJudgingWithError = useCallback(
+    (message: string = MESSAGE_JUDGING_FETCH_FAILED) => {
+      clearJudgingPolling()
+      clearMinimumJudgingDuration()
+      setViewMode('judging')
+      setIsJudgingPollingReady(false)
+      setJudgingErrorMessage(message)
+    },
+    [clearJudgingPolling, clearMinimumJudgingDuration]
+  )
   const exitJudgingWithResultRef = useRef(exitJudgingWithResult)
   const exitJudgingWithErrorRef = useRef(exitJudgingWithError)
 
@@ -1355,11 +1438,12 @@ function App() {
   const retryPostSubmit = useCallback(() => {
     // 再投稿は入力復元を前提に、トップの投稿モーダルへ復帰するだけの導線に限定する。
     clearJudgingPolling()
+    clearMinimumJudgingDuration()
     setSubmitError('')
     setViewMode('top')
     setIsPostModalOpen(true)
     syncTopPath()
-  }, [clearJudgingPolling, syncTopPath])
+  }, [clearJudgingPolling, clearMinimumJudgingDuration, syncTopPath])
 
   useEffect(() => {
     if (viewMode !== 'top' || !isPostModalOpen) return
@@ -1380,14 +1464,16 @@ function App() {
 
   const backToTopFromJudgingError = useCallback(() => {
     clearJudgingPolling()
+    clearMinimumJudgingDuration()
     setSubmitError('')
     setJudgingErrorMessage('')
     setViewMode('top')
     setIsPostModalOpen(false)
     syncTopPath()
-  }, [clearJudgingPolling, syncTopPath])
+  }, [clearJudgingPolling, clearMinimumJudgingDuration, syncTopPath])
 
   const resetToTopAfterJudgingStop = useCallback(() => {
+    clearMinimumJudgingDuration()
     setPendingFormData(null)
     setSubmitError('')
     setJudgingErrorMessage('')
@@ -1397,7 +1483,7 @@ function App() {
     setIsStopJudgingConfirmOpen(false)
     setViewMode('top')
     syncTopPath()
-  }, [syncTopPath])
+  }, [clearMinimumJudgingDuration, syncTopPath])
 
   const handleStopJudgingConfirm = useCallback(() => {
     clearJudgingPolling()
@@ -1409,6 +1495,7 @@ function App() {
 
   const handleStopJudgingAndRepost = useCallback(() => {
     clearJudgingPolling()
+    clearMinimumJudgingDuration()
     abortSubmitRequest()
     invalidateSubmitRequest()
     setIsSubmitting(false)
@@ -1420,7 +1507,13 @@ function App() {
     setViewMode('top')
     setIsPostModalOpen(true)
     syncTopPath()
-  }, [abortSubmitRequest, clearJudgingPolling, invalidateSubmitRequest, syncTopPath])
+  }, [
+    abortSubmitRequest,
+    clearJudgingPolling,
+    clearMinimumJudgingDuration,
+    invalidateSubmitRequest,
+    syncTopPath,
+  ])
 
   const handleRankingPostClick = (postId: string) => {
     setIsRankingModalOpen(false)

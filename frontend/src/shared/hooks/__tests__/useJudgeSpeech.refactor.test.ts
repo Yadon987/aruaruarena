@@ -47,6 +47,11 @@ describe('useJudgeSpeech Refactor', () => {
         dewi: ['B'],
         nakao: ['C'],
       },
+      JUDGE_LOW_SCORE_PHRASES: {
+        hiroyuki: ['A'],
+        dewi: ['B'],
+        nakao: ['C'],
+      },
     }))
 
     const { useJudgeSpeech } = await import('../useJudgeSpeech')
@@ -58,6 +63,34 @@ describe('useJudgeSpeech Refactor', () => {
     })
 
     expect(['A', 'B', 'C']).toContain(result.current.currentSpeech)
+  })
+
+  it('審査員が1人でも同じ審査員で継続できる', async () => {
+    vi.doMock('../../constants/judgePhrases', () => ({
+      JUDGES: ['hiroyuki'],
+      JUDGE_PHRASES: {
+        hiroyuki: ['A', 'B'],
+      },
+      JUDGE_LOW_SCORE_PHRASES: {
+        hiroyuki: ['A'],
+      },
+    }))
+
+    const { useJudgeSpeech } = await import('../useJudgeSpeech')
+    const { result } = renderHook(() => useJudgeSpeech({ isJudging: true, isPostModalOpen: false }))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    const firstJudge = result.current.speakingJudge
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3500)
+    })
+    const secondJudge = result.current.speakingJudge
+
+    expect(firstJudge).toBe('hiroyuki')
+    expect(secondJudge).toBe('hiroyuki')
   })
 
   it('発話間隔は最小0ms〜最大500msの範囲内になる', async () => {
