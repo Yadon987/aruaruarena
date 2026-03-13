@@ -126,6 +126,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     render(<App />)
 
+    // fake timers 環境では fillAndSubmitPostForm の非同期待機が不安定なためインラインで操作する。
     fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
     fireEvent.change(screen.getByLabelText('ニックネーム'), {
       target: { value: '待機太郎' },
@@ -135,8 +136,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: '投稿' }))
     await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
     })
 
     expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
@@ -151,8 +151,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       await vi.advanceTimersByTimeAsync(100)
     })
     await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
     })
 
     expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -354,7 +353,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
     expect(screen.getByRole('button', { name: 'Xでシェア' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Xでシェア' }))
-    const [shareIntentUrl] = vi.mocked(window.open).mock.calls.at(-1) as [string]
+    const lastOpenCallIndex = vi.mocked(window.open).mock.calls.length - 1
+    const [shareIntentUrl] = vi.mocked(window.open).mock.calls[lastOpenCallIndex] as [string]
     expect(decodeURIComponent(shareIntentUrl)).toContain('21位')
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
   }, 12000)

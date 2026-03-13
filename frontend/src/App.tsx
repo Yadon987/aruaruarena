@@ -70,6 +70,7 @@ const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
 const MINIMUM_JUDGING_DURATION_MS = 7500
+const MINIMUM_JUDGING_DURATION_STORAGE_KEY = 'aruaruarena_minimum_judging_ends_at'
 const JUDGING_POLLING_TIMEOUT_MS =
   import.meta.env.MODE === 'development' && !isMockApiEnabled() ? 120000 : 60000
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
@@ -186,6 +187,20 @@ function parsePostIds(rawValue: string | null): string[] {
   } catch {
     return []
   }
+}
+
+function readMinimumJudgingEndsAt(): number {
+  const rawValue = sessionStorage.getItem(MINIMUM_JUDGING_DURATION_STORAGE_KEY)
+  const parsedValue = Number(rawValue)
+  return Number.isFinite(parsedValue) ? parsedValue : 0
+}
+
+function writeMinimumJudgingEndsAt(endsAt: number) {
+  sessionStorage.setItem(MINIMUM_JUDGING_DURATION_STORAGE_KEY, String(endsAt))
+}
+
+function clearMinimumJudgingEndsAt() {
+  sessionStorage.removeItem(MINIMUM_JUDGING_DURATION_STORAGE_KEY)
 }
 
 function readPostIds(): string[] {
@@ -467,13 +482,27 @@ function App() {
       minimumJudgingSessionRef.current += 1
     }
     minimumJudgingEndsAtRef.current = 0
+    clearMinimumJudgingEndsAt()
   }, [])
 
   const beginMinimumJudgingDuration = useCallback(() => {
     clearMinimumJudgingDuration(false)
     minimumJudgingSessionRef.current += 1
     minimumJudgingEndsAtRef.current = Date.now() + MINIMUM_JUDGING_DURATION_MS
+    writeMinimumJudgingEndsAt(minimumJudgingEndsAtRef.current)
   }, [clearMinimumJudgingDuration])
+
+  const restoreMinimumJudgingDuration = useCallback(() => {
+    const storedEndsAt = readMinimumJudgingEndsAt()
+    if (storedEndsAt <= Date.now()) {
+      clearMinimumJudgingEndsAt()
+      minimumJudgingEndsAtRef.current = 0
+      return
+    }
+
+    minimumJudgingSessionRef.current += 1
+    minimumJudgingEndsAtRef.current = storedEndsAt
+  }, [])
 
   const waitForMinimumJudgingDuration = useCallback(async () => {
     const minimumEndsAt = minimumJudgingEndsAtRef.current
@@ -857,12 +886,12 @@ function App() {
         // failed応答は結果画面へ直接遷移し、ポーリングは中断する。
         setJudgingErrorMessage('')
         clearJudgingPolling()
-        setPendingFormData(null)
         setIsJudgingPollingReady(false)
         void (async () => {
           const canProceed = await waitForMinimumJudgingDuration()
           if (!canProceed) return
           clearMinimumJudgingDuration(false)
+          setPendingFormData(null)
           enterResultView(response.id, null, { source: 'judging' })
         })()
         return
@@ -1036,8 +1065,9 @@ function App() {
       return
     }
 
+    restoreMinimumJudgingDuration()
     enterJudgingMode(routePostId)
-  }, [enterJudgingMode, syncTopPath])
+  }, [enterJudgingMode, restoreMinimumJudgingDuration, syncTopPath])
 
   useEffect(() => {
     if (viewMode !== 'judging' || !judgingPostId) return

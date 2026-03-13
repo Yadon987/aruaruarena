@@ -30,7 +30,7 @@ class ScoreManipulationGuardService
     /贔屓/,
     /厳守/,
     /必ず.*(?:点|評価)/,
-    /審査員/
+    /審査員.*(?:お願い|して|指示|採点|評価)/
   ].freeze
 
   SCORE_REFERENCE_PATTERN = /(?:\d{1,3}|百)\s*点(?:以上|以下|台|満点|を|くらい|ぐらい)?/
