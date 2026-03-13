@@ -3,11 +3,6 @@
 require 'rails_helper'
 
 RSpec.describe 'GET /api/posts/:id', type: :request do
-  before do
-    Post.delete_all
-    Judgment.delete_all
-  end
-
   describe '正常系' do
     it '審査完了した投稿（status=scored, 3人全員成功）の詳細を取得できる' do
       post = create(:post, :scored, nickname: '太郎', body: 'スヌーズ押して二度寝', average_score: 85.3, judges_count: 3)

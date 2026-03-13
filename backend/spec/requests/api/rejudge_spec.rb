@@ -3,11 +3,6 @@
 require 'rails_helper'
 
 RSpec.describe 'POST /api/posts/:id/rejudge', type: :request do
-  before do
-    Post.delete_all
-    Judgment.delete_all
-  end
-
   let(:headers) { { 'Content-Type' => 'application/json' } }
   let(:success_result) do
     BaseAiAdapter::JudgmentResult.new(

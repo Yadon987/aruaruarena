@@ -100,10 +100,7 @@ class Post
   # スコア付き投稿のscore_keyを生成
   # @return [String] score_key（例: "0127#1738041600#uuid"）
   def generate_score_key
-    return nil if average_score.blank?
-
-    inv_score = SCORE_BASE - (average_score * SCORE_MULTIPLIER).round # 四捨五入
-    format('%<s1>04d#%<s2>010d#%<s3>s', s1: inv_score, s2: created_at, s3: id)
+    PostScoreKeyService.generate(post: self)
   end
 
   # ステータスを更新してscore_keyを設定
@@ -127,17 +124,7 @@ class Post
   #
   # @return [Integer, nil] 順位（1位スタート）。scored以外のステータスはnilを返す
   def calculate_rank
-    return nil unless status == STATUS_SCORED
-    return nil if score_key.blank?
-
-    # GSIクエリで自分より上位（score_keyが小さい）の投稿数を取得
-    # with_indexでranking_indexを明示的に指定してQuery操作を使用
-    higher_count = Post.where(status: STATUS_SCORED)
-                       .where('score_key.lt': score_key)
-                       .with_index(:ranking_index)
-                       .count
-
-    higher_count + 1
+    PostRankingService.calculate_rank(self)
   end
 
   # 投稿詳細のAPI レスポンス用JSON形式で返す
@@ -194,22 +181,7 @@ class Post
   # @param limit [Integer] 取得件数（デフォルト: DEFAULT_RANKING_LIMIT）
   # @return [Array<Post>] ランキング順のPost配列
   def self.top_rankings(limit = DEFAULT_RANKING_LIMIT)
-    # GSIからscore_key昇順でIDを取得
-    gsi_results = where(status: STATUS_SCORED)
-                  .with_index(:ranking_index)
-                  .scan_index_forward(true)
-                  .record_limit(limit)
-                  .to_a
-
-    # IDのリストを取得（GSIクエリ結果の順序を維持）
-    ids = gsi_results.map(&:id)
-
-    # テーブルから完全なレコードを取得
-    return [] if ids.empty?
-
-    # IDの順序を維持して返す
-    posts = find(ids).index_by(&:id)
-    ids.filter_map { |id| posts[id] }
+    PostRankingService.top_rankings(limit)
   end
 
   # 全scored投稿数を取得する
@@ -221,37 +193,17 @@ class Post
   #
   # @return [Integer] scored状態の投稿数
   def self.total_scored_count
-    where(status: STATUS_SCORED)
-      .with_index(:ranking_index)
-      .count
+    PostRankingService.total_scored_count
   end
 
   private
 
   def clear_claim_field!(claimed_at)
-    return if claimed_at.nil?
-
-    Dynamoid.adapter.client.update_item(
-      table_name: self.class.table_name,
-      key: { id: id },
-      update_expression: 'REMOVE #claim',
-      condition_expression: '#status <> :judging AND #claim = :claimed_at',
-      expression_attribute_names: {
-        '#status' => 'status',
-        '#claim' => CLAIM_FIELD
-      },
-      expression_attribute_values: {
-        ':judging' => STATUS_JUDGING,
-        ':claimed_at' => claimed_at
-      }
-    )
-  rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-    nil
+    PostClaimService.clear_claim_field!(self, claimed_at)
   end
 
   def current_claimed_at
-    item = Dynamoid.adapter.client.get_item(table_name: self.class.table_name, key: { id: id }).item
-    item&.[](CLAIM_FIELD)
+    PostClaimService.current_claimed_at(self)
   end
 
   # 入力のサニタイズ（前後の空白のみ除去）

@@ -281,10 +281,6 @@ RSpec.describe Post, type: :model do
   # ============================================
 
   describe '.top_rankings' do
-    before do
-      Post.delete_all
-    end
-
     # テスト10: .top_rankings がscoredのみ取得
     # 検証: status=scoredフィルタ
     it 'scored状態の投稿のみを取得すること' do
@@ -345,10 +341,6 @@ RSpec.describe Post, type: :model do
   end
 
   describe '.total_scored_count' do
-    before do
-      Post.delete_all
-    end
-
     # テスト16: .total_scored_count がscored投稿の総数を返す
     # 検証: count機能
     it 'scored投稿の総数を返すこと' do

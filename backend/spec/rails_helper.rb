@@ -136,6 +136,18 @@ RSpec.configure do |config|
   config.define_derived_metadata(file_path: %r{/spec/services/judge_error_spec\.rb\z/}) do |meta|
     meta[:dynamodb] = false
   end
+  config.define_derived_metadata(file_path: %r{/spec/services/post_score_key_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb] = false
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/persona_bias_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb] = false
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/ai_secret_health_check_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb] = false
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/local_judgment_worker_heartbeat_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb] = false
+  end
   config.define_derived_metadata(file_path: %r{/spec/requests/(api/)?health_check_spec\.rb\z/}) do |meta|
     meta[:dynamodb] = false
   end
@@ -144,14 +156,44 @@ RSpec.configure do |config|
   config.define_derived_metadata(file_path: %r{/spec/models/rate_limit_spec\.rb\z/}) do |meta|
     meta[:dynamodb_tables] = [RateLimit.table_name]
   end
+  config.define_derived_metadata(file_path: %r{/spec/models/judgment_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Judgment.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/models/post_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Post.table_name, Judgment.table_name]
+  end
   config.define_derived_metadata(file_path: %r{/spec/services/rate_limiter_service_spec\.rb\z/}) do |meta|
     meta[:dynamodb_tables] = [RateLimit.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/judge_post_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Post.table_name, Judgment.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/rejudge_post_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Post.table_name, Judgment.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/post_ranking_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Post.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/services/post_claim_service_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Post.table_name]
   end
   config.define_derived_metadata(file_path: %r{/spec/models/duplicate_check_spec\.rb\z/}) do |meta|
     meta[:dynamodb_tables] = [DuplicateCheck.table_name]
   end
   config.define_derived_metadata(file_path: %r{/spec/services/duplicate_check_service_spec\.rb\z/}) do |meta|
     meta[:dynamodb_tables] = [DuplicateCheck.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/requests/api/posts_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Post.table_name, RateLimit.table_name, DuplicateCheck.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/requests/api/posts_show_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Post.table_name, Judgment.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/requests/api/rankings_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Post.table_name]
+  end
+  config.define_derived_metadata(file_path: %r{/spec/requests/api/rejudge_spec\.rb\z/}) do |meta|
+    meta[:dynamodb_tables] = [Post.table_name, Judgment.table_name]
   end
 
   # Filter lines from Rails gems in backtraces.
