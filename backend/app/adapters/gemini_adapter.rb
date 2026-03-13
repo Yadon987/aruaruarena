@@ -395,7 +395,7 @@ class GeminiAdapter < BaseAiAdapter
 
   def send_request(request_body)
     client.post(api_endpoint) do |req|
-      req.params[:key] = api_key
+      req.headers['x-goog-api-key'] = api_key
       req.headers['Content-Type'] = 'application/json'
       req.body = JSON.generate(request_body)
     end

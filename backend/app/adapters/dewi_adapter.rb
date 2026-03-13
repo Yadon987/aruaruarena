@@ -13,8 +13,8 @@ class DewiAdapter < BaseOpenAiCompatAdapter
   # Cerebras APIのベースURL
   BASE_URL = 'https://api.cerebras.ai/v1'
 
-  # Cerebrasで安定稼働しているモデル
-  MODEL_NAME = 'gpt-oss-120b'
+  # Cerebrasで現在利用可能なモデル
+  MODEL_NAME = 'llama3.1-8b'
 
   private
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# CerebrasAdapter - Cerebras (gpt-oss-120b) 用アダプター
+# CerebrasAdapter - Cerebras (llama3.1-8b) 用アダプター
 #
 # BaseOpenAiCompatAdapterを継承し、デヴィ夫人風の審査員として投稿を採点します。
 #
@@ -12,8 +12,8 @@ class CerebrasAdapter < BaseOpenAiCompatAdapter
   # Cerebras APIのベースURL
   BASE_URL = 'https://api.cerebras.ai/v1'
 
-  # gpt-oss-120bモデル
-  MODEL_NAME = 'gpt-oss-120b'
+  # llama3.1-8bモデル
+  MODEL_NAME = 'llama3.1-8b'
 
   private
 

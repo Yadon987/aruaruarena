@@ -13,7 +13,7 @@ RSpec.describe CerebrasAdapter do
                     {
                       PROMPT_PATH: 'app/prompts/dewi.txt',
                       BASE_URL: 'https://api.cerebras.ai/v1',
-                      MODEL_NAME: 'gpt-oss-120b'
+                      MODEL_NAME: 'llama3.1-8b'
                     }
   end
 
@@ -24,7 +24,7 @@ RSpec.describe CerebrasAdapter do
   describe '#build_request' do
     let(:post_content) { 'テスト投稿' }
 
-    it_behaves_like 'openai compatible build request', 'gpt-oss-120b', 'dewi'
+    it_behaves_like 'openai compatible build request', 'llama3.1-8b', 'dewi'
   end
 
   describe '#parse_response' do
