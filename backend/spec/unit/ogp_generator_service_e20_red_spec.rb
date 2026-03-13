@@ -62,7 +62,7 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         nickname: '太郎',
         body: 'あるある本文',
         average_score: 85.5,
-        calculate_rank: 1,
+        calculate_rank: 11,
         created_at: Time.current
       )
     end
@@ -86,21 +86,25 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class.private_instance_methods(false)).not_to include(:draw_judgments)
     end
 
-    # 何を検証するか: 審査員結果が存在しても描画処理はニックネーム・本文・スコアの3回だけで完結すること
-    # E20-03でランク表示を削除したため4回→3回に変更
-    it '審査員結果が存在してもdraw_textは3回だけ呼ばれること' do
+    # 何を検証するか: 本文1行+ニックネーム+順位数字/接尾辞+点数数字/接尾辞+フッターの7要素で描画されること
+    it '審査員結果が存在してもdraw_textは7回だけ呼ばれること' do
       redraw_service = described_class.new('post-id')
-      expect(redraw_service).to receive(:draw_text).exactly(3).times.and_call_original
+      expect(redraw_service).to receive(:draw_text).exactly(7).times.and_call_original
 
       redraw_service.execute
     end
 
-    # 何を検証するか: スコア表示は小数第1位付きで描画されること
-    it '総合スコアが85.5点として描画されること' do
+    # 何を検証するか: 順位数字が主文言として描画されること
+    it '総合スコア画像に11が描画されること' do
       allow(service).to receive(:draw_text).and_call_original
       expect(service).to receive(:draw_text)
-        .with(anything, '85.5点', described_class::FONT_SIZES[:score], described_class::TEXT_COLORS[:score],
-              described_class::LAYOUT[:score][:x], described_class::LAYOUT[:score][:y], described_class::FONT_BOLD_PATH)
+        .with(anything, hash_including(
+                          text: '11',
+                          size: be_between(described_class::MIN_FONT_SIZES[:rank_number], described_class::FONT_SIZES[:rank_number]),
+                          color: described_class::TEXT_COLORS[:rank],
+                          y: described_class::LAYOUT[:rank_number][:y],
+                          font: described_class::NUMBER_FONT_PATH
+                        ))
         .and_call_original
 
       service.execute
@@ -143,7 +147,7 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         nickname: "太郎\r\n次郎",
         body: "本文\n続き",
         average_score: nil,
-        calculate_rank: 1,
+        calculate_rank: 11,
         created_at: Time.current
       )
     end
@@ -167,12 +171,17 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(service.send(:escape_single_quotes, 'a\\b')).to eq('a\\\\b')
     end
 
-    # 何を検証するか: nilスコアでも0.0点表記で描画されること
-    it 'average_scoreがnilでも0.0点で描画されること' do
+    # 何を検証するか: nilスコアでも0.0表記になること
+    it 'average_scoreがnilでも0.0で描画されること' do
       allow(service).to receive(:draw_text).and_call_original
       expect(service).to receive(:draw_text)
-        .with(anything, '0.0点', described_class::FONT_SIZES[:score], described_class::TEXT_COLORS[:score],
-              described_class::LAYOUT[:score][:x], described_class::LAYOUT[:score][:y], described_class::FONT_BOLD_PATH)
+        .with(anything, hash_including(
+                          text: '0.0',
+                          size: be_between(described_class::MIN_FONT_SIZES[:score_number], described_class::FONT_SIZES[:score_number]),
+                          color: described_class::TEXT_COLORS[:score],
+                          y: described_class::LAYOUT[:score_number][:y],
+                          font: described_class::NUMBER_FONT_PATH
+                        ))
         .and_call_original
 
       service.execute

@@ -37,7 +37,10 @@ module OgpTestHelpers
   # rubocop:disable Metrics/AbcSize
   def setup_draw_mocks
     allow(mock_draw).to receive(:font).and_return(nil)
+    allow(mock_draw).to receive(:encoding).and_return(nil)
     allow(mock_draw).to receive(:fill).and_return(nil)
+    allow(mock_draw).to receive(:stroke).and_return(nil)
+    allow(mock_draw).to receive(:strokewidth).and_return(nil)
     allow(mock_draw).to receive(:pointsize).and_return(nil)
     allow(mock_draw).to receive(:gravity).and_return(nil)
     allow(mock_draw).to receive(:draw).and_return(nil)
