@@ -139,6 +139,10 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     expect(window.open).toHaveBeenCalledWith(expect.any(String), '_blank', 'noopener,noreferrer')
     const [shareIntentUrl] = vi.mocked(window.open).mock.calls[0]
+    expect(typeof shareIntentUrl).toBe('string')
+    if (typeof shareIntentUrl !== 'string') {
+      throw new Error('shareIntentUrl が文字列ではありません')
+    }
     expect(shareIntentUrl).toContain('https://twitter.com/intent/tweet?')
     expect(decodeURIComponent(shareIntentUrl)).toContain('/posts/share-post-id')
     expect(screen.getByTestId('ogp-preview')).toHaveAttribute(
