@@ -193,8 +193,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: '投稿' }))
     await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
     })
 
     await act(async () => {
@@ -207,8 +206,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       await vi.advanceTimersByTimeAsync(1)
     })
     await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
     })
 
     expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -382,6 +380,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
 
     expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'シェア画像を表示' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
   })
 

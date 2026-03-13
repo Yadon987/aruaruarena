@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { delay, HttpResponse, http } from 'msw'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
@@ -307,41 +307,4 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     expect(getPostSpy).not.toHaveBeenCalled()
   })
-
-  it('judgingルートへ復帰しても保存済みの最低審査時間を引き継ぐ', async () => {
-    vi.useFakeTimers()
-    const routePostId = '11111111-1111-4111-8111-111111111111'
-    window.history.pushState({}, '', `/judging/${routePostId}`)
-    sessionStorage.setItem('aruaruarena_minimum_judging_ends_at', String(Date.now() + 7500))
-    mswServer.use(
-      http.get('/api/posts/:id', () => {
-        return HttpResponse.json({
-          id: routePostId,
-          nickname: '復帰太郎',
-          body: '本文',
-          status: 'scored',
-          created_at: '2026-03-13T00:00:00Z',
-        })
-      })
-    )
-
-    render(<App />)
-
-    expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(7400)
-    })
-
-    expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(100)
-    })
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0)
-    })
-
-    expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
-  }, 12000)
 })

@@ -296,12 +296,7 @@ class JudgePostService
   end
 
   def capped_total_score(scores)
-    raw_total_score = Judgment.calculate_total_score(scores)
-    capped_score = ScoreManipulationGuardService.cap_total_score(@post.body, raw_total_score)
-    return capped_score if capped_score == raw_total_score
-
-    Rails.logger.warn("[JudgePostService] 採点誘導文を検知したため合計点を制限: post_id=#{@post.id}")
-    capped_score
+    capped_total_score_for(scores, @post, service_name: self.class.name)
   end
 
   def build_successful_judgment(persona, attrs)
