@@ -2,6 +2,8 @@
 
 # ペルソナ別の採点補正を担当するサービス
 class PersonaBiasService
+  MAX_SCORE_PER_ITEM = 20
+
   class << self
     # @param base_scores [Hash]
     # @param persona [String]
@@ -20,28 +22,30 @@ class PersonaBiasService
       when 'hiroyuki' then apply_hiroyuki_bias(scores)
       when 'dewi'     then apply_dewi_bias(scores)
       when 'nakao'    then apply_nakao_bias(scores)
+      else
+        raise ArgumentError, "Unsupported persona: #{persona}"
       end
     end
 
     # @param scores [Hash]
     # @return [void]
     def apply_hiroyuki_bias(scores)
-      scores[:originality] = [scores[:originality] + 3, Judgment::MAX_SCORE_PER_ITEM].min
+      scores[:originality] = [scores[:originality] + 3, MAX_SCORE_PER_ITEM].min
       scores[:empathy] = [scores[:empathy] - 2, 0].max
     end
 
     # @param scores [Hash]
     # @return [void]
     def apply_dewi_bias(scores)
-      scores[:expression] = [scores[:expression] + 3, Judgment::MAX_SCORE_PER_ITEM].min
-      scores[:humor] = [scores[:humor] + 2, Judgment::MAX_SCORE_PER_ITEM].min
+      scores[:expression] = [scores[:expression] + 3, MAX_SCORE_PER_ITEM].min
+      scores[:humor] = [scores[:humor] + 2, MAX_SCORE_PER_ITEM].min
     end
 
     # @param scores [Hash]
     # @return [void]
     def apply_nakao_bias(scores)
-      scores[:humor] = [scores[:humor] + 3, Judgment::MAX_SCORE_PER_ITEM].min
-      scores[:empathy] = [scores[:empathy] + 2, Judgment::MAX_SCORE_PER_ITEM].min
+      scores[:humor] = [scores[:humor] + 3, MAX_SCORE_PER_ITEM].min
+      scores[:empathy] = [scores[:empathy] + 2, MAX_SCORE_PER_ITEM].min
     end
 
     # @param scores [Hash]

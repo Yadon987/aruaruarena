@@ -29,10 +29,10 @@ RSpec.describe PersonaBiasService, type: :service do
       expect(result[:empathy]).to eq(17)
     end
 
-    it '未知のpersonaではスコアを変更しないこと' do
-      result = described_class.apply_persona_bias(base_scores, 'unknown')
-
-      expect(result).to eq(base_scores)
+    it '未知のpersonaでは例外を送出すること' do
+      expect do
+        described_class.apply_persona_bias(base_scores, 'unknown')
+      end.to raise_error(ArgumentError, 'Unsupported persona: unknown')
     end
   end
 

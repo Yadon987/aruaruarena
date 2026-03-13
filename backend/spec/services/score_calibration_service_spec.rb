@@ -51,5 +51,22 @@ RSpec.describe ScoreCalibrationService do
       expect(calibrated).to be > 58.3
       expect(calibrated).to be <= 100.0
     end
+
+    it 'score_key生成はPostScoreKeyServiceへ委譲すること' do
+      ENV['SCORE_CALIBRATION_ENABLED'] = 'true'
+      ENV['SCORE_CALIBRATION_MIN_HISTORY'] = '10'
+      allow(Post).to receive(:total_scored_count).and_return(200, 200)
+
+      scope = instance_double('Dynamoid::Criteria::Chain')
+      allow(Post).to receive(:where).with(status: Post::STATUS_SCORED).and_return(scope)
+      allow(PostScoreKeyService).to receive(:generate).with(post:, average_score: 58.3).and_return('delegated-key')
+      allow(scope).to receive(:where).with('score_key.lt': 'delegated-key').and_return(scope)
+      allow(scope).to receive(:with_index).with(:ranking_index).and_return(scope)
+      allow(scope).to receive(:count).and_return(10)
+
+      described_class.calibrate(raw_score: 58.3, post:)
+
+      expect(PostScoreKeyService).to have_received(:generate).with(post:, average_score: 58.3)
+    end
   end
 end

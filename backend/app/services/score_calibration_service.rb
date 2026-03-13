@@ -73,9 +73,7 @@ class ScoreCalibrationService
     end
 
     def score_key_for(raw_score:, post:)
-      created_at = post.created_at.to_i
-      inv_score = Post::SCORE_BASE - (raw_score * Post::SCORE_MULTIPLIER).round
-      format('%<score>04d#%<created>010d#%<id>s', score: inv_score, created: created_at, id: post.id)
+      PostScoreKeyService.generate(post:, average_score: raw_score)
     end
 
     # 上位比率に対する目標スコア帯
