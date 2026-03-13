@@ -32,6 +32,42 @@ RSpec.describe PersonaCommentStyleService, type: :service do
       expect(result).to eq('論点はいいですよね')
     end
 
+    it 'ひろゆき風で自然な よね 終止なら語尾を重ねないこと' do
+      result = described_class.style('誰にでもあるよね', 'hiroyuki')
+
+      expect(result).to eq('誰にでもあるよね')
+    end
+
+    it '中尾彬風で自然な ね 終止なら語尾を重ねないこと' do
+      result = described_class.style('誰にでもあるね', 'nakao')
+
+      expect(result).to eq('誰にでもあるね')
+    end
+
+    it 'デヴィ婦人風で自然な ですわね 終止なら語尾を重ねないこと' do
+      result = described_class.style('簡潔ですわね', 'dewi')
+
+      expect(result).to eq('簡潔ですわね')
+    end
+
+    it '中尾彬風の二重語尾を自然な形に戻すこと' do
+      result = described_class.style('誰にでもあるねだね', 'nakao')
+
+      expect(result).to eq('誰にでもあるね')
+    end
+
+    it 'デヴィ婦人風の二重語尾を自然な形に戻すこと' do
+      result = described_class.style('簡潔ですわねですわ', 'dewi')
+
+      expect(result).to eq('簡潔ですわね')
+    end
+
+    it 'デヴィ婦人風で ますですわ を自然な敬体に戻すこと' do
+      result = described_class.style('品が際立ちますですわ', 'dewi')
+
+      expect(result).to eq('品が際立ちますわ')
+    end
+
     it '30文字を超える場合は30文字以内に収めること' do
       result = described_class.style('あるある感があって刺さるコメントです', 'nakao')
 

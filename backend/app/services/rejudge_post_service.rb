@@ -111,9 +111,18 @@ class RejudgePostService
       brevity: result.scores[:brevity],
       originality: result.scores[:originality],
       expression: result.scores[:expression],
-      total_score: Judgment.calculate_total_score(result.scores),
+      total_score: capped_total_score(result.scores),
       comment: result.comment
     }
+  end
+
+  def capped_total_score(scores)
+    raw_total_score = Judgment.calculate_total_score(scores)
+    capped_total_score = ScoreManipulationGuardService.cap_total_score(@post.body, raw_total_score)
+    return capped_total_score if capped_total_score == raw_total_score
+
+    Rails.logger.warn("[RejudgePostService] 採点誘導文を検知したため合計点を制限: post_id=#{@post.id}")
+    capped_total_score
   end
 
   def save_judgment!(persona, attrs, existing_judgment = nil)

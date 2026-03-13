@@ -45,15 +45,42 @@ class PersonaCommentStyleService
   COMMENT_ENDINGS = {
     'hiroyuki' => {
       suffix: 'って話です',
-      allowed: %w[ですよね じゃないですか って話です]
+      allowed: [
+        /ですよね\z/,
+        /よね\z/,
+        /じゃないですか\z/,
+        /って話です\z/,
+        /なんですよね\z/,
+        /だと思いますよ\z/,
+        /ってところです\z/
+      ].freeze
     }.freeze,
     'dewi' => {
       suffix: 'ですわ',
-      allowed: %w[ですわ ですこと ですの よろしくてよ]
+      allowed: [
+        /ですわ\z/,
+        /ですこと\z/,
+        /ですの\z/,
+        /よろしくてよ\z/,
+        /ですわね\z/,
+        /ますわ\z/,
+        /ませんわ\z/,
+        /ございませんわ\z/,
+        /ありませんこと\z/
+      ].freeze
     }.freeze,
     'nakao' => {
       suffix: 'だね',
-      allowed: %w[だね だな だよ かな]
+      allowed: [
+        /だね\z/,
+        /だな\z/,
+        /だよ\z/,
+        /かな\z/,
+        /じゃないか\z/,
+        /だろうね\z/,
+        /かもしれないね\z/,
+        /ね\z/
+      ].freeze
     }.freeze
   }.freeze
 
@@ -104,13 +131,58 @@ class PersonaCommentStyleService
       ending_rule = COMMENT_ENDINGS.fetch(persona) do
         raise ArgumentError, "Unsupported persona: #{persona}"
       end
-      return comment if ending_rule[:allowed].any? { |suffix| comment.end_with?(suffix) }
+      normalized_comment = normalize_persona_ending(comment, persona)
+      deduplicated_comment = remove_duplicate_suffix(normalized_comment, ending_rule)
+      return deduplicated_comment if allowed_comment_ending?(deduplicated_comment, ending_rule)
+      return normalized_comment if allowed_comment_ending?(normalized_comment, ending_rule)
 
-      "#{trim_trailing_ending(comment)}#{ending_rule[:suffix]}"
+      "#{trim_trailing_ending(normalized_comment, persona)}#{ending_rule[:suffix]}"
     end
 
-    def trim_trailing_ending(comment)
-      comment.gsub(/[。!！?？]+$/, '').sub(/(です|ます|でした|だ|だよ|だね|だな|かな)\z/, '')
+    def allowed_comment_ending?(comment, ending_rule)
+      ending_rule[:allowed].any? { |pattern| comment.match?(pattern) }
+    end
+
+    def remove_duplicate_suffix(comment, ending_rule)
+      return comment unless comment.end_with?(ending_rule[:suffix])
+
+      base_comment = comment.delete_suffix(ending_rule[:suffix])
+      return base_comment if allowed_comment_ending?(base_comment, ending_rule)
+
+      comment
+    end
+
+    def normalize_persona_ending(comment, persona)
+      case persona
+      when 'hiroyuki'
+        comment
+      when 'dewi'
+        comment
+          .sub(/ません(?:ですわ|ですの|ですこと|ですわね)\z/, 'ませんわ')
+          .sub(/ます(?:ですわ|ですの|ですこと|ですわね)\z/, 'ますわ')
+      when 'nakao'
+        comment.sub(/(.+(?:る|う|く|ぐ|す|つ|ぬ|ぶ|む|い|しい|ない))だね\z/, '\1ね')
+      else
+        raise ArgumentError, "Unsupported persona: #{persona}"
+      end
+    end
+
+    def trim_trailing_ending(comment, persona)
+      trimmed_comment = comment.gsub(/[。!！?？]+$/, '')
+      persona_patterns = COMMENT_ENDINGS.fetch(persona) do
+        raise ArgumentError, "Unsupported persona: #{persona}"
+      end[:allowed]
+
+      loop do
+        previous_comment = trimmed_comment
+        persona_patterns.each do |pattern|
+          trimmed_comment = trimmed_comment.sub(pattern, '')
+        end
+        trimmed_comment = trimmed_comment.sub(/(です|ます|でした|だ|だよ|だね|だな|かな|ですよ|ですわね)\z/, '')
+        break if trimmed_comment == previous_comment
+      end
+
+      trimmed_comment
     end
 
     def truncate_comment(comment)

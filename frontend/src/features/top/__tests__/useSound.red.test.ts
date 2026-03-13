@@ -94,4 +94,40 @@ describe('E18 RED: useSound', () => {
 
     await expect(Promise.resolve().then(() => sound.playSe('se_submit'))).resolves.toBeUndefined()
   })
+
+  it('judging BGM はバージョン付きURLで新しいCanCan.mp3を参照する', async () => {
+    const howlOptions: Array<{ src?: string[] }> = []
+
+    vi.resetModules()
+    vi.doMock('howler', () => ({
+      Howl: class {
+        constructor(options: { src?: string[]; volume?: number }) {
+          howlOptions.push(options)
+        }
+
+        play() {
+          return 1
+        }
+
+        stop() {}
+
+        unload() {}
+
+        fade() {}
+
+        volume() {
+          return 0.5
+        }
+      },
+    }))
+
+    const module = await import('../../../hooks/useSound')
+    const sound = module.createSoundController()
+    sound.unlockAudio()
+    sound.setConsented()
+    sound.setVolume(0.5)
+    sound.playSceneBgm('judging')
+
+    expect(howlOptions[0]?.src?.[0]).toContain('/sounds/CanCan.mp3?v=')
+  })
 })

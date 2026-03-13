@@ -15,6 +15,14 @@ RSpec.describe GeminiAdapter do
 
   describe '初期化' do
     it_behaves_like 'adapter initialization', 'ひろゆき風', true
+
+    it 'ひろゆき風の自然な論理口調ルールを含むこと' do
+      prompt = adapter.instance_variable_get(:@prompt)
+
+      expect(prompt).to include('基本の終止形は「ですよね」「じゃないですか」「って話です」')
+      expect(prompt).to include('別人格の語尾や不自然なつなぎ方は禁止。')
+      expect(prompt).to include('不自然なら自然なひろゆき風の終止形に書き直すこと。')
+    end
   end
 
   describe '#client' do

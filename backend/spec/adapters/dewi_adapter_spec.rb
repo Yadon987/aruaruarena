@@ -24,6 +24,14 @@ RSpec.describe DewiAdapter, type: :model do
 
   describe '初期化' do
     it_behaves_like 'adapter initialization', 'デヴィ婦人風'
+
+    it 'デヴィ婦人風の自然な敬体ルールを含むこと' do
+      prompt = adapter.instance_variable_get(:@prompt)
+
+      expect(prompt).to include('基本の終止形は「ですわ」「ですこと」「ですの」「よろしくてよ」')
+      expect(prompt).to include('他キャラの語尾や常体が混ざった不自然な語尾は禁止。')
+      expect(prompt).to include('不自然なら自然なデヴィ婦人風の敬体に書き直すこと。')
+    end
   end
 
   describe '#client' do

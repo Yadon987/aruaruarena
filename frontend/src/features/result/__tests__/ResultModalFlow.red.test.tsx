@@ -215,8 +215,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
     expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
   }, 12000)
 
-  it('審査直後のTOP20結果では共有ボタン群を表示し、シェア画像押下時のみOGPを表示する', async () => {
-    // 何を検証するか: 審査直後の上位結果だけ共有導線を出し、OGPは明示操作まで隠すこと
+  it('審査直後のscored結果では共有ボタン群を表示し、シェア画像押下時のみOGPを表示する', async () => {
+    // 何を検証するか: 審査直後にscoredなら順位に関係なく共有導線を出し、OGPは明示操作まで隠すこと
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'share-post-id',
       status: 'judging',
@@ -322,8 +322,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
   }, 12000)
 
-  it('TOP20圏外のscored投稿ではシェア関連UIを表示しない', async () => {
-    // 何を検証するか: scoredでもrankが21位以降は共有UIを表示しないこと
+  it('TOP20圏外のscored投稿でも審査直後ならシェア関連UIを表示する', async () => {
+    // 何を検証するか: 審査直後の結果ではrankが21位以降でも共有UIを表示すること
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'scope-post-id',
       status: 'judging',
@@ -351,7 +351,11 @@ describe('E15-01 RED: ResultModal Flow', () => {
       { timeout: 9000 }
     )
 
-    expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Xでシェア' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Xでシェア' }))
+    const [shareIntentUrl] = vi.mocked(window.open).mock.calls.at(-1) as [string]
+    expect(decodeURIComponent(shareIntentUrl)).toContain('21位')
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
   }, 12000)
 
