@@ -19,22 +19,36 @@ class PostClaimService
     def clear_claim_field!(post, claimed_at)
       return if claimed_at.nil?
 
-      Dynamoid.adapter.client.update_item(
+      Dynamoid.adapter.client.update_item(**clear_claim_field_params(post, claimed_at))
+    rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
+      nil
+    end
+
+    private
+
+    def clear_claim_field_params(post, claimed_at)
+      {
         table_name: Post.table_name,
         key: { id: post.id },
         update_expression: 'REMOVE #claim',
         condition_expression: '#status <> :judging AND #claim = :claimed_at',
-        expression_attribute_names: {
-          '#status' => 'status',
-          '#claim' => Post::CLAIM_FIELD
-        },
-        expression_attribute_values: {
-          ':judging' => Post::STATUS_JUDGING,
-          ':claimed_at' => claimed_at
-        }
-      )
-    rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-      nil
+        expression_attribute_names: claim_attribute_names,
+        expression_attribute_values: claim_attribute_values(claimed_at)
+      }
+    end
+
+    def claim_attribute_names
+      {
+        '#status' => 'status',
+        '#claim' => Post::CLAIM_FIELD
+      }
+    end
+
+    def claim_attribute_values(claimed_at)
+      {
+        ':judging' => Post::STATUS_JUDGING,
+        ':claimed_at' => claimed_at
+      }
     end
   end
 end

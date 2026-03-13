@@ -25,6 +25,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     localStorage.clear()
     vi.clearAllMocks()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true } as Response))
+    vi.spyOn(window, 'open').mockImplementation(() => null)
     mockRankings([
       {
         rank: 1,
@@ -100,6 +101,50 @@ describe('E15-01 RED: ResultModal Flow', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
     })
+  })
+
+  it('審査直後のTOP20結果では共有ボタン群を表示し、シェア画像押下時のみOGPを表示する', async () => {
+    // 何を検証するか: 審査直後の上位結果だけ共有導線を出し、OGPは明示操作まで隠すこと
+    vi.spyOn(api.posts, 'create').mockResolvedValue({
+      id: 'share-post-id',
+      status: 'judging',
+    })
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'share-post-id',
+      nickname: '共有太郎',
+      body: '共有本文',
+      status: 'scored',
+      created_at: '2026-02-17T00:00:00Z',
+      average_score: 91.4,
+      rank: 3,
+      total_count: 20,
+      judgments: [],
+    })
+
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: '共有太郎', body: '共有テスト本文です' })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'シェア画像' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'でシェア' })).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'シェア画像' }))
+
+    expect(screen.getByTestId('ogp-preview')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'でシェア' }))
+
+    expect(window.open).toHaveBeenCalledWith(expect.any(String), '_blank', 'noopener,noreferrer')
+    const [shareIntentUrl] = vi.mocked(window.open).mock.calls[0]
+    expect(shareIntentUrl).toContain('https://twitter.com/intent/tweet?')
+    expect(decodeURIComponent(shareIntentUrl)).toContain('/posts/share-post-id')
+    expect(screen.getByTestId('ogp-preview')).toHaveAttribute(
+      'src',
+      expect.stringContaining('/ogp/posts/share-post-id.png')
+    )
   })
 
   it('自分の投稿選択で結果モーダルが開く', async () => {
@@ -184,7 +229,33 @@ describe('E15-01 RED: ResultModal Flow', () => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
     })
 
-    expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'でシェア' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
+  })
+
+  it('ランキング経由の結果表示ではシェア関連UIを表示しない', async () => {
+    // 何を検証するか: ランキング閲覧では共有導線を出さないこと
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'rank-post-1',
+      nickname: 'ランク太郎',
+      body: '本文',
+      status: 'scored',
+      created_at: '2026-02-17T00:00:00Z',
+      average_score: 90.1,
+      rank: 1,
+      total_count: 40,
+      judgments: [],
+    })
+
+    render(<App />)
+
+    await openRankingResultFromTopRanking()
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+    })
+
+    expect(screen.queryByRole('button', { name: 'でシェア' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
   })
 

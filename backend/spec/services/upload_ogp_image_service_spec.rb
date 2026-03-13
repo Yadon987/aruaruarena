@@ -37,6 +37,15 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
 
       expect(described_class.call('post-id')).to be false
     end
+
+    it 'エラーログを出力して早期リターンすること' do
+      allow(Rails.logger).to receive(:error)
+
+      expect(described_class.call('post-id')).to be false
+      expect(Rails.logger).to have_received(:error).with(
+        '[UploadOgpImageService] OGP_S3_BUCKET environment variable is not set'
+      )
+    end
   end
 
   it '生成したOGP画像をS3へ保存すること' do

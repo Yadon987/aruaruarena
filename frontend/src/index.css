@@ -597,6 +597,66 @@
   filter: drop-shadow(0 0 6px rgba(255, 245, 200, 0.9));
 }
 
+.result-summary-share-image-button {
+  border-color: rgba(148, 232, 255, 0.92);
+  background:
+    radial-gradient(
+      130% 160% at 18% 0%,
+      rgba(220, 251, 255, 0.48) 0%,
+      rgba(220, 251, 255, 0) 36%
+    ),
+    linear-gradient(180deg, rgba(66, 192, 224, 1) 0%, rgba(24, 121, 161, 1) 56%, rgba(17, 82, 121, 1) 100%);
+  color: #effcff;
+  text-shadow:
+    0 1px 0 rgba(6, 48, 70, 0.72),
+    0 0 11px rgba(184, 245, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(228, 252, 255, 0.72),
+    inset 0 -2px 0 rgba(6, 55, 84, 0.58),
+    0 10px 24px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(114, 218, 247, 0.58),
+    0 0 22px rgba(97, 214, 255, 0.38);
+}
+
+.result-summary-share-image-button:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(236, 253, 255, 0.88),
+    inset 0 -2px 0 rgba(7, 62, 92, 0.66),
+    0 12px 28px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(122, 224, 255, 0.78),
+    0 0 36px rgba(114, 224, 255, 0.46);
+}
+
+.result-summary-x-share-button {
+  border-color: rgba(244, 244, 244, 0.88);
+  background:
+    radial-gradient(
+      130% 160% at 18% 0%,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0) 36%
+    ),
+    linear-gradient(180deg, rgba(36, 36, 39, 1) 0%, rgba(14, 14, 17, 1) 56%, rgba(3, 3, 5, 1) 100%);
+  color: #ffffff;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.86),
+    0 0 11px rgba(255, 255, 255, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.72),
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 0 22px rgba(255, 255, 255, 0.12);
+}
+
+.result-summary-x-share-button:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.8),
+    0 12px 28px rgba(0, 0, 0, 0.46),
+    0 0 0 1px rgba(255, 255, 255, 0.3),
+    0 0 28px rgba(255, 255, 255, 0.18);
+}
+
 .ranking-top-rank-row {
   position: relative;
   overflow: hidden;

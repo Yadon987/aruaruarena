@@ -40,21 +40,33 @@ module JudgeCommonConcern
   end
 
   def update_scored_post!(post, successful_judgments, succeeded_count)
-    total = successful_judgments.sum(&:total_score)
-    raw_average = (total.to_f / succeeded_count).round(ROUND_PRECISION)
+    raw_average = average_score_for(successful_judgments, succeeded_count)
     post.average_score = ScoreCalibrationService.calibrate(raw_score: raw_average, post: post)
-    post.status = Post::STATUS_SCORED
-    upload_ogp_image(post)
-    post.update_status!(Post::STATUS_SCORED)
-    LogOgpGenerationEventService.call(
-      event: 'post_scored_saved',
-      post:,
-      successful_judges_count: succeeded_count
-    )
+    persist_scored_post!(post)
+    log_scored_post(post, succeeded_count)
   end
 
   def update_failed_post!(post)
     post.average_score = nil
     post.update_status!(Post::STATUS_FAILED)
+  end
+
+  def average_score_for(successful_judgments, succeeded_count)
+    total = successful_judgments.sum(&:total_score)
+    (total.to_f / succeeded_count).round(ROUND_PRECISION)
+  end
+
+  def persist_scored_post!(post)
+    post.status = Post::STATUS_SCORED
+    upload_ogp_image(post)
+    post.update_status!(Post::STATUS_SCORED)
+  end
+
+  def log_scored_post(post, succeeded_count)
+    LogOgpGenerationEventService.call(
+      event: 'post_scored_saved',
+      post:,
+      successful_judges_count: succeeded_count
+    )
   end
 end

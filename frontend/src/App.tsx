@@ -92,6 +92,10 @@ const LOW_SCORE_THRESHOLD = SCORE_THRESHOLDS.LOW
 const CONTACT_FORM_URL = 'https://forms.gle/zLN3j3YF87qdULXB9'
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
+const SHAREABLE_RESULT_MAX_RANK = 20
+const POST_SHARE_PATH_PREFIX = '/posts/'
+const OGP_IMAGE_PATH_PREFIX = '/ogp/posts/'
+const X_SHARE_INTENT_URL = 'https://twitter.com/intent/tweet'
 
 type ValidationErrors = {
   nicknameError: string
@@ -99,6 +103,7 @@ type ValidationErrors = {
 }
 
 type ViewMode = 'top' | 'judging' | 'result'
+type ResultViewSource = 'judging' | 'ranking' | 'my_posts' | 'error' | 'unknown'
 
 function shouldShowAudioConsentModalInTest(): boolean {
   return (
@@ -113,8 +118,61 @@ function canOpenResultModalFromMyPost(post: Post): boolean {
   )
 }
 
+function hasShareableRank(rank: number | undefined): rank is number {
+  return (
+    typeof rank === 'number' &&
+    Number.isInteger(rank) &&
+    rank >= 1 &&
+    rank <= SHAREABLE_RESULT_MAX_RANK
+  )
+}
+
 function isFinalResultPost(post: Post | null): post is Post & { status: 'scored' | 'failed' } {
   return post !== null && (post.status === 'scored' || post.status === 'failed')
+}
+
+function readFrontendBaseUrl(): string {
+  const envBaseUrl = import.meta.env.VITE_FRONTEND_BASE_URL?.trim()
+  return envBaseUrl && envBaseUrl.length > 0 ? envBaseUrl : window.location.origin
+}
+
+function buildFrontendAbsoluteUrl(pathname: string): string {
+  const baseUrl = readFrontendBaseUrl()
+  return new URL(pathname, `${baseUrl.replace(/\/+$/, '')}/`).toString()
+}
+
+function buildShareTargetUrl(postId: string): string {
+  return buildFrontendAbsoluteUrl(`${POST_SHARE_PATH_PREFIX}${postId}`)
+}
+
+function buildOgpPreviewUrl(postId: string): string {
+  return buildFrontendAbsoluteUrl(`${OGP_IMAGE_PATH_PREFIX}${postId}.png`)
+}
+
+function buildResultShareText(post: Post): string {
+  const scoreLabel = typeof post.average_score === 'number' ? post.average_score.toFixed(1) : '--.-'
+  const rankLabel = hasShareableRank(post.rank) ? `${post.rank}位` : 'ランクイン'
+  return `「${post.body}」\n${post.nickname}さんのあるあるは ${rankLabel} / ${scoreLabel}点！\n#あるあるアリーナ`
+}
+
+function buildXShareIntentUrl(post: Post): string {
+  const params = new URLSearchParams({
+    text: buildResultShareText(post),
+    url: buildShareTargetUrl(post.id),
+  })
+  return `${X_SHARE_INTENT_URL}?${params.toString()}`
+}
+
+function canShowPostJudgingShareActions(
+  post: Post | null,
+  source: ResultViewSource
+): post is Post & { status: 'scored'; rank: number } {
+  return (
+    source === 'judging' &&
+    isFinalResultPost(post) &&
+    post.status === 'scored' &&
+    hasShareableRank(post.rank)
+  )
 }
 
 function shouldOpenResultModalOnMyPostError(status: number | undefined): boolean {
@@ -366,6 +424,7 @@ function App() {
   const [activeResultPost, setActiveResultPost] = useState<Post | null>(null)
   const [isResultPostLoading, setIsResultPostLoading] = useState(false)
   const [resultModalErrorCode, setResultModalErrorCode] = useState<string | null>(null)
+  const [resultViewSource, setResultViewSource] = useState<ResultViewSource>('unknown')
   const [isRejudgeModalOpen, setIsRejudgeModalOpen] = useState(false)
   const [isRejudging, setIsRejudging] = useState(false)
   const [rejudgeErrorMessage, setRejudgeErrorMessage] = useState('')
@@ -452,6 +511,7 @@ function App() {
     setActiveResultPost(null)
     setIsResultPostLoading(false)
     setResultModalErrorCode(null)
+    setResultViewSource('unknown')
     setIsRejudgeModalOpen(false)
     setRejudgeErrorMessage('')
     setIsRejudging(false)
@@ -498,10 +558,15 @@ function App() {
   }, [])
 
   const enterResultView = useCallback(
-    (postId: string, initialPost?: Post | null) => {
+    (
+      postId: string,
+      initialPost?: Post | null,
+      options?: { source?: ResultViewSource }
+    ) => {
       saveResultViewTrigger()
       setActiveResultPostId(postId)
       setResultModalErrorCode(null)
+      setResultViewSource(options?.source ?? 'unknown')
       setRejudgeErrorMessage('')
       setIsRejudging(false)
       if (initialPost) {
@@ -521,11 +586,12 @@ function App() {
   )
 
   const enterResultViewWithError = useCallback(
-    (postId: string, errorCode: string) => {
+    (postId: string, errorCode: string, options?: { source?: ResultViewSource }) => {
       saveResultViewTrigger()
       setActiveResultPostId(postId)
       setActiveResultPost(null)
       setResultModalErrorCode(errorCode)
+      setResultViewSource(options?.source ?? 'error')
       setIsResultPostLoading(false)
       setIsRejudgeModalOpen(false)
       setViewMode('result')
@@ -553,6 +619,12 @@ function App() {
   const handlePlayRetrySound = useCallback(() => {
     sound.playSe(SOUND_SE_RETRY)
   }, [sound])
+
+  const handleResultShareToX = useCallback(() => {
+    if (!canShowPostJudgingShareActions(activeResultPost, resultViewSource)) return
+
+    window.open(buildXShareIntentUrl(activeResultPost), '_blank', 'noopener,noreferrer')
+  }, [activeResultPost, resultViewSource])
 
   const handleAudioConsent = useCallback(
     (nextVolume: number) => {
@@ -745,7 +817,7 @@ function App() {
       if (response.status === 'failed') {
         // failed応答は結果画面へ直接遷移し、ポーリングは中断する。
         setJudgingErrorMessage('')
-        enterResultView(response.id)
+        enterResultView(response.id, null, { source: 'judging' })
         setIsJudgingPollingReady(false)
         return
       }
@@ -861,7 +933,7 @@ function App() {
       clearJudgingPolling()
       setPendingFormData(null)
       setIsJudgingPollingReady(false)
-      enterResultView(post.id, post)
+      enterResultView(post.id, post, { source: 'judging' })
     },
     [clearJudgingPolling, enterResultView]
   )
@@ -1352,7 +1424,7 @@ function App() {
 
   const handleRankingPostClick = (postId: string) => {
     setIsRankingModalOpen(false)
-    enterResultView(postId)
+    enterResultView(postId, null, { source: 'ranking' })
   }
 
   const handleMyPostClick = async (postId: string) => {
@@ -1360,7 +1432,7 @@ function App() {
     if (cachedPost) {
       if (canOpenResultModalFromMyPost(cachedPost)) {
         closeMyPosts(false)
-        enterResultView(postId, cachedPost)
+        enterResultView(postId, cachedPost, { source: 'my_posts' })
       } else {
         setSelectedPost(cachedPost)
       }
@@ -1385,7 +1457,7 @@ function App() {
       clearMyPostDetailError(postId)
       if (canOpenResultModalFromMyPost(response)) {
         closeMyPosts(false)
-        enterResultView(postId, response)
+        enterResultView(postId, response, { source: 'my_posts' })
       } else {
         setSelectedPost(response)
       }
@@ -1396,7 +1468,9 @@ function App() {
       setMyPostsError(resolvePostDetailErrorMessage(error))
       if (status === HTTP_STATUS.NOT_FOUND) {
         closeMyPosts(false)
-        enterResultViewWithError(postId, resolveResultModalErrorCode(error))
+        enterResultViewWithError(postId, resolveResultModalErrorCode(error), {
+          source: 'my_posts',
+        })
       } else {
         setMyPostDetailErrors((prev) => ({
           ...prev,
@@ -1404,7 +1478,9 @@ function App() {
         }))
         if (shouldOpenResultModalOnMyPostError(status)) {
           closeMyPosts(false)
-          enterResultViewWithError(postId, resolveResultModalErrorCode(error))
+          enterResultViewWithError(postId, resolveResultModalErrorCode(error), {
+            source: 'my_posts',
+          })
         }
         restorePostIdsAfterNonNotFound(previousPostIds)
       }
@@ -1431,6 +1507,10 @@ function App() {
       : activeResultPost?.status === 'scored' || activeResultPost?.status === 'failed'
         ? 'complete'
         : 'complete'
+  const shareableResultPost = useMemo(() => {
+    if (!canShowPostJudgingShareActions(activeResultPost, resultViewSource)) return null
+    return activeResultPost
+  }, [activeResultPost, resultViewSource])
 
   useEffect(() => {
     if (!isMyPostsOpen) return
@@ -1686,6 +1766,10 @@ function App() {
                   onClose={closeResultAndBackTop}
                   isRejudging={isRejudging}
                   rejudgeErrorMessage={rejudgeErrorMessage}
+                  onShareToX={shareableResultPost ? handleResultShareToX : undefined}
+                  ogpPreviewUrl={
+                    shareableResultPost ? buildOgpPreviewUrl(shareableResultPost.id) : undefined
+                  }
                 />
               )}
           </div>

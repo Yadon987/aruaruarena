@@ -333,6 +333,19 @@ RSpec.describe BaseAiAdapter do
           expect(result.scores[:empathy]).to eq(13) # 15 - 2
         end
 
+        it 'コメントもひろゆき風に整形されること' do
+          adapter.mock_response = described_class::JudgmentResult.new(
+            succeeded: true,
+            error_code: nil,
+            scores: base_scores,
+            comment: '共感が強いです'
+          )
+
+          result = adapter.judge('テスト投稿', persona: 'hiroyuki')
+
+          expect(result.comment).to eq('再現性は高いって話です')
+        end
+
         it 'ひろゆき風のバイアスで0-20の範囲内に収まること' do
           edge_scores = { empathy: 1, humor: 15, brevity: 15, originality: 19, expression: 15 }
           adapter.mock_response = described_class::JudgmentResult.new(
@@ -355,6 +368,19 @@ RSpec.describe BaseAiAdapter do
           expect(result.scores[:humor]).to eq(17) # 15 + 2
         end
 
+        it 'コメントもデヴィ婦人風に整形されること' do
+          adapter.mock_response = described_class::JudgmentResult.new(
+            succeeded: true,
+            error_code: nil,
+            scores: base_scores,
+            comment: '共感がある'
+          )
+
+          result = adapter.judge('テスト投稿', persona: 'dewi')
+
+          expect(result.comment).to eq('気品が通っていますわ')
+        end
+
         it 'デヴィ婦人風のバイアスで0-20の範囲内に収まること' do
           edge_scores = { empathy: 15, humor: 19, brevity: 15, originality: 15, expression: 18 }
           adapter.mock_response = described_class::JudgmentResult.new(
@@ -375,6 +401,19 @@ RSpec.describe BaseAiAdapter do
           result = adapter.judge('テスト投稿', persona: 'nakao')
           expect(result.scores[:humor]).to eq(18) # 15 + 3
           expect(result.scores[:empathy]).to eq(17) # 15 + 2
+        end
+
+        it 'コメントも中尾彬風に整形されること' do
+          adapter.mock_response = described_class::JudgmentResult.new(
+            succeeded: true,
+            error_code: nil,
+            scores: base_scores,
+            comment: '共感が残る'
+          )
+
+          result = adapter.judge('テスト投稿', persona: 'nakao')
+
+          expect(result.comment).to eq('余韻が残るかな')
         end
 
         it '中尾彬風のバイアスで0-20の範囲内に収まること' do

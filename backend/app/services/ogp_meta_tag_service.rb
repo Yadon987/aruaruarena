@@ -12,9 +12,22 @@ class OgpMetaTagService
   LOCALE = 'ja_JP'
   OG_TYPE = 'article'
   TWITTER_CARD = 'summary_large_image'
+  IMAGE_WIDTH = 1200
+  IMAGE_HEIGHT = 630
 
   # クローラー判定用キーワード
-  CRAWLER_KEYWORDS = %w[twitterbot facebookexternalhit line-poker discordbot slackbot].freeze
+  CRAWLER_KEYWORDS = %w[
+    twitterbot
+    facebookexternalhit
+    line-poker
+    discordbot
+    slackbot
+    googlebot
+    bingbot
+    linkedinbot
+    pinterest
+    applebot
+  ].freeze
 
   # User-Agentがクローラーかどうかを判定する
   #
@@ -49,6 +62,8 @@ class OgpMetaTagService
         <meta property="og:type" content="#{OG_TYPE}">
         <meta property="og:url" content="#{normalized_base_url}/posts/#{post.id}">
         <meta property="og:image" content="#{normalized_base_url}/ogp/posts/#{post.id}.png">
+        <meta property="og:image:width" content="#{IMAGE_WIDTH}">
+        <meta property="og:image:height" content="#{IMAGE_HEIGHT}">
         <meta property="og:description" content="#{escape_html(generate_description(body: post.body, average_score: post.average_score))}">
         <meta property="og:site_name" content="#{SITE_NAME}">
         <meta property="og:locale" content="#{LOCALE}">

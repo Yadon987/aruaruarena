@@ -154,7 +154,7 @@ describe('E18-01 RED: BGM scene integration', () => {
 
     clearAudioDebugEvents()
     const resultModal = screen.getByRole('dialog', { name: '審査結果モーダル' })
-    fireEvent.click(within(resultModal).getByRole('button', { name: 'トップへ戻る' }))
+    fireEvent.click(within(resultModal).getByRole('button', { name: 'トップへ' }))
 
     await waitFor(() => {
       const topEvents = getAudioDebugEvents().filter(

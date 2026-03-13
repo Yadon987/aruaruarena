@@ -38,6 +38,16 @@ RSpec.describe OgpMetaTagService, type: :service do
       # 何を検証するか: 定数値が正しく設定されていること
       expect(described_class::TWITTER_CARD).to eq('summary_large_image')
     end
+
+    it 'IMAGE_WIDTH定数が1200で定義されていること' do
+      # 何を検証するか: OGP画像の幅が正しく設定されていること
+      expect(described_class::IMAGE_WIDTH).to eq(1200)
+    end
+
+    it 'IMAGE_HEIGHT定数が630で定義されていること' do
+      # 何を検証するか: OGP画像の高さが正しく設定されていること
+      expect(described_class::IMAGE_HEIGHT).to eq(630)
+    end
   end
 
   describe '.crawler?' do
@@ -66,6 +76,35 @@ RSpec.describe OgpMetaTagService, type: :service do
         # 何を検証するか: Slackbotを含むUser-Agentをクローラーとして判定できること
         expect(described_class.crawler?(user_agent: 'Slackbot/1.0')).to be true
       end
+
+      it 'Googlebotを含むUser-Agentでtrueを返すこと' do
+        # 何を検証するか: Googlebotを含むUser-Agentをクローラーとして判定できること
+        expect(described_class.crawler?(user_agent: 'Mozilla/5.0 (compatible; Googlebot/2.1)')).to be true
+      end
+
+      it 'bingbotを含むUser-Agentでtrueを返すこと' do
+        # 何を検証するか: bingbotを含むUser-Agentをクローラーとして判定できること
+        expect(described_class.crawler?(user_agent: 'Mozilla/5.0 (compatible; bingbot/2.0)')).to be true
+      end
+
+      it 'LinkedInBotを含むUser-Agentでtrueを返すこと' do
+        # 何を検証するか: LinkedInBotを含むUser-Agentをクローラーとして判定できること
+        expect(described_class.crawler?(user_agent: 'LinkedInBot/1.0')).to be true
+      end
+
+      it 'Pinterestを含むUser-Agentでtrueを返すこと' do
+        # 何を検証するか: Pinterestを含むUser-Agentをクローラーとして判定できること
+        expect(described_class.crawler?(user_agent: 'Mozilla/5.0 (compatible; Pinterest/0.2)')).to be true
+      end
+
+      # rubocop:disable Layout/LineLength
+      it 'Applebotを含むUser-Agentでtrueを返すこと' do
+        # 何を検証するか: Applebotを含むUser-Agentをクローラーとして判定できること
+        user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/8.0.2 Safari/600.2.5 (Applebot/0.1)'
+
+        expect(described_class.crawler?(user_agent:)).to be true
+      end
+      # rubocop:enable Layout/LineLength
 
       # rubocop:disable Layout/LineLength
       it '通常のブラウザ（Chrome）でfalseを返すこと' do
@@ -160,6 +199,8 @@ RSpec.describe OgpMetaTagService, type: :service do
         expect(html).to include('<meta property="og:type"')
         expect(html).to include('<meta property="og:url"')
         expect(html).to include('<meta property="og:image"')
+        expect(html).to include('<meta property="og:image:width"')
+        expect(html).to include('<meta property="og:image:height"')
         expect(html).to include('<meta property="og:description"')
         expect(html).to include('<meta property="og:site_name"')
         expect(html).to include('<meta property="og:locale"')
@@ -215,6 +256,14 @@ RSpec.describe OgpMetaTagService, type: :service do
         html = described_class.generate_html(post:, base_url:)
 
         expect(html).to include('スヌーズ押して二度寝 (スコア: 85.5点)')
+      end
+
+      it 'og:image:width と og:image:height に画像サイズが設定されること' do
+        # 何を検証するか: OGP画像サイズがクローラーへ明示されること
+        html = described_class.generate_html(post:, base_url:)
+
+        expect(html).to include('property="og:image:width" content="1200"')
+        expect(html).to include('property="og:image:height" content="630"')
       end
 
       it 'og:site_nameに"あるあるアリーナ"が設定されること' do

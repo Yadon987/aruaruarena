@@ -60,7 +60,9 @@ describe('E12-01 RED: TopPage Integration', () => {
     await fillAndSubmitPostForm({ nickname: '制限太郎', body: '投稿テキストです' })
 
     await waitFor(() => {
-      expect(screen.getByText('投稿に失敗しました')).toBeInTheDocument()
+      expect(
+        screen.getByText('アクセスが集中しています。時間をおいて再度お試しください')
+      ).toBeInTheDocument()
     })
     await expectRetryRestoresFormInput('制限太郎', '投稿テキストです')
   })
@@ -104,8 +106,8 @@ describe('E12-01 RED: TopPage Integration', () => {
     })
   })
 
-  it('通信失敗時に既定エラーメッセージを表示し入力を保持する', async () => {
-    // 何を検証するか: ネットワーク失敗時に既定エラー表示後、再投稿で入力復元されること
+  it('通信失敗時に開発環境向けメッセージを表示し入力を保持する', async () => {
+    // 何を検証するか: 開発時の接続失敗案内を表示した後も、再投稿で入力復元されること
     mswServer.use(
       http.post('/api/posts', () => {
         return HttpResponse.error()
@@ -117,7 +119,11 @@ describe('E12-01 RED: TopPage Integration', () => {
     await fillAndSubmitPostForm({ nickname: '通信太郎', body: '通信失敗テスト本文です' })
 
     await waitFor(() => {
-      expect(screen.getByText('ネットワークに接続できませんでした')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'backendに接続できませんでした。backend を起動してください（bundle exec rails s）'
+        )
+      ).toBeInTheDocument()
     })
     await expectRetryRestoresFormInput('通信太郎', '通信失敗テスト本文です')
   })

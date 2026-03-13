@@ -248,7 +248,7 @@ class BaseAiAdapter
       succeeded: true,
       error_code: nil,
       scores: biased_scores,
-      comment: result.comment
+      comment: PersonaCommentStyleService.style(result.comment, persona)
     )
   end
 
