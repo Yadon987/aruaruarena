@@ -120,7 +120,6 @@ export const PRIVACY_POLICY_TEXT = `
 12. お問い合わせ
 本ポリシーおよび利用者情報の取扱いに関するお問い合わせは、以下の窓口までご連絡ください。
 Googleフォームを利用する場合は、Googleの提供する外部サービス上で情報が送信されます。
-メール: aruaruarena.official@gmail.com
 フォーム: https://forms.gle/zLN3j3YF87qdULXB9
 
 13. 改定

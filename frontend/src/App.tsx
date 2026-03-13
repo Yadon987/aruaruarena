@@ -87,6 +87,11 @@ const RESULT_MODAL_ERROR_FETCH_FAILED = 'FETCH_ERROR'
 const MESSAGE_REJUDGE_FAILED = '再審査に失敗しました。時間をおいて再度お試しください'
 const DEFAULT_FAILED_PERSONAS: JudgePersona[] = ['hiroyuki', 'dewi', 'nakao']
 const MAX_MY_POST_PREFETCH_CONCURRENCY = 3
+const MY_POST_STATUS_LABELS: Record<Post['status'], string> = {
+  judging: '審査中',
+  scored: '審査完了',
+  failed: '審査失敗',
+}
 const SOUND_SE_SUBMIT = 'se_submit'
 const SOUND_SE_RETRY = 'se_retry'
 const SOUND_SE_RESULT_OPEN = 'se_result_open'
@@ -286,6 +291,44 @@ function buildTransientErrorNotice(errorCount: number): string {
     return `通信が不安定です（${errorCount}/${JUDGING_TRANSIENT_ERROR_MAX_RETRIES}）。まもなくタイムアウトします。`
   }
   return `通信が不安定です（${errorCount}/${JUDGING_TRANSIENT_ERROR_MAX_RETRIES}）。再接続を試しています...`
+}
+
+function buildMyPostCardStatusClass(status: Post['status']): string {
+  if (status === 'scored') {
+    return 'border-emerald-300/45 bg-gradient-to-r from-emerald-400/20 to-lime-300/10 text-emerald-50 shadow-[0_0_18px_rgba(52,211,153,0.18)]'
+  }
+  if (status === 'failed') {
+    return 'border-rose-300/45 bg-gradient-to-r from-rose-400/20 to-orange-300/10 text-rose-50 shadow-[0_0_18px_rgba(251,113,133,0.16)]'
+  }
+  return 'border-sky-300/45 bg-gradient-to-r from-sky-400/20 to-cyan-300/10 text-sky-50 shadow-[0_0_18px_rgba(56,189,248,0.16)]'
+}
+
+function formatMyPostCreatedAt(createdAt: string | undefined): string {
+  if (!createdAt || createdAt.trim().length === 0) {
+    return '取得待ち'
+  }
+
+  const trimmedCreatedAt = createdAt.trim()
+  const numericTimestamp = Number(trimmedCreatedAt)
+
+  let date: Date
+  if (Number.isFinite(numericTimestamp) && /^\d+$/.test(trimmedCreatedAt)) {
+    date = new Date(numericTimestamp * 1000)
+  } else {
+    date = new Date(trimmedCreatedAt)
+  }
+
+  if (Number.isNaN(date.getTime())) {
+    return trimmedCreatedAt
+  }
+
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
 }
 
 function validateForm(nickname: string, body: string): ValidationErrors {
@@ -992,6 +1035,50 @@ function App() {
     syncTopPath()
   }, [closeResultView, syncTopPath])
 
+  const backResultToMyPosts = useCallback(() => {
+    resetResultViewState()
+    resultRequestSeqRef.current += 1
+    setViewMode('top')
+    setIsMyPostsOpen(true)
+    setSelectedPost(null)
+    setIsLoadingPostDetail(false)
+    setIsPrivacyPolicyOpen(false)
+    setIsRankingModalOpen(false)
+    setIsFooterActionSheetOpen(false)
+    syncMyPostIds()
+    syncTopPath()
+  }, [resetResultViewState, syncMyPostIds, syncTopPath])
+
+  const backResultToRanking = useCallback(() => {
+    resetResultViewState()
+    resultRequestSeqRef.current += 1
+    setViewMode('top')
+    setIsRankingModalOpen(true)
+    setIsMyPostsOpen(false)
+    setSelectedPost(null)
+    setIsLoadingPostDetail(false)
+    setIsPrivacyPolicyOpen(false)
+    setIsFooterActionSheetOpen(false)
+    syncTopPath()
+  }, [resetResultViewState, syncTopPath])
+
+  const resultCloseButtonLabel =
+    resultViewSource === 'my_posts' || resultViewSource === 'ranking' ? '戻る' : 'トップへ'
+  const resultCloseButtonAriaLabel =
+    resultViewSource === 'my_posts'
+      ? '自分の投稿へ戻る'
+      : resultViewSource === 'ranking'
+        ? 'ランキングへ戻る'
+        : 'トップへ'
+  const resultCloseButtonIcon =
+    resultViewSource === 'my_posts' || resultViewSource === 'ranking' ? '↩' : '🏮'
+  const handleResultPrimaryClose =
+    resultViewSource === 'my_posts'
+      ? backResultToMyPosts
+      : resultViewSource === 'ranking'
+        ? backResultToRanking
+        : closeResultAndBackTop
+
   const notFinalResultNotice = (
     <div className="glass-panel mx-auto w-full max-w-xl rounded-2xl p-6 text-center text-slate-100">
       <p className="text-sm font-semibold text-rose-100">{MESSAGE_RESULT_NOT_FINAL}</p>
@@ -1007,10 +1094,10 @@ function App() {
         </NeonButton>
         <button
           type="button"
-          onClick={closeResultAndBackTop}
+          onClick={handleResultPrimaryClose}
           className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
         >
-          トップへ戻る
+          {resultCloseButtonLabel}
         </button>
       </div>
     </div>
@@ -1850,10 +1937,10 @@ function App() {
                   </NeonButton>
                   <button
                     type="button"
-                    onClick={closeResultAndBackTop}
+                    onClick={handleResultPrimaryClose}
                     className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
                   >
-                    トップへ戻る
+                    {resultCloseButtonLabel}
                   </button>
                 </div>
               </div>
@@ -1874,7 +1961,10 @@ function App() {
                   averageScore={activeResultPost.average_score}
                   status={activeResultPost.status}
                   onRejudge={handleResultRejudge}
-                  onClose={closeResultAndBackTop}
+                  onClose={handleResultPrimaryClose}
+                  closeLabel={resultCloseButtonLabel}
+                  closeAriaLabel={resultCloseButtonAriaLabel}
+                  closeIcon={resultCloseButtonIcon}
                   isRejudging={isRejudging}
                   rejudgeErrorMessage={rejudgeErrorMessage}
                   onShareToX={shareableResultPost ? handleResultShareToX : undefined}
@@ -1894,81 +1984,171 @@ function App() {
               className="modal-overlay-gorgeous absolute inset-0"
               onClick={() => closeMyPosts()}
             />
-            <motion.div
-              ref={myPostsModalRef}
-              initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
-              animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
-              transition={{ duration: DURATION.MODAL }}
-              role="dialog"
-              aria-modal="true"
-              aria-label="自分の投稿"
-              tabIndex={-1}
-              className="modal-gorgeous-base relative z-10 w-full max-w-md rounded-2xl p-4 text-slate-100"
-            >
-              {selectedPost ? (
-                <MyPostDetail
-                  post={selectedPost}
-                  onBack={() => setSelectedPost(null)}
-                  onClose={closeMyPosts}
-                />
-              ) : (
-                <>
-                  <div className="modal-header-gorgeous flex items-center justify-between gap-4">
-                    <h2 className="gold-text text-lg font-semibold">自分の投稿</h2>
-                    <button
-                      type="button"
-                      onClick={() => closeMyPosts()}
-                      className="text-sm font-semibold text-slate-300 transition hover:text-white"
-                    >
-                      閉じる
-                    </button>
-                  </div>
-                  {myPostsError && <p className="mb-3 text-rose-200">{myPostsError}</p>}
-                  {isLoadingPostDetail && (
-                    <p className="mb-3 text-slate-200">投稿詳細を読み込み中です...</p>
-                  )}
-                  {displayMyPostIds.length === 0 ? (
-                    <p className="text-slate-200">投稿するとここに表示されます</p>
-                  ) : (
-                    <ul className="modal-scroll-area max-h-[60vh] space-y-2 overflow-y-auto pr-1">
-                      {displayMyPostIds.map((postId) => (
-                        <li key={postId} data-testid="my-post-id-item">
-                          <button
-                            type="button"
-                            className="text-left font-semibold text-amber-100 underline-offset-2 hover:underline"
-                            onClick={() => handleMyPostClick(postId)}
-                          >
-                            {postId}
-                          </button>
-                          {loadingMyPostIds.includes(postId) && <p>読み込み中...</p>}
-                          {myPostDetails[postId] && (
-                            <div>
-                              <p>本文: {myPostDetails[postId].body}</p>
-                              {typeof myPostDetails[postId].average_score === 'number' && (
-                                <p>{myPostDetails[postId].average_score}</p>
-                              )}
-                              {typeof myPostDetails[postId].rank === 'number' && (
-                                <p>{myPostDetails[postId].rank}位</p>
-                              )}
-                              <p>{myPostDetails[postId].created_at}</p>
-                              <p>{myPostDetails[postId].status}</p>
-                            </div>
-                          )}
-                          {myPostDetailErrors[postId] && (
-                            <div>
-                              <p>{myPostDetailErrors[postId]}</p>
-                              <button type="button" onClick={() => retryMyPostDetail(postId)}>
-                                再試行
-                              </button>
-                            </div>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              )}
-            </motion.div>
+            <div className="relative flex h-full w-full items-center justify-center">
+              <motion.div
+                ref={myPostsModalRef}
+                initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
+                animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
+                transition={{ duration: DURATION.MODAL }}
+                role="dialog"
+                aria-modal="true"
+                aria-label="自分の投稿"
+                tabIndex={-1}
+                className="modal-gorgeous-base relative z-10 w-full max-w-[95vw] rounded-2xl p-4 text-slate-100 sm:max-w-2xl lg:max-w-3xl"
+              >
+                {selectedPost ? (
+                  <MyPostDetail
+                    post={selectedPost}
+                    onBack={() => setSelectedPost(null)}
+                    onClose={closeMyPosts}
+                  />
+                ) : (
+                  <>
+                    <div className="modal-header-gorgeous flex items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <h2 className="gold-text text-lg font-semibold">自分の投稿</h2>
+                        <p className="text-sm text-slate-200/85">
+                          投稿履歴から審査状況やスコアをまとめて確認できます。
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => closeMyPosts()}
+                        className="modal-close-gorgeous"
+                        aria-label="閉じる"
+                      >
+                        <span aria-hidden="true" className="leading-none text-lg">
+                          ×
+                        </span>
+                        <span className="sr-only">閉じる</span>
+                      </button>
+                    </div>
+                    {myPostsError && (
+                      <p className="mb-4 rounded-xl border border-rose-300/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                        {myPostsError}
+                      </p>
+                    )}
+                    {isLoadingPostDetail && (
+                      <p className="mb-4 rounded-xl border border-sky-200/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+                        投稿詳細を読み込み中です...
+                      </p>
+                    )}
+                    {displayMyPostIds.length === 0 ? (
+                      <div className="rounded-2xl border border-white/10 bg-black/15 px-5 py-8 text-center text-slate-200">
+                        投稿するとここに表示されます
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between gap-3 text-sm text-slate-300/90">
+                          <p>{displayMyPostIds.length}件の投稿を表示中</p>
+                          <p>カードを押すと詳細を確認できます</p>
+                        </div>
+                        <ul className="modal-scroll-area max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+                          {displayMyPostIds.map((postId) => {
+                            const post = myPostDetails[postId]
+                            const isLoading = loadingMyPostIds.includes(postId)
+                            const errorMessage = myPostDetailErrors[postId]
+
+                            return (
+                              <li key={postId} data-testid="my-post-id-item">
+                                <button
+                                  type="button"
+                                  aria-label={postId}
+                                  aria-describedby={`my-post-meta-${postId}`}
+                                  className="w-full rounded-[1.4rem] border border-white/12 bg-[radial-gradient(circle_at_top_left,rgba(255,214,120,0.16),transparent_35%),linear-gradient(180deg,rgba(20,28,45,0.92),rgba(9,14,25,0.96))] p-4 text-left transition hover:border-amber-200/35 hover:shadow-[0_18px_38px_rgba(8,15,30,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/70"
+                                  onClick={() => handleMyPostClick(postId)}
+                                >
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div className="space-y-2">
+                                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/70">
+                                        投稿ID
+                                      </p>
+                                      <p className="break-all font-mono text-sm text-amber-50">
+                                        {postId}
+                                      </p>
+                                    </div>
+                                    {post && (
+                                      <span
+                                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${buildMyPostCardStatusClass(post.status)}`}
+                                      >
+                                        {MY_POST_STATUS_LABELS[post.status]}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div
+                                    id={`my-post-meta-${postId}`}
+                                    className="mt-4 space-y-3 text-sm text-slate-200/90"
+                                  >
+                                    {isLoading && <p>読み込み中...</p>}
+
+                                    {post && (
+                                      <>
+                                        <div className="rounded-xl border border-amber-200/10 bg-white/5 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                                          <p className="mb-2 text-xs font-semibold tracking-[0.2em] text-slate-300/80">
+                                            本文
+                                          </p>
+                                          <p className="text-base leading-7 text-slate-50">
+                                            {post.body}
+                                          </p>
+                                        </div>
+                                        <div className="grid gap-2 sm:grid-cols-3">
+                                          <div className="rounded-xl border border-white/8 bg-white/5 px-3 py-2">
+                                            <p className="text-xs text-slate-300/75">ステータス</p>
+                                            <p className="mt-1 font-semibold text-slate-50">
+                                              {MY_POST_STATUS_LABELS[post.status]}
+                                            </p>
+                                          </div>
+                                          <div className="rounded-xl border border-white/8 bg-white/5 px-3 py-2">
+                                            <p className="text-xs text-slate-300/75">スコア</p>
+                                            <p className="mt-1 font-semibold text-slate-50">
+                                              {typeof post.average_score === 'number'
+                                                ? post.average_score.toFixed(1)
+                                                : '--'}
+                                            </p>
+                                          </div>
+                                          <div className="rounded-xl border border-white/8 bg-white/5 px-3 py-2">
+                                            <p className="text-xs text-slate-300/75">順位</p>
+                                            <p className="mt-1 font-semibold text-slate-50">
+                                              {typeof post.rank === 'number'
+                                                ? `${post.rank}位`
+                                                : '--'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="rounded-xl border border-white/8 bg-white/5 px-3 py-2">
+                                          <p className="text-xs text-slate-300/75">作成日時</p>
+                                          <p className="mt-1 font-medium text-slate-100">
+                                            {formatMyPostCreatedAt(post.created_at)}
+                                          </p>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </button>
+
+                                {errorMessage && (
+                                  <div className="mt-2 rounded-xl border border-rose-300/20 bg-rose-500/10 px-4 py-3">
+                                    <p className="text-sm text-rose-100">{errorMessage}</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => retryMyPostDetail(postId)}
+                                      className="mt-3 rounded-xl border border-rose-200/35 bg-black/20 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-black/30"
+                                    >
+                                      再試行
+                                    </button>
+                                  </div>
+                                )}
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            </div>
           </div>
         )}
 

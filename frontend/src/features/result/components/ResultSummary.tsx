@@ -8,6 +8,9 @@ interface ResultSummaryProps {
   averageScore?: number
   status: 'scored' | 'failed'
   onClose: () => void
+  closeLabel?: string
+  closeAriaLabel?: string
+  closeIcon?: string
   onRejudge?: () => void
   isRejudging?: boolean
   rejudgeErrorMessage?: string
@@ -29,6 +32,9 @@ export function ResultSummary({
   averageScore,
   status,
   onClose,
+  closeLabel = 'トップへ',
+  closeAriaLabel = 'トップへ',
+  closeIcon = '🏮',
   onRejudge,
   isRejudging = false,
   rejudgeErrorMessage = '',
@@ -74,7 +80,9 @@ export function ResultSummary({
 
       {canPreviewOgp && isOgpPreviewVisible && (
         <div className="mt-6 rounded-2xl border border-cyan-200/30 bg-slate-950/35 p-4">
-          <p className="mb-3 text-sm font-bold tracking-[0.08em] text-cyan-100">シェア画像プレビュー</p>
+          <p className="mb-3 text-sm font-bold tracking-[0.08em] text-cyan-100">
+            シェア画像プレビュー
+          </p>
           <img
             src={ogpPreviewUrl}
             alt={`${nickname}さんのOGP画像プレビュー`}
@@ -130,13 +138,13 @@ export function ResultSummary({
         <button
           type="button"
           onClick={onClose}
-          aria-label="トップへ"
+          aria-label={closeAriaLabel}
           className="neon-button-base result-summary-back-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
         >
           <span aria-hidden="true" className="result-summary-back-icon">
-            🏮
+            {closeIcon}
           </span>
-          <span>トップへ</span>
+          <span>{closeLabel}</span>
         </button>
       </div>
       {rejudgeErrorMessage && (

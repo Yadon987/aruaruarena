@@ -59,10 +59,32 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     await waitFor(() => expect(getPostSpy).toHaveBeenCalledWith(MY_POST_ID))
     expect(await screen.findByText(/本文1/)).toBeInTheDocument()
+    expect(screen.getByText('投稿ID')).toBeInTheDocument()
+    expect(screen.getByText('スコア')).toBeInTheDocument()
+    expect(screen.getByText('順位')).toBeInTheDocument()
+    expect(screen.getByText('作成日時')).toBeInTheDocument()
     expect(screen.getByText('95.3')).toBeInTheDocument()
     expect(screen.getByText('1位')).toBeInTheDocument()
-    expect(screen.getByText('2026-02-18T00:00:00Z')).toBeInTheDocument()
-    expect(screen.getByText('scored')).toBeInTheDocument()
+    expect(screen.getByText('2026/02/18 09:00')).toBeInTheDocument()
+    expect(screen.getAllByText('審査完了')).toHaveLength(2)
+  })
+
+  it('作成日時が空の場合は取得待ちを表示する', async () => {
+    // 何を検証するか: created_at 未取得時に空欄ではなく代替表示を出すこと
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: MY_POST_ID,
+      nickname: '太郎',
+      body: '本文1',
+      status: 'judging',
+      created_at: '',
+    })
+    localStorage.setItem('my_post_ids', JSON.stringify([MY_POST_ID]))
+
+    render(<App />)
+
+    await openMyPostsDialog()
+
+    expect(await screen.findByText('取得待ち')).toBeInTheDocument()
   })
 
   it('投稿クリック時に投稿一覧モーダルを閉じて審査結果モーダルへ切り替える', async () => {

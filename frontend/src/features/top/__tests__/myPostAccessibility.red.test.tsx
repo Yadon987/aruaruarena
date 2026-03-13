@@ -34,4 +34,13 @@ describe('E16-01 MyPost Accessibility RED', () => {
 
     expect(document.body).toHaveFocus()
   })
+
+  it('投稿一覧モーダルの閉じるボタンが共通スタイルのラベルで表示される', async () => {
+    // 何を検証するか: 他モーダルと同じ「閉じる」アクセシブルネームを維持すること
+    render(<App />)
+
+    await openMyPostsDialog()
+
+    expect(screen.getByRole('button', { name: '閉じる' })).toBeInTheDocument()
+  })
 })
