@@ -111,9 +111,13 @@ class RejudgePostService
       brevity: result.scores[:brevity],
       originality: result.scores[:originality],
       expression: result.scores[:expression],
-      total_score: Judgment.calculate_total_score(result.scores),
+      total_score: capped_total_score(result.scores),
       comment: result.comment
     }
+  end
+
+  def capped_total_score(scores)
+    capped_total_score_for(scores, @post, service_name: self.class.name)
   end
 
   def save_judgment!(persona, attrs, existing_judgment = nil)

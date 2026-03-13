@@ -14,6 +14,7 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
   afterEach(() => {
     mswServer.resetHandlers()
     localStorage.clear()
+    sessionStorage.clear()
     getPostSpy.mockClear()
     vi.useRealTimers()
     window.history.replaceState({}, '', '/')
@@ -72,10 +73,13 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
-    })
-  })
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+      },
+      { timeout: 9000 }
+    )
+  }, 12000)
 
   it('status=failed を受信したらポーリング停止して審査結果画面へ遷移する', async () => {
     // 何を検証するか: failed受信時に審査中を終了し審査結果画面へ遷移すること
@@ -95,10 +99,13 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
 
     await fillAndSubmitPostForm({ nickname: 'RED太郎', body: 'REDテスト本文です' })
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
-    })
-  })
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+      },
+      { timeout: 9000 }
+    )
+  }, 12000)
 
   it('応答がポーリング間隔より遅くても同一リクエストの完了を待って結果表示する', async () => {
     // 何を検証するか: 3秒超の遅い応答でも次周期で中断せず、1回の取得で結果へ遷移すること
@@ -124,11 +131,11 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
       () => {
         expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
       },
-      { timeout: 7000 }
+      { timeout: 11000 }
     )
 
     expect(getPostSpy).toHaveBeenCalledTimes(1)
-  }, 9000)
+  }, 14000)
 
   it('GET /api/posts/:id が404のとき審査エラーパネルを表示する', async () => {
     // 何を検証するか: 404応答時に審査待機を停止して審査エラー導線を表示すること
@@ -272,13 +279,16 @@ describe('E13-02 RED: 審査中ポーリングとタイムアウト', () => {
     const baseTime = Date.now()
     const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => baseTime + 61_000)
     try {
-      await waitFor(() => {
-        expect(
-          screen.getByText(
-            'ローカル審査ワーカーが停止しています。bundle exec ruby scripts/run_judgment_worker.rb を起動してください'
-          )
-        ).toBeInTheDocument()
-      }, { timeout: 5000 })
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText(
+              'ローカル審査ワーカーが停止しています。bundle exec ruby scripts/run_judgment_worker.rb を起動してください'
+            )
+          ).toBeInTheDocument()
+        },
+        { timeout: 5000 }
+      )
     } finally {
       dateNowSpy.mockRestore()
     }

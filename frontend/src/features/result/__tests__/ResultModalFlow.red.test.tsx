@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
@@ -98,13 +98,122 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     await fillAndSubmitPostForm({ nickname: '遷移太郎', body: '遷移テスト本文です' })
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
-    })
-  })
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+      },
+      { timeout: 9000 }
+    )
+  }, 12000)
 
-  it('審査直後のTOP20結果では共有ボタン群を表示し、シェア画像押下時のみOGPを表示する', async () => {
-    // 何を検証するか: 審査直後の上位結果だけ共有導線を出し、OGPは明示操作まで隠すこと
+  it('審査完了が早くても結果表示は最低7.5秒待つ', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(api.posts, 'create').mockResolvedValue({
+      id: 'minimum-duration-post-id',
+      status: 'judging',
+    })
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'minimum-duration-post-id',
+      nickname: '待機太郎',
+      body: '待機本文',
+      status: 'scored',
+      created_at: '2026-03-13T00:00:00Z',
+      average_score: 84.2,
+      rank: 6,
+      total_count: 18,
+      judgments: [],
+    })
+
+    render(<App />)
+
+    // fake timers 環境では fillAndSubmitPostForm の非同期待機が不安定なためインラインで操作する。
+    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '待機太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '最低審査時間テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(7400)
+    })
+
+    expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+  }, 12000)
+
+  it('7.5秒経過後に審査完了した場合は追加待機なしで結果表示する', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(api.posts, 'create').mockResolvedValue({
+      id: 'slow-minimum-duration-post-id',
+      status: 'judging',
+    })
+    vi.spyOn(api.posts, 'get').mockImplementation(
+      async () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({
+              id: 'slow-minimum-duration-post-id',
+              nickname: '待機太郎',
+              body: '待機本文',
+              status: 'scored',
+              created_at: '2026-03-13T00:00:00Z',
+              average_score: 92.4,
+              rank: 2,
+              total_count: 18,
+              judgments: [],
+            })
+          }, 8000)
+        })
+    )
+
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '待機太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '遅延完了テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(7999)
+    })
+
+    expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+  }, 12000)
+
+  it('審査直後のscored結果では共有ボタン群を表示し、シェア画像押下時のみOGPを表示する', async () => {
+    // 何を検証するか: 審査直後にscoredなら順位に関係なく共有導線を出し、OGPは明示操作まで隠すこと
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'share-post-id',
       status: 'judging',
@@ -125,17 +234,20 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     await fillAndSubmitPostForm({ nickname: '共有太郎', body: '共有テスト本文です' })
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'シェア画像' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'でシェア' })).toBeInTheDocument()
-    })
+    await waitFor(
+      () => {
+        expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Xでシェア' })).toBeInTheDocument()
+      },
+      { timeout: 9000 }
+    )
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'シェア画像' }))
+    fireEvent.click(screen.getByRole('button', { name: 'シェア画像を表示' }))
 
     expect(screen.getByTestId('ogp-preview')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'でシェア' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Xでシェア' }))
 
     expect(window.open).toHaveBeenCalledWith(expect.any(String), '_blank', 'noopener,noreferrer')
     const [shareIntentUrl] = vi.mocked(window.open).mock.calls[0] as [string]
@@ -145,7 +257,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       'src',
       expect.stringContaining('/ogp/posts/share-post-id.png')
     )
-  })
+  }, 12000)
 
   it('自分の投稿選択で結果モーダルが開く', async () => {
     // 何を検証するか: 過去の投稿から投稿を選択した際に結果モーダルが表示されること
@@ -193,18 +305,22 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     await fillAndSubmitPostForm({ nickname: '閉じる太郎', body: '閉じるテスト本文です' })
 
-    const modal = await screen.findByRole('dialog', {
-      name: '審査結果モーダル',
-    })
+    const modal = await screen.findByRole(
+      'dialog',
+      {
+        name: '審査結果モーダル',
+      },
+      { timeout: 9000 }
+    )
     fireEvent.keyDown(modal, { key: 'Escape' })
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
     })
-  })
+  }, 12000)
 
-  it('TOP20圏外のscored投稿ではシェア関連UIを表示しない', async () => {
-    // 何を検証するか: scoredでもrankが21位以降は共有UIを表示しないこと
+  it('TOP20圏外のscored投稿でも審査直後ならシェア関連UIを表示する', async () => {
+    // 何を検証するか: 審査直後の結果ではrankが21位以降でも共有UIを表示すること
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'scope-post-id',
       status: 'judging',
@@ -225,13 +341,21 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     await fillAndSubmitPostForm({ nickname: '範囲太郎', body: '範囲テスト本文です' })
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
-    })
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+      },
+      { timeout: 9000 }
+    )
 
-    expect(screen.queryByRole('button', { name: 'でシェア' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Xでシェア' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Xでシェア' }))
+    const lastOpenCallIndex = vi.mocked(window.open).mock.calls.length - 1
+    const [shareIntentUrl] = vi.mocked(window.open).mock.calls[lastOpenCallIndex] as [string]
+    expect(decodeURIComponent(shareIntentUrl)).toContain('21位')
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
-  })
+  }, 12000)
 
   it('ランキング経由の結果表示ではシェア関連UIを表示しない', async () => {
     // 何を検証するか: ランキング閲覧では共有導線を出さないこと
@@ -255,7 +379,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
     })
 
-    expect(screen.queryByRole('button', { name: 'でシェア' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'シェア画像を表示' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
   })
 

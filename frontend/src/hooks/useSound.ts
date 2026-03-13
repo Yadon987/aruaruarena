@@ -7,6 +7,7 @@ const SOUND_MODAL_ANSWERED_KEY = 'aruaru_sound_modal_answered'
 const LEGACY_SOUND_MODAL_ANSWERED_KEY = 'aruaru_sound_consent'
 export const DEFAULT_VOLUME = 0.6
 const FADE_DURATION_MS = 500
+const JUDGING_BGM_ASSET_VERSION = '20260313-01'
 
 type Scene = 'top' | 'judging' | 'success' | 'low_score' | 'failed'
 type SeId = 'se_submit' | 'se_result_open' | 'se_retry'
@@ -17,7 +18,7 @@ type FadeSpy = (from: number, to: number, durationMs: number) => void
 
 const BGM_FILES: Record<Scene, string> = {
   top: '/sounds/radetzky_march.mp3',
-  judging: '/sounds/CanCan.mp3',
+  judging: `/sounds/CanCan.mp3?v=${JUDGING_BGM_ASSET_VERSION}`,
   success: '/sounds/pomp_and_circumstance.mp3',
   low_score: '/sounds/fate_theme.mp3',
   failed: '/sounds/fate_theme.mp3',

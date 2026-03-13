@@ -35,6 +35,7 @@ export function useJudgeSpeech({
   const intervalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const durationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSpeechRef = useRef<string | null>(null)
+  const lastSpeakingJudgeRef = useRef<JudgePersona | null>(null)
   const scheduleNextSpeechRef = useRef(() => {})
 
   const clearAllTimers = useCallback(() => {
@@ -60,8 +61,12 @@ export function useJudgeSpeech({
     if (JUDGES.length === 0) {
       throw new Error('No judges configured')
     }
-    const index = Math.floor(Math.random() * JUDGES.length)
-    return JUDGES[index]
+    const availableJudges = JUDGES.filter((judge) => judge !== lastSpeakingJudgeRef.current)
+    const pool = availableJudges.length > 0 ? availableJudges : JUDGES
+    const index = Math.floor(Math.random() * pool.length)
+    const selectedJudge = pool[index]
+    lastSpeakingJudgeRef.current = selectedJudge
+    return selectedJudge
   }, [])
 
   const getRandomSpeech = useCallback((judge: JudgePersona, isLowScore: boolean): string => {
@@ -105,6 +110,7 @@ export function useJudgeSpeech({
       setCurrentSpeech(null)
       setSpeakingJudge(null)
       lastSpeechRef.current = null
+      lastSpeakingJudgeRef.current = null
       return
     }
 

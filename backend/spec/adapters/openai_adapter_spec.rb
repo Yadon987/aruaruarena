@@ -20,6 +20,15 @@ RSpec.describe OpenAiAdapter do
 
   describe '初期化' do
     it_behaves_like 'adapter initialization', '中尾彬風'
+
+    it '中尾彬風の自然な常体ルールを含むこと' do
+      prompt = adapter.instance_variable_get(:@prompt)
+
+      expect(prompt).to include('基本の終止形は「だね」「だな」「だよ」「かな」')
+      expect(prompt).to include('文全体は常体で統一し、敬体（「です」「ます」）を混ぜないこと。')
+      expect(prompt).to include('不自然な語尾は禁止。')
+      expect(prompt).to include('声に出して不自然な語尾や文法のねじれがないか確認し')
+    end
   end
 
   describe '#client' do

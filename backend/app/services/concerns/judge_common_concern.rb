@@ -72,4 +72,13 @@ module JudgeCommonConcern
       successful_judges_count: succeeded_count
     )
   end
+
+  def capped_total_score_for(scores, post, service_name:)
+    raw_total_score = Judgment.calculate_total_score(scores)
+    capped_score = ScoreManipulationGuardService.cap_total_score(post.body, raw_total_score)
+    return capped_score if capped_score == raw_total_score
+
+    Rails.logger.warn("[#{service_name}] 採点誘導文を検知したため合計点を制限: post_id=#{post.id}")
+    capped_score
+  end
 end
