@@ -5,12 +5,6 @@ require 'rails_helper'
 # E08 ランキングAPIのテスト
 # GET /api/rankings エンドポイントの受け入れ基準を検証
 RSpec.describe 'GET /api/rankings', type: :request do
-  before do
-    # テストデータのクリーンアップ
-    Post.delete_all
-    Judgment.delete_all
-  end
-
   describe '正常系' do
     # テスト1: ステータス200でTOP20がスコア降順で返される
     # 検証: スコア降順、TOP20制限、各フィールド確認

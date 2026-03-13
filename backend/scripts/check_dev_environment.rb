@@ -4,7 +4,7 @@ require_relative '../config/environment'
 require 'uri'
 
 unless Rails.env.development?
-  puts "[warn] このチェックは開発環境（development）のみを想定しています。"
+  puts '[warn] このチェックは開発環境（development）のみを想定しています。'
   exit 1
 end
 
@@ -51,13 +51,9 @@ if ENV['SYNCHRONOUS_JUDGE'] == 'true'
   warnings << 'SYNCHRONOUS_JUDGE が true です。開発中の審査をローカル同期実行にせず、本番同等フローを使う場合は false にしてください。'
 end
 
-if local_worker_mode && synchronous_mode
-  errors << 'LOCAL_JUDGE_WORKER と SYNCHRONOUS_JUDGE を同時に true にしないでください'
-end
+errors << 'LOCAL_JUDGE_WORKER と SYNCHRONOUS_JUDGE を同時に true にしないでください' if local_worker_mode && synchronous_mode
 
-if local_worker_mode
-  warnings << 'LOCAL_JUDGE_WORKER=true のため、審査はローカルワーカーで実行されます'
-end
+warnings << 'LOCAL_JUDGE_WORKER=true のため、審査はローカルワーカーで実行されます' if local_worker_mode
 
 unless dynamodb_endpoint.include?('localhost') || dynamodb_endpoint.include?('127.0.0.1')
   errors << "DYNAMODB_ENDPOINT がローカルではありません（現在値: #{dynamodb_endpoint}）"
@@ -67,26 +63,25 @@ required_keys = base_required_keys.dup
 required_keys.concat(sqs_required_keys) unless local_worker_mode || synchronous_mode
 
 required_keys.each do |key|
-  value = ENV[key]
+  value = ENV.fetch(key, nil)
   errors << "#{key} が未設定です" if value.nil? || value.strip.empty?
-end
 
-required_keys.each do |key|
   next unless ENV[key]
   next unless placeholder_value?(ENV[key])
 
   errors << "#{key} がプレースホルダ値です"
 end
 
-if required_keys.include?('SQS_QUEUE_URL') && ENV['SQS_QUEUE_URL'] && placeholder_value?(ENV['SQS_QUEUE_URL'])
+if required_keys.include?('SQS_QUEUE_URL') && ENV.fetch('SQS_QUEUE_URL',
+                                                        nil) && placeholder_value?(ENV.fetch('SQS_QUEUE_URL', nil))
   errors << 'SQS_QUEUE_URL がプレースホルダ値です'
-elsif required_keys.include?('SQS_QUEUE_URL') && ENV['SQS_QUEUE_URL'] && !valid_sqs_queue_url?(ENV['SQS_QUEUE_URL'])
-  errors << "SQS_QUEUE_URL の形式が不正です（現在値: #{ENV['SQS_QUEUE_URL']}）"
+elsif required_keys.include?('SQS_QUEUE_URL') && ENV.fetch('SQS_QUEUE_URL',
+                                                           nil) && !valid_sqs_queue_url?(ENV.fetch('SQS_QUEUE_URL',
+                                                                                                   nil))
+  errors << "SQS_QUEUE_URL の形式が不正です（現在値: #{ENV.fetch('SQS_QUEUE_URL', nil)}）"
 end
 
-if warnings.any?
-  puts "[warn] #{warnings.join("\n[warn] ")}"
-end
+puts "[warn] #{warnings.join("\n[warn] ")}" if warnings.any?
 
 if errors.any?
   puts '[error] 開発環境の必須チェックで未設定または不正な値を検出しました。'

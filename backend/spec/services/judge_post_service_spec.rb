@@ -11,12 +11,6 @@ RSpec.describe JudgePostService do
   # DynamoDBテストヘルパーをinclude
   include DynamoDBTestHelpers
 
-  # 各テスト前にJudgmentをクリーンアップ
-  before(:each) do
-    # DynamoDB Localの整合性問題を回避するため、確実に削除
-    cleanup_judgments_table
-  end
-
   # 何を検証するか: 定数の定義
   describe '定数' do
     it 'JUDGES定数が定義されていること' do
@@ -51,7 +45,7 @@ RSpec.describe JudgePostService do
   end
 
   describe 'dewiアダプター選択' do
-    let!(:post) { create(:post) }
+    let(:post) { create(:post) }
     let(:service) { described_class.new(post.id) }
 
     it 'test環境ではDewiAdapterを返すこと' do
@@ -69,7 +63,7 @@ RSpec.describe JudgePostService do
 
   # 何を検証するか: 並列審査の実行
   describe '#execute' do
-    let!(:post) { create(:post) }
+    let(:post) { create(:post) }
     let(:service) { described_class.new(post.id) }
 
     context '正常系' do
@@ -239,18 +233,33 @@ RSpec.describe JudgePostService do
     context '境界値・タイムアウト' do
       # 何を検証するか: タイムアウト発生時にerror_code: timeoutになること
       it 'タイムアウト発生時にerror_code: timeoutになること' do
-        # テスト用にタイムアウトを短縮
         stub_const('JudgePostService::PER_JUDGE_TIMEOUT', 0.05)
         expect(service).to receive(:handle_timeout).with('hiroyuki').and_call_original
 
-        # sleepでタイムアウトを発生させる
-        allow_any_instance_of(GeminiAdapter).to receive(:judge) do
-          sleep(0.1) # PER_JUDGE_TIMEOUTを超えるまで待機
-          create_success_response(scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
-                                  comment: 'test')
-        end
-        mock_adapter_judge(DewiAdapter, success: true)
-        mock_adapter_judge(OpenAiAdapter, success: true)
+        timeout_future = instance_double(Concurrent::Future)
+        dewi_future = instance_double(Concurrent::Future)
+        nakao_future = instance_double(Concurrent::Future)
+
+        allow(Concurrent::Future).to receive(:execute).and_return(timeout_future, dewi_future, nakao_future)
+        allow(timeout_future).to receive(:value).with(0.05).and_return(nil)
+        allow(dewi_future).to receive(:value).with(0.05).and_return(
+          {
+            persona: 'dewi',
+            result: create_success_response(
+              scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
+              comment: 'test'
+            )
+          }
+        )
+        allow(nakao_future).to receive(:value).with(0.05).and_return(
+          {
+            persona: 'nakao',
+            result: create_success_response(
+              scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
+              comment: 'test'
+            )
+          }
+        )
 
         service.execute
 
@@ -308,7 +317,7 @@ RSpec.describe JudgePostService do
 
   # 何を検証するか: 審査結果の保存
   describe '#save_judgments!' do
-    let!(:post) { create(:post) }
+    let(:post) { create(:post) }
     let(:service) { described_class.new(post.id) }
 
     it '成功した審査結果がJudgmentテーブルに保存されること' do
@@ -343,7 +352,7 @@ RSpec.describe JudgePostService do
 
   # 何を検証するか: ステータス更新
   describe '#update_post_status!' do
-    let!(:post) { create(:post) }
+    let(:post) { create(:post) }
     let(:service) { described_class.new(post.id) }
 
     context 'scoredの場合' do
@@ -376,7 +385,7 @@ RSpec.describe JudgePostService do
   end
 
   describe 'privateメソッド' do
-    let!(:post) { create(:post) }
+    let(:post) { create(:post) }
     let(:service) { described_class.new(post.id) }
 
     describe '#resolve_adapter_class' do

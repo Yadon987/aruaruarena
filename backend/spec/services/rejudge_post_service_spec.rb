@@ -9,10 +9,6 @@ RSpec.describe 'RejudgePostService', type: :service do
 
   let(:service_class) { Object.const_get('RejudgePostService') }
 
-  before(:each) do
-    cleanup_judgments_table
-  end
-
   describe '.call' do
     # 何を検証するか: Postが存在しない場合はWARNログを出力して安全に終了すること
     it '存在しないPost IDでも例外を出さずに終了する' do
@@ -43,7 +39,7 @@ RSpec.describe 'RejudgePostService', type: :service do
   end
 
   describe 'dewiアダプター選択' do
-    let!(:post_record) { create(:post, :failed, judges_count: 1) }
+    let(:post_record) { create(:post, :failed, judges_count: 1) }
     let(:service) { service_class.new(post_record.id, failed_personas: ['dewi']) }
 
     it 'test環境ではDewiAdapterを返すこと' do
@@ -60,7 +56,7 @@ RSpec.describe 'RejudgePostService', type: :service do
   end
 
   describe 'hiroyukiアダプター選択' do
-    let!(:post_record) { create(:post, :failed, judges_count: 1) }
+    let(:post_record) { create(:post, :failed, judges_count: 1) }
     let(:service) { service_class.new(post_record.id, failed_personas: ['hiroyuki']) }
 
     it 'sync_rejudge文脈でGeminiAdapterを初期化すること' do

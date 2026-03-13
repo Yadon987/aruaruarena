@@ -87,20 +87,14 @@ class Judgment
   # @param base_scores [Hash] 基本スコア（empathy, humor, brevity, originality, expression）
   # @return [Hash] バイアス適用後のスコア
   def self.apply_persona_bias(base_scores, persona)
-    scores = base_scores.dup
-    apply_bias_by_persona(scores, persona)
-    scores
+    PersonaBiasService.apply_persona_bias(base_scores, persona)
   end
 
   # ペルソナごとのバイアス適用
   # @param scores [Hash] スコア（破壊的変更）
   # @param persona [String] ペルソナID
   def self.apply_bias_by_persona(scores, persona)
-    case persona
-    when 'hiroyuki' then apply_hiroyuki_bias(scores)
-    when 'dewi'     then apply_dewi_bias(scores)
-    when 'nakao'    then apply_nakao_bias(scores)
-    end
+    PersonaBiasService.apply_bias_by_persona(scores, persona)
   end
 
   # ひろゆき風ペルソナのバイアスを適用
@@ -112,8 +106,7 @@ class Judgment
   # @param scores [Hash] スコア（破壊的変更）
   # @return [void]
   def self.apply_hiroyuki_bias(scores)
-    scores[:originality] = [scores[:originality] + 3, MAX_SCORE_PER_ITEM].min
-    scores[:empathy]     = [scores[:empathy] - 2, 0].max
+    PersonaBiasService.apply_hiroyuki_bias(scores)
   end
 
   # デヴィ婦人風ペルソナのバイアスを適用
@@ -125,8 +118,7 @@ class Judgment
   # @param scores [Hash] スコア（破壊的変更）
   # @return [void]
   def self.apply_dewi_bias(scores)
-    scores[:expression] = [scores[:expression] + 3, MAX_SCORE_PER_ITEM].min
-    scores[:humor]      = [scores[:humor] + 2, MAX_SCORE_PER_ITEM].min
+    PersonaBiasService.apply_dewi_bias(scores)
   end
 
   # 中尾彬風ペルソナのバイアスを適用
@@ -138,15 +130,14 @@ class Judgment
   # @param scores [Hash] スコア（破壊的変更）
   # @return [void]
   def self.apply_nakao_bias(scores)
-    scores[:humor]   = [scores[:humor] + 3, MAX_SCORE_PER_ITEM].min
-    scores[:empathy] = [scores[:empathy] + 2, MAX_SCORE_PER_ITEM].min
+    PersonaBiasService.apply_nakao_bias(scores)
   end
 
   # 合計点を計算
   # @param scores [Hash] 5項目のスコア
   # @return [Integer] 合計点（0-100）
   def self.calculate_total_score(scores)
-    scores.values.sum
+    PersonaBiasService.calculate_total_score(scores)
   end
 
   # 審査結果をAPI レスポンス用のJSON形式で返す

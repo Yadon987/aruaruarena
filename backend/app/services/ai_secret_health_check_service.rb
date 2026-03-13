@@ -10,7 +10,7 @@ class AiSecretHealthCheckService
 
   class << self
     def missing_env_vars(base_required_env_vars)
-      base_missing = base_required_env_vars.reject { |var| present?(ENV[var]) }
+      base_missing = base_required_env_vars.reject { |var| present?(ENV.fetch(var, nil)) }
 
       return base_missing unless secrets_manager_enabled?
 

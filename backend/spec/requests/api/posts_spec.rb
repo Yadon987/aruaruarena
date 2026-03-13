@@ -5,7 +5,6 @@ require 'rails_helper'
 RSpec.describe 'API::Posts', type: :request do
   describe 'POST /api/posts' do
     before do
-      Post.delete_all
       allow(JudgmentQueueService).to receive(:enqueue)
       allow(RateLimiterService).to receive(:limited?).and_return(false)
       allow(RateLimiterService).to receive(:set_limit!)
