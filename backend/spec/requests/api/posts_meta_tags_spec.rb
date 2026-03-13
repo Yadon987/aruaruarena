@@ -111,8 +111,8 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
         # 何を検証するか: クローラーに画像サイズが明示されること
         get "/api/posts/#{scored_post.id}", headers: { 'User-Agent' => 'Twitterbot/1.0' }
 
-        expect(response.body).to include('property="og:image:width" content="1200"')
-        expect(response.body).to include('property="og:image:height" content="630"')
+        expect(response.body).to match(/property="og:image:width"[^>]*content="1200"/)
+        expect(response.body).to match(/property="og:image:height"[^>]*content="630"/)
       end
 
       it 'twitter:imageに正しい画像パスが含まれること' do

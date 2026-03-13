@@ -334,6 +334,7 @@ RSpec.describe BaseAiAdapter do
         end
 
         it 'コメントもひろゆき風に整形されること' do
+          # ひろゆき風コメント整形で「共感」系の表現が persona 固有の短評へ変換されることを確認
           adapter.mock_response = described_class::JudgmentResult.new(
             succeeded: true,
             error_code: nil,
@@ -343,6 +344,7 @@ RSpec.describe BaseAiAdapter do
 
           result = adapter.judge('テスト投稿', persona: 'hiroyuki')
 
+          # 元コメントがひろゆき風の語彙と語尾へ補正されることを確認
           expect(result.comment).to eq('再現性は高いって話です')
         end
 

@@ -9,8 +9,10 @@ class StartLocalJudgmentFallbackService
       Rails.logger.warn(
         "[JudgmentQueueService] ローカルワーカー未起動のため非同期フォールバックを実行: post_id=#{post_id}"
       )
-      thread = Thread.new { execute(post_id) }
-      disable_thread_exception_report!(thread)
+      Thread.new do
+        disable_current_thread_exception_report!
+        execute(post_id)
+      end
       nil
     end
 
@@ -22,7 +24,7 @@ class StartLocalJudgmentFallbackService
     rescue StandardError => e
       Rails.logger.error(
         "[JudgmentQueueService] ローカルフォールバック審査に失敗: post_id=#{post_id}, " \
-        "error=#{e.class} - #{e.message}"
+        "error=#{e.class} - #{e.message}\n#{e.backtrace&.join("\n")}"
       )
     end
 
@@ -32,10 +34,10 @@ class StartLocalJudgmentFallbackService
       Thread.current.name = THREAD_NAME
     end
 
-    def disable_thread_exception_report!(thread)
-      return unless thread.respond_to?(:report_on_exception=)
+    def disable_current_thread_exception_report!
+      return unless Thread.current.respond_to?(:report_on_exception=)
 
-      thread.report_on_exception = false
+      Thread.current.report_on_exception = false
     end
   end
 end

@@ -89,7 +89,8 @@ export function ResultSummary({
           <button
             type="button"
             onClick={() => setIsOgpPreviewVisible((prev) => !prev)}
-            aria-label="シェア画像"
+            aria-expanded={isOgpPreviewVisible}
+            aria-label={isOgpPreviewVisible ? 'シェア画像を閉じる' : 'シェア画像を表示'}
             className="neon-button-base result-summary-back-button result-summary-share-image-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
           >
             <span aria-hidden="true" className="result-summary-back-icon">
@@ -102,7 +103,7 @@ export function ResultSummary({
           <button
             type="button"
             onClick={onShareToX}
-            aria-label="でシェア"
+            aria-label="Xでシェア"
             className="neon-button-base result-summary-back-button result-summary-x-share-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
           >
             <svg

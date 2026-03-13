@@ -52,11 +52,14 @@ module JudgeCommonConcern
   end
 
   def average_score_for(successful_judgments, succeeded_count)
+    return 0.0 if succeeded_count <= 0
+
     total = successful_judgments.sum(&:total_score)
     (total.to_f / succeeded_count).round(ROUND_PRECISION)
   end
 
   def persist_scored_post!(post)
+    # OGP生成時に最新ステータスを参照できるよう、永続化前にインメモリで反映する
     post.status = Post::STATUS_SCORED
     upload_ogp_image(post)
     post.update_status!(Post::STATUS_SCORED)

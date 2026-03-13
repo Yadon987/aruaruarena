@@ -146,7 +146,7 @@ RSpec.configure do |config|
     meta[:dynamodb] = false
   end
   config.define_derived_metadata(
-    file_path: %r{/spec/services/local_judgment_worker_heartbeat_service_spec\.rb\z/}
+    file_path: %r{/spec/services/local_judgment_worker_heartbeat_service_spec\.rb\z}
   ) do |meta|
     meta[:dynamodb] = false
   end
