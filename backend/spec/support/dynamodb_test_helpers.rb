@@ -78,7 +78,7 @@ module DynamoDBTestHelpers
   private
 
   def cleanup_model_table!(model)
-    endpoint = ENV.fetch('DYNAMODB_ENDPOINT', nil)
+    endpoint = normalized_dynamodb_endpoint
     Dynamoid.config.endpoint = endpoint if endpoint.present? && Dynamoid.config.endpoint != endpoint
 
     delete_timeout = model == Post ? POST_CLEANUP_DELETE_TIMEOUT : CLEANUP_DELETE_TIMEOUT
@@ -136,5 +136,12 @@ module DynamoDBTestHelpers
           .count
     end
     "base=#{base_count}件, ranking_index=#{ranking_count}件が残存"
+  end
+
+  def normalized_dynamodb_endpoint
+    endpoint = ENV.fetch('DYNAMODB_ENDPOINT', nil)
+    return 'http://127.0.0.1:8002' if ['http://127.0.0.1:8000', 'http://localhost:8000'].include?(endpoint)
+
+    endpoint
   end
 end

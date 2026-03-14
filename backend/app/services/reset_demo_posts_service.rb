@@ -31,7 +31,7 @@ class ResetDemoPostsService
   end
 
   def build_judgments!(post:, index:)
-    totals = judgment_totals(post.average_score.to_f, index)
+    totals = judgment_totals(demo_total_sum(index), index)
 
     DemoPostsSeedData::PERSONAS.each_with_index do |persona, persona_index|
       Judgment.create!(judgment_attributes(post:, persona:, persona_index:, total_score: totals[persona_index]))
@@ -39,12 +39,14 @@ class ResetDemoPostsService
   end
 
   def demo_average_score(index)
-    step = 10.0 / (DemoPostsSeedData::POSTS.size - 1)
-    (75.0 - (index * step)).round(1)
+    (demo_total_sum(index) / DemoPostsSeedData::PERSONAS.count.to_f).round(1)
   end
 
-  def judgment_totals(average_score, index)
-    total_sum = (average_score * DemoPostsSeedData::PERSONAS.count).round
+  def demo_total_sum(index)
+    225 - index
+  end
+
+  def judgment_totals(total_sum, index)
     base = total_sum / 3
     totals = [base, base, base]
 

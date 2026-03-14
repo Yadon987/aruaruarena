@@ -4,6 +4,14 @@
 require 'spec_helper'
 ENV['RAILS_ENV'] ||= 'test'
 
+# テスト実行時に古いDynamoDB Localの既定ポート(8000)が残っていても、
+# 現在のテスト環境で利用する8002へ統一する。
+legacy_dynamodb_endpoints = ['http://127.0.0.1:8000', 'http://localhost:8000'].freeze
+if ENV['RAILS_ENV'] == 'test' &&
+   (ENV['DYNAMODB_ENDPOINT'].to_s.empty? || legacy_dynamodb_endpoints.include?(ENV.fetch('DYNAMODB_ENDPOINT', nil)))
+  ENV['DYNAMODB_ENDPOINT'] = 'http://127.0.0.1:8002'
+end
+
 # Prevent database truncation if the environment is production
 # Rails環境を読み込んだ後にチェックする
 

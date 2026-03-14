@@ -24,7 +24,14 @@ export function JudgingIndicator() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setPhaseIndex((prev) => Math.min(prev + 1, PHRASES.length - 1))
+      setPhaseIndex((prev) => {
+        if (prev >= PHRASES.length - 1) {
+          clearInterval(timer)
+          return prev
+        }
+
+        return prev + 1
+      })
     }, PHRASE_DURATION_MS)
 
     return () => clearInterval(timer)

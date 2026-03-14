@@ -121,7 +121,8 @@ namespace :dynamodb do
   task reset_demo_posts: :environment do
     if $stdin.tty?
       print '投稿データを初期化します。よろしいですか？ (yes/no): '
-      return unless $stdin.gets.chomp == 'yes'
+      answer = $stdin.gets&.strip&.downcase
+      return unless answer == 'yes'
     elsif ENV['FORCE_RESET_DEMO_POSTS'] != 'yes'
       abort '非対話環境では FORCE_RESET_DEMO_POSTS=yes を指定してください'
     end

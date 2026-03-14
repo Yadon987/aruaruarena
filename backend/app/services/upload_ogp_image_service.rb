@@ -100,6 +100,7 @@ class UploadOgpImageService
       content_type: 'image/png',
       cache_control: CACHE_CONTROL
     )
+    OgpMetaTagService.delete_uploaded_image_exists_cache!(@post)
   end
 
   def generate_ogp_image

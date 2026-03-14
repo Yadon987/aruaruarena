@@ -66,6 +66,23 @@ describe('JudgingIndicator', () => {
     expect(screen.getByText('最終判定を集計中 💡')).toBeInTheDocument()
   })
 
+  it('最後のフレーズ到達後は追加のタイマーを消費しない', () => {
+    render(<JudgingIndicator />)
+
+    act(() => {
+      vi.advanceTimersByTime(1980 * 3)
+    })
+
+    expect(vi.getTimerCount()).toBe(1)
+
+    act(() => {
+      vi.advanceTimersByTime(1980)
+    })
+
+    expect(vi.getTimerCount()).toBe(0)
+    expect(screen.getByText('最終判定を集計中 💡')).toBeInTheDocument()
+  })
+
   it('ライブリージョンとして審査中状態を通知できる', () => {
     render(<JudgingIndicator />)
 

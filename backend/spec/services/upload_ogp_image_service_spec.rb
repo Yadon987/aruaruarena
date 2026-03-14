@@ -49,6 +49,8 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
   end
 
   it '生成したOGP画像をS3へ保存すること' do
+    allow(OgpMetaTagService).to receive(:delete_uploaded_image_exists_cache!).with(post)
+
     expect(described_class.call('post-id', s3_client:)).to be true
 
     request = s3_client.api_requests.find { |api_request| api_request[:operation_name] == :put_object }
@@ -70,6 +72,7 @@ RSpec.describe UploadOgpImageService, type: :service, dynamodb: false do
       bucket_name: 'test-ogp-bucket',
       object_key: 'ogp/posts/post-id.png'
     )
+    expect(OgpMetaTagService).to have_received(:delete_uploaded_image_exists_cache!).with(post)
   end
 
   it 'invalidation に失敗しても S3保存成功なら true を返すこと' do

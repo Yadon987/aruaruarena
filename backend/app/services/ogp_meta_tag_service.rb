@@ -130,18 +130,20 @@ class OgpMetaTagService
   end
 
   def self.uploaded_image_exists?(post:)
-    Rails.cache.fetch(uploaded_image_exists_cache_key(post), expires_in: UPLOADED_IMAGE_EXISTS_CACHE_TTL) do
-      build_s3_client.head_object(bucket: ogp_s3_bucket, key: object_key(post))
-      true
-    rescue Aws::S3::Errors::NotFound, Aws::S3::Errors::NoSuchKey
-      false
-    rescue Aws::S3::Errors::ServiceError => e
-      Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認に失敗: post_id=#{post.id} error=#{e.class} - #{e.message}")
-      false
-    rescue StandardError => e
-      Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認で予期しない例外: post_id=#{post.id} error=#{e.class} - #{e.message}")
-      false
-    end
+    cache_key = uploaded_image_exists_cache_key(post)
+    return true if uploaded_image_exists_cache_store.read(cache_key)
+
+    build_s3_client.head_object(bucket: ogp_s3_bucket, key: object_key(post))
+    uploaded_image_exists_cache_store.write(cache_key, true, expires_in: UPLOADED_IMAGE_EXISTS_CACHE_TTL)
+    true
+  rescue Aws::S3::Errors::NotFound, Aws::S3::Errors::NoSuchKey
+    false
+  rescue Aws::S3::Errors::ServiceError => e
+    Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認に失敗: post_id=#{post.id} error=#{e.class} - #{e.message}")
+    false
+  rescue StandardError => e
+    Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認で予期しない例外: post_id=#{post.id} error=#{e.class} - #{e.message}")
+    false
   end
 
   # 文字列を指定した長さで省略する
@@ -176,11 +178,21 @@ class OgpMetaTagService
   end
 
   def self.uploaded_image_exists_cache_key(post)
-    "ogp_meta_tag_service/uploaded_image_exists/#{object_key(post)}"
+    "ogp_meta_tag_service/uploaded_image_exists/#{ogp_s3_bucket}/#{object_key(post)}"
   end
 
   def self.ogp_s3_bucket
     ENV.fetch('OGP_S3_BUCKET', '').strip
+  end
+
+  def self.uploaded_image_exists_cache_store
+    return Rails.cache unless Rails.cache.is_a?(ActiveSupport::Cache::NullStore)
+
+    @uploaded_image_exists_cache_store ||= ActiveSupport::Cache::MemoryStore.new
+  end
+
+  def self.delete_uploaded_image_exists_cache!(post)
+    uploaded_image_exists_cache_store.delete(uploaded_image_exists_cache_key(post))
   end
 
   def self.build_s3_client

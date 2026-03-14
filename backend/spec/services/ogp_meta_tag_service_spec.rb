@@ -338,6 +338,19 @@ RSpec.describe OgpMetaTagService, type: :service do
         expect(head_requests.size).to eq(1)
       end
 
+      it 'S3に画像が存在しない場合はfalseをキャッシュしないこと' do
+        ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
+        s3_client = Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true)
+        s3_client.stub_responses(:head_object, 'NotFound')
+        allow(Aws::S3::Client).to receive(:new).and_return(s3_client)
+
+        2.times { described_class.generate_html(post:, base_url:) }
+
+        head_requests = s3_client.api_requests.select { |request| request[:operation_name] == :head_object }
+
+        expect(head_requests.size).to eq(2)
+      end
+
       it 'S3に画像が存在しない場合はデフォルト画像へフォールバックすること' do
         ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
         s3_client = Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true)
