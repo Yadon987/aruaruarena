@@ -84,7 +84,7 @@ describe('App Game Show Layout Refactor', () => {
     ).toBeInTheDocument()
   })
 
-  it('初回表示時はオンボーディングを先に表示し、閉じた後に音声確認を表示する', () => {
+  it('初回表示時はオンボーディングを先に表示し、閉じた後に音声確認を表示する', async () => {
     vi.stubGlobal('__SHOW_ONBOARDING_MODAL_IN_TEST__', true)
     vi.stubGlobal('__SHOW_AUDIO_CONSENT_MODAL_IN_TEST__', true)
 
@@ -97,7 +97,7 @@ describe('App Game Show Layout Refactor', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'はじめる' }))
 
-    return waitFor(() => {
+    await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: '遊び方ガイド' })).not.toBeInTheDocument()
       expect(screen.getByRole('alertdialog', { name: '音声を再生しますか？' })).toBeInTheDocument()
       expect(localStorage.getItem('aruaru_onboarding_completed')).toBe('true')
