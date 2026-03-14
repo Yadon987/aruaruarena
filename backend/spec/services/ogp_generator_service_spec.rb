@@ -230,25 +230,42 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     end
 
     it '本文の行間は各行の縮小率に関わらず一定であること' do
-      allow(service).to receive(:build_body_lines).and_return(['短い本文', 'とても長くて縮小される本文'])
-      allow(service).to receive(:fitted_font_size) do |layout_key, text|
-        next 38 if layout_key == :body && text == '短い本文'
-        next 34 if layout_key == :body && text == 'とても長くて縮小される本文'
-
-        described_class::FONT_SIZES[layout_key]
-      end
+      allow(service).to receive(:body_font_size).and_return(34)
+      allow(service).to receive(:build_body_lines).with(font_size: 34).and_return(['短い本文', 'とても長くて縮小される本文'])
 
       items = service.send(:build_body_items)
 
       expect(items.first[:y]).to eq(described_class::LAYOUT[:body][:y])
-      expect(items.second[:y] - items.first[:y]).to eq(38 + described_class::BODY_LINE_SPACING)
+      expect(items.second[:y] - items.first[:y]).to eq(34 + described_class::BODY_LINE_SPACING)
+      expect(items.map { |item| item[:size] }).to all(eq(34))
+    end
+
+    it '本文が縮小後サイズで4行以内に収まる場合は省略しないこと' do
+      allow(service).to receive(:sanitized_body_text).and_return('本文テキスト')
+      allow(service).to receive(:body_line_count) do |font_size|
+        font_size > 34 ? 5 : 4
+      end
+      allow(service).to receive(:wrapped_lines) do |_text, max_width:, font_size:, max_lines:|
+        expect(max_width).to eq(described_class::LAYOUT[:body][:max_width])
+        expect(max_lines).to eq(described_class::BODY_MAX_LINES)
+
+        if font_size == 34
+          ['1行目', '2行目', '3行目', '4行目']
+        else
+          ['1行目', '2行目', '3行目', '4行目...']
+        end
+      end
+
+      expect(service.send(:build_body_lines)).to eq(['1行目', '2行目', '3行目', '4行目'])
     end
 
     it '点数が広すぎる場合はフォントサイズを自動で縮小すること' do
       font_size = service.send(:fitted_font_size, :score_number, '100.0')
 
-      expect(font_size).to be <= described_class::FONT_SIZES[:score_number]
+      expect(font_size).to be < described_class::FONT_SIZES[:score_number]
       expect(font_size).to be >= described_class::MIN_FONT_SIZES[:score_number]
+      expect(service.send(:estimate_text_width, '100.0', font_size))
+        .to be <= described_class::LAYOUT[:score_number][:max_width]
     end
   end
 

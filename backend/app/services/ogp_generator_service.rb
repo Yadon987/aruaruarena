@@ -50,7 +50,7 @@ class OgpGeneratorService
     rank_number: 112,
     rank_pending: 48,
     rank_suffix: 52,
-    score_number: 98,
+    score_number: 96,
     score_suffix: 44,
     footer: 34
   }.freeze
@@ -183,16 +183,17 @@ class OgpGeneratorService
   end
 
   def build_body_items
-    lines = build_body_lines
-    line_height = body_line_height(:body, lines)
+    font_size = body_font_size
+    lines = build_body_lines(font_size: font_size)
 
     lines.map.with_index do |line, index|
       multiline_text_item(
         :body,
         line,
-        LAYOUT[:body][:y] + ((line_height + BODY_LINE_SPACING) * index),
+        LAYOUT[:body][:y] + ((font_size + BODY_LINE_SPACING) * index),
         TEXT_COLORS[:body],
         FONT_BOLD_PATH,
+        font_size: font_size,
         stroke_width: 1,
         shadow: false
       )
@@ -296,8 +297,8 @@ class OgpGeneratorService
     }
   end
 
-  def multiline_text_item(layout_key, text, y_position, color, font_path, stroke_width: 0, shadow: true)
-    fitted_size = fitted_font_size(layout_key, text)
+  def multiline_text_item(layout_key, text, y_position, color, font_path, font_size: nil, stroke_width: 0, shadow: true)
+    fitted_size = font_size || fitted_font_size(layout_key, text)
 
     {
       text: text,
@@ -310,10 +311,6 @@ class OgpGeneratorService
       stroke_width: stroke_width,
       shadow: shadow ? shadow_options(stroke_width) : nil
     }
-  end
-
-  def body_line_height(layout_key, lines)
-    lines.map { |line| fitted_font_size(layout_key, line) }.max || FONT_SIZES[layout_key]
   end
 
   def centered_pair_items(number_layout_key, suffix_layout_key, number_text, suffix_text, style:)
@@ -356,32 +353,21 @@ class OgpGeneratorService
     area[:x1] + (((area[:x2] - area[:x1]) - text_width) / 2.0).floor
   end
 
-  def build_body_lines
+  def build_body_lines(font_size: body_font_size)
     wrapped_lines(
-      sanitize_post_text("「#{@post.body}」"),
+      sanitized_body_text,
       max_width: LAYOUT[:body][:max_width],
-      font_size: FONT_SIZES[:body],
+      font_size: font_size,
       max_lines: BODY_MAX_LINES
     )
   end
 
+  def sanitized_body_text
+    sanitize_post_text("「#{@post.body}」")
+  end
+
   def wrapped_lines(text, max_width:, font_size:, max_lines:)
-    return [''] if text.blank?
-
-    lines = []
-    current_line = +''
-
-    text.each_char do |char|
-      candidate = "#{current_line}#{char}"
-      if estimate_text_width(candidate, font_size) <= max_width || current_line.empty?
-        current_line = candidate
-        next
-      end
-
-      lines << current_line
-      current_line = char
-    end
-    lines << current_line unless current_line.empty?
+    lines = wrap_lines(text, max_width: max_width, font_size: font_size)
 
     return lines if lines.length <= max_lines
 
@@ -403,6 +389,25 @@ class OgpGeneratorService
     end
   end
 
+  def body_font_size
+    font_size = FONT_SIZES[:body]
+    min_size = MIN_FONT_SIZES[:body]
+
+    while font_size > min_size && body_line_count(font_size) > BODY_MAX_LINES
+      font_size -= 2
+    end
+
+    font_size
+  end
+
+  def body_line_count(font_size)
+    wrap_lines(
+      sanitized_body_text,
+      max_width: LAYOUT[:body][:max_width],
+      font_size: font_size
+    ).length
+  end
+
   def fitted_font_size(layout_key, text)
     layout = LAYOUT[layout_key]
     font_size = FONT_SIZES[layout_key]
@@ -413,6 +418,27 @@ class OgpGeneratorService
     end
 
     font_size
+  end
+
+  def wrap_lines(text, max_width:, font_size:)
+    return [''] if text.blank?
+
+    lines = []
+    current_line = +''
+
+    text.each_char do |char|
+      candidate = "#{current_line}#{char}"
+      if estimate_text_width(candidate, font_size) <= max_width || current_line.empty?
+        current_line = candidate
+        next
+      end
+
+      lines << current_line
+      current_line = char
+    end
+    lines << current_line unless current_line.empty?
+
+    lines
   end
 
   def shadow_options(stroke_width)
