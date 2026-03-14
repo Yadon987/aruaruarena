@@ -3,6 +3,7 @@
 require 'erb'
 
 # OGPメタタグ生成サービス
+# rubocop:disable Metrics/ClassLength
 class OgpMetaTagService
   # 定数
   DEFAULT_OGP_IMAGE_PATH = '/ogp/default.png'
@@ -14,6 +15,8 @@ class OgpMetaTagService
   TWITTER_CARD = 'summary_large_image'
   IMAGE_WIDTH = 1200
   IMAGE_HEIGHT = 630
+  OGP_S3_PREFIX = 'ogp/posts'
+  S3_HEAD_TIMEOUT = 3
 
   # クローラー判定用キーワード
   CRAWLER_KEYWORDS = %w[
@@ -50,6 +53,7 @@ class OgpMetaTagService
 
     # 末尾のスラッシュを削除して正規化
     normalized_base_url = base_url.chomp('/')
+    image_url = ogp_image_url(post:, base_url: normalized_base_url)
 
     # HTMLテンプレートを構築
     # XSS対策: テキスト部分は必ず escape_html を通すこと
@@ -61,7 +65,7 @@ class OgpMetaTagService
         <meta property="og:title" content="#{escape_html(post.nickname || '')}さんのあるある投稿 | #{SITE_NAME}">
         <meta property="og:type" content="#{OG_TYPE}">
         <meta property="og:url" content="#{normalized_base_url}/posts/#{post.id}">
-        <meta property="og:image" content="#{normalized_base_url}/ogp/posts/#{post.id}.png">
+        <meta property="og:image" content="#{image_url}">
         <meta property="og:image:width" content="#{IMAGE_WIDTH}">
         <meta property="og:image:height" content="#{IMAGE_HEIGHT}">
         <meta property="og:description" content="#{escape_html(generate_description(body: post.body, average_score: post.average_score))}">
@@ -70,11 +74,20 @@ class OgpMetaTagService
         <meta name="twitter:card" content="#{TWITTER_CARD}">
         <meta name="twitter:title" content="#{escape_html(post.nickname || '')}さんのあるある投稿 | #{SITE_NAME}">
         <meta name="twitter:description" content="#{escape_html(generate_description(body: post.body, average_score: post.average_score))}">
-        <meta name="twitter:image" content="#{normalized_base_url}/ogp/posts/#{post.id}.png">
+        <meta name="twitter:image" content="#{image_url}">
       </head>
       <body></body>
       </html>
     HTML
+  end
+
+  def self.ogp_image_url(post:, base_url:)
+    normalized_base_url = base_url.chomp('/')
+    return generated_image_url(post:, base_url: normalized_base_url) if ogp_s3_bucket.blank?
+    return generated_image_url(post:, base_url: normalized_base_url) if uploaded_image_exists?(post:)
+
+    Rails.logger.warn("[OgpMetaTagService] 生成済みOGP画像が見つからないためデフォルト画像へフォールバック: post_id=#{post.id}")
+    default_image_url(base_url: normalized_base_url)
   end
 
   # 説明文（og:description）を生成する
@@ -115,6 +128,19 @@ class OgpMetaTagService
     ERB::Util.html_escape(text)
   end
 
+  def self.uploaded_image_exists?(post:)
+    build_s3_client.head_object(bucket: ogp_s3_bucket, key: object_key(post))
+    true
+  rescue Aws::S3::Errors::NotFound, Aws::S3::Errors::NoSuchKey
+    false
+  rescue Aws::S3::Errors::ServiceError => e
+    Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認に失敗: post_id=#{post.id} error=#{e.class} - #{e.message}")
+    false
+  rescue StandardError => e
+    Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認で予期しない例外: post_id=#{post.id} error=#{e.class} - #{e.message}")
+    false
+  end
+
   # 文字列を指定した長さで省略する
   #
   # @param text [String] 対象文字列
@@ -133,4 +159,29 @@ class OgpMetaTagService
     truncated = text_str[0...(max_length - ellipsis_length)]
     "#{truncated}#{ELLIPSIS}"
   end
+
+  def self.default_image_url(base_url:)
+    "#{base_url}#{DEFAULT_OGP_IMAGE_PATH}"
+  end
+
+  def self.generated_image_url(post:, base_url:)
+    "#{base_url}/#{object_key(post)}"
+  end
+
+  def self.object_key(post)
+    "#{OGP_S3_PREFIX}/#{post.id}.png"
+  end
+
+  def self.ogp_s3_bucket
+    ENV.fetch('OGP_S3_BUCKET', '').strip
+  end
+
+  def self.build_s3_client
+    Aws::S3::Client.new(
+      region: ENV.fetch('AWS_REGION', 'ap-northeast-1'),
+      http_open_timeout: S3_HEAD_TIMEOUT,
+      http_read_timeout: S3_HEAD_TIMEOUT
+    )
+  end
 end
+# rubocop:enable Metrics/ClassLength

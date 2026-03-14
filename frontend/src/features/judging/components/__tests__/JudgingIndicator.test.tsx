@@ -1,22 +1,32 @@
 import { act, render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { JudgingIndicator } from '../JudgingIndicator'
+
+const useReducedMotionMock = vi.fn(() => false)
+
+vi.mock('../../../../shared/hooks/useReducedMotion', () => ({
+  useReducedMotion: () => useReducedMotionMock(),
+}))
 
 vi.mock('framer-motion', async () => {
   const actual = await vi.importActual<typeof import('framer-motion')>('framer-motion')
   return {
     ...actual,
-    AnimatePresence: ({ children }: any) => <>{children}</>,
+    AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
   }
 })
 
 describe('JudgingIndicator', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    useReducedMotionMock.mockReturnValue(false)
   })
 
   afterEach(() => {
-    vi.runOnlyPendingTimers()
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
     vi.useRealTimers()
   })
 
@@ -35,10 +45,43 @@ describe('JudgingIndicator', () => {
     })
     expect(screen.getByText('審査員が評価中...')).toBeInTheDocument()
 
-    // さらに2500ms進める
+    // さらに1980ms進める
     act(() => {
       vi.advanceTimersByTime(1980)
     })
     expect(screen.getByText('共感度を測定中...')).toBeInTheDocument()
+  })
+
+  it('最後のフレーズに到達したらそのまま表示を維持する', () => {
+    render(<JudgingIndicator />)
+
+    act(() => {
+      vi.advanceTimersByTime(1980 * 3)
+    })
+    expect(screen.getByText('最終判定を集計中 💡')).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(1980 * 2)
+    })
+    expect(screen.getByText('最終判定を集計中 💡')).toBeInTheDocument()
+  })
+
+  it('ライブリージョンとして審査中状態を通知できる', () => {
+    render(<JudgingIndicator />)
+
+    expect(screen.getByTestId('judging-screen')).toHaveAttribute('aria-live', 'polite')
+    expect(screen.getByLabelText('審査中')).toBeInTheDocument()
+  })
+
+  it('reduced motion が有効でもフレーズは即時に切り替わる', () => {
+    useReducedMotionMock.mockReturnValue(true)
+
+    render(<JudgingIndicator />)
+
+    act(() => {
+      vi.advanceTimersByTime(1980)
+    })
+
+    expect(screen.getByText('審査員が評価中...')).toBeInTheDocument()
   })
 })

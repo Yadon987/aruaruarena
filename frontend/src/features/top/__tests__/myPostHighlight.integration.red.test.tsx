@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
-import { mockRankings, openMyPostsDialog } from '../../../test/appTestHelpers'
+import { mockRankings, openMyPostsDialog, selectMyPost } from '../../../test/appTestHelpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -49,9 +49,7 @@ describe('MyPostHighlight Integration RED', () => {
 
     render(<App />)
 
-    await openMyPostsDialog()
-    const idButton = await screen.findByRole('button', { name: 'id-1' })
-    fireEvent.click(idButton)
+    const idButton = await selectMyPost('id-1')
     fireEvent.click(idButton)
 
     await waitFor(() => expect(getPostSpy).toHaveBeenCalledTimes(1))

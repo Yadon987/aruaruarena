@@ -15,6 +15,13 @@ RSpec.describe CreateCloudFrontInvalidationService, type: :service, dynamodb: fa
     expect(described_class.call(path: '/ogp/posts/post-id.png', post_id: 'post-id')).to be false
   end
 
+  it 'distribution id 未設定時は警告ログを出すこと' do
+    allow(Rails.logger).to receive(:warn)
+
+    expect(described_class.call(path: '/ogp/posts/post-id.png', post_id: 'post-id')).to be false
+    expect(Rails.logger).to have_received(:warn).with(/CLOUDFRONT_DISTRIBUTION_ID が未設定のため invalidation をスキップ/)
+  end
+
   it 'distribution id が設定されている場合は CloudFront invalidation を行うこと' do
     ENV['CLOUDFRONT_DISTRIBUTION_ID'] = 'DIST123'
     allow(Aws::CloudFront::Client).to receive(:new).and_return(cloudfront_client)
