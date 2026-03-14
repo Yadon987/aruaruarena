@@ -198,7 +198,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
 
     await waitFor(() => {
       expect(localStorage.getItem('my_post_ids')).toBe(JSON.stringify([]))
+      expect(screen.getByText('投稿するとここに表示されます')).toBeInTheDocument()
     })
-    expect(screen.getByText('投稿するとここに表示されます')).toBeInTheDocument()
   })
 })

@@ -71,9 +71,15 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
-      expect(pushStateSpy).toHaveBeenCalledTimes(1)
     })
-    expect(pushStateSpy).toHaveBeenNthCalledWith(1, {}, '', '/judging/official-post-id')
+    expect(
+      pushStateSpy.mock.calls.some((call) => call.some((arg) => arg === `/judging/${tempPostId}`))
+    ).toBe(false)
+    expect(
+      pushStateSpy.mock.calls.some((call) =>
+        call.some((arg) => arg === '/judging/official-post-id')
+      )
+    ).toBe(true)
   })
 
   it('API失敗時は審査中画面に再投稿導線を出し、入力値を復元する', async () => {

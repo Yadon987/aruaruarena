@@ -973,8 +973,9 @@ function App() {
       sound.playSe(SOUND_SE_SUBMIT)
       setIsPostModalOpen(false)
       enterJudgingMode(temporaryPostId, false)
+      syncJudgingPath(temporaryPostId)
     },
-    [beginMinimumJudgingDuration, enterJudgingMode, sound]
+    [beginMinimumJudgingDuration, enterJudgingMode, sound, syncJudgingPath]
   )
 
   const applyJudgingSubmitSuccess = useCallback(
@@ -1432,25 +1433,7 @@ function App() {
         clearMyPostDetailError(postId)
         return response
       } catch (error) {
-        if (getErrorStatus(error) === HTTP_STATUS.NOT_FOUND) {
-          removePostId(postId)
-          setMyPostDetails((prev) => {
-            if (!(postId in prev)) return prev
-
-            const next = { ...prev }
-            delete next[postId]
-            myPostDetailsRef.current = next
-            return next
-          })
-          setMyPostDetailErrors((prev) => {
-            if (!(postId in prev)) return prev
-
-            const next = { ...prev }
-            delete next[postId]
-            return next
-          })
-          syncMyPostIds()
-        } else {
+        if (getErrorStatus(error) !== HTTP_STATUS.NOT_FOUND) {
           setMyPostDetailErrors((prev) => ({
             ...prev,
             [postId]: MESSAGE_MY_POST_DETAIL_FETCH_FAILED,
@@ -1462,7 +1445,7 @@ function App() {
         inFlightPostIdsRef.current.delete(postId)
       }
     },
-    [clearMyPostDetailError, setMyPostLoading, storeMyPostDetail, syncMyPostIds]
+    [clearMyPostDetailError, setMyPostLoading, storeMyPostDetail]
   )
 
   const prefetchMyPostsDetails = useCallback(
