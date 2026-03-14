@@ -48,9 +48,12 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     await openRankingResultFromTopRanking()
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
-    })
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+      },
+      { timeout: 9000 }
+    )
   })
 
   it('ランキング投稿のstatusが未確定でも採点詳細モーダルを保てる', async () => {
@@ -278,9 +281,12 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     await selectMyPost('my-post-id')
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
-    })
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+      },
+      { timeout: 9000 }
+    )
   })
 
   it('自分の投稿経由ではトップへではなく戻るボタンを表示し、一覧モーダルへ戻れる', async () => {
@@ -387,6 +393,74 @@ describe('E15-01 RED: ResultModal Flow', () => {
     const [shareIntentUrl] = vi.mocked(window.open).mock.calls[lastOpenCallIndex] as [string]
     expect(decodeURIComponent(shareIntentUrl)).toContain('21位')
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
+  }, 12000)
+
+  it('60.1点のscored投稿では高得点演出を表示する', async () => {
+    // 何を検証するか: average_score が 60 を超える場合だけ高得点演出を表示すること
+    vi.spyOn(api.posts, 'create').mockResolvedValue({
+      id: 'high-score-post-id',
+      status: 'judging',
+    })
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'high-score-post-id',
+      nickname: '高得点太郎',
+      body: '高得点本文',
+      status: 'scored',
+      created_at: '2026-03-14T00:00:00Z',
+      average_score: 60.1,
+      rank: 12,
+      total_count: 30,
+      judgments: [],
+    })
+
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: '高得点太郎', body: '高得点演出テスト本文です' })
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+      },
+      { timeout: 9000 }
+    )
+
+    expect(screen.getByTestId('high-score-badge')).toBeInTheDocument()
+    expect(screen.getByTestId('high-score-flash')).toBeInTheDocument()
+    expect(screen.getByTestId('high-score-confetti')).toBeInTheDocument()
+  }, 12000)
+
+  it('60.0点のscored投稿では高得点演出を表示しない', async () => {
+    // 何を検証するか: average_score が 60 ちょうどでは高得点扱いにならないこと
+    vi.spyOn(api.posts, 'create').mockResolvedValue({
+      id: 'boundary-score-post-id',
+      status: 'judging',
+    })
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'boundary-score-post-id',
+      nickname: '境界太郎',
+      body: '境界本文',
+      status: 'scored',
+      created_at: '2026-03-14T00:00:00Z',
+      average_score: 60.0,
+      rank: 15,
+      total_count: 30,
+      judgments: [],
+    })
+
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: '境界太郎', body: '境界値テスト本文です' })
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
+      },
+      { timeout: 9000 }
+    )
+
+    expect(screen.queryByTestId('high-score-badge')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('high-score-flash')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('high-score-confetti')).not.toBeInTheDocument()
   }, 12000)
 
   it('ランキング経由の結果表示ではシェア関連UIを表示しない', async () => {

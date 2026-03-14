@@ -653,7 +653,11 @@ RSpec.describe GeminiAdapter do
 
       allow(adapter).to receive(:client).and_return(client)
       allow(adapter).to receive(:api_key).and_return('test-gemini-key')
-      allow(client).to receive(:post).with('v1beta/models/gemini-2.5-flash:generateContent').and_yield(request).and_return(response)
+      allow(client)
+        .to receive(:post)
+        .with('v1beta/models/gemini-2.5-flash:generateContent')
+        .and_yield(request)
+        .and_return(response)
 
       result = adapter.send(:send_request, sample: 'payload')
 

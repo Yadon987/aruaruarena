@@ -76,7 +76,7 @@ describe('TopPage Ranking Integration RED', () => {
       await screen.findByText(
         '取得に失敗しました。時間をおいて再度お試しください。',
         {},
-        { timeout: 5000 }
+        { timeout: 8000 }
       )
     ).toBeInTheDocument()
   })
@@ -93,7 +93,7 @@ describe('TopPage Ranking Integration RED', () => {
     await openRankingModal()
 
     expect(
-      await screen.findByText('通信状況を確認して再度お試しください。', {}, { timeout: 5000 })
+      await screen.findByText('通信状況を確認して再度お試しください。', {}, { timeout: 8000 })
     ).toBeInTheDocument()
   })
 

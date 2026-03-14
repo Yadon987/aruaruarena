@@ -180,6 +180,15 @@ function canShowPostJudgingShareActions(
   return source === 'judging' && isFinalResultPost(post) && post.status === 'scored'
 }
 
+function isHighScoreResult(post: Post | null): post is Post & { status: 'scored'; average_score: number } {
+  return (
+    isFinalResultPost(post) &&
+    post.status === 'scored' &&
+    typeof post.average_score === 'number' &&
+    post.average_score > LOW_SCORE_THRESHOLD
+  )
+}
+
 function shouldOpenResultModalOnMyPostError(status: number | undefined): boolean {
   return Boolean(status && SERVER_ERROR_STATUSES.includes(status))
 }
@@ -635,9 +644,7 @@ function App() {
       return 'judging'
     }
     if (activeResultPost.status === 'failed') return 'failed'
-
-    const avgScore = activeResultPost.average_score
-    if (avgScore !== undefined && avgScore <= LOW_SCORE_THRESHOLD) {
+    if (!isHighScoreResult(activeResultPost)) {
       return 'low_score'
     }
     return 'success'
@@ -2026,6 +2033,7 @@ function App() {
                   totalCount={activeResultPost.total_count}
                   averageScore={activeResultPost.average_score}
                   status={activeResultPost.status}
+                  isHighScore={isHighScoreResult(activeResultPost)}
                   onRejudge={handleResultRejudge}
                   onClose={handleResultPrimaryClose}
                   closeLabel={resultCloseButtonLabel}
@@ -2440,8 +2448,7 @@ function App() {
                 isLowScore={
                   isFinalResultPost(activeResultPost) &&
                   activeResultPost.status === 'scored' &&
-                  activeResultPost.average_score !== undefined &&
-                  activeResultPost.average_score <= LOW_SCORE_THRESHOLD
+                  !isHighScoreResult(activeResultPost)
                 }
                 judgingPhase={judgingPhase}
                 compactBottomSpacing={true}

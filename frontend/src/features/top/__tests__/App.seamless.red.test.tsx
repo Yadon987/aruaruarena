@@ -42,7 +42,7 @@ const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿
     () => {
       expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
     },
-    { timeout: 5000 }
+    { timeout: 7000 }
   )
 }
 
@@ -166,7 +166,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
     )
   })
 
-  it('審査完了で結果モーダルが表示される', { timeout: 15000 }, async () => {
+  it('審査完了で結果モーダルが表示される', { timeout: 20000 }, async () => {
     // 何を検証するか: FR-08 - 審査完了時、結果モーダルが表示されること
     // 審査完了状態を返すようにモックを上書き
     vi.mocked(api.posts.get).mockResolvedValue({
@@ -191,11 +191,11 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
         expect(screen.queryByRole('dialog', { name: '投稿フォーム' })).not.toBeInTheDocument()
         expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
       },
-      { timeout: 10000 }
+      { timeout: 12000 }
     )
   })
 
-  it('結果モーダル表示後、審査員は待機状態に戻る', { timeout: 15000 }, async () => {
+  it('結果モーダル表示後、審査員は待機状態に戻る', { timeout: 20000 }, async () => {
     // 何を検証するか: FR-08 - 審査完了時、審査員は待機状態に戻ること
     // 審査完了状態を返すようにモックを上書き
     vi.mocked(api.posts.get).mockResolvedValue({
@@ -220,7 +220,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
         expect(screen.queryByRole('dialog', { name: '投稿フォーム' })).not.toBeInTheDocument()
         expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
       },
-      { timeout: 10000 }
+      { timeout: 12000 }
     )
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument()

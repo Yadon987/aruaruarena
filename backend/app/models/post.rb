@@ -13,6 +13,8 @@
 class Post
   include Dynamoid::Document
 
+  attr_accessor :request_ip
+
   # バリデーション定数
   NICKNAME_MIN_LENGTH = 1
   NICKNAME_MAX_LENGTH = 20
@@ -36,6 +38,7 @@ class Post
 
   # ランキング取得件数のデフォルト値
   DEFAULT_RANKING_LIMIT = 20
+  RATE_LIMIT_ERROR_MESSAGE = '投稿頻度が高すぎます。3分待ってから再投稿してください'
 
   # テーブル設定
   table name: 'aruaruarena-posts', key: :id
@@ -83,6 +86,7 @@ class Post
 
   # 本文のgrapheme数をバリデーション
   validate :body_grapheme_length
+  validate :validate_post_rate_limit, on: :create
 
   # スコア範囲のバリデーション
   validates :average_score,
@@ -241,6 +245,13 @@ class Post
     return unless length < BODY_MIN_LENGTH || length > BODY_MAX_LENGTH
 
     errors.add(:body, 'は3〜30文字で入力してください')
+  end
+
+  def validate_post_rate_limit
+    return if request_ip.blank? || nickname.blank?
+    return unless RateLimiterService.limited?(ip: request_ip, nickname:)
+
+    errors.add(:base, RATE_LIMIT_ERROR_MESSAGE)
   end
 
   # 作成日時を設定（UnixTimestampを文字列として保存）

@@ -351,26 +351,26 @@ RSpec.describe 'API::Posts', type: :request do
       end
 
       # Given: 同一IPで初回投稿成功
-      # When: 5分以内に2回目の投稿
-      # Then: 429 Too Many Requests + error message
-      it '同一IPで5分以内に2回目の投稿は429エラーを返す' do
+      # When: 3分以内に2回目の投稿
+      # Then: 422 VALIDATION_ERROR + error message
+      it '同一IPで3分以内に2回目の投稿はバリデーションエラーを返す' do
         # 初回投稿
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
 
         # 2回目（同一IP）
         post '/api/posts', params: same_ip_params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:too_many_requests)
+        expect(response).to have_http_status(:unprocessable_content)
 
         json = response.parsed_body
-        expect(json['error']).to eq('投稿頻度を制限中')
-        expect(json['code']).to eq('RATE_LIMITED')
+        expect(json['error']).to eq('投稿頻度が高すぎます。3分待ってから再投稿してください')
+        expect(json['code']).to eq('VALIDATION_ERROR')
       end
 
       # Given: 同一ニックネームで初回投稿成功（異なるIP）
-      # When: 5分以内に2回目の投稿
-      # Then: 429 Too Many Requests
-      it '同一ニックネームで5分以内に2回目の投稿は429エラーを返す' do
+      # When: 3分以内に2回目の投稿
+      # Then: 422 VALIDATION_ERROR
+      it '同一ニックネームで3分以内に2回目の投稿はバリデーションエラーを返す' do
         # 初回投稿（IP: 192.168.1.1）
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
@@ -378,11 +378,11 @@ RSpec.describe 'API::Posts', type: :request do
         # 2回目（同一ニックネーム、異なるIP）
         different_ip_headers = valid_headers.merge('REMOTE_ADDR' => '192.168.1.2')
         post '/api/posts', params: same_nickname_params.to_json, headers: different_ip_headers
-        expect(response).to have_http_status(:too_many_requests)
+        expect(response).to have_http_status(:unprocessable_content)
 
         json = response.parsed_body
-        expect(json['error']).to eq('投稿頻度を制限中')
-        expect(json['code']).to eq('RATE_LIMITED')
+        expect(json['error']).to eq('投稿頻度が高すぎます。3分待ってから再投稿してください')
+        expect(json['code']).to eq('VALIDATION_ERROR')
       end
 
       # Given: 異なるIPかつ異なるニックネーム
@@ -406,8 +406,8 @@ RSpec.describe 'API::Posts', type: :request do
       end
 
       # Given: 初回投稿成功
-      # When: 5分以内に2回目の投稿（同じIP・ニックネーム）
-      # Then: 429 Too Many Requests + 正しいエラーレスポンス
+      # When: 3分以内に2回目の投稿（同じIP・ニックネーム）
+      # Then: 422 VALIDATION_ERROR + 正しいエラーレスポンス
       it 'レート制限エラーの場合、レスポンスボディが正しいこと' do
         # 初回投稿
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
@@ -415,17 +415,17 @@ RSpec.describe 'API::Posts', type: :request do
 
         # 2回目
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
-        expect(response).to have_http_status(:too_many_requests)
+        expect(response).to have_http_status(:unprocessable_content)
 
         json = response.parsed_body
-        expect(json['error']).to eq('投稿頻度を制限中')
-        expect(json['code']).to eq('RATE_LIMITED')
+        expect(json['error']).to eq('投稿頻度が高すぎます。3分待ってから再投稿してください')
+        expect(json['code']).to eq('VALIDATION_ERROR')
       end
 
-      # Given: 同一IPで5分以内に2回目の投稿（ニックネームが空）
+      # Given: 同一IPで3分以内に2回目の投稿（ニックネームが空）
       # When: 投稿リクエスト
-      # Then: レート制限が先に返される（429）
-      it 'バリデーションエラーとレート制限が同時に発生する場合、レート制限が先に返される' do
+      # Then: 入力バリデーションエラーが返る
+      it 'ニックネームが空の場合は入力バリデーションエラーを返す' do
         # 初回投稿
         post '/api/posts', params: valid_params.to_json, headers: valid_headers
         expect(response).to have_http_status(:created)
@@ -439,12 +439,11 @@ RSpec.describe 'API::Posts', type: :request do
         }
         post '/api/posts', params: invalid_params.to_json, headers: valid_headers
 
-        # レート制限（429）がバリデーションエラー（422）より優先
-        expect(response).to have_http_status(:too_many_requests)
+        expect(response).to have_http_status(:unprocessable_content)
 
         json = response.parsed_body
-        expect(json['error']).to eq('投稿頻度を制限中')
-        expect(json['code']).to eq('RATE_LIMITED')
+        expect(json['error']).to include('ニックネームを入力してください')
+        expect(json['code']).to eq('VALIDATION_ERROR')
       end
 
       # Given: DynamoDB接続エラー（RateLimiterService内部でrescue）

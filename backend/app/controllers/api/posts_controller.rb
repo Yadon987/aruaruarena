@@ -13,7 +13,6 @@ module Api
     ERROR_CODE_VALIDATION = 'VALIDATION_ERROR'
     ERROR_CODE_BAD_REQUEST = 'BAD_REQUEST'
     ERROR_CODE_NOT_FOUND = 'NOT_FOUND'
-    ERROR_CODE_RATE_LIMITED = 'RATE_LIMITED'
     ERROR_CODE_DUPLICATE_CONTENT = 'DUPLICATE_CONTENT'
     ERROR_CODE_INVALID_STATUS = 'INVALID_STATUS'
     ERROR_CODE_INVALID_PERSONA = 'INVALID_PERSONA'
@@ -22,7 +21,6 @@ module Api
 
     # エラーメッセージ定数
     ERROR_MESSAGE_NOT_FOUND = '投稿が見つかりません'
-    ERROR_MESSAGE_RATE_LIMITED = '投稿頻度を制限中'
     ERROR_MESSAGE_DUPLICATE_CONTENT = '同じ内容の投稿があります'
     ERROR_MESSAGE_INVALID_STATUS = '再審査できないステータスです'
     ERROR_MESSAGE_INVALID_PERSONA = '無効な審査員IDです'
@@ -51,17 +49,7 @@ module Api
     end
 
     def create
-      # レート制限チェック（投稿バリデーション前に実行）
-      # バリデーションより先にチェックして、不要なDB操作を回避
-      if RateLimiterService.limited?(ip: request.remote_ip, nickname: post_params[:nickname])
-        render json: {
-          error: ERROR_MESSAGE_RATE_LIMITED,
-          code: ERROR_CODE_RATE_LIMITED
-        }, status: :too_many_requests
-        return
-      end
-
-      # 重複チェック（レート制限チェックの後、バリデーションの前に実行）
+      # 重複チェック（バリデーションの前に実行）
       if DuplicateCheckService.duplicate?(body: post_params[:body])
         render json: {
           error: ERROR_MESSAGE_DUPLICATE_CONTENT,
@@ -71,6 +59,7 @@ module Api
       end
 
       post = Post.new(post_params.merge(id: SecureRandom.uuid))
+      post.request_ip = request.remote_ip
 
       if post.save
         LogOgpGenerationEventService.call(event: 'post_created', post:)

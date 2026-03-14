@@ -11,10 +11,10 @@ class OgpGeneratorService
   BODY_LINE_SPACING = 14
 
   BASE_IMAGE_PATH = Rails.root.join('app/assets/images/base_ogp.png')
-  # ImageMagick 6系では同梱OTFよりDroid Sans Fallbackの方が日本語描画が安定する。
-  FONT_PATH = Pathname.new('/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf')
-  FONT_BOLD_PATH = Pathname.new('/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf')
-  NUMBER_FONT_PATH = Pathname.new('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+  # 実行環境依存のシステムフォントではなく、同梱フォントを使って描画失敗を防ぐ。
+  FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
+  FONT_BOLD_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
+  NUMBER_FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
   REQUIRED_FILES = [BASE_IMAGE_PATH, FONT_PATH, FONT_BOLD_PATH, NUMBER_FONT_PATH].freeze
 
   # 画像レイアウト定数
@@ -186,35 +186,23 @@ class OgpGeneratorService
     font_size = body_font_size
     lines = build_body_lines(font_size: font_size)
 
-    lines.map.with_index do |line, index|
-      multiline_text_item(
-        :body,
-        line,
-        LAYOUT[:body][:y] + ((font_size + BODY_LINE_SPACING) * index),
-        TEXT_COLORS[:body],
-        FONT_BOLD_PATH,
-        font_size: font_size,
-        stroke_width: 1,
-        shadow: false
-      )
-    end
+    lines.map.with_index { |line, index| build_body_item(line, index, font_size) }
   end
 
   def build_footer_item
-    left_text_item(
-      :footer,
-      TEXT_CONFIG[:footer_text],
-      TEXT_COLORS[:footer],
-      FONT_BOLD_PATH,
-      stroke_width: 2,
-      shadow: false,
-      glow: { color: TEXT_COLORS[:footer_glow], layers: [{ x: 0, y: 0 }, { x: 0, y: 2 }] },
-      center_in: :title_plate
-    )
+    left_text_item(:footer, footer_item_options)
   end
 
   def build_nickname_item(nickname_text)
-    left_text_item(:nickname, nickname_text, TEXT_COLORS[:nickname], FONT_BOLD_PATH, stroke_width: 1)
+    left_text_item(
+      :nickname,
+      {
+        text: nickname_text,
+        color: TEXT_COLORS[:nickname],
+        font_path: FONT_BOLD_PATH,
+        stroke_width: 1
+      }
+    )
   end
 
   def build_rank_items
@@ -231,15 +219,7 @@ class OgpGeneratorService
   end
 
   def build_pending_rank_item
-    left_text_item(
-      :rank_pending,
-      build_rank_text(nil),
-      TEXT_COLORS[:rank],
-      FONT_BOLD_PATH,
-      stroke_width: 3,
-      shadow: false,
-      center_in: :rank_area
-    )
+    left_text_item(:rank_pending, pending_rank_item_options)
   end
 
   def build_score_items
@@ -279,65 +259,145 @@ class OgpGeneratorService
     sanitize_text(text)
   end
 
-  def left_text_item(layout_key, text, color, font_path, stroke_width: 0, shadow: true, glow: nil, center_in: nil)
-    fitted_size = fitted_font_size(layout_key, text)
-    x_position = center_in ? centered_text_x(text, fitted_size, center_in) : LAYOUT[layout_key][:x]
+  def build_body_item(line, index, font_size)
+    multiline_text_item(:body, body_item_options(line, index, font_size))
+  end
 
+  def footer_glow_options
+    { color: TEXT_COLORS[:footer_glow], layers: [{ x: 0, y: 0 }, { x: 0, y: 2 }] }
+  end
+
+  def footer_item_options
     {
-      text: text,
-      size: fitted_size,
-      color: color,
-      x: x_position,
-      y: LAYOUT[layout_key][:y],
-      font: font_path,
-      stroke_color: TEXT_COLORS[:stroke_dark],
-      stroke_width: stroke_width,
-      shadow: shadow ? shadow_options(stroke_width) : nil,
-      glow: glow
+      text: TEXT_CONFIG[:footer_text],
+      color: TEXT_COLORS[:footer],
+      font_path: FONT_BOLD_PATH,
+      stroke_width: 2,
+      shadow: false,
+      glow: footer_glow_options,
+      center_in: :title_plate
     }
   end
 
-  def multiline_text_item(layout_key, text, y_position, color, font_path, font_size: nil, stroke_width: 0, shadow: true)
-    fitted_size = font_size || fitted_font_size(layout_key, text)
+  def pending_rank_item_options
+    {
+      text: build_rank_text(nil),
+      color: TEXT_COLORS[:rank],
+      font_path: FONT_BOLD_PATH,
+      stroke_width: 3,
+      shadow: false,
+      center_in: :rank_area
+    }
+  end
+
+  def body_item_options(line, index, font_size)
+    {
+      text: line,
+      color: TEXT_COLORS[:body],
+      font_path: FONT_BOLD_PATH,
+      y_position: body_item_y(index, font_size),
+      font_size: font_size,
+      stroke_width: 1,
+      shadow: false
+    }
+  end
+
+  def body_item_y(index, font_size)
+    LAYOUT[:body][:y] + ((font_size + BODY_LINE_SPACING) * index)
+  end
+
+  def left_text_item(layout_key, item_options)
+    text = item_options[:text]
+    item_options[:x_position] = resolve_x_position(layout_key, text, item_options[:center_in])
+    item_options[:y_position] = LAYOUT[layout_key][:y]
+    item_options[:font_size] = fitted_font_size(layout_key, text)
+
+    build_text_item(text_item_attributes(layout_key, item_options))
+  end
+
+  def multiline_text_item(layout_key, item_options)
+    text = item_options[:text]
+    item_options[:x_position] = LAYOUT[layout_key][:x]
+    item_options[:font_size] ||= fitted_font_size(layout_key, text)
+
+    build_text_item(text_item_attributes(layout_key, item_options))
+  end
+
+  def text_item_attributes(layout_key, item_options)
+    base_text_item_attributes(layout_key, item_options).merge(
+      text_item_effect_attributes(item_options)
+    )
+  end
+
+  def base_text_item_attributes(layout_key, item_options)
+    {
+      text: item_options[:text],
+      size: item_options[:font_size],
+      color: item_options[:color],
+      x: item_options[:x_position],
+      y: item_options[:y_position],
+      font: item_options[:font_path],
+      layout_key: layout_key
+    }
+  end
+
+  def text_item_effect_attributes(item_options)
+    stroke_width = item_options.fetch(:stroke_width, 0)
 
     {
-      text: text,
-      size: fitted_size,
-      color: color,
-      x: LAYOUT[layout_key][:x],
-      y: y_position,
-      font: font_path,
       stroke_color: TEXT_COLORS[:stroke_dark],
       stroke_width: stroke_width,
-      shadow: shadow ? shadow_options(stroke_width) : nil
+      shadow: resolve_shadow(item_options.fetch(:shadow, true), stroke_width),
+      glow: item_options[:glow]
     }
+  end
+
+  def build_text_item(attributes)
+    attributes
+  end
+
+  def resolve_x_position(layout_key, text, center_in)
+    return LAYOUT[layout_key][:x] unless center_in
+
+    centered_text_x(text, fitted_font_size(layout_key, text), center_in)
+  end
+
+  def resolve_shadow(enabled, stroke_width)
+    enabled ? shadow_options(stroke_width) : nil
   end
 
   def centered_pair_items(number_layout_key, suffix_layout_key, number_text, suffix_text, style:)
-    number_item = left_text_item(
-      number_layout_key,
-      number_text,
-      style[:color],
-      style[:number_font_path],
-      stroke_width: style[:number_stroke_width]
-    )
-    suffix_item = left_text_item(
-      suffix_layout_key,
-      suffix_text,
-      style[:color],
-      style[:suffix_font_path],
-      stroke_width: style[:suffix_stroke_width]
-    )
+    number_item = build_pair_item(number_layout_key, number_text, style, :number)
+    suffix_item = build_pair_item(suffix_layout_key, suffix_text, style, :suffix)
 
-    total_width = estimate_text_width(number_item[:text], number_item[:size]) +
-                  style[:gap] +
-                  estimate_text_width(suffix_item[:text], suffix_item[:size])
-    start_x = centered_x_for_area(total_width, style[:area] || :panel)
+    place_pair_items(number_item, suffix_item, style)
+  end
+
+  def build_pair_item(layout_key, text, style, part)
+    left_text_item(
+      layout_key,
+      {
+        text: text,
+        color: style[:color],
+        font_path: style[:"#{part}_font_path"],
+        stroke_width: style[:"#{part}_stroke_width"]
+      }
+    )
+  end
+
+  def place_pair_items(number_item, suffix_item, style)
+    start_x = centered_x_for_area(pair_total_width(number_item, suffix_item, style), style[:area] || :panel)
+    number_width = estimate_text_width(number_item[:text], number_item[:size])
 
     number_item[:x] = start_x
-    suffix_item[:x] = start_x + estimate_text_width(number_item[:text], number_item[:size]) + style[:gap]
-
+    suffix_item[:x] = start_x + number_width + style[:gap]
     [number_item, suffix_item]
+  end
+
+  def pair_total_width(number_item, suffix_item, style)
+    estimate_text_width(number_item[:text], number_item[:size]) +
+      style[:gap] +
+      estimate_text_width(suffix_item[:text], suffix_item[:size])
   end
 
   def centered_x_for_area(total_width, area_key)
@@ -423,18 +483,19 @@ class OgpGeneratorService
     current_line = +''
 
     text.each_char do |char|
-      candidate = "#{current_line}#{char}"
-      if estimate_text_width(candidate, font_size) <= max_width || current_line.empty?
-        current_line = candidate
-        next
-      end
-
-      lines << current_line
-      current_line = char
+      current_line = append_char_or_wrap(lines, current_line, char, max_width, font_size)
     end
     lines << current_line unless current_line.empty?
 
     lines
+  end
+
+  def append_char_or_wrap(lines, current_line, char, max_width, font_size)
+    candidate = "#{current_line}#{char}"
+    return candidate if current_line.empty? || estimate_text_width(candidate, font_size) <= max_width
+
+    lines << current_line
+    char
   end
 
   def shadow_options(stroke_width)
@@ -450,18 +511,12 @@ class OgpGeneratorService
   end
 
   def character_width_ratio(char)
-    case char
-    when /[A-Z0-9]/
-      0.72
-    when /[a-z]/
-      0.62
-    when /[぀-ヿ一-龠々ー]/
-      1.0
-    when /[[:space:]]/
-      0.38
-    else
-      0.82
-    end
+    return 0.72 if char.match?(/[A-Z0-9]/)
+    return 0.62 if char.match?(/[a-z]/)
+    return 1.0 if char.match?(/[぀-ヿ一-龠々ー]/)
+    return 0.38 if char.match?(/[[:space:]]/)
+
+    0.82
   end
 
   def safe_rank
@@ -488,38 +543,22 @@ class OgpGeneratorService
   end
 
   def draw_overlay_panel(image)
-    panel = LAYOUT[:panel]
-    image.combine_options do |config|
-      config.fill TEXT_COLORS[:panel_fill]
-      config.stroke TEXT_COLORS[:panel_stroke]
-      config.strokewidth 2
-      config.draw "roundrectangle #{panel[:x1]},#{panel[:y1]} #{panel[:x2]},#{panel[:y2]} #{panel[:radius]},#{panel[:radius]}"
-    end
+    draw_roundrectangle(image, :panel, fill: TEXT_COLORS[:panel_fill], stroke: TEXT_COLORS[:panel_stroke])
   end
 
   def draw_title_plate(image)
-    plate = LAYOUT[:title_plate]
-    image.combine_options do |config|
-      config.fill TEXT_COLORS[:title_plate_fill]
-      config.stroke TEXT_COLORS[:title_plate_stroke]
-      config.strokewidth 2
-      config.draw "roundrectangle #{plate[:x1]},#{plate[:y1]} #{plate[:x2]},#{plate[:y2]} #{plate[:radius]},#{plate[:radius]}"
-    end
+    draw_roundrectangle(
+      image,
+      :title_plate,
+      fill: TEXT_COLORS[:title_plate_fill],
+      stroke: TEXT_COLORS[:title_plate_stroke]
+    )
   end
 
   def draw_text(image, item)
     draw_glow(image, item) if item[:glow]
     draw_shadow(image, item) if item[:shadow]
-
-    apply_text_layer(
-      image,
-      item,
-      fill: item[:color],
-      x: item[:x],
-      y: item[:y],
-      stroke: item[:stroke_color],
-      stroke_width: item[:stroke_width]
-    )
+    apply_text_layer(image, item, fill: item[:color], position: text_position(item), stroke: item[:stroke_color])
   end
 
   def draw_shadow(image, item)
@@ -527,8 +566,7 @@ class OgpGeneratorService
       image,
       item,
       fill: item[:shadow][:color],
-      x: item[:x] + item[:shadow][:x],
-      y: item[:y] + item[:shadow][:y],
+      position: shadow_position(item),
       stroke: 'transparent'
     )
   end
@@ -539,24 +577,60 @@ class OgpGeneratorService
         image,
         item,
         fill: item[:glow][:color],
-        x: item[:x] + layer[:x],
-        y: item[:y] + layer[:y],
+        position: layer_position(item, layer),
         stroke: 'transparent'
       )
     end
   end
 
-  def apply_text_layer(image, item, fill:, x:, y:, stroke:, stroke_width: nil)
+  def draw_roundrectangle(image, layout_key, fill:, stroke:)
+    image.combine_options do |config|
+      config.fill fill
+      config.stroke stroke
+      config.strokewidth 2
+      config.draw roundrectangle_command(LAYOUT[layout_key])
+    end
+  end
+
+  def roundrectangle_command(layout)
+    "roundrectangle #{layout[:x1]},#{layout[:y1]} " \
+      "#{layout[:x2]},#{layout[:y2]} #{layout[:radius]},#{layout[:radius]}"
+  end
+
+  def text_position(item)
+    { x: item[:x], y: item[:y], stroke_width: item[:stroke_width] }
+  end
+
+  def shadow_position(item)
+    {
+      x: item[:x] + item[:shadow][:x],
+      y: item[:y] + item[:shadow][:y]
+    }
+  end
+
+  def layer_position(item, layer)
+    { x: item[:x] + layer[:x], y: item[:y] + layer[:y] }
+  end
+
+  def apply_text_layer(image, item, fill:, position:, stroke:)
     image.combine_options do |config|
       config.font item[:font].to_s
       config.encoding 'UTF-8'
       config.fill fill
       config.stroke stroke if stroke
-      config.strokewidth stroke_width if stroke_width.to_i.positive?
+      apply_stroke_width(config, position[:stroke_width])
       config.pointsize item[:size]
       config.gravity 'northwest'
-      config.draw "text #{x},#{y} '#{escape_single_quotes(item[:text])}'"
+      config.draw text_draw_command(item[:text], position)
     end
+  end
+
+  def apply_stroke_width(config, stroke_width)
+    config.strokewidth stroke_width if stroke_width.to_i.positive?
+  end
+
+  def text_draw_command(text, position)
+    "text #{position[:x]},#{position[:y]} '#{escape_single_quotes(text)}'"
   end
 
   # 制御文字を削除（改行・タブは保持）
@@ -581,7 +655,6 @@ class OgpGeneratorService
     image.combine_options do |config|
       config.quality 85
       config.define 'png:compression-level=9'
-      config.define 'png:compression-filter=5'
       config.define 'png:compression-strategy=1'
     end
   end

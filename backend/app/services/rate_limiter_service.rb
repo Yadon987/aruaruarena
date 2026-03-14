@@ -4,10 +4,10 @@ require 'digest'
 
 # RateLimiterService - レート制限サービス
 #
-# IPアドレスとニックネームの両方に対して5分間の投稿制限を設ける
+# IPアドレスとニックネームの両方に対して3分間の投稿制限を設ける
 class RateLimiterService
   # 定数
-  LIMIT_DURATION = 5 # TODO: 開発の利便性のため一時的に5秒に変更（本来は 300）
+  LIMIT_DURATION = 3.minutes.to_i
 
   LOG_HASH_LENGTH = 16
 

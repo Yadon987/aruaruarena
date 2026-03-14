@@ -34,22 +34,10 @@ module OgpTestHelpers
   # rubocop:enable Metrics/AbcSize
 
   # 何を検証するか: 描画コマンドのモックを設定する
-  # rubocop:disable Metrics/AbcSize
   def setup_draw_mocks
-    allow(mock_draw).to receive(:font).and_return(nil)
-    allow(mock_draw).to receive(:encoding).and_return(nil)
-    allow(mock_draw).to receive(:fill).and_return(nil)
-    allow(mock_draw).to receive(:stroke).and_return(nil)
-    allow(mock_draw).to receive(:strokewidth).and_return(nil)
-    allow(mock_draw).to receive(:pointsize).and_return(nil)
-    allow(mock_draw).to receive(:gravity).and_return(nil)
-    allow(mock_draw).to receive(:draw).and_return(nil)
-    allow(mock_draw).to receive(:annotate).and_return(nil)
-    # PNG圧縮用モック
-    allow(mock_draw).to receive(:quality).and_return(nil)
-    allow(mock_draw).to receive(:define).and_return(nil)
+    setup_basic_draw_mocks
+    setup_png_compression_mocks
   end
-  # rubocop:enable Metrics/AbcSize
 
   # 何を検証するか: ファイル存在チェックのモックを設定する
   # rubocop:disable Metrics/AbcSize
@@ -61,6 +49,7 @@ module OgpTestHelpers
     allow(File).to receive(:exist?).with(OgpGeneratorService::BASE_IMAGE_PATH.to_s).and_return(true)
     allow(File).to receive(:exist?).with(OgpGeneratorService::FONT_PATH.to_s).and_return(true)
     allow(File).to receive(:exist?).with(OgpGeneratorService::FONT_BOLD_PATH.to_s).and_return(true)
+    allow(File).to receive(:exist?).with(OgpGeneratorService::NUMBER_FONT_PATH.to_s).and_return(true)
   end
 
   # フォントファイルが存在しないモックを設定する
@@ -69,6 +58,18 @@ module OgpTestHelpers
     allow(File).to receive(:exist?).with(OgpGeneratorService::FONT_PATH.to_s).and_return(false)
   end
   # rubocop:enable Metrics/AbcSize
+
+  def setup_basic_draw_mocks
+    %i[font encoding fill stroke strokewidth pointsize gravity draw annotate].each do |method_name|
+      allow(mock_draw).to receive(method_name).and_return(nil)
+    end
+  end
+
+  def setup_png_compression_mocks
+    %i[quality define].each do |method_name|
+      allow(mock_draw).to receive(method_name).and_return(nil)
+    end
+  end
 
   # 何を検証するか: ランキング計算のモックを設定する
   def setup_rank_mock(rank = 1)

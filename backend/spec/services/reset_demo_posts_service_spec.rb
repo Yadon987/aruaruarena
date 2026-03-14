@@ -7,7 +7,7 @@ RSpec.describe ResetDemoPostsService, type: :service do
     it '投稿関連データを初期化して20件のダミー投稿を作成すること' do
       create(:post, :scored, nickname: '既存投稿', body: '古い投稿です', average_score: 80.0)
       create(:judgment, post_id: Post.first.id, persona: 'hiroyuki')
-      RateLimit.create!(identifier: 'nick#old', expires_at: Time.current.to_i + 300)
+      RateLimit.create!(identifier: 'nick#old', expires_at: Time.current.to_i + 180)
       DuplicateCheck.create!(body_hash: 'old_hash', post_id: SecureRandom.uuid, expires_at: Time.current.to_i + 3600)
 
       posts = described_class.call

@@ -156,7 +156,7 @@ RSpec.describe RateLimiterService, type: :service do
 
       # Given: IP・ニックネームともに制限なし
       # When: set_limit!を呼び出す
-      # Then: expires_atが現在時刻+300秒に設定される（Integer型）
+      # Then: expires_atが現在時刻+180秒に設定される（Integer型）
       it 'expires_atが現在時刻+設定値のInteger型で設定されること' do
         current_time = Time.current.to_i
         described_class.set_limit!(ip: ip, nickname: nickname)

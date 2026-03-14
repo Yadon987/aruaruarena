@@ -39,6 +39,12 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     it 'FONT_SIZES定数に審査員関連キーが含まれないこと' do
       expect(described_class::FONT_SIZES.keys).not_to include(:judge_score, :judge_comment)
     end
+
+    it '同梱フォントを使用すること' do
+      expect(described_class::FONT_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf'))
+      expect(described_class::FONT_BOLD_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf'))
+      expect(described_class::NUMBER_FONT_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf'))
+    end
   end
 
   describe 'E20 RED: 初期化処理' do
@@ -350,6 +356,24 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       service = described_class.new('post-id')
       setup_file_exist_mocks
       allow(File).to receive(:exist?).with(described_class::FONT_PATH.to_s).and_return(false)
+
+      expect(service.execute).to be_nil
+    end
+
+    it '数字用フォントファイルが存在しない場合はnilを返すこと' do
+      post = instance_double(
+        Post,
+        id: 'post-id',
+        status: Post::STATUS_SCORED,
+        nickname: '太郎',
+        body: 'あるある本文',
+        average_score: 85.5,
+        calculate_rank: 11
+      )
+      allow(Post).to receive(:find).with('post-id').and_return(post)
+      service = described_class.new('post-id')
+      setup_file_exist_mocks
+      allow(File).to receive(:exist?).with(described_class::NUMBER_FONT_PATH.to_s).and_return(false)
 
       expect(service.execute).to be_nil
     end
