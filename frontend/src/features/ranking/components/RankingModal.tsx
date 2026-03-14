@@ -105,7 +105,12 @@ export function RankingModal({
         data-testid="ranking-modal-overlay"
         onClick={handleClose}
       />
-      <div className="relative flex h-full w-full items-center justify-center">
+      <div
+        className="relative flex h-full w-full items-center justify-center"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) handleClose()
+        }}
+      >
         <motion.div
           initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
           animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
@@ -116,6 +121,7 @@ export function RankingModal({
           aria-label="ランキング"
           tabIndex={-1}
           className={DIALOG_CONTAINER_CLASS}
+          onClick={(event) => event.stopPropagation()}
         >
           <div className="modal-header-gorgeous flex items-center justify-between gap-4">
             <h2 className="gold-text text-lg font-semibold">ランキング</h2>

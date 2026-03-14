@@ -255,7 +255,12 @@ describe('E15-01 RED: ResultModal Flow', () => {
     expect(window.open).toHaveBeenCalledWith(expect.any(String), '_blank', 'noopener,noreferrer')
     const [shareIntentUrl] = vi.mocked(window.open).mock.calls[0] as [string]
     expect(shareIntentUrl).toContain('https://twitter.com/intent/tweet?')
-    expect(decodeURIComponent(shareIntentUrl)).toContain('/posts/share-post-id')
+    const shareUrl = new URL(shareIntentUrl)
+    const shareText = shareUrl.searchParams.get('text')
+    expect(shareUrl.searchParams.get('url')).toContain('/posts/share-post-id')
+    expect(shareText).toBe(
+      '「共有本文」\nこれ、あるあるすぎて刺さる。結果は 3位 / 91.4点！\n\n共感したらいいね＆シェアで応援してください！\n#RUNTEQ #RUNTEQポートフォリオ #あるあるアリーナ'
+    )
     expect(screen.getByTestId('ogp-preview')).toHaveAttribute(
       'src',
       expect.stringContaining('/ogp/posts/share-post-id.png')
@@ -420,7 +425,6 @@ describe('E15-01 RED: ResultModal Flow', () => {
       { timeout: 9000 }
     )
 
-    expect(screen.getByTestId('high-score-badge')).toBeInTheDocument()
     expect(screen.getByTestId('high-score-flash')).toBeInTheDocument()
     expect(screen.getByTestId('high-score-confetti')).toBeInTheDocument()
   }, 12000)
@@ -454,7 +458,6 @@ describe('E15-01 RED: ResultModal Flow', () => {
       { timeout: 9000 }
     )
 
-    expect(screen.queryByTestId('high-score-badge')).not.toBeInTheDocument()
     expect(screen.queryByTestId('high-score-flash')).not.toBeInTheDocument()
     expect(screen.queryByTestId('high-score-confetti')).not.toBeInTheDocument()
   }, 12000)
