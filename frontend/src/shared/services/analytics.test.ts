@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { initializeGoogleAnalytics, trackTopPageView } from './analytics'
 
+const TEST_MEASUREMENT_ID = 'G-TEST12345'
+
 describe('analytics', () => {
   const originalDataLayer = window.dataLayer
   const originalGtag = window.gtag
@@ -27,18 +29,20 @@ describe('analytics', () => {
   })
 
   it('計測IDがある場合はGA4スクリプトと設定を初期化する', () => {
-    initializeGoogleAnalytics('G-D3Y9975R3L')
+    initializeGoogleAnalytics(TEST_MEASUREMENT_ID)
 
     const script = document.head.querySelector<HTMLScriptElement>('#ga4-script')
 
     expect(script).not.toBeNull()
-    expect(script?.src).toContain('https://www.googletagmanager.com/gtag/js?id=G-D3Y9975R3L')
+    expect(script?.src).toContain(
+      `https://www.googletagmanager.com/gtag/js?id=${TEST_MEASUREMENT_ID}`
+    )
     expect(window.dataLayer).toHaveLength(2)
-    expect(window.dataLayer[1]).toEqual(['config', 'G-D3Y9975R3L', { send_page_view: false }])
+    expect(window.dataLayer[1]).toEqual(['config', TEST_MEASUREMENT_ID, { send_page_view: false }])
   })
 
   it('トップ画面ではpage_viewを送信する', () => {
-    initializeGoogleAnalytics('G-D3Y9975R3L')
+    initializeGoogleAnalytics(TEST_MEASUREMENT_ID)
 
     trackTopPageView('/')
 
@@ -53,7 +57,7 @@ describe('analytics', () => {
   })
 
   it('トップ画面以外ではpage_viewを送信しない', () => {
-    initializeGoogleAnalytics('G-D3Y9975R3L')
+    initializeGoogleAnalytics(TEST_MEASUREMENT_ID)
 
     trackTopPageView('/judging/test-id')
 
