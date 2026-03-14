@@ -105,12 +105,7 @@ export function RankingModal({
         data-testid="ranking-modal-overlay"
         onClick={handleClose}
       />
-      <div
-        className="relative flex h-full w-full items-center justify-center"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) handleClose()
-        }}
-      >
+      <div className="relative flex h-full w-full items-center justify-center">
         <motion.div
           initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
           animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
