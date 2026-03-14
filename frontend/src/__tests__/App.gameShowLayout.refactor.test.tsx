@@ -71,12 +71,12 @@ describe('App Game Show Layout Refactor', () => {
     expect(screen.queryByRole('button', { name: '過去の投稿' })).not.toBeInTheDocument()
   })
 
-  it('「その他」押下時に補助メニューの3導線が表示される', () => {
+  it('「その他」押下時に設定の3導線が表示される', () => {
     // 何を検証するか: 補助導線が「その他」メニューに集約されること
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'その他を開く' }))
 
-    expect(screen.getByRole('dialog', { name: '補助メニュー' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '設定' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '過去の投稿' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'プライバシーポリシー' })).toBeInTheDocument()
     expect(
@@ -112,7 +112,7 @@ describe('App Game Show Layout Refactor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'その他を開く' }))
     fireEvent.click(screen.getByRole('button', { name: '遊び方を見る' }))
 
-    expect(screen.queryByRole('dialog', { name: '補助メニュー' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '設定' })).not.toBeInTheDocument()
     expect(screen.getByRole('dialog', { name: '遊び方ガイド' })).toBeInTheDocument()
     expect(localStorage.getItem('aruaru_onboarding_completed')).toBe('true')
   })
@@ -129,16 +129,16 @@ describe('App Game Show Layout Refactor', () => {
     expect(screen.queryByRole('dialog', { name: 'ランキング' })).not.toBeInTheDocument()
   })
 
-  it('その他ボタンを再度押すと補助メニューを閉じる', () => {
-    // 何を検証するか: 同じトリガーの再押下で補助メニューを閉じられること
+  it('その他ボタンを再度押すと設定を閉じる', () => {
+    // 何を検証するか: 同じトリガーの再押下で設定を閉じられること
     render(<App />)
 
     const otherButton = screen.getByRole('button', { name: 'その他を開く' })
     fireEvent.click(otherButton)
-    expect(screen.getByRole('dialog', { name: '補助メニュー' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '設定' })).toBeInTheDocument()
 
     fireEvent.click(otherButton)
-    expect(screen.queryByRole('dialog', { name: '補助メニュー' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '設定' })).not.toBeInTheDocument()
   })
 
   it('自分の投稿モーダルは外側クリックで閉じる', () => {

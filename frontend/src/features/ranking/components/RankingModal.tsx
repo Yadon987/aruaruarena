@@ -116,6 +116,7 @@ export function RankingModal({
           aria-label="ランキング"
           tabIndex={-1}
           className={DIALOG_CONTAINER_CLASS}
+          onClick={(event) => event.stopPropagation()}
         >
           <div className="modal-header-gorgeous flex items-center justify-between gap-4">
             <h2 className="gold-text text-lg font-semibold">ランキング</h2>

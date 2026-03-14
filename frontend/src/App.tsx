@@ -168,8 +168,8 @@ function buildOgpPreviewUrl(postId: string): string {
 
 function buildResultShareText(post: Post): string {
   const scoreLabel = typeof post.average_score === 'number' ? post.average_score.toFixed(1) : '--.-'
-  const rankLabel = hasShareableRank(post.rank) ? `${post.rank}位` : 'ランクイン'
-  return `「${post.body}」\n${post.nickname}さんのあるあるは ${rankLabel} / ${scoreLabel}点！\n#あるあるアリーナ`
+  const rankLabel = hasShareableRank(post.rank) ? `${post.rank}位` : '結果発表'
+  return `「${post.body}」\nこれ、あるあるすぎて刺さる。結果は ${rankLabel} / ${scoreLabel}点！\n\n共感したらいいね＆シェアで応援してください！\n#RUNTEQ #RUNTEQポートフォリオ #あるあるアリーナ`
 }
 
 function buildXShareIntentUrl(post: Post): string {
@@ -192,7 +192,9 @@ function canShowPostJudgingShareActions(
   )
 }
 
-function isHighScoreResult(post: Post | null): post is Post & { status: 'scored'; average_score: number } {
+function isHighScoreResult(
+  post: Post | null
+): post is Post & { status: 'scored'; average_score: number } {
   return (
     isFinalResultPost(post) &&
     post.status === 'scored' &&
@@ -2098,6 +2100,7 @@ function App() {
                 aria-label="自分の投稿"
                 tabIndex={-1}
                 className="modal-gorgeous-base relative z-10 w-full max-w-[95vw] rounded-2xl p-4 text-slate-100 sm:max-w-2xl lg:max-w-3xl"
+                onClick={(event) => event.stopPropagation()}
               >
                 {selectedPost ? (
                   <MyPostDetail
@@ -2277,7 +2280,7 @@ function App() {
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-3">
             <button
               type="button"
-              aria-label="補助メニューを閉じる"
+              aria-label="設定を閉じる"
               className="modal-overlay-gorgeous absolute inset-0"
               onClick={closeFooterActionSheet}
             />
@@ -2288,11 +2291,11 @@ function App() {
               transition={{ duration: DURATION.MODAL }}
               role="dialog"
               aria-modal="true"
-              aria-label="補助メニュー"
+              aria-label="設定"
               className="modal-gorgeous-base w-full max-w-md rounded-2xl p-4 text-slate-100 shadow-2xl"
             >
               <div className="modal-header-gorgeous">
-                <p className="gold-text text-sm font-semibold">補助メニュー</p>
+                <p className="gold-text text-sm font-semibold">設定</p>
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <NeonButton
@@ -2337,7 +2340,7 @@ function App() {
                 <button
                   type="button"
                   className="mt-1 rounded-xl border border-amber-200/35 bg-black/20 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-black/30"
-                  aria-label="補助メニューを閉じる"
+                  aria-label="設定を閉じる"
                   onClick={closeFooterActionSheet}
                 >
                   閉じる
