@@ -155,6 +155,23 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
 
       service.execute
     end
+
+    # 何を検証するか: 順位未確定時に「ランク集計中」を単独ラベルとして描画し「位」を付けないこと
+    it 'rankがnilのときはランク集計中を単独描画すること' do
+      allow(post).to receive(:calculate_rank).and_return(nil)
+      allow(service).to receive(:draw_text).and_call_original
+      expect(service).to receive(:draw_text)
+        .with(anything, hash_including(
+                          text: 'ランク集計中',
+                          color: described_class::TEXT_COLORS[:rank],
+                          y: described_class::LAYOUT[:rank_pending][:y],
+                          font: described_class::FONT_BOLD_PATH
+                        ))
+        .and_call_original
+      expect(service).not_to receive(:draw_text).with(anything, hash_including(text: '位'))
+
+      service.execute
+    end
   end
 
   describe 'sanitize_text' do

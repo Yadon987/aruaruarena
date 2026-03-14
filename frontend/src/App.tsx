@@ -2049,12 +2049,15 @@ function App() {
                             const post = myPostDetails[postId]
                             const isLoading = loadingMyPostIds.includes(postId)
                             const errorMessage = myPostDetailErrors[postId]
+                            const myPostButtonLabel = post
+                              ? `${post.body}、${MY_POST_STATUS_LABELS[post.status]}、投稿詳細を開く`
+                              : `投稿ID ${postId} の投稿詳細を開く`
 
                             return (
                               <li key={postId} data-testid="my-post-id-item">
                                 <button
                                   type="button"
-                                  aria-label={postId}
+                                  aria-label={myPostButtonLabel}
                                   aria-describedby={`my-post-meta-${postId}`}
                                   className="w-full rounded-[1.4rem] border border-white/12 bg-[radial-gradient(circle_at_top_left,rgba(255,214,120,0.16),transparent_35%),linear-gradient(180deg,rgba(20,28,45,0.92),rgba(9,14,25,0.96))] p-4 text-left transition hover:border-amber-200/35 hover:shadow-[0_18px_38px_rgba(8,15,30,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/70"
                                   onClick={() => handleMyPostClick(postId)}

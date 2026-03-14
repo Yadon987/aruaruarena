@@ -26,6 +26,7 @@ class OgpGeneratorService
     nickname: { x: 96, y: 142, max_width: 380 },
     body: { x: 92, y: 198, max_width: 450 },
     rank_number: { x: 92, y: 368, max_width: 250 },
+    rank_pending: { x: 92, y: 382, max_width: 480 },
     rank_suffix: { x: 92, y: 404, max_width: 90 },
     score_number: { x: 92, y: 440, max_width: 360 },
     score_suffix: { x: 92, y: 470, max_width: 90 }
@@ -36,6 +37,7 @@ class OgpGeneratorService
     body: 38,
     nickname: 30,
     rank_number: 132,
+    rank_pending: 64,
     rank_suffix: 64,
     score_number: 112,
     score_suffix: 52,
@@ -46,6 +48,7 @@ class OgpGeneratorService
     body: 34,
     nickname: 26,
     rank_number: 112,
+    rank_pending: 48,
     rank_suffix: 52,
     score_number: 98,
     score_suffix: 44,
@@ -203,12 +206,26 @@ class OgpGeneratorService
   end
 
   def build_rank_items
+    return [build_pending_rank_item] if safe_rank.nil?
+
     centered_pair_items(
       :rank_number,
       :rank_suffix,
       build_rank_text(safe_rank).chomp(TEXT_CONFIG[:rank_suffix]),
       TEXT_CONFIG[:rank_suffix],
       style: rank_pair_style
+    )
+  end
+
+  def build_pending_rank_item
+    left_text_item(
+      :rank_pending,
+      build_rank_text(nil),
+      TEXT_COLORS[:rank],
+      FONT_BOLD_PATH,
+      stroke_width: 3,
+      shadow: false,
+      center_in: :rank_area
     )
   end
 
@@ -456,41 +473,51 @@ class OgpGeneratorService
     draw_glow(image, item) if item[:glow]
     draw_shadow(image, item) if item[:shadow]
 
-    image.combine_options do |config|
-      config.font item[:font].to_s
-      config.encoding 'UTF-8'
-      config.fill item[:color]
-      config.stroke item[:stroke_color] if item[:stroke_width].to_i.positive?
-      config.strokewidth item[:stroke_width] if item[:stroke_width].to_i.positive?
-      config.pointsize item[:size]
-      config.gravity 'northwest'
-      config.draw "text #{item[:x]},#{item[:y]} '#{escape_single_quotes(item[:text])}'"
-    end
+    apply_text_layer(
+      image,
+      item,
+      fill: item[:color],
+      x: item[:x],
+      y: item[:y],
+      stroke: item[:stroke_color],
+      stroke_width: item[:stroke_width]
+    )
   end
 
   def draw_shadow(image, item)
-    image.combine_options do |config|
-      config.font item[:font].to_s
-      config.encoding 'UTF-8'
-      config.fill item[:shadow][:color]
-      config.stroke 'transparent'
-      config.pointsize item[:size]
-      config.gravity 'northwest'
-      config.draw "text #{item[:x] + item[:shadow][:x]},#{item[:y] + item[:shadow][:y]} '#{escape_single_quotes(item[:text])}'"
-    end
+    apply_text_layer(
+      image,
+      item,
+      fill: item[:shadow][:color],
+      x: item[:x] + item[:shadow][:x],
+      y: item[:y] + item[:shadow][:y],
+      stroke: 'transparent'
+    )
   end
 
   def draw_glow(image, item)
     item[:glow][:layers].each do |layer|
-      image.combine_options do |config|
-        config.font item[:font].to_s
-        config.encoding 'UTF-8'
-        config.fill item[:glow][:color]
-        config.stroke 'transparent'
-        config.pointsize item[:size]
-        config.gravity 'northwest'
-        config.draw "text #{item[:x] + layer[:x]},#{item[:y] + layer[:y]} '#{escape_single_quotes(item[:text])}'"
-      end
+      apply_text_layer(
+        image,
+        item,
+        fill: item[:glow][:color],
+        x: item[:x] + layer[:x],
+        y: item[:y] + layer[:y],
+        stroke: 'transparent'
+      )
+    end
+  end
+
+  def apply_text_layer(image, item, fill:, x:, y:, stroke:, stroke_width: nil)
+    image.combine_options do |config|
+      config.font item[:font].to_s
+      config.encoding 'UTF-8'
+      config.fill fill
+      config.stroke stroke if stroke
+      config.strokewidth stroke_width if stroke_width.to_i.positive?
+      config.pointsize item[:size]
+      config.gravity 'northwest'
+      config.draw "text #{x},#{y} '#{escape_single_quotes(item[:text])}'"
     end
   end
 

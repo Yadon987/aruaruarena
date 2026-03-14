@@ -104,7 +104,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
     render(<App />)
 
     await openMyPostsDialog()
-    fireEvent.click(await screen.findByRole('button', { name: MY_POST_ID }))
+    fireEvent.click(await screen.findByRole('button', { name: /投稿詳細を開く/ }))
 
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: '自分の投稿' })).not.toBeInTheDocument()
@@ -122,7 +122,7 @@ describe('E16-01 MyPostDetail Integration RED', () => {
     render(<App />)
 
     await openMyPostsDialog()
-    fireEvent.click(await screen.findByRole('button', { name: MY_POST_ID }))
+    fireEvent.click(await screen.findByRole('button', { name: /投稿詳細を開く/ }))
 
     expect(
       await screen.findByText('一時的なエラーです。時間をおいて再試行してください')

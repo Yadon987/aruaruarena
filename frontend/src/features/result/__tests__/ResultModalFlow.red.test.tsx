@@ -311,7 +311,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     fireEvent.click(within(resultModal).getByRole('button', { name: '自分の投稿へ戻る' }))
 
     const myPostsDialog = await screen.findByRole('dialog', { name: '自分の投稿' })
-    expect(within(myPostsDialog).getByRole('button', { name: 'my-post-id' })).toBeInTheDocument()
+    expect(within(myPostsDialog).getByRole('button', { name: /投稿詳細を開く/ })).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
   })
 

@@ -28,7 +28,7 @@ export async function openMyPostsDialog() {
 export async function selectMyPost(postId: string) {
   await openMyPostsDialog()
 
-  const button = await screen.findByRole('button', { name: postId })
+  const button = await screen.findByRole('button', { name: `投稿ID ${postId} の投稿詳細を開く` })
   await act(async () => {
     fireEvent.click(button)
     await Promise.resolve()
