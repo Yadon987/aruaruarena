@@ -630,7 +630,8 @@ class OgpGeneratorService
   end
 
   def text_draw_command(text, position)
-    "text #{position[:x]},#{position[:y]} '#{escape_single_quotes(text)}'"
+    sanitized_text = sanitize_text(text.to_s)
+    "text #{position[:x]},#{position[:y]} '#{escape_single_quotes(sanitized_text)}'"
   end
 
   # 制御文字を削除（改行・タブは保持）

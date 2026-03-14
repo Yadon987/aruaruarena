@@ -59,12 +59,14 @@ module OgpTestHelpers
   end
   # rubocop:enable Metrics/AbcSize
 
+  # 何を検証するか: 基本的な描画コマンドのモックを設定する
   def setup_basic_draw_mocks
     %i[font encoding fill stroke strokewidth pointsize gravity draw annotate].each do |method_name|
       allow(mock_draw).to receive(method_name).and_return(nil)
     end
   end
 
+  # 何を検証するか: PNG圧縮関連のモックを設定する
   def setup_png_compression_mocks
     %i[quality define].each do |method_name|
       allow(mock_draw).to receive(method_name).and_return(nil)
