@@ -100,7 +100,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(service).to receive(:draw_text)
         .with(anything, hash_including(
                           text: '11',
-                          size: be_between(described_class::MIN_FONT_SIZES[:rank_number], described_class::FONT_SIZES[:rank_number]),
+                          size: be_between(described_class::MIN_FONT_SIZES[:rank_number],
+                                           described_class::FONT_SIZES[:rank_number]),
                           color: described_class::TEXT_COLORS[:rank],
                           y: described_class::LAYOUT[:rank_number][:y],
                           font: described_class::NUMBER_FONT_PATH
@@ -177,7 +178,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(service).to receive(:draw_text)
         .with(anything, hash_including(
                           text: '0.0',
-                          size: be_between(described_class::MIN_FONT_SIZES[:score_number], described_class::FONT_SIZES[:score_number]),
+                          size: be_between(described_class::MIN_FONT_SIZES[:score_number],
+                                           described_class::FONT_SIZES[:score_number]),
                           color: described_class::TEXT_COLORS[:score],
                           y: described_class::LAYOUT[:score_number][:y],
                           font: described_class::NUMBER_FONT_PATH
