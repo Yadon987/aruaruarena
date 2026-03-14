@@ -5,8 +5,8 @@ require 'spec_helper'
 ENV['RAILS_ENV'] ||= 'test'
 require_relative 'support/dynamodb_constants'
 
-# テスト実行時に古いDynamoDB Localの既定ポート(8000)が残っていても、
-# 現在のテスト環境で利用する8002へ統一する。
+# テスト用エンドポイントが未指定のときだけ既定の 8002 を使う。
+# CI などで明示された DYNAMODB_ENDPOINT はそのまま尊重する。
 if ENV['RAILS_ENV'] == 'test'
   ENV['DYNAMODB_ENDPOINT'] = DynamoDBConstants.normalized_endpoint(ENV.fetch('DYNAMODB_ENDPOINT', nil))
 end

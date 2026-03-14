@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { type CSSProperties, useState } from 'react'
+import { useReducedMotion } from '../../../shared/hooks/useReducedMotion'
 
 interface ResultSummaryProps {
   nickname: string
@@ -7,6 +8,7 @@ interface ResultSummaryProps {
   totalCount?: number
   averageScore?: number
   status: 'scored' | 'failed'
+  isHighScore?: boolean
   onClose: () => void
   closeLabel?: string
   closeAriaLabel?: string
@@ -31,6 +33,7 @@ export function ResultSummary({
   rank,
   averageScore,
   status,
+  isHighScore = false,
   onClose,
   closeLabel = 'トップへ',
   closeAriaLabel,
@@ -42,6 +45,7 @@ export function ResultSummary({
   ogpPreviewUrl,
 }: ResultSummaryProps) {
   const [isOgpPreviewVisible, setIsOgpPreviewVisible] = useState(false)
+  const prefersReducedMotion = useReducedMotion()
   const resolvedCloseAriaLabel = closeAriaLabel ?? closeLabel
   const canRejudge = status === 'failed' && typeof onRejudge === 'function'
   const canPreviewOgp = typeof ogpPreviewUrl === 'string' && ogpPreviewUrl.length > 0
@@ -53,12 +57,54 @@ export function ResultSummary({
 
   return (
     <section
-      className="glass-panel relative z-20 mx-auto w-full max-w-xl rounded-2xl border border-amber-200/35 p-5 shadow-[0_18px_40px_rgba(8,15,40,0.35)]"
+      className={`glass-panel result-summary-shell relative z-20 mx-auto w-full max-w-xl rounded-2xl border border-amber-200/35 p-5 shadow-[0_18px_40px_rgba(8,15,40,0.35)] ${
+        isHighScore ? 'result-summary-shell-high-score' : ''
+      }`}
       aria-label="審査結果サマリー"
     >
+      {isHighScore && (
+        <>
+          <div
+            aria-hidden="true"
+            data-testid="high-score-flash"
+            className={`result-summary-flash ${prefersReducedMotion ? 'result-summary-flash-reduced' : ''}`}
+          />
+          {!prefersReducedMotion && (
+            <div
+              aria-hidden="true"
+              data-testid="high-score-confetti"
+              className="result-summary-confetti-layer"
+            >
+              {Array.from({ length: 12 }, (_, index) => (
+                <span
+                  key={`confetti-left-${index}`}
+                  className={`result-summary-confetti-piece result-summary-confetti-piece-${
+                    (index % 4) + 1
+                  }`}
+                  style={
+                    {
+                      ['--confetti-left' as string]: `${6 + index * 7.5}%`,
+                      ['--confetti-delay' as string]: `${(index % 6) * 0.28}s`,
+                      ['--confetti-duration' as string]: `${5.2 + (index % 4) * 0.55}s`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
       <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100/85">
         RESULT
       </p>
+      {isHighScore && (
+        <p
+          data-testid="high-score-badge"
+          className="result-summary-high-score-badge mt-3 text-center text-xs font-black uppercase tracking-[0.24em]"
+        >
+          HIGH SCORE
+        </p>
+      )}
       <h2 className="mt-2 text-center text-2xl font-black text-white sm:text-3xl">
         ★ <span className="gold-text">{nickname}</span> ★
       </h2>

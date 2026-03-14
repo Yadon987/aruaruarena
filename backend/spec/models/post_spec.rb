@@ -255,6 +255,28 @@ RSpec.describe Post, type: :model do
     end
   end
 
+  describe '投稿レート制限バリデーション' do
+    it '3分以内の再投稿時はbaseエラーを追加すること' do
+      allow(RateLimiterService).to receive(:limited?).with(ip: '192.168.1.1', nickname: '太郎').and_return(true)
+
+      post = build(:post, nickname: '太郎', body: 'スヌーズ押して二度寝')
+      post.request_ip = '192.168.1.1'
+
+      expect(post).not_to be_valid
+      expect(post.errors[:base]).to include('投稿頻度が高すぎます。3分待ってから再投稿してください')
+    end
+
+    it '投稿元IPがない場合はレート制限を検証しないこと' do
+      allow(RateLimiterService).to receive(:limited?)
+
+      post = build(:post)
+      post.request_ip = nil
+      post.valid?
+
+      expect(RateLimiterService).not_to have_received(:limited?)
+    end
+  end
+
   describe '文字数カウント詳細' do
     # 検証: 結合絵文字が1文字としてカウントされること
     it '結合絵文字（👨‍👩‍👧‍👦）を1文字としてカウントすること' do

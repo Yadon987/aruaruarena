@@ -13,7 +13,7 @@ class RateLimit
   # Primary Key（自動的にString型として扱われるため、field定義は不要）
   # field :identifierはDynamoidによって自動的に管理されます
 
-  # TTL設定（5分後 = 300秒、UnixTimestampを整数として保存）
+  # TTL設定（3分後 = 180秒、UnixTimestampを整数として保存）
   field :expires_at, :integer
 
   # TTL設定（DynamoDB側で設定されるため、モデル側では特別な設定不要）
@@ -58,18 +58,20 @@ class RateLimit
 
   # レート制限を設定
   # @param identifier [String] 識別子
-  # @param seconds [Integer] 制限時間（デフォルト: 300秒 = 5分）
+  # @param seconds [Integer] 制限時間（デフォルト: 180秒 = 3分）
   # @return [RateLimit] 作成または更新されたレート制限
-  def self.set_limit(identifier, seconds: 300)
+  def self.set_limit(identifier, seconds: 180)
+    expires_at = current_timestamp + seconds
+
     # upsert: レコードが存在する場合は更新、存在しない場合は作成
     record = find(identifier)
-    record.expires_at = current_timestamp + seconds
+    record.expires_at = expires_at
     record.save! # save!で例外を投げてRateLimitを返す
     record
   rescue Dynamoid::Errors::RecordNotFound
     create!(
       identifier: identifier,
-      expires_at: current_timestamp + seconds
+      expires_at: expires_at
     )
   end
 

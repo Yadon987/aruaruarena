@@ -31,6 +31,7 @@ jobs:
       CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID || secrets.CLOUDFRONT_DISTRIBUTION_ID }}
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || secrets.VITE_API_BASE_URL }}
       VITE_FRONTEND_BASE_URL: ${{ vars.VITE_FRONTEND_BASE_URL }}
+      VITE_GA_MEASUREMENT_ID: ${{ vars.VITE_GA_MEASUREMENT_ID || secrets.VITE_GA_MEASUREMENT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,6 +52,7 @@ jobs:
         env:
           VITE_API_BASE_URL: ${{ env.VITE_API_BASE_URL }}
           VITE_FRONTEND_BASE_URL: ${{ env.VITE_FRONTEND_BASE_URL }}
+          VITE_GA_MEASUREMENT_ID: ${{ env.VITE_GA_MEASUREMENT_ID }}
         run: npm run build
 
       - name: Validate deploy variables
@@ -64,6 +66,7 @@ jobs:
           [ -n "${CLOUDFRONT_DISTRIBUTION_ID:-}" ] || missing_vars+=("CLOUDFRONT_DISTRIBUTION_ID")
           [ -n "${VITE_API_BASE_URL:-}" ] || missing_vars+=("VITE_API_BASE_URL")
           [ -n "${VITE_FRONTEND_BASE_URL:-}" ] || missing_vars+=("VITE_FRONTEND_BASE_URL")
+          [ -n "${VITE_GA_MEASUREMENT_ID:-}" ] || missing_vars+=("VITE_GA_MEASUREMENT_ID")
 
           if [ ${#missing_vars[@]} -gt 0 ]; then
             missing_csv="$(IFS=,; echo "${missing_vars[*]}")"

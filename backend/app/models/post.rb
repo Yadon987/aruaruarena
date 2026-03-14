@@ -13,6 +13,8 @@
 class Post
   include Dynamoid::Document
 
+  attr_accessor :request_ip
+
   # バリデーション定数
   NICKNAME_MIN_LENGTH = 1
   NICKNAME_MAX_LENGTH = 20
@@ -36,7 +38,6 @@ class Post
 
   # ランキング取得件数のデフォルト値
   DEFAULT_RANKING_LIMIT = 20
-
   # テーブル設定
   table name: 'aruaruarena-posts', key: :id
   # 読み書きのキャパシティ（オンデマンドモードでは無効）
@@ -83,6 +84,7 @@ class Post
 
   # 本文のgrapheme数をバリデーション
   validate :body_grapheme_length
+  validate :validate_post_rate_limit, on: :create
 
   # スコア範囲のバリデーション
   validates :average_score,
@@ -243,6 +245,13 @@ class Post
     errors.add(:body, 'は3〜30文字で入力してください')
   end
 
+  def validate_post_rate_limit
+    return if request_ip.blank? || nickname.blank?
+    return unless RateLimiterService.limited?(ip: request_ip, nickname:)
+
+    errors.add(:base, rate_limit_error_message)
+  end
+
   # 作成日時を設定（UnixTimestampを文字列として保存）
   #
   # 作成時にcreated_atが未設定の場合、現在時刻をUnixTimestampとして設定
@@ -257,6 +266,11 @@ class Post
   # @return [String] UnixTimestamp（例: "1738041600"）
   def current_timestamp
     Time.now.to_i.to_s
+  end
+
+  def rate_limit_error_message
+    wait_minutes = RateLimiterService::LIMIT_DURATION / 60
+    "投稿頻度が高すぎます。#{wait_minutes}分待ってから再投稿してください"
   end
 
   # Judgmentが存在する場合は削除を防止

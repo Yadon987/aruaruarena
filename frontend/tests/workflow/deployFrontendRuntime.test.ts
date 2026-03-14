@@ -51,6 +51,7 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     expect(step?.run).toBe('npm run build')
     expect(step?.['working-directory']).toBe('./frontend')
     expect(env.VITE_API_BASE_URL).toBe('${{ env.VITE_API_BASE_URL }}')
+    expect(env.VITE_GA_MEASUREMENT_ID).toBe('${{ env.VITE_GA_MEASUREMENT_ID }}')
   })
 
   // 何を検証するか: 必須デプロイ変数が未設定なら以降へ進まないようにすること
@@ -71,6 +72,7 @@ describe('E14-01: deploy frontend runtime assumptions', () => {
     expect(run).toContain('S3_BUCKET_FRONTEND')
     expect(run).toContain('CLOUDFRONT_DISTRIBUTION_ID')
     expect(run).toContain('VITE_API_BASE_URL')
+    expect(run).toContain('VITE_GA_MEASUREMENT_ID')
     expect(run).toContain('MISSING_DEPLOY_VARS=')
     expect(step?.['continue-on-error']).toBeUndefined()
   })

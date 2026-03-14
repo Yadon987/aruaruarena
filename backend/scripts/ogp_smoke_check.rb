@@ -26,7 +26,8 @@ begin
   )
   ENV['OGP_S3_BUCKET'] = 'ogp-smoke-test-bucket'
 
-  uploaded = UploadOgpImageService.call(post.id, s3_client:)
+  # 保存直後の再読込はDynamoDBの結果的整合性で取りこぼすため、Postオブジェクトを直接渡す。
+  uploaded = UploadOgpImageService.call(post, s3_client:)
   put_request = s3_client.api_requests.find { |request| request[:operation_name] == :put_object }
 
   result = {

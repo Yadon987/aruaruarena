@@ -39,7 +39,7 @@ RSpec.describe RateLimit, type: :model do
 
   describe '.limited?' do
     it '識別子が存在する場合はtrueを返すこと' do
-      create(:rate_limit, identifier: 'ip#test123', expires_at: Time.now.to_i + 300)
+      create(:rate_limit, identifier: 'ip#test123', expires_at: Time.now.to_i + 180)
       expect(described_class.limited?('ip#test123')).to be true
     end
 
@@ -56,11 +56,11 @@ RSpec.describe RateLimit, type: :model do
       expect(rate_limit.expires_at.to_i).to eq(current_time + 600)
     end
 
-    it 'デフォルトで5分間の制限を作成すること' do
+    it 'デフォルトで3分間の制限を作成すること' do
       current_time = Time.now.to_i
       rate_limit = described_class.set_limit('ip#test123')
       # String型なので整数に変換して比較
-      expect(rate_limit.expires_at.to_i).to be_within(1).of(current_time + 300)
+      expect(rate_limit.expires_at.to_i).to be_within(1).of(current_time + 180)
     end
   end
 end

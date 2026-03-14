@@ -39,6 +39,18 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     it 'FONT_SIZES定数に審査員関連キーが含まれないこと' do
       expect(described_class::FONT_SIZES.keys).not_to include(:judge_score, :judge_comment)
     end
+
+    it '同梱フォントを使用すること' do
+      expect(described_class::FONT_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf'))
+      expect(described_class::FONT_BOLD_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf'))
+      expect(described_class::NUMBER_FONT_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf'))
+    end
+
+    it '同梱フォント実体が存在すること' do
+      expect(described_class::FONT_PATH.exist?).to be(true)
+      expect(described_class::FONT_BOLD_PATH.exist?).to be(true)
+      expect(described_class::NUMBER_FONT_PATH.exist?).to be(true)
+    end
   end
 
   describe 'E20 RED: 初期化処理' do
@@ -221,6 +233,16 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     end
   end
 
+  describe 'text_draw_command' do
+    it '描画コマンド生成時にサニタイズとエスケープをまとめて行うこと' do
+      service = described_class.allocate
+
+      command = service.send(:text_draw_command, "危険😀'`\n文字列", { x: 12, y: 34 })
+
+      expect(command).to eq("text 12,34 '危険\\'\\` 文字列'")
+    end
+  end
+
   describe 'E20 REFACTOR: レイアウト計算' do
     let(:service) { described_class.allocate }
 
@@ -352,6 +374,37 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       allow(File).to receive(:exist?).with(described_class::FONT_PATH.to_s).and_return(false)
 
       expect(service.execute).to be_nil
+    end
+
+    shared_examples '必須フォント欠損時はnilを返すこと' do |font_path|
+      it "#{font_path} が存在しない場合はnilを返すこと" do
+        allow(File).to receive(:exist?).with(font_path.to_s).and_return(false)
+
+        expect(service.execute).to be_nil
+      end
+    end
+
+    context '必須フォントが欠損しているとき' do
+      let(:post) do
+        instance_double(
+          Post,
+          id: 'post-id',
+          status: Post::STATUS_SCORED,
+          nickname: '太郎',
+          body: 'あるある本文',
+          average_score: 85.5,
+          calculate_rank: 11
+        )
+      end
+      let(:service) { described_class.new('post-id') }
+
+      before do
+        allow(Post).to receive(:find).with('post-id').and_return(post)
+        setup_file_exist_mocks
+      end
+
+      it_behaves_like '必須フォント欠損時はnilを返すこと', described_class::NUMBER_FONT_PATH
+      it_behaves_like '必須フォント欠損時はnilを返すこと', described_class::FONT_BOLD_PATH
     end
 
     # 何を検証するか: ベース画像欠損時に成功ログを出力しないこと
