@@ -576,7 +576,7 @@ class OgpGeneratorService
   def escape_single_quotes(text)
     # まずバックスラッシュをエスケープし、その後シングルクォートをエスケープ
     # ImageMagick MVGパーサーではバックスラッシュも特殊文字として扱われるため
-    text.gsub('\\') { '\\\\' }.gsub("'") { "\\'" }
+    text.gsub('\\') { '\\\\' }.gsub("'") { "\\'" }.gsub('`') { '\\`' }
   end
 
   # PNG画像の圧縮を行う

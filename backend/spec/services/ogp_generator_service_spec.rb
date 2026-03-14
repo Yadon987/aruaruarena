@@ -200,6 +200,24 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     end
   end
 
+  describe 'escape_single_quotes' do
+    it 'バッククォートをエスケープすること' do
+      service = described_class.allocate
+
+      escaped = service.send(:escape_single_quotes, '危険`文字列')
+
+      expect(escaped).to eq('危険\\`文字列')
+    end
+
+    it 'バッククォートとシングルクォートが混在してもエスケープすること' do
+      service = described_class.allocate
+
+      escaped = service.send(:escape_single_quotes, "危険'`文字列")
+
+      expect(escaped).to eq("危険\\'\\`文字列")
+    end
+  end
+
   describe 'E20 REFACTOR: レイアウト計算' do
     let(:service) { described_class.allocate }
 

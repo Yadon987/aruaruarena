@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { NeonButton } from './components/ui/NeonButton'
 import { JudgeAvatars } from './features/judging/components/JudgeAvatars'
+import { JudgingIndicator } from './features/judging/components/JudgingIndicator'
 import { RankingModal } from './features/ranking'
 import { ResultSummary } from './features/result/components/ResultSummary'
 import { AudioConsentModal } from './features/top/components/AudioConsentModal'
@@ -617,6 +618,7 @@ function App() {
     if (viewMode !== 'top' || window.location.pathname !== ROOT_PATH) return
     if (hasCompletedOnboarding || isOnboardingOpen) return
     if (import.meta.env.MODE === 'test' && !shouldShowOnboardingModalInTest()) return
+
     setIsOnboardingOpen(true)
   }, [hasCompletedOnboarding, isOnboardingOpen, viewMode])
 
@@ -1905,7 +1907,7 @@ function App() {
         style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
       >
         {viewMode === 'judging' && !judgingErrorMessage && (
-          <section data-testid="judging-screen" aria-label="審査中" className="sr-only" />
+          <JudgingIndicator />
         )}
         {viewMode === 'judging' && !judgingErrorMessage && judgingTransientErrorCount > 0 && (
           <div className="pointer-events-none fixed left-1/2 top-5 z-[125] -translate-x-1/2">
