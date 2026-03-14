@@ -357,8 +357,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
   }, 12000)
 
-  it('TOP20圏外のscored投稿でも審査直後ならシェア関連UIを表示する', async () => {
-    // 何を検証するか: 審査直後の結果ではrankが21位以降でも共有UIを表示すること
+  it('TOP20圏外のscored投稿ではシェア関連UIを表示しない', async () => {
+    // 何を検証するか: 審査直後でも rank が 21 位以降なら共有UIを表示しないこと
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'scope-post-id',
       status: 'judging',
@@ -386,12 +386,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
       { timeout: 9000 }
     )
 
-    expect(screen.getByRole('button', { name: 'Xでシェア' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Xでシェア' }))
-    const lastOpenCallIndex = vi.mocked(window.open).mock.calls.length - 1
-    const [shareIntentUrl] = vi.mocked(window.open).mock.calls[lastOpenCallIndex] as [string]
-    expect(decodeURIComponent(shareIntentUrl)).toContain('21位')
+    expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'シェア画像を表示' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
   }, 12000)
 

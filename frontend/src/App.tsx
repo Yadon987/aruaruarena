@@ -102,6 +102,7 @@ const LOW_SCORE_THRESHOLD = SCORE_THRESHOLDS.LOW
 const CONTACT_FORM_URL = 'https://forms.gle/zLN3j3YF87qdULXB9'
 const FIXED_FOOTER_MIN_RESERVED_PX = 96
 const FIXED_FOOTER_EXTRA_GAP_PX = 12
+const SHAREABLE_RESULT_MAX_RANK = 20
 const POST_SHARE_PATH_PREFIX = '/posts/'
 const OGP_IMAGE_PATH_PREFIX = '/ogp/posts/'
 const X_SHARE_INTENT_URL = 'https://twitter.com/intent/tweet'
@@ -138,6 +139,15 @@ function isFinalResultPost(post: Post | null): post is Post & { status: 'scored'
   return post !== null && (post.status === 'scored' || post.status === 'failed')
 }
 
+function hasShareableRank(rank: number | undefined): rank is number {
+  return (
+    typeof rank === 'number' &&
+    Number.isInteger(rank) &&
+    rank >= 1 &&
+    rank <= SHAREABLE_RESULT_MAX_RANK
+  )
+}
+
 function readFrontendBaseUrl(): string {
   const envBaseUrl = import.meta.env.VITE_FRONTEND_BASE_URL?.trim()
   return envBaseUrl && envBaseUrl.length > 0 ? envBaseUrl : window.location.origin
@@ -158,10 +168,7 @@ function buildOgpPreviewUrl(postId: string): string {
 
 function buildResultShareText(post: Post): string {
   const scoreLabel = typeof post.average_score === 'number' ? post.average_score.toFixed(1) : '--.-'
-  const rankLabel =
-    typeof post.rank === 'number' && Number.isInteger(post.rank) && post.rank >= 1
-      ? `${post.rank}位`
-      : '結果発表'
+  const rankLabel = hasShareableRank(post.rank) ? `${post.rank}位` : 'ランクイン'
   return `「${post.body}」\n${post.nickname}さんのあるあるは ${rankLabel} / ${scoreLabel}点！\n#あるあるアリーナ`
 }
 
@@ -177,7 +184,12 @@ function canShowPostJudgingShareActions(
   post: Post | null,
   source: ResultViewSource
 ): post is Post & { status: 'scored' } {
-  return source === 'judging' && isFinalResultPost(post) && post.status === 'scored'
+  return (
+    source === 'judging' &&
+    isFinalResultPost(post) &&
+    post.status === 'scored' &&
+    hasShareableRank(post.rank)
+  )
 }
 
 function isHighScoreResult(post: Post | null): post is Post & { status: 'scored'; average_score: number } {

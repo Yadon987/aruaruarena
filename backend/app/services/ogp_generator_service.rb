@@ -11,11 +11,10 @@ class OgpGeneratorService
   BODY_LINE_SPACING = 14
 
   BASE_IMAGE_PATH = Rails.root.join('app/assets/images/base_ogp.png')
-  # 実行環境依存のシステムフォントではなく、同梱フォントを使って描画失敗を防ぐ。
   FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
   FONT_BOLD_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
   NUMBER_FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
-  REQUIRED_FILES = [BASE_IMAGE_PATH, FONT_PATH, FONT_BOLD_PATH, NUMBER_FONT_PATH].uniq.freeze
+  REQUIRED_FILES = [BASE_IMAGE_PATH, FONT_PATH, FONT_BOLD_PATH, NUMBER_FONT_PATH].freeze
 
   # 画像レイアウト定数
   LAYOUT = {

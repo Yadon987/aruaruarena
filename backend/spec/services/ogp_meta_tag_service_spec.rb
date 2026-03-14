@@ -340,6 +340,19 @@ RSpec.describe OgpMetaTagService, type: :service do
         expect(head_requests.size).to eq(1)
       end
 
+      it 'Rails.cache が書き込み不可でも MemoryStore で画像存在確認をキャッシュできること' do
+        ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
+        s3_client = Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true)
+        allow(Aws::S3::Client).to receive(:new).and_return(s3_client)
+        allow(Rails).to receive(:cache).and_raise(Errno::EROFS)
+
+        2.times { described_class.generate_html(post:, base_url:) }
+
+        head_requests = s3_client.api_requests.select { |request| request[:operation_name] == :head_object }
+
+        expect(head_requests.size).to eq(1)
+      end
+
       it 'S3に画像が存在しない場合はfalseをキャッシュしないこと' do
         ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
         s3_client = Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true)

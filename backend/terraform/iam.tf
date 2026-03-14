@@ -94,6 +94,7 @@ resource "aws_iam_role_policy" "s3_ogp_access" {
       {
         Effect = "Allow"
         Action = [
+          "s3:GetObject",
           "s3:PutObject"
         ]
         Resource = "arn:aws:s3:::${var.frontend_s3_bucket_name}/ogp/*"
