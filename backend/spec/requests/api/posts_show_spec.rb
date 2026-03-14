@@ -17,7 +17,7 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
       expect(json['id']).to eq(post.id)
       expect(json['nickname']).to eq('太郎')
       expect(json['body']).to eq('スヌーズ押して二度寝')
-      expect(json['created_at']).to eq(post.created_at)
+      expect(json['created_at']).to eq(post.created_at.as_json)
       expect(json['average_score']).to eq(85.3)
       expect(json['status']).to eq('scored')
       expect(json['judges_count']).to eq(3)

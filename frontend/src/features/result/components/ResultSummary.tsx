@@ -33,7 +33,7 @@ export function ResultSummary({
   status,
   onClose,
   closeLabel = 'トップへ',
-  closeAriaLabel = 'トップへ',
+  closeAriaLabel,
   closeIcon = '🏮',
   onRejudge,
   isRejudging = false,
@@ -42,6 +42,7 @@ export function ResultSummary({
   ogpPreviewUrl,
 }: ResultSummaryProps) {
   const [isOgpPreviewVisible, setIsOgpPreviewVisible] = useState(false)
+  const resolvedCloseAriaLabel = closeAriaLabel ?? closeLabel
   const canRejudge = status === 'failed' && typeof onRejudge === 'function'
   const canPreviewOgp = typeof ogpPreviewUrl === 'string' && ogpPreviewUrl.length > 0
   const rankLabel = status === 'scored' && isFiniteNumber(rank) ? `${rank}位` : FAILED_RANK_DISPLAY
@@ -138,7 +139,7 @@ export function ResultSummary({
         <button
           type="button"
           onClick={onClose}
-          aria-label={closeAriaLabel}
+          aria-label={resolvedCloseAriaLabel}
           className="neon-button-base result-summary-back-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
         >
           <span aria-hidden="true" className="result-summary-back-icon">

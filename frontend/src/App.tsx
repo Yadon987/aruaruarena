@@ -328,6 +328,7 @@ function formatMyPostCreatedAt(createdAt: string | undefined): string {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Tokyo',
   }).format(date)
 }
 
@@ -1505,7 +1506,7 @@ function App() {
   useFocusTrap({
     isActive: viewMode === 'result' && !isRejudgeModalOpen,
     containerRef: resultDialogRef,
-    onEscape: closeResultAndBackTop,
+    onEscape: handleResultPrimaryClose,
   })
 
   useFocusTrap({

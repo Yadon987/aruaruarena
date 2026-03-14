@@ -168,42 +168,81 @@ class OgpGeneratorService
   end
 
   def build_post_draw_items
-    body_lines = build_body_lines
     nickname_text = "#{TEXT_CONFIG[:nickname_prefix]}  #{sanitize_post_text(@post.nickname)}"
-    rank_text = build_rank_text(safe_rank)
-    score_text = build_score_text(@post.average_score)
-    rank_items = centered_pair_items(
-      :rank_number, :rank_suffix,
-      rank_text.delete(TEXT_CONFIG[:rank_suffix]), TEXT_CONFIG[:rank_suffix],
-      TEXT_COLORS[:rank], NUMBER_FONT_PATH, FONT_BOLD_PATH,
-      gap: 8, number_stroke_width: 6, suffix_stroke_width: 3,
-      area: :rank_area
-    )
-    score_items = centered_pair_items(
-      :score_number, :score_suffix,
-      score_text.delete(TEXT_CONFIG[:score_suffix]), TEXT_CONFIG[:score_suffix],
-      TEXT_COLORS[:score], NUMBER_FONT_PATH, FONT_BOLD_PATH,
-      gap: 10, number_stroke_width: 5, suffix_stroke_width: 2
-    )
 
     [
-      *body_lines.map.with_index do |line, index|
-        multiline_text_item(:body, line, index, TEXT_COLORS[:body], FONT_BOLD_PATH, stroke_width: 1, shadow: false)
-      end,
-      left_text_item(
-        :footer,
-        TEXT_CONFIG[:footer_text],
-        TEXT_COLORS[:footer],
-        FONT_BOLD_PATH,
-        stroke_width: 2,
-        shadow: false,
-        glow: { color: TEXT_COLORS[:footer_glow], layers: [{ x: 0, y: 0 }, { x: 0, y: 2 }] },
-        center_in: :title_plate
-      ),
-      left_text_item(:nickname, nickname_text, TEXT_COLORS[:nickname], FONT_BOLD_PATH, stroke_width: 1),
-      *rank_items,
-      *score_items
+      *build_body_items,
+      build_footer_item,
+      build_nickname_item(nickname_text),
+      *build_rank_items,
+      *build_score_items
     ]
+  end
+
+  def build_body_items
+    build_body_lines.map.with_index do |line, index|
+      multiline_text_item(:body, line, index, TEXT_COLORS[:body], FONT_BOLD_PATH, stroke_width: 1, shadow: false)
+    end
+  end
+
+  def build_footer_item
+    left_text_item(
+      :footer,
+      TEXT_CONFIG[:footer_text],
+      TEXT_COLORS[:footer],
+      FONT_BOLD_PATH,
+      stroke_width: 2,
+      shadow: false,
+      glow: { color: TEXT_COLORS[:footer_glow], layers: [{ x: 0, y: 0 }, { x: 0, y: 2 }] },
+      center_in: :title_plate
+    )
+  end
+
+  def build_nickname_item(nickname_text)
+    left_text_item(:nickname, nickname_text, TEXT_COLORS[:nickname], FONT_BOLD_PATH, stroke_width: 1)
+  end
+
+  def build_rank_items
+    centered_pair_items(
+      :rank_number,
+      :rank_suffix,
+      build_rank_text(safe_rank).chomp(TEXT_CONFIG[:rank_suffix]),
+      TEXT_CONFIG[:rank_suffix],
+      style: rank_pair_style
+    )
+  end
+
+  def build_score_items
+    centered_pair_items(
+      :score_number,
+      :score_suffix,
+      build_score_text(@post.average_score).chomp(TEXT_CONFIG[:score_suffix]),
+      TEXT_CONFIG[:score_suffix],
+      style: score_pair_style
+    )
+  end
+
+  def rank_pair_style
+    {
+      color: TEXT_COLORS[:rank],
+      number_font_path: NUMBER_FONT_PATH,
+      suffix_font_path: FONT_BOLD_PATH,
+      gap: 8,
+      number_stroke_width: 6,
+      suffix_stroke_width: 3,
+      area: :rank_area
+    }
+  end
+
+  def score_pair_style
+    {
+      color: TEXT_COLORS[:score],
+      number_font_path: NUMBER_FONT_PATH,
+      suffix_font_path: FONT_BOLD_PATH,
+      gap: 10,
+      number_stroke_width: 5,
+      suffix_stroke_width: 2
+    }
   end
 
   def sanitize_post_text(text)
@@ -244,17 +283,29 @@ class OgpGeneratorService
     }
   end
 
-  def centered_pair_items(number_layout_key, suffix_layout_key, number_text, suffix_text, color, number_font_path, suffix_font_path, gap:, number_stroke_width:, suffix_stroke_width:, area: nil)
-    number_item = left_text_item(number_layout_key, number_text, color, number_font_path, stroke_width: number_stroke_width)
-    suffix_item = left_text_item(suffix_layout_key, suffix_text, color, suffix_font_path, stroke_width: suffix_stroke_width)
+  def centered_pair_items(number_layout_key, suffix_layout_key, number_text, suffix_text, style:)
+    number_item = left_text_item(
+      number_layout_key,
+      number_text,
+      style[:color],
+      style[:number_font_path],
+      stroke_width: style[:number_stroke_width]
+    )
+    suffix_item = left_text_item(
+      suffix_layout_key,
+      suffix_text,
+      style[:color],
+      style[:suffix_font_path],
+      stroke_width: style[:suffix_stroke_width]
+    )
 
     total_width = estimate_text_width(number_item[:text], number_item[:size]) +
-                  gap +
+                  style[:gap] +
                   estimate_text_width(suffix_item[:text], suffix_item[:size])
-    start_x = centered_x_for_area(total_width, area || :panel)
+    start_x = centered_x_for_area(total_width, style[:area] || :panel)
 
     number_item[:x] = start_x
-    suffix_item[:x] = start_x + estimate_text_width(number_item[:text], number_item[:size]) + gap
+    suffix_item[:x] = start_x + estimate_text_width(number_item[:text], number_item[:size]) + style[:gap]
 
     [number_item, suffix_item]
   end
