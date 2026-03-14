@@ -40,13 +40,19 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class::FONT_SIZES.keys).not_to include(:judge_score, :judge_comment)
     end
 
-    it '同梱フォントを使用すること' do
-      expect(described_class::FONT_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf'))
-      expect(described_class::FONT_BOLD_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf'))
-      expect(described_class::NUMBER_FONT_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf'))
+    it '日本語描画が安定するTTFフォントを使用すること' do
+      expect(described_class::FONT_PATH).to eq(
+        Pathname.new('/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf')
+      )
+      expect(described_class::FONT_BOLD_PATH).to eq(
+        Pathname.new('/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf')
+      )
+      expect(described_class::NUMBER_FONT_PATH).to eq(
+        Pathname.new('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+      )
     end
 
-    it '同梱フォント実体が存在すること' do
+    it '描画に使用するフォント実体が存在すること' do
       expect(described_class::FONT_PATH.exist?).to be(true)
       expect(described_class::FONT_BOLD_PATH.exist?).to be(true)
       expect(described_class::NUMBER_FONT_PATH.exist?).to be(true)

@@ -186,8 +186,6 @@ class OgpMetaTagService
   end
 
   def self.uploaded_image_exists_cache_store
-    return Rails.cache unless Rails.cache.is_a?(ActiveSupport::Cache::NullStore)
-
     @uploaded_image_exists_cache_store ||= ActiveSupport::Cache::MemoryStore.new
   end
 
