@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import 'dseg/css/dseg.css'
 import App from './App.tsx'
 import './index.css'
+import { initializeGoogleAnalytics } from './shared/services'
 
 function shouldUseMockApi(): boolean {
   const value = import.meta.env.VITE_USE_MOCK_API
@@ -24,6 +25,8 @@ async function enableMocking() {
 }
 
 enableMocking().then(() => {
+  initializeGoogleAnalytics()
+
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />

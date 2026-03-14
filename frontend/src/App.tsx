@@ -23,7 +23,7 @@ import { SCORE_THRESHOLDS, TEXT_LENGTH } from './shared/constants/validation'
 import { useAvatarImages } from './shared/hooks/useAvatarImages'
 import { useFocusTrap } from './shared/hooks/useFocusTrap'
 import { useReducedMotion } from './shared/hooks/useReducedMotion'
-import { ApiClientError, api } from './shared/services/api'
+import { ApiClientError, api, trackTopPageView } from './shared/services'
 import type { CreatePostResponse, GetHealthResponse } from './shared/types/api'
 import type { JudgePersona, Post } from './shared/types/domain'
 import { countGraphemeClusters } from './shared/utils'
@@ -539,6 +539,7 @@ function App() {
   const minimumJudgingSessionRef = useRef(0)
   const submitAbortControllerRef = useRef<AbortController | null>(null)
   const submitRequestSeqRef = useRef(0)
+  const hasTrackedTopPageViewRef = useRef(false)
   const activeResultErrorCode = resultModalErrorCode
 
   const clearMinimumJudgingDuration = useCallback((invalidate: boolean = true) => {
@@ -618,6 +619,13 @@ function App() {
     if (import.meta.env.MODE === 'test' && !shouldShowOnboardingModalInTest()) return
     setIsOnboardingOpen(true)
   }, [hasCompletedOnboarding, isOnboardingOpen, viewMode])
+
+  useEffect(() => {
+    if (viewMode !== 'top' || hasTrackedTopPageViewRef.current) return
+
+    trackTopPageView()
+    hasTrackedTopPageViewRef.current = true
+  }, [viewMode])
 
   const resultAudioScene = useMemo(() => {
     if (viewMode !== 'result' || !activeResultPost) return null
