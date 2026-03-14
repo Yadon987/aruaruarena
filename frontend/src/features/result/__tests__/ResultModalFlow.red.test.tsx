@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
@@ -283,6 +283,38 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
   })
 
+  it('自分の投稿経由ではトップへではなく戻るボタンを表示し、一覧モーダルへ戻れる', async () => {
+    // 何を検証するか: 過去の投稿から開いた結果モーダルだけ特別に一覧復帰導線へ差し替わること
+    localStorage.setItem('my_post_ids', JSON.stringify(['my-post-id']))
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'my-post-id',
+      nickname: '自分太郎',
+      body: '自分本文',
+      status: 'scored',
+      created_at: '2026-02-17T00:00:00Z',
+      average_score: 86.5,
+      rank: 4,
+      total_count: 14,
+      judgments: [],
+    })
+
+    render(<App />)
+
+    await selectMyPost('my-post-id')
+
+    const resultModal = await screen.findByRole('dialog', { name: '審査結果モーダル' })
+    expect(
+      within(resultModal).getByRole('button', { name: '自分の投稿へ戻る' })
+    ).toBeInTheDocument()
+    expect(within(resultModal).queryByRole('button', { name: 'トップへ' })).not.toBeInTheDocument()
+
+    fireEvent.click(within(resultModal).getByRole('button', { name: '自分の投稿へ戻る' }))
+
+    const myPostsDialog = await screen.findByRole('dialog', { name: '自分の投稿' })
+    expect(within(myPostsDialog).getByRole('button', { name: /投稿詳細を開く/ })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
+  })
+
   it('閉じるボタンとEscで結果モーダルを閉じる', async () => {
     // 何を検証するか: 閉じるボタンとEscキーでモーダルが閉じること
     vi.spyOn(api.posts, 'create').mockResolvedValue({
@@ -382,6 +414,37 @@ describe('E15-01 RED: ResultModal Flow', () => {
     expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'シェア画像を表示' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
+  })
+
+  it('ランキング経由ではトップへではなく戻るボタンを表示し、ランキングモーダルへ戻れる', async () => {
+    // 何を検証するか: ランキングから開いた結果モーダルは一覧復帰導線を優先すること
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'rank-post-1',
+      nickname: 'ランク太郎',
+      body: '本文',
+      status: 'scored',
+      created_at: '2026-02-17T00:00:00Z',
+      average_score: 90.1,
+      rank: 1,
+      total_count: 40,
+      judgments: [],
+    })
+
+    render(<App />)
+
+    await openRankingResultFromTopRanking()
+
+    const resultModal = await screen.findByRole('dialog', { name: '審査結果モーダル' })
+    expect(
+      within(resultModal).getByRole('button', { name: 'ランキングへ戻る' })
+    ).toBeInTheDocument()
+    expect(within(resultModal).queryByRole('button', { name: 'トップへ' })).not.toBeInTheDocument()
+
+    fireEvent.click(within(resultModal).getByRole('button', { name: 'ランキングへ戻る' }))
+
+    const rankingDialog = await screen.findByRole('dialog', { name: 'ランキング' })
+    expect(rankingDialog).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
   })
 
   it('再試行ボタン押下で同一idの再取得を1回実行する', async () => {

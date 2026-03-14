@@ -645,6 +645,26 @@ RSpec.describe GeminiAdapter do
     end
   end
 
+  describe '#send_request' do
+    it 'x-goog-api-keyヘッダーでAPIキーを送信し、クエリパラメータを使わないこと' do
+      request = Struct.new(:headers, :params, :body).new({}, {}, nil)
+      response = instance_double(Faraday::Response)
+      client = instance_double(Faraday::Connection)
+
+      allow(adapter).to receive(:client).and_return(client)
+      allow(adapter).to receive(:api_key).and_return('test-gemini-key')
+      allow(client).to receive(:post).with('v1beta/models/gemini-2.5-flash:generateContent').and_yield(request).and_return(response)
+
+      result = adapter.send(:send_request, sample: 'payload')
+
+      expect(result).to eq(response)
+      expect(request.headers['x-goog-api-key']).to eq('test-gemini-key')
+      expect(request.headers['Content-Type']).to eq('application/json')
+      expect(request.params).to eq({})
+      expect(request.body).to eq(JSON.generate(sample: 'payload'))
+    end
+  end
+
   it_behaves_like 'adapter api key validation', 'GEMINI_API_KEY'
 
   describe '#judge (Integration)', vcr: true do

@@ -17,6 +17,7 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
       expect(json['id']).to eq(post.id)
       expect(json['nickname']).to eq('太郎')
       expect(json['body']).to eq('スヌーズ押して二度寝')
+      expect(json['created_at']).to eq(post.created_at.as_json)
       expect(json['average_score']).to eq(85.3)
       expect(json['status']).to eq('scored')
       expect(json['judges_count']).to eq(3)
@@ -226,7 +227,7 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
 
       # トップレベルフィールドの存在チェック
       expect(json).to include(
-        'id', 'nickname', 'body', 'average_score',
+        'id', 'nickname', 'body', 'created_at', 'average_score',
         'status', 'judges_count', 'rank', 'total_count', 'judgments'
       )
 
@@ -234,6 +235,7 @@ RSpec.describe 'GET /api/posts/:id', type: :request do
       expect(json['id']).to be_a(String)
       expect(json['nickname']).to be_a(String)
       expect(json['body']).to be_a(String)
+      expect(json['created_at']).to be_a(String)
       expect(json['average_score']).to be_a(Float)
       expect(json['status']).to be_a(String)
       expect(json['judges_count']).to be_an(Integer)

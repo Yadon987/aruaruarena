@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
 import { api } from '../../../shared/services/api'
-import { openMyPostsDialog } from '../../../test/appTestHelpers'
+import { openMyPostsDialog, selectMyPost } from '../../../test/appTestHelpers'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -53,8 +53,7 @@ describe('MyPostDetail Integration', () => {
 
     render(<App />)
 
-    await openMyPostsDialog()
-    fireEvent.click(await screen.findByRole('button', { name: 'id-1' }))
+    await selectMyPost('id-1')
 
     const detail = await screen.findByRole('heading', { name: '投稿詳細' })
     const detailSection = detail.closest('section')
@@ -78,13 +77,12 @@ describe('MyPostDetail Integration', () => {
 
     render(<App />)
 
-    await openMyPostsDialog()
-    fireEvent.click(await screen.findByRole('button', { name: 'id-1' }))
+    await selectMyPost('id-1')
     fireEvent.click(await screen.findByRole('button', { name: '戻る' }))
 
     expect(await screen.findByRole('heading', { name: '自分の投稿' })).toBeInTheDocument()
     const dialog = await screen.findByRole('dialog', { name: '自分の投稿' })
-    expect(within(dialog).getByRole('button', { name: 'id-1' })).toBeInTheDocument()
+    expect(within(dialog).getByText('id-1')).toBeInTheDocument()
   })
 
   it('モーダル再オープン時は一覧を初期表示する', async () => {
@@ -100,8 +98,7 @@ describe('MyPostDetail Integration', () => {
 
     render(<App />)
 
-    await openMyPostsDialog()
-    fireEvent.click(await screen.findByRole('button', { name: 'id-1' }))
+    await selectMyPost('id-1')
     const detailHeading = await screen.findByRole('heading', {
       name: '投稿詳細',
     })

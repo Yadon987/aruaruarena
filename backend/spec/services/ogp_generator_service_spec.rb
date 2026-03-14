@@ -70,7 +70,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         status: Post::STATUS_SCORED,
         nickname: '太郎',
         body: 'あるある本文',
-        average_score: 85.5
+        average_score: 85.5,
+        calculate_rank: 11
       )
     end
     let(:service) { described_class.new('post-id') }
@@ -98,33 +99,76 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class.private_instance_methods(false)).not_to include(:draw_judgments)
     end
 
-    # 何を検証するか: 描画処理はニックネーム・本文・スコアの3回だけで完結すること
-    it 'draw_textは3回だけ呼ばれること' do
+    # 何を検証するか: 本文1行+ニックネーム+順位数字/接尾辞+点数数字/接尾辞+フッターの7要素で描画されること
+    it 'draw_textは7回だけ呼ばれること' do
       redraw_service = described_class.new('post-id')
-      expect(redraw_service).to receive(:draw_text).exactly(3).times.and_call_original
+      expect(redraw_service).to receive(:draw_text).exactly(7).times.and_call_original
 
       redraw_service.execute
     end
 
-    # 何を検証するか: スコア表示は小数第1位付きで描画されること
-    it '総合スコアが85.5点として描画されること' do
+    # 何を検証するか: 順位数字が独立した主文言として大きく描画されること
+    it '11が主文言として描画されること' do
       allow(service).to receive(:draw_text).and_call_original
       expect(service).to receive(:draw_text)
-        .with(anything, '85.5点', described_class::FONT_SIZES[:score], described_class::TEXT_COLORS[:score],
-              described_class::LAYOUT[:score][:x], described_class::LAYOUT[:score][:y], described_class::FONT_BOLD_PATH)
+        .with(anything, hash_including(
+                          text: '11',
+                          size: be_between(described_class::MIN_FONT_SIZES[:rank_number], described_class::FONT_SIZES[:rank_number]),
+                          color: described_class::TEXT_COLORS[:rank],
+                          y: described_class::LAYOUT[:rank_number][:y],
+                          font: described_class::NUMBER_FONT_PATH
+                        ))
         .and_call_original
 
       service.execute
     end
 
-    # 何を検証するか: average_score=nilでも0.0点でフォールバックして描画すること
+    # 何を検証するか: ニックネームが独立ラベルとして描画されること
+    it 'ニックネーム入りのラベルが描画されること' do
+      allow(service).to receive(:draw_text).and_call_original
+      expect(service).to receive(:draw_text)
+        .with(anything, hash_including(
+                          text: '投稿者  太郎',
+                          size: be_between(described_class::MIN_FONT_SIZES[:nickname], described_class::FONT_SIZES[:nickname]),
+                          color: described_class::TEXT_COLORS[:nickname],
+                          y: described_class::LAYOUT[:nickname][:y],
+                          font: described_class::FONT_BOLD_PATH
+                        ))
+        .and_call_original
+
+      service.execute
+    end
+
+    # 何を検証するか: average_score=nilでも0.0点表記へフォールバックすること
     it 'average_scoreがnilのときは0.0点が描画されること' do
       allow(post).to receive(:average_score).and_return(nil)
       allow(service).to receive(:draw_text).and_call_original
       expect(service).to receive(:draw_text)
-        .with(anything, '0.0点', described_class::FONT_SIZES[:score], described_class::TEXT_COLORS[:score],
-              described_class::LAYOUT[:score][:x], described_class::LAYOUT[:score][:y], described_class::FONT_BOLD_PATH)
+        .with(anything, hash_including(
+                          text: '0.0',
+                          size: be_between(described_class::MIN_FONT_SIZES[:score_number], described_class::FONT_SIZES[:score_number]),
+                          color: described_class::TEXT_COLORS[:score],
+                          y: described_class::LAYOUT[:score_number][:y],
+                          font: described_class::NUMBER_FONT_PATH
+                        ))
         .and_call_original
+
+      service.execute
+    end
+
+    # 何を検証するか: 順位未確定時に「ランク集計中」を単独ラベルとして描画し「位」を付けないこと
+    it 'rankがnilのときはランク集計中を単独描画すること' do
+      allow(post).to receive(:calculate_rank).and_return(nil)
+      allow(service).to receive(:draw_text).and_call_original
+      expect(service).to receive(:draw_text)
+        .with(anything, hash_including(
+                          text: 'ランク集計中',
+                          color: described_class::TEXT_COLORS[:rank],
+                          y: described_class::LAYOUT[:rank_pending][:y],
+                          font: described_class::FONT_BOLD_PATH
+                        ))
+        .and_call_original
+      expect(service).not_to receive(:draw_text).with(anything, hash_including(text: '位'))
 
       service.execute
     end
@@ -153,6 +197,75 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       sanitized = service.send(:sanitize_text, '100点')
 
       expect(sanitized).to eq('100点')
+    end
+  end
+
+  describe 'E20 REFACTOR: レイアウト計算' do
+    let(:service) { described_class.allocate }
+
+    it '長い本文を本文の最大行数以内に折り返し、末尾を省略すること' do
+      text = '「朝起きた瞬間からもう一回寝られる理由を本気で探してしまい、布団の中で言い訳を量産しながら気づけばアラームを三回止めているあるあるです」'
+
+      lines = service.send(
+        :wrapped_lines,
+        text,
+        max_width: 420,
+        font_size: 42,
+        max_lines: described_class::BODY_MAX_LINES
+      )
+
+      expect(lines.length).to be <= described_class::BODY_MAX_LINES
+      expect(lines.last).to end_with('...')
+    end
+
+    it '順位ラベルは本番経路で順位数値と接尾辞に分かれて描画されること' do
+      allow(service).to receive(:safe_rank).and_return(11)
+
+      number_item, suffix_item = service.send(:build_rank_items)
+
+      expect(number_item[:text]).to eq('11')
+      expect(number_item[:y]).to eq(described_class::LAYOUT[:rank_number][:y])
+      expect(suffix_item[:text]).to eq(described_class::TEXT_CONFIG[:rank_suffix])
+      expect(suffix_item[:y]).to eq(described_class::LAYOUT[:rank_suffix][:y])
+    end
+
+    it '本文の行間は各行の縮小率に関わらず一定であること' do
+      allow(service).to receive(:body_font_size).and_return(34)
+      allow(service).to receive(:build_body_lines).with(font_size: 34).and_return(['短い本文', 'とても長くて縮小される本文'])
+
+      items = service.send(:build_body_items)
+
+      expect(items.first[:y]).to eq(described_class::LAYOUT[:body][:y])
+      expect(items.second[:y] - items.first[:y]).to eq(34 + described_class::BODY_LINE_SPACING)
+      expect(items.map { |item| item[:size] }).to all(eq(34))
+    end
+
+    it '本文が縮小後サイズで4行以内に収まる場合は省略しないこと' do
+      allow(service).to receive(:sanitized_body_text).and_return('本文テキスト')
+      allow(service).to receive(:body_line_count) do |font_size|
+        font_size > 34 ? 5 : 4
+      end
+      allow(service).to receive(:wrapped_lines) do |_text, max_width:, font_size:, max_lines:|
+        expect(max_width).to eq(described_class::LAYOUT[:body][:max_width])
+        expect(max_lines).to eq(described_class::BODY_MAX_LINES)
+
+        if font_size == 34
+          ['1行目', '2行目', '3行目', '4行目']
+        else
+          ['1行目', '2行目', '3行目', '4行目...']
+        end
+      end
+
+      expect(service.send(:build_body_lines)).to eq(['1行目', '2行目', '3行目', '4行目'])
+    end
+
+    it '点数が広すぎる場合はフォントサイズを自動で縮小すること' do
+      font_size = service.send(:fitted_font_size, :score_number, '100.0')
+
+      expect(font_size).to be < described_class::FONT_SIZES[:score_number]
+      expect(font_size).to be >= described_class::MIN_FONT_SIZES[:score_number]
+      expect(service.send(:estimate_text_width, '100.0', font_size))
+        .to be <= described_class::LAYOUT[:score_number][:max_width]
     end
   end
 
@@ -190,7 +303,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         status: Post::STATUS_SCORED,
         nickname: '太郎',
         body: 'あるある本文',
-        average_score: 85.5
+        average_score: 85.5,
+        calculate_rank: 11
       )
       allow(Post).to receive(:find).with('post-id').and_return(post)
       service = described_class.new('post-id')
@@ -208,7 +322,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         status: Post::STATUS_SCORED,
         nickname: '太郎',
         body: 'あるある本文',
-        average_score: 85.5
+        average_score: 85.5,
+        calculate_rank: 11
       )
       allow(Post).to receive(:find).with('post-id').and_return(post)
       service = described_class.new('post-id')

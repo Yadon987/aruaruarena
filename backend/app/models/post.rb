@@ -147,6 +147,7 @@ class Post
       id: id,
       nickname: nickname,
       body: body,
+      created_at: created_at,
       average_score: average_score&.to_f,
       status: status,
       judges_count: judges_count,

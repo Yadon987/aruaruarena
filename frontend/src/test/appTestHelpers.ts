@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen, within } from '@testing-library/react'
 import { vi } from 'vitest'
 import { useRankings } from '../shared/hooks/useRankings'
 import type { RankingItem } from '../shared/types/domain'
@@ -26,9 +26,13 @@ export async function openMyPostsDialog() {
 }
 
 export async function selectMyPost(postId: string) {
-  await openMyPostsDialog()
+  const dialog = await openMyPostsDialog()
 
-  const button = await screen.findByRole('button', { name: postId })
+  const postIdNode = await within(dialog).findByText(postId)
+  const button = postIdNode.closest('button')
+  if (!button) {
+    throw new Error(`投稿ID ${postId} の投稿カードボタンが見つかりません`)
+  }
   await act(async () => {
     fireEvent.click(button)
     await Promise.resolve()
