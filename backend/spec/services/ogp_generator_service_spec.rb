@@ -45,6 +45,12 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class::FONT_BOLD_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf'))
       expect(described_class::NUMBER_FONT_PATH).to eq(Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf'))
     end
+
+    it '同梱フォント実体が存在すること' do
+      expect(described_class::FONT_PATH.exist?).to be(true)
+      expect(described_class::FONT_BOLD_PATH.exist?).to be(true)
+      expect(described_class::NUMBER_FONT_PATH.exist?).to be(true)
+    end
   end
 
   describe 'E20 RED: 初期化処理' do
