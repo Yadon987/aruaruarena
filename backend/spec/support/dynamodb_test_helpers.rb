@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'timeout'
+require_relative 'dynamodb_constants'
 
 module DynamoDBTestHelpers
   include DynamoDBJudgmentHelpers
@@ -139,9 +140,6 @@ module DynamoDBTestHelpers
   end
 
   def normalized_dynamodb_endpoint
-    endpoint = ENV.fetch('DYNAMODB_ENDPOINT', nil)
-    return 'http://127.0.0.1:8002' if ['http://127.0.0.1:8000', 'http://localhost:8000'].include?(endpoint)
-
-    endpoint
+    DynamoDBConstants.normalized_endpoint(ENV.fetch('DYNAMODB_ENDPOINT', nil))
   end
 end

@@ -194,11 +194,13 @@ RSpec.describe OgpMetaTagService, type: :service do
       original_ogp_s3_bucket = ENV.fetch('OGP_S3_BUCKET', nil)
       original_aws_region = ENV.fetch('AWS_REGION', nil)
       Rails.cache.clear
+      described_class.clear_uploaded_image_exists_cache!
       example.run
     ensure
       original_ogp_s3_bucket.nil? ? ENV.delete('OGP_S3_BUCKET') : ENV['OGP_S3_BUCKET'] = original_ogp_s3_bucket
       original_aws_region.nil? ? ENV.delete('AWS_REGION') : ENV['AWS_REGION'] = original_aws_region
       Rails.cache.clear
+      described_class.clear_uploaded_image_exists_cache!
     end
 
     context '正常系 (Happy Path)' do
@@ -489,6 +491,24 @@ RSpec.describe OgpMetaTagService, type: :service do
         # 重複スラッシュがないことを確認 (http://...//posts/...)
         expect(html).not_to include('//posts/')
       end
+    end
+  end
+
+  describe '.clear_uploaded_image_exists_cache!' do
+    after do
+      described_class.instance_variable_set(:@uploaded_image_exists_cache_store, nil)
+    end
+
+    it 'フォールバック用MemoryStoreをクリアして再生成可能な状態へ戻すこと' do
+      cache_key = 'ogp_meta_tag_service/test'
+      initial_store = ActiveSupport::Cache::MemoryStore.new
+      described_class.instance_variable_set(:@uploaded_image_exists_cache_store, initial_store)
+      initial_store.write(cache_key, true)
+
+      described_class.clear_uploaded_image_exists_cache!
+
+      expect(initial_store.read(cache_key)).to be_nil
+      expect(described_class.instance_variable_get(:@uploaded_image_exists_cache_store)).to be_nil
     end
   end
 

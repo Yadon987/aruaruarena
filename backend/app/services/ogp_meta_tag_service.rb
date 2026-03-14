@@ -191,6 +191,14 @@ class OgpMetaTagService
     @uploaded_image_exists_cache_store ||= ActiveSupport::Cache::MemoryStore.new
   end
 
+  def self.clear_uploaded_image_exists_cache!
+    cache_store = @uploaded_image_exists_cache_store
+    return unless cache_store.respond_to?(:clear)
+
+    cache_store.clear
+    @uploaded_image_exists_cache_store = nil
+  end
+
   def self.delete_uploaded_image_exists_cache!(post)
     uploaded_image_exists_cache_store.delete(uploaded_image_exists_cache_key(post))
   end

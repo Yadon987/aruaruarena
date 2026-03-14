@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'dynamodb_constants'
+
 # DynamoDB Localの設定
 RSpec.configure do |config|
   config.before(:suite) do
-    endpoint = ENV['DYNAMODB_ENDPOINT'].presence || 'http://127.0.0.1:8002'
-    endpoint = 'http://127.0.0.1:8002' if ['http://127.0.0.1:8000', 'http://localhost:8000'].include?(endpoint)
+    endpoint = DynamoDBConstants.normalized_endpoint(ENV.fetch('DYNAMODB_ENDPOINT', nil))
     ENV['DYNAMODB_ENDPOINT'] = endpoint
 
     # テスト用DynamoDB設定
