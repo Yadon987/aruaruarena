@@ -8,6 +8,7 @@ import { RankingModal } from './features/ranking'
 import { ResultSummary } from './features/result/components/ResultSummary'
 import { AudioConsentModal } from './features/top/components/AudioConsentModal'
 import { MyPostDetail } from './features/top/components/MyPostDetail'
+import { OnboardingModal } from './features/top/components/OnboardingModal'
 import { PostFormModal } from './features/top/components/PostFormModal'
 import { PrivacyPolicyModal } from './features/top/components/PrivacyPolicyModal'
 import { SoundControlButton } from './features/top/components/SoundControlButton'
@@ -65,6 +66,7 @@ const MESSAGE_JUDGING_LOCAL_WORKER_GUIDE =
 const DIALOG_CLOSE_KEY = 'Escape'
 const OPEN_KEYS = ['Enter', ' '] as const
 const ROOT_PATH = '/'
+const ONBOARDING_COMPLETED_STORAGE_KEY = 'aruaru_onboarding_completed'
 const SOUND_SETTINGS_PANEL_ID = 'sound-settings-panel'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
@@ -115,6 +117,13 @@ function shouldShowAudioConsentModalInTest(): boolean {
   return (
     (globalThis as { __SHOW_AUDIO_CONSENT_MODAL_IN_TEST__?: boolean })
       .__SHOW_AUDIO_CONSENT_MODAL_IN_TEST__ === true
+  )
+}
+
+function shouldShowOnboardingModalInTest(): boolean {
+  return (
+    (globalThis as { __SHOW_ONBOARDING_MODAL_IN_TEST__?: boolean })
+      .__SHOW_ONBOARDING_MODAL_IN_TEST__ === true
   )
 }
 
@@ -198,6 +207,22 @@ function readMinimumJudgingEndsAt(): number {
   const rawValue = sessionStorage.getItem(MINIMUM_JUDGING_DURATION_STORAGE_KEY)
   const parsedValue = Number(rawValue)
   return Number.isFinite(parsedValue) ? parsedValue : 0
+}
+
+function readOnboardingCompleted(): boolean {
+  try {
+    return localStorage.getItem(ONBOARDING_COMPLETED_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function writeOnboardingCompleted() {
+  try {
+    localStorage.setItem(ONBOARDING_COMPLETED_STORAGE_KEY, 'true')
+  } catch {
+    // ストレージ無効環境ではメモリ上の状態だけを維持する。
+  }
 }
 
 function writeMinimumJudgingEndsAt(endsAt: number) {
@@ -460,6 +485,10 @@ function App() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [isLoadingPostDetail, setIsLoadingPostDetail] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('top')
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(() =>
+    readOnboardingCompleted()
+  )
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
   const [volume, setVolume] = useState(() => sound.volume)
   const [hasAudioConsent, setHasAudioConsent] = useState(() => sound.hasConsented)
   const [isSoundSettingsOpen, setIsSoundSettingsOpen] = useState(false)
@@ -583,6 +612,13 @@ function App() {
     setHasAudioConsent(true)
   }, [sound])
 
+  useEffect(() => {
+    if (viewMode !== 'top' || window.location.pathname !== ROOT_PATH) return
+    if (hasCompletedOnboarding || isOnboardingOpen) return
+    if (import.meta.env.MODE === 'test' && !shouldShowOnboardingModalInTest()) return
+    setIsOnboardingOpen(true)
+  }, [hasCompletedOnboarding, isOnboardingOpen, viewMode])
+
   const resultAudioScene = useMemo(() => {
     if (viewMode !== 'result' || !activeResultPost) return null
     if (!isFinalResultPost(activeResultPost)) {
@@ -597,8 +633,16 @@ function App() {
     return 'success'
   }, [activeResultPost, viewMode])
   const audioScene = resultAudioScene ?? (viewMode === 'result' ? 'top' : viewMode)
+  const shouldAutoOpenOnboarding =
+    viewMode === 'top' &&
+    window.location.pathname === ROOT_PATH &&
+    !hasCompletedOnboarding &&
+    (import.meta.env.MODE !== 'test' || shouldShowOnboardingModalInTest())
   const isAudioConsentModalOpen =
-    !hasAudioConsent && (import.meta.env.MODE !== 'test' || shouldShowAudioConsentModalInTest())
+    !isOnboardingOpen &&
+    !shouldAutoOpenOnboarding &&
+    !hasAudioConsent &&
+    (import.meta.env.MODE !== 'test' || shouldShowAudioConsentModalInTest())
   const syncMyPostIds = useCallback(() => setMyPostIds(readPostIds()), [])
   const setMyPostLoading = useCallback((postId: string, isLoading: boolean) => {
     setLoadingMyPostIds((prev) => {
@@ -1456,6 +1500,21 @@ function App() {
     setIsPrivacyPolicyOpen(false)
   }
 
+  const completeOnboarding = useCallback(() => {
+    writeOnboardingCompleted()
+    setHasCompletedOnboarding(true)
+    setIsOnboardingOpen(false)
+  }, [])
+
+  const openOnboarding = useCallback(() => {
+    setIsFooterActionSheetOpen(false)
+    setIsMyPostsOpen(false)
+    setIsPrivacyPolicyOpen(false)
+    setIsRankingModalOpen(false)
+    resetMyPostsModalState()
+    setIsOnboardingOpen(true)
+  }, [resetMyPostsModalState])
+
   const openContactForm = () => {
     setIsFooterActionSheetOpen(false)
     window.open(CONTACT_FORM_URL, '_blank', 'noopener,noreferrer')
@@ -1770,6 +1829,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AudioConsentModal isOpen={isAudioConsentModalOpen} onConsent={handleAudioConsent} />
+      <OnboardingModal isOpen={isOnboardingOpen} onClose={completeOnboarding} />
       {viewMode === 'judging' && (
         <div className="fixed left-4 top-4 z-50 sm:left-6 sm:top-6">
           <NeonButton
@@ -2205,6 +2265,15 @@ function App() {
                   onKeyDown={handleMyPostsTriggerKeyDown}
                 >
                   過去の投稿
+                </NeonButton>
+                <NeonButton
+                  type="button"
+                  variant="secondary"
+                  compactOnMobile={true}
+                  ariaLabel="遊び方を見る"
+                  onClick={openOnboarding}
+                >
+                  遊び方を見る
                 </NeonButton>
                 <NeonButton
                   ref={privacyPolicyTriggerRef}

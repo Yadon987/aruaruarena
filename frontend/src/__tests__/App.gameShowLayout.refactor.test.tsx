@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
@@ -23,11 +23,14 @@ describe('App Game Show Layout Refactor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
+    vi.unstubAllGlobals()
     originalScrollIntoView = window.HTMLElement.prototype.scrollIntoView
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     window.HTMLElement.prototype.scrollIntoView = originalScrollIntoView
   })
 
@@ -79,6 +82,39 @@ describe('App Game Show Layout Refactor', () => {
     expect(
       screen.getByRole('button', { name: '問い合わせ（新しいタブで開く）' })
     ).toBeInTheDocument()
+  })
+
+  it('初回表示時はオンボーディングを先に表示し、閉じた後に音声確認を表示する', () => {
+    vi.stubGlobal('__SHOW_ONBOARDING_MODAL_IN_TEST__', true)
+    vi.stubGlobal('__SHOW_AUDIO_CONSENT_MODAL_IN_TEST__', true)
+
+    render(<App />)
+
+    expect(screen.getByRole('dialog', { name: '遊び方ガイド' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('alertdialog', { name: '音声を再生しますか？' })
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'はじめる' }))
+
+    return waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: '遊び方ガイド' })).not.toBeInTheDocument()
+      expect(screen.getByRole('alertdialog', { name: '音声を再生しますか？' })).toBeInTheDocument()
+      expect(localStorage.getItem('aruaru_onboarding_completed')).toBe('true')
+    })
+  })
+
+  it('既読済みでも「その他」から遊び方を再表示できる', () => {
+    localStorage.setItem('aruaru_onboarding_completed', 'true')
+
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'その他を開く' }))
+    fireEvent.click(screen.getByRole('button', { name: '遊び方を見る' }))
+
+    expect(screen.queryByRole('dialog', { name: '補助メニュー' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '遊び方ガイド' })).toBeInTheDocument()
+    expect(localStorage.getItem('aruaru_onboarding_completed')).toBe('true')
   })
 
   it('ランキングボタンを再度押すとランキングモーダルを閉じる', () => {
