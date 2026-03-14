@@ -206,12 +206,13 @@ class OgpGeneratorService
   end
 
   def build_rank_items
-    return [build_pending_rank_item] if safe_rank.nil?
+    rank = safe_rank
+    return [build_pending_rank_item] if rank.nil?
 
     centered_pair_items(
       :rank_number,
       :rank_suffix,
-      build_rank_text(safe_rank).chomp(TEXT_CONFIG[:rank_suffix]),
+      build_rank_text(rank).chomp(TEXT_CONFIG[:rank_suffix]),
       TEXT_CONFIG[:rank_suffix],
       style: rank_pair_style
     )

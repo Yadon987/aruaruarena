@@ -1096,6 +1096,7 @@ function App() {
         <button
           type="button"
           onClick={handleResultPrimaryClose}
+          aria-label={resultCloseButtonAriaLabel}
           className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
         >
           {resultCloseButtonLabel}
@@ -1939,6 +1940,7 @@ function App() {
                   <button
                     type="button"
                     onClick={handleResultPrimaryClose}
+                    aria-label={resultCloseButtonAriaLabel}
                     className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15"
                   >
                     {resultCloseButtonLabel}

@@ -28,7 +28,11 @@ export async function openMyPostsDialog() {
 export async function selectMyPost(postId: string) {
   await openMyPostsDialog()
 
-  const button = await screen.findByRole('button', { name: `投稿ID ${postId} の投稿詳細を開く` })
+  const postIdNode = await screen.findByText(postId)
+  const button = postIdNode.closest('button')
+  if (!button) {
+    throw new Error(`投稿ID ${postId} の投稿カードボタンが見つかりません`)
+  }
   await act(async () => {
     fireEvent.click(button)
     await Promise.resolve()

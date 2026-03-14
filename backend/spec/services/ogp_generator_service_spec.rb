@@ -203,19 +203,30 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
   describe 'E20 REFACTOR: レイアウト計算' do
     let(:service) { described_class.allocate }
 
-    it '長い本文を3行以内に折り返し、末尾を省略すること' do
-      text = '「朝起きた瞬間からもう一回寝られる理由を本気で探してしまうあるあるです」'
+    it '長い本文を本文の最大行数以内に折り返し、末尾を省略すること' do
+      text = '「朝起きた瞬間からもう一回寝られる理由を本気で探してしまい、布団の中で言い訳を量産しながら気づけばアラームを三回止めているあるあるです」'
 
-      lines = service.send(:wrapped_lines, text, max_width: 420, font_size: 42, max_lines: 3)
+      lines = service.send(
+        :wrapped_lines,
+        text,
+        max_width: 420,
+        font_size: 42,
+        max_lines: described_class::BODY_MAX_LINES
+      )
 
-      expect(lines.length).to be <= 3
+      expect(lines.length).to be <= described_class::BODY_MAX_LINES
       expect(lines.last).to end_with('...')
     end
 
-    it '順位ラベルは左パネルの本文開始位置に揃うこと' do
-      item = service.send(:left_text_item, :rank_number, '11', described_class::TEXT_COLORS[:rank], described_class::NUMBER_FONT_PATH)
+    it '順位ラベルは本番経路で順位数値と接尾辞に分かれて描画されること' do
+      allow(service).to receive(:safe_rank).and_return(11)
 
-      expect(item[:x]).to eq(described_class::LAYOUT[:rank_number][:x])
+      number_item, suffix_item = service.send(:build_rank_items)
+
+      expect(number_item[:text]).to eq('11')
+      expect(number_item[:y]).to eq(described_class::LAYOUT[:rank_number][:y])
+      expect(suffix_item[:text]).to eq(described_class::TEXT_CONFIG[:rank_suffix])
+      expect(suffix_item[:y]).to eq(described_class::LAYOUT[:rank_suffix][:y])
     end
 
     it '点数が広すぎる場合はフォントサイズを自動で縮小すること' do
