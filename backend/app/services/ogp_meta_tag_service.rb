@@ -17,6 +17,7 @@ class OgpMetaTagService
   IMAGE_HEIGHT = 630
   OGP_S3_PREFIX = 'ogp/posts'
   S3_HEAD_TIMEOUT = 3
+  UPLOADED_IMAGE_EXISTS_CACHE_TTL = 5.minutes
 
   # クローラー判定用キーワード
   CRAWLER_KEYWORDS = %w[
@@ -129,16 +130,18 @@ class OgpMetaTagService
   end
 
   def self.uploaded_image_exists?(post:)
-    build_s3_client.head_object(bucket: ogp_s3_bucket, key: object_key(post))
-    true
-  rescue Aws::S3::Errors::NotFound, Aws::S3::Errors::NoSuchKey
-    false
-  rescue Aws::S3::Errors::ServiceError => e
-    Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認に失敗: post_id=#{post.id} error=#{e.class} - #{e.message}")
-    false
-  rescue StandardError => e
-    Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認で予期しない例外: post_id=#{post.id} error=#{e.class} - #{e.message}")
-    false
+    Rails.cache.fetch(uploaded_image_exists_cache_key(post), expires_in: UPLOADED_IMAGE_EXISTS_CACHE_TTL) do
+      build_s3_client.head_object(bucket: ogp_s3_bucket, key: object_key(post))
+      true
+    rescue Aws::S3::Errors::NotFound, Aws::S3::Errors::NoSuchKey
+      false
+    rescue Aws::S3::Errors::ServiceError => e
+      Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認に失敗: post_id=#{post.id} error=#{e.class} - #{e.message}")
+      false
+    rescue StandardError => e
+      Rails.logger.warn("[OgpMetaTagService] OGP画像存在確認で予期しない例外: post_id=#{post.id} error=#{e.class} - #{e.message}")
+      false
+    end
   end
 
   # 文字列を指定した長さで省略する
@@ -170,6 +173,10 @@ class OgpMetaTagService
 
   def self.object_key(post)
     "#{OGP_S3_PREFIX}/#{post.id}.png"
+  end
+
+  def self.uploaded_image_exists_cache_key(post)
+    "ogp_meta_tag_service/uploaded_image_exists/#{object_key(post)}"
   end
 
   def self.ogp_s3_bucket

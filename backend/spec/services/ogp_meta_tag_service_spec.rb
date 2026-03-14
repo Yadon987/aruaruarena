@@ -190,9 +190,15 @@ RSpec.describe OgpMetaTagService, type: :service do
     end
     let(:base_url) { 'https://example.com' }
 
-    after do
-      ENV.delete('OGP_S3_BUCKET')
-      ENV.delete('AWS_REGION')
+    around do |example|
+      original_ogp_s3_bucket = ENV.fetch('OGP_S3_BUCKET', nil)
+      original_aws_region = ENV.fetch('AWS_REGION', nil)
+      Rails.cache.clear
+      example.run
+    ensure
+      original_ogp_s3_bucket.nil? ? ENV.delete('OGP_S3_BUCKET') : ENV['OGP_S3_BUCKET'] = original_ogp_s3_bucket
+      original_aws_region.nil? ? ENV.delete('AWS_REGION') : ENV['AWS_REGION'] = original_aws_region
+      Rails.cache.clear
     end
 
     context '正常系 (Happy Path)' do
@@ -318,6 +324,18 @@ RSpec.describe OgpMetaTagService, type: :service do
         expect(head_request.dig(:params, :bucket)).to eq('test-ogp-bucket')
         expect(head_request.dig(:params, :key)).to eq("ogp/posts/#{post.id}.png")
         expect(html).to include("property=\"og:image\" content=\"#{base_url}/ogp/posts/#{post.id}.png\"")
+      end
+
+      it '同じ投稿の画像存在確認結果を短時間キャッシュすること' do
+        ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
+        s3_client = Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true)
+        allow(Aws::S3::Client).to receive(:new).and_return(s3_client)
+
+        2.times { described_class.generate_html(post:, base_url:) }
+
+        head_requests = s3_client.api_requests.select { |request| request[:operation_name] == :head_object }
+
+        expect(head_requests.size).to eq(1)
       end
 
       it 'S3に画像が存在しない場合はデフォルト画像へフォールバックすること' do

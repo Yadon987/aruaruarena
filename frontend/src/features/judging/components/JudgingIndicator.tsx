@@ -33,6 +33,7 @@ export function JudgingIndicator() {
   return (
     <div
       data-testid="judging-screen"
+      role="status"
       aria-label="審査中"
       aria-live="polite"
       className="pointer-events-none fixed inset-x-0 top-20 z-40 flex items-center justify-center px-4 sm:top-24"

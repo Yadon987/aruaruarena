@@ -39,7 +39,8 @@ class ResetDemoPostsService
   end
 
   def demo_average_score(index)
-    ((225 - (index * 2)) / 3.0).round(1)
+    step = 10.0 / (DemoPostsSeedData::POSTS.size - 1)
+    (75.0 - (index * step)).round(1)
   end
 
   def judgment_totals(average_score, index)

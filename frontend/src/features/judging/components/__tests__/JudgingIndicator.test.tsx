@@ -70,7 +70,7 @@ describe('JudgingIndicator', () => {
     render(<JudgingIndicator />)
 
     expect(screen.getByTestId('judging-screen')).toHaveAttribute('aria-live', 'polite')
-    expect(screen.getByLabelText('審査中')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '審査中' })).toBeInTheDocument()
   })
 
   it('reduced motion が有効でもフレーズは即時に切り替わる', () => {
