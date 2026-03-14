@@ -338,6 +338,7 @@ RSpec.describe 'API::Posts', type: :request do
           }
         }
       end
+      let(:rate_limit_error_message) { '投稿頻度が高すぎます。3分待ってから再投稿してください' }
 
       # Given: 初回投稿（IP・ニックネームともに制限なし）
       # When: 投稿リクエスト
@@ -363,7 +364,7 @@ RSpec.describe 'API::Posts', type: :request do
         expect(response).to have_http_status(:unprocessable_content)
 
         json = response.parsed_body
-        expect(json['error']).to eq('投稿頻度が高すぎます。3分待ってから再投稿してください')
+        expect(json['error']).to eq(rate_limit_error_message)
         expect(json['code']).to eq('VALIDATION_ERROR')
       end
 
@@ -381,7 +382,7 @@ RSpec.describe 'API::Posts', type: :request do
         expect(response).to have_http_status(:unprocessable_content)
 
         json = response.parsed_body
-        expect(json['error']).to eq('投稿頻度が高すぎます。3分待ってから再投稿してください')
+        expect(json['error']).to eq(rate_limit_error_message)
         expect(json['code']).to eq('VALIDATION_ERROR')
       end
 
@@ -418,7 +419,7 @@ RSpec.describe 'API::Posts', type: :request do
         expect(response).to have_http_status(:unprocessable_content)
 
         json = response.parsed_body
-        expect(json['error']).to eq('投稿頻度が高すぎます。3分待ってから再投稿してください')
+        expect(json['error']).to eq(rate_limit_error_message)
         expect(json['code']).to eq('VALIDATION_ERROR')
       end
 

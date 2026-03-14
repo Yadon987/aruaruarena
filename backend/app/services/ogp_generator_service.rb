@@ -15,7 +15,7 @@ class OgpGeneratorService
   FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
   FONT_BOLD_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
   NUMBER_FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
-  REQUIRED_FILES = [BASE_IMAGE_PATH, FONT_PATH, FONT_BOLD_PATH, NUMBER_FONT_PATH].freeze
+  REQUIRED_FILES = [BASE_IMAGE_PATH, FONT_PATH, FONT_BOLD_PATH, NUMBER_FONT_PATH].uniq.freeze
 
   # 画像レイアウト定数
   LAYOUT = {
