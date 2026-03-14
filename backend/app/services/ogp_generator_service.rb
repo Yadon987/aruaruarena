@@ -183,8 +183,19 @@ class OgpGeneratorService
   end
 
   def build_body_items
-    build_body_lines.map.with_index do |line, index|
-      multiline_text_item(:body, line, index, TEXT_COLORS[:body], FONT_BOLD_PATH, stroke_width: 1, shadow: false)
+    lines = build_body_lines
+    line_height = body_line_height(:body, lines)
+
+    lines.map.with_index do |line, index|
+      multiline_text_item(
+        :body,
+        line,
+        LAYOUT[:body][:y] + ((line_height + BODY_LINE_SPACING) * index),
+        TEXT_COLORS[:body],
+        FONT_BOLD_PATH,
+        stroke_width: 1,
+        shadow: false
+      )
     end
   end
 
@@ -285,7 +296,7 @@ class OgpGeneratorService
     }
   end
 
-  def multiline_text_item(layout_key, text, index, color, font_path, stroke_width: 0, shadow: true)
+  def multiline_text_item(layout_key, text, y_position, color, font_path, stroke_width: 0, shadow: true)
     fitted_size = fitted_font_size(layout_key, text)
 
     {
@@ -293,12 +304,16 @@ class OgpGeneratorService
       size: fitted_size,
       color: color,
       x: LAYOUT[layout_key][:x],
-      y: LAYOUT[layout_key][:y] + ((fitted_size + BODY_LINE_SPACING) * index),
+      y: y_position,
       font: font_path,
       stroke_color: TEXT_COLORS[:stroke_dark],
       stroke_width: stroke_width,
       shadow: shadow ? shadow_options(stroke_width) : nil
     }
+  end
+
+  def body_line_height(layout_key, lines)
+    lines.map { |line| fitted_font_size(layout_key, line) }.max || FONT_SIZES[layout_key]
   end
 
   def centered_pair_items(number_layout_key, suffix_layout_key, number_text, suffix_text, style:)

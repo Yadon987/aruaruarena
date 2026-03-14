@@ -229,6 +229,21 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(suffix_item[:y]).to eq(described_class::LAYOUT[:rank_suffix][:y])
     end
 
+    it '本文の行間は各行の縮小率に関わらず一定であること' do
+      allow(service).to receive(:build_body_lines).and_return(['短い本文', 'とても長くて縮小される本文'])
+      allow(service).to receive(:fitted_font_size) do |layout_key, text|
+        next 38 if layout_key == :body && text == '短い本文'
+        next 34 if layout_key == :body && text == 'とても長くて縮小される本文'
+
+        described_class::FONT_SIZES[layout_key]
+      end
+
+      items = service.send(:build_body_items)
+
+      expect(items.first[:y]).to eq(described_class::LAYOUT[:body][:y])
+      expect(items.second[:y] - items.first[:y]).to eq(38 + described_class::BODY_LINE_SPACING)
+    end
+
     it '点数が広すぎる場合はフォントサイズを自動で縮小すること' do
       font_size = service.send(:fitted_font_size, :score_number, '100.0')
 
