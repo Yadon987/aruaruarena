@@ -64,7 +64,7 @@ CloudFront では `403/404 -> /index.html` の SPA フォールバックが dist
 
 - `OgpMetaTagService.generate_html` に `1200x630` を明示する
 
-### 4. `/ogp/default.png` 配置フローの不足
+### 4. `/ogp/ogps.webp` 配置フローの不足
 
 - frontend デプロイは `frontend/dist` を `aws s3 sync` している
 - `backend/app/assets/images/default_ogp.png` を置いても frontend S3 には載らない
@@ -72,9 +72,9 @@ CloudFront では `403/404 -> /index.html` の SPA フォールバックが dist
 
 対応:
 
-- `frontend/public/ogp/default.png` を追加する
+- `frontend/public/ogp/ogps.webp` を静的 OGP 画像として使用する
 - 画像は 1200x630 の `backend/app/assets/images/base_ogp.png` を流用する
-- これで既存の frontend デプロイだけで `/ogp/default.png` が配信される
+- これで既存の frontend デプロイだけで `/ogp/ogps.webp` が配信される
 
 ### 5. `UploadOgpImageService` の未設定ログ不足
 
@@ -139,7 +139,7 @@ CloudFront では `403/404 -> /index.html` の SPA フォールバックが dist
 
 - `frontend/index.html`
   - 静的 OGP / Twitter Card を追加
-- `frontend/public/ogp/default.png`
+- `frontend/public/ogp/ogps.webp`
   - frontend 配信物として default OGP を追加
 - `frontend/tests/workflow/frontendStaticOgp.test.ts`
   - 静的 OGP タグと公開画像配置を検証

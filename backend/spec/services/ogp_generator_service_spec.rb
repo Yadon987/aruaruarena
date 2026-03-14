@@ -113,7 +113,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(service).to receive(:draw_text)
         .with(anything, hash_including(
                           text: '11',
-                          size: be_between(described_class::MIN_FONT_SIZES[:rank_number], described_class::FONT_SIZES[:rank_number]),
+                          size: be_between(described_class::MIN_FONT_SIZES[:rank_number],
+                                           described_class::FONT_SIZES[:rank_number]),
                           color: described_class::TEXT_COLORS[:rank],
                           y: described_class::LAYOUT[:rank_number][:y],
                           font: described_class::NUMBER_FONT_PATH
@@ -129,7 +130,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(service).to receive(:draw_text)
         .with(anything, hash_including(
                           text: '投稿者  太郎',
-                          size: be_between(described_class::MIN_FONT_SIZES[:nickname], described_class::FONT_SIZES[:nickname]),
+                          size: be_between(described_class::MIN_FONT_SIZES[:nickname],
+                                           described_class::FONT_SIZES[:nickname]),
                           color: described_class::TEXT_COLORS[:nickname],
                           y: described_class::LAYOUT[:nickname][:y],
                           font: described_class::FONT_BOLD_PATH
@@ -146,7 +148,8 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(service).to receive(:draw_text)
         .with(anything, hash_including(
                           text: '0.0',
-                          size: be_between(described_class::MIN_FONT_SIZES[:score_number], described_class::FONT_SIZES[:score_number]),
+                          size: be_between(described_class::MIN_FONT_SIZES[:score_number],
+                                           described_class::FONT_SIZES[:score_number]),
                           color: described_class::TEXT_COLORS[:score],
                           y: described_class::LAYOUT[:score_number][:y],
                           font: described_class::NUMBER_FONT_PATH
@@ -200,6 +203,24 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     end
   end
 
+  describe 'escape_single_quotes' do
+    it 'バッククォートをエスケープすること' do
+      service = described_class.allocate
+
+      escaped = service.send(:escape_single_quotes, '危険`文字列')
+
+      expect(escaped).to eq('危険\\`文字列')
+    end
+
+    it 'バッククォートとシングルクォートが混在してもエスケープすること' do
+      service = described_class.allocate
+
+      escaped = service.send(:escape_single_quotes, "危険'`文字列")
+
+      expect(escaped).to eq("危険\\'\\`文字列")
+    end
+  end
+
   describe 'E20 REFACTOR: レイアウト計算' do
     let(:service) { described_class.allocate }
 
@@ -231,13 +252,13 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
 
     it '本文の行間は各行の縮小率に関わらず一定であること' do
       allow(service).to receive(:body_font_size).and_return(34)
-      allow(service).to receive(:build_body_lines).with(font_size: 34).and_return(['短い本文', 'とても長くて縮小される本文'])
+      allow(service).to receive(:build_body_lines).with(font_size: 34).and_return(%w[短い本文 とても長くて縮小される本文])
 
       items = service.send(:build_body_items)
 
       expect(items.first[:y]).to eq(described_class::LAYOUT[:body][:y])
       expect(items.second[:y] - items.first[:y]).to eq(34 + described_class::BODY_LINE_SPACING)
-      expect(items.map { |item| item[:size] }).to all(eq(34))
+      expect(items.pluck(:size)).to all(eq(34))
     end
 
     it '本文が縮小後サイズで4行以内に収まる場合は省略しないこと' do
@@ -250,13 +271,13 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         expect(max_lines).to eq(described_class::BODY_MAX_LINES)
 
         if font_size == 34
-          ['1行目', '2行目', '3行目', '4行目']
+          %w[1行目 2行目 3行目 4行目]
         else
           ['1行目', '2行目', '3行目', '4行目...']
         end
       end
 
-      expect(service.send(:build_body_lines)).to eq(['1行目', '2行目', '3行目', '4行目'])
+      expect(service.send(:build_body_lines)).to eq(%w[1行目 2行目 3行目 4行目])
     end
 
     it '点数が広すぎる場合はフォントサイズを自動で縮小すること' do

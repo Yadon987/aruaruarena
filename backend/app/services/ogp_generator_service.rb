@@ -393,9 +393,7 @@ class OgpGeneratorService
     font_size = FONT_SIZES[:body]
     min_size = MIN_FONT_SIZES[:body]
 
-    while font_size > min_size && body_line_count(font_size) > BODY_MAX_LINES
-      font_size -= 2
-    end
+    font_size -= 2 while font_size > min_size && body_line_count(font_size) > BODY_MAX_LINES
 
     font_size
   end
@@ -413,9 +411,7 @@ class OgpGeneratorService
     font_size = FONT_SIZES[layout_key]
     min_size = MIN_FONT_SIZES[layout_key]
 
-    while font_size > min_size && estimate_text_width(text, font_size) > layout[:max_width]
-      font_size -= 2
-    end
+    font_size -= 2 while font_size > min_size && estimate_text_width(text, font_size) > layout[:max_width]
 
     font_size
   end
@@ -576,7 +572,7 @@ class OgpGeneratorService
   def escape_single_quotes(text)
     # まずバックスラッシュをエスケープし、その後シングルクォートをエスケープ
     # ImageMagick MVGパーサーではバックスラッシュも特殊文字として扱われるため
-    text.gsub('\\') { '\\\\' }.gsub("'") { "\\'" }
+    text.gsub('\\') { '\\\\' }.gsub("'") { "\\'" }.gsub('`') { '\\`' }
   end
 
   # PNG画像の圧縮を行う
