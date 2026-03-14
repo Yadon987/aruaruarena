@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { openMyPostsDialog } from '../../../test/appTestHelpers'
@@ -20,7 +20,9 @@ describe('MyPostStorage Refactor', () => {
 
     await openMyPostsDialog()
 
-    expect((await screen.findAllByTestId('my-post-id-item')).length).toBe(2)
-    expect(screen.getAllByRole('button', { name: 'id-1' })).toHaveLength(1)
+    const postItems = await screen.findAllByTestId('my-post-id-item')
+
+    expect(postItems).toHaveLength(2)
+    expect(postItems.filter((item) => within(item).queryByText('id-1'))).toHaveLength(1)
   })
 })

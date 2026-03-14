@@ -984,14 +984,10 @@ function App() {
         // failed応答は結果画面へ直接遷移し、ポーリングは中断する。
         setJudgingErrorMessage('')
         clearJudgingPolling()
+        clearMinimumJudgingDuration(false)
         setIsJudgingPollingReady(false)
-        void (async () => {
-          const canProceed = await waitForMinimumJudgingDuration()
-          if (!canProceed) return
-          clearMinimumJudgingDuration(false)
-          setPendingFormData(null)
-          enterResultView(response.id, null, { source: 'judging' })
-        })()
+        setPendingFormData(null)
+        enterResultView(response.id, null, { source: 'judging' })
         return
       }
 
@@ -1005,7 +1001,6 @@ function App() {
       syncJudgingPath,
       syncMyPostIds,
       enterJudgingMode,
-      waitForMinimumJudgingDuration,
     ]
   )
 
@@ -1906,9 +1901,7 @@ function App() {
         className="game-show-stage relative min-h-screen overflow-hidden px-6 pb-6"
         style={{ isolation: 'isolate', paddingBottom: `${footerReservedSpace}px` }}
       >
-        {viewMode === 'judging' && !judgingErrorMessage && (
-          <JudgingIndicator />
-        )}
+        {viewMode === 'judging' && !judgingErrorMessage && <JudgingIndicator />}
         {viewMode === 'judging' && !judgingErrorMessage && judgingTransientErrorCount > 0 && (
           <div className="pointer-events-none fixed left-1/2 top-5 z-[125] -translate-x-1/2">
             <p
@@ -2121,15 +2114,15 @@ function App() {
                             const post = myPostDetails[postId]
                             const isLoading = loadingMyPostIds.includes(postId)
                             const errorMessage = myPostDetailErrors[postId]
-                            const myPostButtonLabel = post
-                              ? `${post.body}、${MY_POST_STATUS_LABELS[post.status]}、投稿詳細を開く`
-                              : `投稿ID ${postId} の投稿詳細を開く`
-
                             return (
                               <li key={postId} data-testid="my-post-id-item">
                                 <button
                                   type="button"
-                                  aria-label={myPostButtonLabel}
+                                  aria-label={
+                                    post
+                                      ? `${post.body}、${MY_POST_STATUS_LABELS[post.status]}、投稿詳細を開く`
+                                      : `投稿ID ${postId} の投稿詳細を開く`
+                                  }
                                   aria-describedby={`my-post-meta-${postId}`}
                                   className="w-full rounded-[1.4rem] border border-white/12 bg-[radial-gradient(circle_at_top_left,rgba(255,214,120,0.16),transparent_35%),linear-gradient(180deg,rgba(20,28,45,0.92),rgba(9,14,25,0.96))] p-4 text-left transition hover:border-amber-200/35 hover:shadow-[0_18px_38px_rgba(8,15,30,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/70"
                                   onClick={() => handleMyPostClick(postId)}

@@ -23,9 +23,20 @@ describe('analytics', () => {
       delete window.gtag
     }
 
-    window.dataLayer = originalDataLayer ?? []
+    if (originalDataLayer) {
+      window.dataLayer = originalDataLayer
+    } else {
+      delete (window as { dataLayer?: unknown[] }).dataLayer
+    }
     document.title = originalTitle
     document.head.querySelector('#ga4-script')?.remove()
+  })
+
+  it.each([null, undefined])('計測IDが%sの場合はGA4スクリプトを初期化しない', (measurementId) => {
+    initializeGoogleAnalytics(measurementId)
+
+    expect(document.head.querySelector('#ga4-script')).toBeNull()
+    expect(window.dataLayer).toEqual([])
   })
 
   it('計測IDがある場合はGA4スクリプトと設定を初期化する', () => {

@@ -116,4 +116,27 @@ namespace :dynamodb do
 
     puts "✅ #{posts.count} 件の投稿を更新しました"
   end
+
+  desc '投稿関連データを初期化してダミー投稿20件を再投入'
+  task reset_demo_posts: :environment do
+    if $stdin.tty?
+      print '投稿データを初期化します。よろしいですか？ (yes/no): '
+      answer = $stdin.gets&.strip&.downcase
+      return unless answer == 'yes'
+    elsif ENV['FORCE_RESET_DEMO_POSTS'] != 'yes'
+      abort '非対話環境では FORCE_RESET_DEMO_POSTS=yes を指定してください'
+    end
+
+    puts '投稿データを初期化してダミーデータを作成中...'
+
+    posts = ResetDemoPostsService.call
+
+    puts "✅ #{posts.count} 件のダミー投稿を作成しました"
+    if posts.any?
+      puts "   1位: #{posts.first.nickname} #{posts.first.average_score}点"
+      puts "   #{posts.count}位: #{posts.last.nickname} #{posts.last.average_score}点"
+    else
+      puts '   投稿は作成されませんでした'
+    end
+  end
 end

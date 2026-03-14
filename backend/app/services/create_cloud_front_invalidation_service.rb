@@ -14,11 +14,12 @@ class CreateCloudFrontInvalidationService
   end
 
   def execute
-    return false if distribution_id.empty?
-    return true if invalidation_succeeded?
+    if distribution_id.empty?
+      write_missing_distribution_log
+      return false
+    end
 
-    write_failure_log(last_response.code)
-    false
+    invalidation_succeeded?
   rescue StandardError => e
     write_exception_log(e)
     false
@@ -57,6 +58,13 @@ class CreateCloudFrontInvalidationService
   def write_success_log
     Rails.logger.info(
       "[CreateCloudFrontInvalidationService] CloudFront invalidation成功: post_id=#{@post_id}, path=#{@path}"
+    )
+  end
+
+  def write_missing_distribution_log
+    Rails.logger.warn(
+      '[CreateCloudFrontInvalidationService] CLOUDFRONT_DISTRIBUTION_ID が未設定のため invalidation をスキップ: ' \
+      "post_id=#{@post_id}, path=#{@path}"
     )
   end
 

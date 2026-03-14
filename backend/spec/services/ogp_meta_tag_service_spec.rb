@@ -190,6 +190,19 @@ RSpec.describe OgpMetaTagService, type: :service do
     end
     let(:base_url) { 'https://example.com' }
 
+    around do |example|
+      original_ogp_s3_bucket = ENV.fetch('OGP_S3_BUCKET', nil)
+      original_aws_region = ENV.fetch('AWS_REGION', nil)
+      Rails.cache.clear
+      described_class.clear_uploaded_image_exists_cache!
+      example.run
+    ensure
+      original_ogp_s3_bucket.nil? ? ENV.delete('OGP_S3_BUCKET') : ENV['OGP_S3_BUCKET'] = original_ogp_s3_bucket
+      original_aws_region.nil? ? ENV.delete('AWS_REGION') : ENV['AWS_REGION'] = original_aws_region
+      Rails.cache.clear
+      described_class.clear_uploaded_image_exists_cache!
+    end
+
     context '正常系 (Happy Path)' do
       it '正しいOGPタグが含まれるHTMLを返すこと' do
         # 何を検証するか: 必要なOGPタグがすべて含まれること
@@ -292,6 +305,77 @@ RSpec.describe OgpMetaTagService, type: :service do
         html = described_class.generate_html(post:, base_url:)
 
         expect(html).to include("name=\"twitter:image\" content=\"#{base_url}/ogp/posts/#{post.id}.png\"")
+      end
+
+      it 'OGP_S3_BUCKET未設定時はS3確認を行わず投稿画像URLを使うこと' do
+        expect(Aws::S3::Client).not_to receive(:new)
+
+        html = described_class.generate_html(post:, base_url:)
+
+        expect(html).to include("property=\"og:image\" content=\"#{base_url}/ogp/posts/#{post.id}.png\"")
+      end
+
+      it 'S3に画像が存在する場合は投稿画像URLを使うこと' do
+        ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
+        s3_client = Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true)
+        allow(Aws::S3::Client).to receive(:new).and_return(s3_client)
+
+        html = described_class.generate_html(post:, base_url:)
+
+        head_request = s3_client.api_requests.find { |request| request[:operation_name] == :head_object }
+        expect(head_request.dig(:params, :bucket)).to eq('test-ogp-bucket')
+        expect(head_request.dig(:params, :key)).to eq("ogp/posts/#{post.id}.png")
+        expect(html).to include("property=\"og:image\" content=\"#{base_url}/ogp/posts/#{post.id}.png\"")
+      end
+
+      it '同じ投稿の画像存在確認結果を短時間キャッシュすること' do
+        ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
+        s3_client = Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true)
+        allow(Aws::S3::Client).to receive(:new).and_return(s3_client)
+
+        2.times { described_class.generate_html(post:, base_url:) }
+
+        head_requests = s3_client.api_requests.select { |request| request[:operation_name] == :head_object }
+
+        expect(head_requests.size).to eq(1)
+      end
+
+      it 'S3に画像が存在しない場合はfalseをキャッシュしないこと' do
+        ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
+        s3_client = Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true)
+        s3_client.stub_responses(:head_object, 'NotFound')
+        allow(Aws::S3::Client).to receive(:new).and_return(s3_client)
+
+        2.times { described_class.generate_html(post:, base_url:) }
+
+        head_requests = s3_client.api_requests.select { |request| request[:operation_name] == :head_object }
+
+        expect(head_requests.size).to eq(2)
+      end
+
+      it 'S3に画像が存在しない場合はデフォルト画像へフォールバックすること' do
+        ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
+        s3_client = Aws::S3::Client.new(region: 'ap-northeast-1', stub_responses: true)
+        s3_client.stub_responses(:head_object, 'NotFound')
+        allow(Aws::S3::Client).to receive(:new).and_return(s3_client)
+        allow(Rails.logger).to receive(:warn)
+
+        html = described_class.generate_html(post:, base_url:)
+
+        expect(html).to include("property=\"og:image\" content=\"#{base_url}/ogp/default.png\"")
+        expect(html).to include("name=\"twitter:image\" content=\"#{base_url}/ogp/default.png\"")
+        expect(Rails.logger).to have_received(:warn).with(/生成済みOGP画像が見つからないためデフォルト画像へフォールバック/)
+      end
+
+      it 'S3確認で例外が発生した場合もデフォルト画像へフォールバックすること' do
+        ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
+        allow(Aws::S3::Client).to receive(:new).and_raise(StandardError, 'timeout')
+        allow(Rails.logger).to receive(:warn)
+
+        html = described_class.generate_html(post:, base_url:)
+
+        expect(html).to include("property=\"og:image\" content=\"#{base_url}/ogp/default.png\"")
+        expect(Rails.logger).to have_received(:warn).with(/OGP画像存在確認で予期しない例外/)
       end
     end
 
@@ -407,6 +491,24 @@ RSpec.describe OgpMetaTagService, type: :service do
         # 重複スラッシュがないことを確認 (http://...//posts/...)
         expect(html).not_to include('//posts/')
       end
+    end
+  end
+
+  describe '.clear_uploaded_image_exists_cache!' do
+    after do
+      described_class.instance_variable_set(:@uploaded_image_exists_cache_store, nil)
+    end
+
+    it 'フォールバック用MemoryStoreをクリアして再生成可能な状態へ戻すこと' do
+      cache_key = 'ogp_meta_tag_service/test'
+      initial_store = ActiveSupport::Cache::MemoryStore.new
+      described_class.instance_variable_set(:@uploaded_image_exists_cache_store, initial_store)
+      initial_store.write(cache_key, true)
+
+      described_class.clear_uploaded_image_exists_cache!
+
+      expect(initial_store.read(cache_key)).to be_nil
+      expect(described_class.instance_variable_get(:@uploaded_image_exists_cache_store)).to be_nil
     end
   end
 
