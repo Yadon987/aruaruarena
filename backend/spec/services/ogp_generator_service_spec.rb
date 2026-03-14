@@ -40,15 +40,15 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class::FONT_SIZES.keys).not_to include(:judge_score, :judge_comment)
     end
 
-    it '日本語描画が安定するTTFフォントを使用すること' do
+    it 'アプリ同梱のフォントを使用すること' do
       expect(described_class::FONT_PATH).to eq(
-        Pathname.new('/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf')
+        Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
       )
       expect(described_class::FONT_BOLD_PATH).to eq(
-        Pathname.new('/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf')
+        Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
       )
       expect(described_class::NUMBER_FONT_PATH).to eq(
-        Pathname.new('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+        Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
       )
     end
 

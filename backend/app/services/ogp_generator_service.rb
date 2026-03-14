@@ -11,10 +11,9 @@ class OgpGeneratorService
   BODY_LINE_SPACING = 14
 
   BASE_IMAGE_PATH = Rails.root.join('app/assets/images/base_ogp.png')
-  # ImageMagick 6系では OTF よりも TTF の方が日本語描画が安定する。
-  FONT_PATH = Pathname.new('/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf')
-  FONT_BOLD_PATH = Pathname.new('/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf')
-  NUMBER_FONT_PATH = Pathname.new('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+  FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
+  FONT_BOLD_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
+  NUMBER_FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
   REQUIRED_FILES = [BASE_IMAGE_PATH, FONT_PATH, FONT_BOLD_PATH, NUMBER_FONT_PATH].freeze
 
   # 画像レイアウト定数
