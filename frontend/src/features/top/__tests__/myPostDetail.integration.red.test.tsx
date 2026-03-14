@@ -186,4 +186,19 @@ describe('E16-01 MyPostDetail Integration RED', () => {
     await waitFor(() => expect(maxInFlight).toBeGreaterThan(0))
     await waitFor(() => expect(maxInFlight).toBeLessThanOrEqual(3))
   })
+
+  it('一覧事前取得で404になった投稿IDはローカル保存から除外する', async () => {
+    const stalePostId = '66666666-6666-4666-8666-666666666666'
+    vi.spyOn(api.posts, 'get').mockRejectedValue(new ApiClientError('not found', 'NOT_FOUND', 404))
+    localStorage.setItem('my_post_ids', JSON.stringify([stalePostId]))
+
+    render(<App />)
+
+    await openMyPostsDialog()
+
+    await waitFor(() => {
+      expect(localStorage.getItem('my_post_ids')).toBe(JSON.stringify([]))
+    })
+    expect(screen.getByText('投稿するとここに表示されます')).toBeInTheDocument()
+  })
 })
