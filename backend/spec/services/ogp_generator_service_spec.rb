@@ -45,7 +45,9 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class::FONT_PATH_CANDIDATES).to include(described_class::SYSTEM_DROID_FONT_PATH.to_s)
       expect(described_class::FONT_PATH.exist?).to be(true)
       expect(described_class::FONT_BOLD_PATH.exist?).to be(true)
-      expect(described_class::NUMBER_FONT_PATH).to eq(described_class::SYSTEM_NUMBER_FONT_PATH)
+      expect(described_class::NUMBER_FONT_PATH.exist?).to be(true)
+      expect([described_class::SYSTEM_NUMBER_FONT_PATH, described_class::BUNDLED_JP_BOLD_FONT_PATH])
+        .to include(described_class::NUMBER_FONT_PATH)
     end
 
     it '描画に使用するフォント実体が存在すること' do
@@ -260,6 +262,10 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
 
   describe '日本語フォント描画' do
     let(:service) { described_class.allocate }
+
+    before do
+      skip 'ImageMagick が利用できません' unless OgpTestHelpers.imagemagick_available?
+    end
 
     it '日本語フォントで本文文字を描画できること' do
       original_image = MiniMagick::Image.open(described_class::BASE_IMAGE_PATH)

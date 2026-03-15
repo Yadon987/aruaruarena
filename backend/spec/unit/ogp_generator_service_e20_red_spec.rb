@@ -40,12 +40,14 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class::FONT_SIZES.keys).not_to include(:judge_score, :judge_comment)
     end
 
-    it '日本語描画にはDroid Sans Fallbackを優先すること' do
+    it '日本語描画用フォントパスが候補に含まれること' do
       expect(described_class::FONT_PATH_CANDIDATES).to include(described_class::SYSTEM_NOTO_CJK_FONT_PATH.to_s)
       expect(described_class::FONT_PATH_CANDIDATES).to include(described_class::SYSTEM_DROID_FONT_PATH.to_s)
       expect(described_class::FONT_BOLD_PATH_CANDIDATES)
         .to include(described_class::SYSTEM_NOTO_CJK_BOLD_FONT_PATH.to_s)
-      expect(described_class::NUMBER_FONT_PATH).to eq(described_class::SYSTEM_NUMBER_FONT_PATH)
+      expect(described_class::NUMBER_FONT_PATH.exist?).to be(true)
+      expect([described_class::SYSTEM_NUMBER_FONT_PATH, described_class::BUNDLED_JP_BOLD_FONT_PATH])
+        .to include(described_class::NUMBER_FONT_PATH)
     end
   end
 

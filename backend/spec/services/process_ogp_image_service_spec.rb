@@ -23,5 +23,14 @@ RSpec.describe ProcessOgpImageService do
       post.reload
       expect(post.ogp_status).to eq(Post::OGP_STATUS_FAILED)
     end
+
+    it 'ogp_statusがgeneratingの投稿は処理しないこと' do
+      post.update_ogp_status!(Post::OGP_STATUS_GENERATING)
+      allow(UploadOgpImageService).to receive(:call)
+
+      expect(described_class.call(post.id)).to be false
+
+      expect(UploadOgpImageService).not_to have_received(:call)
+    end
   end
 end

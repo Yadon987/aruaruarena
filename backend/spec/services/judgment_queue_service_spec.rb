@@ -98,5 +98,27 @@ RSpec.describe JudgmentQueueService, dynamodb: false do
         )
       )
     end
+
+    it '同期実行モードでは OGP 生成を直接実行すること' do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new('development'))
+      allow(ENV).to receive(:[]).with('SYNCHRONOUS_JUDGE').and_return('true')
+      allow(ProcessOgpImageService).to receive(:call)
+
+      described_class.enqueue_ogp_generation('post-123')
+
+      expect(ProcessOgpImageService).to have_received(:call).with('post-123')
+      expect(signer).not_to have_received(:sign_request)
+    end
+
+    it 'ローカルワーカーモードでは OGP 生成を直接実行すること' do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new('development'))
+      allow(ENV).to receive(:[]).with('LOCAL_JUDGE_WORKER').and_return('true')
+      allow(ProcessOgpImageService).to receive(:call)
+
+      described_class.enqueue_ogp_generation('post-123')
+
+      expect(ProcessOgpImageService).to have_received(:call).with('post-123')
+      expect(signer).not_to have_received(:sign_request)
+    end
   end
 end

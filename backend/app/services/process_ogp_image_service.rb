@@ -34,7 +34,7 @@ class ProcessOgpImageService
   def processable_post?
     return false if @post.nil?
     return false unless @post.status == Post::STATUS_SCORED
-    return false if @post.ogp_status == Post::OGP_STATUS_READY
+    return false if [Post::OGP_STATUS_READY, Post::OGP_STATUS_GENERATING].include?(@post.ogp_status)
 
     true
   end

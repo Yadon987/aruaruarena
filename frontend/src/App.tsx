@@ -667,6 +667,7 @@ function App() {
     return activeResultPost
   }, [activeResultPost, resultViewSource])
   const isShareReady = shareableResultPost?.ogp_status === 'ready'
+  const isShareFailed = shareableResultPost?.ogp_status === 'failed'
   const audioScene = resultAudioScene ?? (viewMode === 'result' ? 'top' : viewMode)
   const shouldAutoOpenOnboarding =
     viewMode === 'top' &&
@@ -932,8 +933,7 @@ function App() {
   }, [isRankingModalOpen])
 
   useEffect(() => {
-    if (viewMode !== 'result' || !shareableResultPost || isShareReady) return
-    if (shareableResultPost.ogp_status === 'failed') return
+    if (viewMode !== 'result' || !shareableResultPost || isShareReady || isShareFailed) return
 
     let isDisposed = false
     let isFetching = false
@@ -980,7 +980,7 @@ function App() {
       isDisposed = true
       if (timerId) clearInterval(timerId)
     }
-  }, [isShareReady, shareableResultPost, viewMode])
+  }, [isShareFailed, isShareReady, shareableResultPost, viewMode])
 
   useEffect(() => {
     if (viewMode === 'judging') {
@@ -2123,7 +2123,7 @@ function App() {
                   closeIcon={resultCloseButtonIcon}
                   isRejudging={isRejudging}
                   rejudgeErrorMessage={rejudgeErrorMessage}
-                  showShareActions={Boolean(shareableResultPost)}
+                  showShareActions={Boolean(shareableResultPost) && !isShareFailed}
                   ogpStatus={shareableResultPost?.ogp_status ?? null}
                   onShareToX={shareableResultPost && isShareReady ? handleResultShareToX : undefined}
                   ogpPreviewUrl={shareableResultPost && isShareReady ? buildOgpPreviewUrl(shareableResultPost.id) : undefined}
