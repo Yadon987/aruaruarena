@@ -22,6 +22,6 @@ describe('E12-01 RED: TopPage レイアウト', () => {
 
     expect(screen.getByLabelText('ニックネーム')).toBeInTheDocument()
     expect(screen.getByLabelText('あるある')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '投稿' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '審査開始' })).toBeInTheDocument()
   })
 })

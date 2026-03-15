@@ -143,7 +143,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     fireEvent.change(screen.getByLabelText('あるある'), {
       target: { value: '最低審査時間テスト本文です' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    fireEvent.click(screen.getByRole('button', { name: '審査開始' }))
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
     })
@@ -201,7 +201,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     fireEvent.change(screen.getByLabelText('あるある'), {
       target: { value: '遅延完了テスト本文です' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    fireEvent.click(screen.getByRole('button', { name: '審査開始' }))
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
     })
@@ -275,6 +275,43 @@ describe('E15-01 RED: ResultModal Flow', () => {
     )
   }, 12000)
 
+  it('審査結果のアクション群はモバイル向けに1列レイアウト用クラスを持つ', async () => {
+    // 何を検証するか: 結果モーダルの共有ボタン群が折り返しではなく横並び前提のクラス構成になること
+    vi.spyOn(api.posts, 'create').mockResolvedValue({
+      id: 'share-layout-post-id',
+      status: 'judging',
+    })
+    vi.spyOn(api.posts, 'get').mockResolvedValue({
+      id: 'share-layout-post-id',
+      nickname: '横並び太郎',
+      body: '横並び本文',
+      status: 'scored',
+      ogp_status: 'ready',
+      created_at: '2026-03-15T00:00:00Z',
+      average_score: 89.1,
+      rank: 5,
+      total_count: 20,
+      judgments: [],
+    })
+
+    render(<App />)
+
+    await fillAndSubmitPostForm({ nickname: '横並び太郎', body: '横並び確認用の本文です' })
+
+    const actions = await screen.findByTestId('result-summary-actions', {}, { timeout: 12000 })
+    expect(actions.className).toContain('result-summary-actions')
+
+    expect(screen.getByRole('button', { name: 'シェア画像を表示' }).className).toContain(
+      'result-summary-action-button'
+    )
+    expect(screen.getByRole('button', { name: 'Xでシェアする' }).className).toContain(
+      'result-summary-action-button'
+    )
+    expect(screen.getByRole('button', { name: 'トップへ' }).className).toContain(
+      'result-summary-action-button'
+    )
+  }, 12000)
+
   it('OGP画像準備中は共有を待機表示し、ready到達後に共有ボタンへ切り替わる', async () => {
     vi.useFakeTimers()
     vi.spyOn(api.posts, 'create').mockResolvedValue({
@@ -316,7 +353,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     fireEvent.change(screen.getByLabelText('あるある'), {
       target: { value: '共有待機テスト本文です' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    fireEvent.click(screen.getByRole('button', { name: '審査開始' }))
     await act(async () => {
       await vi.advanceTimersByTimeAsync(9000)
     })
@@ -397,7 +434,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
 
     const myPostsDialog = await screen.findByRole('dialog', { name: '自分の投稿' })
-    expect(within(myPostsDialog).getByRole('button', { name: /投稿詳細を開く/ })).toBeInTheDocument()
+    expect(
+      within(myPostsDialog).getByRole('button', { name: /投稿詳細を開く/ })
+    ).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
   })
 
