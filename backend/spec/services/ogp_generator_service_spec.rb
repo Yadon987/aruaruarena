@@ -40,22 +40,33 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
       expect(described_class::FONT_SIZES.keys).not_to include(:judge_score, :judge_comment)
     end
 
-    it 'アプリ同梱のフォントを使用すること' do
-      expect(described_class::FONT_PATH).to eq(
-        Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
-      )
-      expect(described_class::FONT_BOLD_PATH).to eq(
-        Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
-      )
-      expect(described_class::NUMBER_FONT_PATH).to eq(
-        Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
-      )
+    it '日本語描画は利用可能なシステムフォントを優先し、数字は同梱フォントを使用すること' do
+      expect(described_class::FONT_PATH_CANDIDATES).to include(described_class::SYSTEM_NOTO_CJK_FONT_PATH.to_s)
+      expect(described_class::FONT_PATH_CANDIDATES).to include(described_class::SYSTEM_DROID_FONT_PATH.to_s)
+      expect(described_class::FONT_PATH.exist?).to be(true)
+      expect(described_class::FONT_BOLD_PATH.exist?).to be(true)
+      expect(described_class::NUMBER_FONT_PATH.exist?).to be(true)
+      expect([described_class::SYSTEM_NUMBER_FONT_PATH, described_class::BUNDLED_JP_BOLD_FONT_PATH])
+        .to include(described_class::NUMBER_FONT_PATH)
     end
 
     it '描画に使用するフォント実体が存在すること' do
       expect(described_class::FONT_PATH.exist?).to be(true)
       expect(described_class::FONT_BOLD_PATH.exist?).to be(true)
       expect(described_class::NUMBER_FONT_PATH.exist?).to be(true)
+    end
+
+    it '日本語描画用フォント候補を優先順で保持すること' do
+      expect(described_class::SYSTEM_DROID_FONT_PATH.to_s).to include('DroidSansFallbackFull.ttf')
+      expect(described_class::SYSTEM_NOTO_CJK_FONT_PATH.to_s).to include('NotoSansCJK-Regular.ttc')
+      expect(described_class::SYSTEM_NOTO_CJK_BOLD_FONT_PATH.to_s).to include('NotoSansCJK-Bold.ttc')
+      expect(described_class::SYSTEM_NUMBER_FONT_PATH.to_s).to include('DejaVuSans-Bold.ttf')
+      expect(described_class::BUNDLED_JP_FONT_PATH).to eq(
+        Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
+      )
+      expect(described_class::BUNDLED_JP_BOLD_FONT_PATH).to eq(
+        Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
+      )
     end
   end
 
@@ -152,7 +163,7 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
                                            described_class::FONT_SIZES[:nickname]),
                           color: described_class::TEXT_COLORS[:nickname],
                           y: described_class::LAYOUT[:nickname][:y],
-                          font: described_class::FONT_BOLD_PATH
+                          font: described_class::FONT_PATH
                         ))
         .and_call_original
 
@@ -249,6 +260,38 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     end
   end
 
+  describe '日本語フォント描画' do
+    let(:service) { described_class.allocate }
+
+    before do
+      skip 'ImageMagick が利用できません' unless OgpTestHelpers.imagemagick_available?
+    end
+
+    it '日本語フォントで本文文字を描画できること' do
+      original_image = MiniMagick::Image.open(described_class::BASE_IMAGE_PATH)
+
+      rendered_image = MiniMagick::Image.open(described_class::BASE_IMAGE_PATH)
+
+      service.send(
+        :apply_text_layer,
+        rendered_image,
+        {
+          text: 'あるあるアリーナ',
+          font: described_class::FONT_PATH,
+          size: 44,
+          stroke_width: 0,
+          x: 96,
+          y: 198
+        },
+        fill: described_class::TEXT_COLORS[:body],
+        position: { x: 96, y: 198, stroke_width: 0 },
+        stroke: 'transparent'
+      )
+
+      expect(rendered_image.signature).not_to eq(original_image.signature)
+    end
+  end
+
   describe 'E20 REFACTOR: レイアウト計算' do
     let(:service) { described_class.allocate }
 
@@ -265,6 +308,22 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
 
       expect(lines.length).to be <= described_class::BODY_MAX_LINES
       expect(lines.last).to end_with('...')
+    end
+
+    it '日本語本文は貪欲に詰め込みすぎず自然な位置で折り返すこと' do
+      text = '「朝は眠いのに夜になると急に目がさえて布団の中で明日のことを考え始めてしまう」'
+
+      lines = service.send(
+        :wrapped_lines,
+        text,
+        max_width: 450,
+        font_size: 38,
+        max_lines: described_class::BODY_MAX_LINES
+      )
+
+      expect(lines).to eq(
+        ['「朝は眠いのに夜になる', 'と急に目がさえて布団の', '中で明日のことを考え始', 'めてしまう」']
+      )
     end
 
     it '順位ラベルは本番経路で順位数値と接尾辞に分かれて描画されること' do

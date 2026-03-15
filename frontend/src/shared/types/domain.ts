@@ -14,6 +14,8 @@ export type JudgePersona = (typeof JUDGE.PERSONAS)[number]
  */
 export type PostStatus = (typeof POST_STATUS.VALUES)[number]
 
+export type OgpStatus = 'pending' | 'generating' | 'ready' | 'failed'
+
 /**
  * 審査結果
  *
@@ -63,6 +65,7 @@ export interface Post {
   nickname: string
   body: string
   status: PostStatus
+  ogp_status?: OgpStatus | null
   average_score?: number
   rank?: number
   total_count?: number

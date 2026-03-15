@@ -10,11 +10,13 @@ FactoryBot.define do
     judges_count { 0 }
     score_key { nil }
     created_at { Time.now.to_i.to_s }
+    ogp_status { 'pending' }
 
     trait :scored do
       status { 'scored' }
       average_score { 85.5 }
       judges_count { 3 }
+      ogp_status { 'ready' }
       after(:build) do |post|
         post.score_key = post.generate_score_key
       end

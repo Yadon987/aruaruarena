@@ -18,17 +18,31 @@ end
 
 def handle_sqs_event(event)
   event.fetch('Records', []).each do |record|
-    next unless record['eventSource'] == 'aws:sqs'
-
-    body = JSON.parse(record.fetch('body', '{}'))
-    post_id = body['post_id']
-    next if post_id.blank?
-
-    Rails.logger.info("[SQS Handler] 審査開始: post_id=#{post_id}")
-    JudgePostService.call(post_id)
+    process_sqs_record(record)
   end
 
   { batchItemFailures: [] }
+end
+
+def process_sqs_record(record)
+  return unless record['eventSource'] == 'aws:sqs'
+
+  body = JSON.parse(record.fetch('body', '{}'))
+  post_id = body['post_id']
+  return if post_id.blank?
+
+  process_job(post_id, body['job_type'].presence || JudgmentQueueService::JOB_TYPE_JUDGE_POST)
+end
+
+def process_job(post_id, job_type)
+  if job_type == JudgmentQueueService::JOB_TYPE_GENERATE_OGP
+    Rails.logger.info("[SQS Handler] OGP生成開始: post_id=#{post_id}")
+    ProcessOgpImageService.call(post_id)
+    return
+  end
+
+  Rails.logger.info("[SQS Handler] 審査開始: post_id=#{post_id}")
+  JudgePostService.call(post_id)
 end
 
 # rubocop:enable Style/GlobalVars

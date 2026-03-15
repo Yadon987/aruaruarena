@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
@@ -55,11 +55,15 @@ async function enableSound() {
 async function openRankingResultModal(postDetail: Awaited<ReturnType<typeof api.posts.get>>) {
   vi.spyOn(api.posts, 'get').mockResolvedValue(postDetail)
 
-  fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
+  })
   await waitFor(() => {
     expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
   })
-  fireEvent.click(screen.getByTestId('ranking-item'))
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('ranking-item'))
+  })
 
   await waitFor(() => {
     expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
@@ -70,9 +74,11 @@ describe('E18-01 RED: BGM scene integration', () => {
   beforeEach(() => {
     localStorage.clear()
     localStorage.setItem('aruaru_sound_modal_answered', 'true')
+    localStorage.setItem('aruaru_onboarding_completed', 'true')
     localStorage.setItem('aruaru_sound_volume', '0.5')
     vi.clearAllMocks()
     vi.stubGlobal('__AUDIO_DEBUG__', [])
+    vi.spyOn(api.rankings, 'list').mockResolvedValue({ rankings: [], total_count: 0 })
     setupRanking()
   })
 
@@ -93,6 +99,7 @@ describe('E18-01 RED: BGM scene integration', () => {
       nickname: '成功太郎',
       body: '成功本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-03-03T00:00:00Z',
       average_score: 95.4,
       rank: 1,

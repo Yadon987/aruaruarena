@@ -389,4 +389,48 @@ RSpec.describe Post, type: :model do
       expect(json[:average_score]).to eq(95.5)
     end
   end
+
+  describe '#update_ogp_status_if_current' do
+    it '条件に合致すればogp_statusを更新できること' do
+      post = create(:post, :scored, ogp_status: Post::OGP_STATUS_PENDING)
+
+      result = post.update_ogp_status_if_current(
+        from: [Post::OGP_STATUS_PENDING, Post::OGP_STATUS_FAILED],
+        to: Post::OGP_STATUS_GENERATING,
+        required_status: Post::STATUS_SCORED
+      )
+
+      expect(result).to be(true)
+      post.reload
+      expect(post.ogp_status).to eq(Post::OGP_STATUS_GENERATING)
+    end
+
+    it '条件に合致しない場合は更新されないこと' do
+      post = create(:post, :scored, ogp_status: Post::OGP_STATUS_READY)
+
+      result = post.update_ogp_status_if_current(
+        from: [Post::OGP_STATUS_PENDING, Post::OGP_STATUS_FAILED],
+        to: Post::OGP_STATUS_GENERATING,
+        required_status: Post::STATUS_SCORED
+      )
+
+      expect(result).to be(false)
+      post.reload
+      expect(post.ogp_status).to eq(Post::OGP_STATUS_READY)
+    end
+
+    it 'status条件に合わない場合は更新されないこと' do
+      post = create(:post, status: Post::STATUS_JUDGING, ogp_status: Post::OGP_STATUS_PENDING)
+
+      result = post.update_ogp_status_if_current(
+        from: Post::OGP_STATUS_PENDING,
+        to: Post::OGP_STATUS_GENERATING,
+        required_status: Post::STATUS_SCORED
+      )
+
+      expect(result).to be(false)
+      post.reload
+      expect(post.ogp_status).to eq(Post::OGP_STATUS_PENDING)
+    end
+  end
 end

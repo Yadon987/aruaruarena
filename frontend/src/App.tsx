@@ -72,12 +72,14 @@ const SOUND_SETTINGS_PANEL_ID = 'sound-settings-panel'
 const JUDGING_PATH_PREFIX = '/judging/'
 const JUDGING_PATH_PATTERN = /^\/judging\/(.+)$/
 const JUDGING_POLLING_INTERVAL_MS = 3000
-const MINIMUM_JUDGING_DURATION_MS = 7500
+const MINIMUM_JUDGING_DURATION_MS = 9000
 const MINIMUM_JUDGING_DURATION_STORAGE_KEY = 'aruaruarena_minimum_judging_ends_at'
 const JUDGING_POLLING_TIMEOUT_MS =
   import.meta.env.MODE === 'development' && !isMockApiEnabled() ? 120000 : 60000
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
 const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
+const RESULT_OGP_POLLING_INTERVAL_MS = 2000
+const RESULT_OGP_POLLING_MAX_ERRORS = 3
 const HEALTH_CHECK_TIMEOUT_MS = 3000
 const AI_TRANSIENT_ERROR_CODES = [
   'provider_error',
@@ -168,8 +170,10 @@ function buildOgpPreviewUrl(postId: string): string {
 
 function buildResultShareText(post: Post): string {
   const scoreLabel = typeof post.average_score === 'number' ? post.average_score.toFixed(1) : '--.-'
-  const rankLabel = hasShareableRank(post.rank) ? `${post.rank}位` : '結果発表'
-  return `「${post.body}」\nこれ、あるあるすぎて刺さる。結果は ${rankLabel} / ${scoreLabel}点！\n\n共感したらいいね＆シェアで応援してください！\n#RUNTEQ #RUNTEQポートフォリオ #あるあるアリーナ`
+  const resultLine = hasShareableRank(post.rank)
+    ? `🏆 結果は ${post.rank}位 / ${scoreLabel}点！`
+    : `🏆 スコアは ${scoreLabel}点！`
+  return `「${post.body}」\n\n💥 これ、あるあるすぎて刺さる。\n${resultLine}\n\n共感したらいいね＆シェアで応援してください！✨\n#RUNTEQ #RUNTEQポートフォリオ #あるあるアリーナ`
 }
 
 function buildXShareIntentUrl(post: Post): string {
@@ -184,12 +188,7 @@ function canShowPostJudgingShareActions(
   post: Post | null,
   source: ResultViewSource
 ): post is Post & { status: 'scored' } {
-  return (
-    source === 'judging' &&
-    isFinalResultPost(post) &&
-    post.status === 'scored' &&
-    hasShareableRank(post.rank)
-  )
+  return source === 'judging' && isFinalResultPost(post) && post.status === 'scored'
 }
 
 function isHighScoreResult(
@@ -532,6 +531,7 @@ function App() {
   const [isRejudgeModalOpen, setIsRejudgeModalOpen] = useState(false)
   const [isRejudging, setIsRejudging] = useState(false)
   const [rejudgeErrorMessage, setRejudgeErrorMessage] = useState('')
+  const [isSharePollingExhausted, setIsSharePollingExhausted] = useState(false)
   const [isJudgingPollingReady, setIsJudgingPollingReady] = useState(false)
   const [judgingTransientErrorCount, setJudgingTransientErrorCount] = useState(0)
   const [footerReservedSpace, setFooterReservedSpace] = useState(FIXED_FOOTER_MIN_RESERVED_PX)
@@ -663,6 +663,17 @@ function App() {
     }
     return 'success'
   }, [activeResultPost, viewMode])
+  const shareableResultPost = useMemo(() => {
+    if (!canShowPostJudgingShareActions(activeResultPost, resultViewSource)) return null
+    return activeResultPost
+  }, [activeResultPost, resultViewSource])
+  const isShareReady = shareableResultPost?.ogp_status === 'ready'
+  const isShareFailed = shareableResultPost?.ogp_status === 'failed'
+
+  useEffect(() => {
+    setIsSharePollingExhausted(false)
+  }, [shareableResultPost?.id, viewMode])
+
   const audioScene = resultAudioScene ?? (viewMode === 'result' ? 'top' : viewMode)
   const shouldAutoOpenOnboarding =
     viewMode === 'top' &&
@@ -926,6 +937,63 @@ function App() {
       document.body.style.overflow = previousOverflow
     }
   }, [isRankingModalOpen])
+
+  useEffect(() => {
+    if (
+      viewMode !== 'result' ||
+      !shareableResultPost ||
+      isShareReady ||
+      isShareFailed ||
+      isSharePollingExhausted
+    ) return
+
+    let isDisposed = false
+    let isFetching = false
+    let consecutiveErrorCount = 0
+    let timerId: ReturnType<typeof setInterval> | null = null
+
+    const syncOgpStatus = async () => {
+      if (isDisposed || isFetching) return
+      isFetching = true
+
+      try {
+        const response = await api.posts.get(shareableResultPost.id)
+        if (isDisposed) return
+        consecutiveErrorCount = 0
+
+        queryClient.setQueryData(queryKeys.posts.detail(shareableResultPost.id), response)
+        setActiveResultPost(response)
+
+        if (response.ogp_status === 'ready' || response.ogp_status === 'failed') {
+          if (timerId) {
+            clearInterval(timerId)
+            timerId = null
+          }
+        }
+      } catch (error) {
+        if (!isDisposed) {
+          consecutiveErrorCount += 1
+          console.error('OGP状態の取得に失敗しました', error)
+          if (consecutiveErrorCount >= RESULT_OGP_POLLING_MAX_ERRORS && timerId) {
+            clearInterval(timerId)
+            timerId = null
+            setIsSharePollingExhausted(true)
+          }
+        }
+      } finally {
+        isFetching = false
+      }
+    }
+
+    timerId = setInterval(() => {
+      void syncOgpStatus()
+    }, RESULT_OGP_POLLING_INTERVAL_MS)
+
+    return () => {
+      isDisposed = true
+      if (timerId) clearInterval(timerId)
+    }
+  }, [isShareFailed, isSharePollingExhausted, isShareReady, shareableResultPost, viewMode])
 
   useEffect(() => {
     if (viewMode === 'judging') {
@@ -1809,10 +1877,6 @@ function App() {
       : activeResultPost?.status === 'scored' || activeResultPost?.status === 'failed'
         ? 'complete'
         : 'complete'
-  const shareableResultPost = useMemo(() => {
-    if (!canShowPostJudgingShareActions(activeResultPost, resultViewSource)) return null
-    return activeResultPost
-  }, [activeResultPost, resultViewSource])
 
   useEffect(() => {
     if (!isMyPostsOpen) return
@@ -2072,10 +2136,12 @@ function App() {
                   closeIcon={resultCloseButtonIcon}
                   isRejudging={isRejudging}
                   rejudgeErrorMessage={rejudgeErrorMessage}
-                  onShareToX={shareableResultPost ? handleResultShareToX : undefined}
-                  ogpPreviewUrl={
-                    shareableResultPost ? buildOgpPreviewUrl(shareableResultPost.id) : undefined
+                  showShareActions={
+                    Boolean(shareableResultPost) && !isShareFailed && !isSharePollingExhausted
                   }
+                  ogpStatus={shareableResultPost?.ogp_status ?? null}
+                  onShareToX={shareableResultPost && isShareReady ? handleResultShareToX : undefined}
+                  ogpPreviewUrl={shareableResultPost && isShareReady ? buildOgpPreviewUrl(shareableResultPost.id) : undefined}
                 />
               )}
           </div>

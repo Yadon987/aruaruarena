@@ -112,6 +112,11 @@ module OgpTestHelpers
   def setup_ogp_service_nil_mock
     allow(OgpGeneratorService).to receive(:call).and_return(nil)
   end
+
+  # ImageMagick の利用可否を判定する
+  def self.imagemagick_available?
+    system('which', 'mogrify', out: File::NULL, err: File::NULL)
+  end
 end
 
 RSpec.configure do |config|

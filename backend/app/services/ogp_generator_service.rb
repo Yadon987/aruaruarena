@@ -9,11 +9,37 @@ class OgpGeneratorService
   SCORE_DEFAULT = 0
   BODY_MAX_LINES = 4
   BODY_LINE_SPACING = 14
+  LINE_BREAK_PENALTY = 10_000
+  LAST_LINE_BALANCE_DIVISOR = 4
+  LINE_END_AVOID_CHARS = %w[と で を が は も へ].freeze
+  LINE_START_AVOID_CHARS = %w[で の 、 。 ， ． ・ ： ； ） 】 』 」 ぁ ぃ ぅ ぇ ぉ っ ゃ ゅ ょ ゎ ゛ ゜].freeze
 
   BASE_IMAGE_PATH = Rails.root.join('app/assets/images/base_ogp.png')
-  FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
-  FONT_BOLD_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
-  NUMBER_FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
+  BUNDLED_JP_FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Regular.otf')
+  BUNDLED_JP_BOLD_FONT_PATH = Rails.root.join('app/assets/fonts/NotoSansJP-Bold.otf')
+  SYSTEM_DROID_FONT_PATH = Pathname.new('/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf')
+  SYSTEM_NOTO_CJK_FONT_PATH = Pathname.new('/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc')
+  SYSTEM_NOTO_CJK_BOLD_FONT_PATH = Pathname.new('/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc')
+  SYSTEM_NUMBER_FONT_PATH = Pathname.new('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+  FONT_PATH_CANDIDATES = [
+    ENV.fetch('OGP_JP_FONT_PATH', '').strip,
+    SYSTEM_NOTO_CJK_FONT_PATH.to_s,
+    SYSTEM_DROID_FONT_PATH.to_s,
+    BUNDLED_JP_FONT_PATH.to_s
+  ].freeze
+  FONT_BOLD_PATH_CANDIDATES = [
+    ENV.fetch('OGP_JP_BOLD_FONT_PATH', '').strip,
+    SYSTEM_NOTO_CJK_BOLD_FONT_PATH.to_s,
+    SYSTEM_DROID_FONT_PATH.to_s,
+    BUNDLED_JP_BOLD_FONT_PATH.to_s
+  ].freeze
+  FONT_PATH = FONT_PATH_CANDIDATES.reject(&:empty?)
+                                  .map { |path| Pathname.new(path) }
+                                  .find { |path| File.exist?(path.to_s) } || BUNDLED_JP_FONT_PATH
+  FONT_BOLD_PATH = FONT_BOLD_PATH_CANDIDATES.reject(&:empty?)
+                                            .map { |path| Pathname.new(path) }
+                                            .find { |path| File.exist?(path.to_s) } || FONT_PATH
+  NUMBER_FONT_PATH = File.exist?(SYSTEM_NUMBER_FONT_PATH.to_s) ? SYSTEM_NUMBER_FONT_PATH : BUNDLED_JP_BOLD_FONT_PATH
   REQUIRED_FILES = [BASE_IMAGE_PATH, FONT_PATH, FONT_BOLD_PATH, NUMBER_FONT_PATH].freeze
 
   # 画像レイアウト定数
@@ -40,7 +66,7 @@ class OgpGeneratorService
     rank_suffix: 64,
     score_number: 112,
     score_suffix: 52,
-    footer: 40
+    footer: 38
   }.freeze
 
   MIN_FONT_SIZES = {
@@ -51,7 +77,7 @@ class OgpGeneratorService
     rank_suffix: 52,
     score_number: 96,
     score_suffix: 44,
-    footer: 34
+    footer: 32
   }.freeze
 
   # テキスト色定数
@@ -198,7 +224,7 @@ class OgpGeneratorService
       {
         text: nickname_text,
         color: TEXT_COLORS[:nickname],
-        font_path: FONT_BOLD_PATH,
+        font_path: FONT_PATH,
         stroke_width: 1
       }
     )
@@ -270,8 +296,8 @@ class OgpGeneratorService
     {
       text: TEXT_CONFIG[:footer_text],
       color: TEXT_COLORS[:footer],
-      font_path: FONT_BOLD_PATH,
-      stroke_width: 2,
+      font_path: FONT_PATH,
+      stroke_width: 1,
       shadow: false,
       glow: footer_glow_options,
       center_in: :title_plate
@@ -293,7 +319,7 @@ class OgpGeneratorService
     {
       text: line,
       color: TEXT_COLORS[:body],
-      font_path: FONT_BOLD_PATH,
+      font_path: FONT_PATH,
       y_position: body_item_y(index, font_size),
       font_size: font_size,
       stroke_width: 1,
@@ -478,23 +504,86 @@ class OgpGeneratorService
   def wrap_lines(text, max_width:, font_size:)
     return [''] if text.blank?
 
-    lines = []
-    current_line = +''
+    chars = text.each_char.to_a
+    best_costs, next_breaks = initialize_line_break_buffers(chars.length)
+    wrap_context = { chars:, max_width:, font_size:, best_costs:, next_breaks: }
 
-    text.each_char do |char|
-      current_line = append_char_or_wrap(lines, current_line, char, max_width, font_size)
+    (chars.length - 1).downto(0) do |start_index|
+      evaluate_line_break_candidates(start_index, wrap_context)
     end
-    lines << current_line unless current_line.empty?
 
-    lines
+    build_lines_from_breaks(chars, next_breaks)
   end
 
-  def append_char_or_wrap(lines, current_line, char, max_width, font_size)
-    candidate = "#{current_line}#{char}"
-    return candidate if current_line.empty? || estimate_text_width(candidate, font_size) <= max_width
+  def initialize_line_break_buffers(length)
+    best_costs = Array.new(length + 1, Float::INFINITY)
+    best_costs[length] = 0
+    [best_costs, Array.new(length)]
+  end
 
-    lines << current_line
-    char
+  def evaluate_line_break_candidates(start_index, wrap_context)
+    current_text = +''
+    chars = wrap_context[:chars]
+
+    (start_index...chars.length).each do |end_index|
+      current_text << chars[end_index]
+      break if estimate_text_width(current_text, wrap_context[:font_size]) > wrap_context[:max_width]
+
+      update_best_line_break(current_text, start_index, end_index, wrap_context)
+    end
+  end
+
+  def update_best_line_break(current_text, start_index, end_index, wrap_context)
+    next_index = end_index + 1
+    line_cost = calculate_line_break_total_cost(current_text, end_index, wrap_context)
+
+    return if line_cost > wrap_context[:best_costs][start_index]
+
+    store_best_line_break(start_index, next_index, line_cost, wrap_context)
+  end
+
+  def calculate_line_break_total_cost(current_text, end_index, wrap_context)
+    next_index = end_index + 1
+    line_break_cost(
+      current_text,
+      next_char: wrap_context[:chars][next_index],
+      max_width: wrap_context[:max_width],
+      font_size: wrap_context[:font_size],
+      last_line: next_index == wrap_context[:chars].length
+    ) + wrap_context[:best_costs][next_index]
+  end
+
+  def store_best_line_break(start_index, next_index, line_cost, wrap_context)
+    wrap_context[:best_costs][start_index] = line_cost
+    wrap_context[:next_breaks][start_index] = next_index
+  end
+
+  def line_break_cost(text, next_char:, max_width:, font_size:, last_line:)
+    remaining_width = max_width - estimate_text_width(text, font_size)
+    base_cost = remaining_width**2
+    return base_cost / LAST_LINE_BALANCE_DIVISOR if last_line
+
+    base_cost + line_break_penalty(text, next_char)
+  end
+
+  def line_break_penalty(text, next_char)
+    penalty = 0
+    penalty += LINE_BREAK_PENALTY if LINE_END_AVOID_CHARS.include?(text[-1])
+    penalty += LINE_BREAK_PENALTY if next_char && LINE_START_AVOID_CHARS.include?(next_char)
+    penalty
+  end
+
+  def build_lines_from_breaks(chars, next_breaks)
+    lines = []
+    current_index = 0
+
+    while current_index < chars.length
+      next_index = next_breaks[current_index] || chars.length
+      lines << chars[current_index...next_index].join
+      current_index = next_index
+    end
+
+    lines
   end
 
   def shadow_options(stroke_width)
@@ -512,7 +601,8 @@ class OgpGeneratorService
   def character_width_ratio(char)
     return 0.72 if char.match?(/[A-Z0-9]/)
     return 0.62 if char.match?(/[a-z]/)
-    return 1.0 if char.match?(/[぀-ヿ一-龠々ー]/)
+    return 0.9 if char.match?(/[ぁ-んァ-ヶー]/)
+    return 1.0 if char.match?(/[一-龠々]/)
     return 0.38 if char.match?(/[[:space:]]/)
 
     0.82

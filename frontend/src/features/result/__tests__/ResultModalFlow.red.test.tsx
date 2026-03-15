@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
@@ -13,11 +13,13 @@ vi.mock('../../../shared/hooks/useRankings', () => ({
 }))
 
 async function openRankingResultFromTopRanking() {
-  fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
-  await waitFor(() => {
-    expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
   })
-  fireEvent.click(screen.getByTestId('ranking-item'))
+  expect(await screen.findByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('ranking-item'))
+  })
 }
 
 describe('E15-01 RED: ResultModal Flow', () => {
@@ -38,6 +40,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
   })
 
   afterEach(() => {
+    cleanup()
+    vi.clearAllTimers()
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })
@@ -90,6 +94,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       nickname: '遷移太郎',
       body: '遷移本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-02-17T00:00:00Z',
       average_score: 88.8,
       rank: 3,
@@ -109,7 +114,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     )
   }, 12000)
 
-  it('審査完了が早くても結果表示は最低7.5秒待つ', async () => {
+  it('審査完了が早くても結果表示は最低9秒待つ', async () => {
     vi.useFakeTimers()
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'minimum-duration-post-id',
@@ -120,6 +125,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       nickname: '待機太郎',
       body: '待機本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-03-13T00:00:00Z',
       average_score: 84.2,
       rank: 6,
@@ -145,7 +151,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     expect(screen.getByTestId('judging-screen')).toBeInTheDocument()
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(7400)
+      await vi.advanceTimersByTimeAsync(8900)
     })
 
     expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
@@ -160,7 +166,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
   }, 12000)
 
-  it('7.5秒経過後に審査完了した場合は追加待機なしで結果表示する', async () => {
+  it('9秒経過後に審査完了した場合は追加待機なしで結果表示する', async () => {
     vi.useFakeTimers()
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'slow-minimum-duration-post-id',
@@ -175,13 +181,14 @@ describe('E15-01 RED: ResultModal Flow', () => {
               nickname: '待機太郎',
               body: '待機本文',
               status: 'scored',
+              ogp_status: 'ready',
               created_at: '2026-03-13T00:00:00Z',
               average_score: 92.4,
               rank: 2,
               total_count: 18,
               judgments: [],
             })
-          }, 8000)
+          }, 9500)
         })
     )
 
@@ -200,7 +207,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
     })
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(7999)
+      await vi.advanceTimersByTimeAsync(9499)
     })
 
     expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
@@ -226,6 +233,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       nickname: '共有太郎',
       body: '共有本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-02-17T00:00:00Z',
       average_score: 91.4,
       rank: 3,
@@ -240,9 +248,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     await waitFor(
       () => {
         expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Xでシェア' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Xでシェアする' })).toBeInTheDocument()
       },
-      { timeout: 9000 }
+      { timeout: 12000 }
     )
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
 
@@ -250,7 +258,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
 
     expect(screen.getByTestId('ogp-preview')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xでシェア' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Xでシェアする' }))
 
     expect(window.open).toHaveBeenCalledWith(expect.any(String), '_blank', 'noopener,noreferrer')
     const [shareIntentUrl] = vi.mocked(window.open).mock.calls[0] as [string]
@@ -259,13 +267,76 @@ describe('E15-01 RED: ResultModal Flow', () => {
     const shareText = shareUrl.searchParams.get('text')
     expect(shareUrl.searchParams.get('url')).toContain('/posts/share-post-id')
     expect(shareText).toBe(
-      '「共有本文」\nこれ、あるあるすぎて刺さる。結果は 3位 / 91.4点！\n\n共感したらいいね＆シェアで応援してください！\n#RUNTEQ #RUNTEQポートフォリオ #あるあるアリーナ'
+      '「共有本文」\n\n💥 これ、あるあるすぎて刺さる。\n🏆 結果は 3位 / 91.4点！\n\n共感したらいいね＆シェアで応援してください！✨\n#RUNTEQ #RUNTEQポートフォリオ #あるあるアリーナ'
     )
     expect(screen.getByTestId('ogp-preview')).toHaveAttribute(
       'src',
       expect.stringContaining('/ogp/posts/share-post-id.png')
     )
   }, 12000)
+
+  it('OGP画像準備中は共有を待機表示し、ready到達後に共有ボタンへ切り替わる', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(api.posts, 'create').mockResolvedValue({
+      id: 'share-pending-post-id',
+      status: 'judging',
+    })
+    vi.spyOn(api.posts, 'get')
+      .mockResolvedValueOnce({
+        id: 'share-pending-post-id',
+        nickname: '共有待機太郎',
+        body: '共有待機本文',
+        status: 'scored',
+        ogp_status: 'pending',
+        created_at: '2026-03-15T00:00:00Z',
+        average_score: 88.4,
+        rank: 4,
+        total_count: 20,
+        judgments: [],
+      })
+      .mockResolvedValueOnce({
+        id: 'share-pending-post-id',
+        nickname: '共有待機太郎',
+        body: '共有待機本文',
+        status: 'scored',
+        ogp_status: 'ready',
+        created_at: '2026-03-15T00:00:00Z',
+        average_score: 88.4,
+        rank: 4,
+        total_count: 20,
+        judgments: [],
+      })
+
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: '投稿する' }))
+    fireEvent.change(screen.getByLabelText('ニックネーム'), {
+      target: { value: '共有待機太郎' },
+    })
+    fireEvent.change(screen.getByLabelText('あるある'), {
+      target: { value: '共有待機テスト本文です' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(9000)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(screen.getByRole('button', { name: '画像を準備中' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Xでシェアする' })).not.toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(screen.getByRole('button', { name: 'Xでシェアする' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
+  }, 15000)
 
   it('自分の投稿選択で結果モーダルが開く', async () => {
     // 何を検証するか: 過去の投稿から投稿を選択した際に結果モーダルが表示されること
@@ -275,6 +346,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       nickname: '自分太郎',
       body: '自分本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-02-17T00:00:00Z',
       average_score: 86.5,
       rank: 4,
@@ -302,6 +374,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       nickname: '自分太郎',
       body: '自分本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-02-17T00:00:00Z',
       average_score: 86.5,
       rank: 4,
@@ -319,7 +392,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     ).toBeInTheDocument()
     expect(within(resultModal).queryByRole('button', { name: 'トップへ' })).not.toBeInTheDocument()
 
-    fireEvent.click(within(resultModal).getByRole('button', { name: '自分の投稿へ戻る' }))
+    await act(async () => {
+      fireEvent.click(within(resultModal).getByRole('button', { name: '自分の投稿へ戻る' }))
+    })
 
     const myPostsDialog = await screen.findByRole('dialog', { name: '自分の投稿' })
     expect(within(myPostsDialog).getByRole('button', { name: /投稿詳細を開く/ })).toBeInTheDocument()
@@ -337,6 +412,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       nickname: '閉じる太郎',
       body: '閉じる本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-02-17T00:00:00Z',
       average_score: 93.2,
       rank: 1,
@@ -355,15 +431,17 @@ describe('E15-01 RED: ResultModal Flow', () => {
       },
       { timeout: 9000 }
     )
-    fireEvent.keyDown(modal, { key: 'Escape' })
+    await act(async () => {
+      fireEvent.keyDown(modal, { key: 'Escape' })
+    })
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
     })
   }, 12000)
 
-  it('TOP20圏外のscored投稿ではシェア関連UIを表示しない', async () => {
-    // 何を検証するか: 審査直後でも rank が 21 位以降なら共有UIを表示しないこと
+  it('60点以下かつ順位なしのscored投稿でもシェア関連UIを表示する', async () => {
+    // 何を検証するか: 審査直後の scored なら低得点で順位未確定でも共有UIを表示すること
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'scope-post-id',
       status: 'judging',
@@ -373,9 +451,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
       nickname: '範囲太郎',
       body: '範囲本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-02-17T00:00:00Z',
-      average_score: 70.3,
-      rank: 21,
+      average_score: 58.4,
       total_count: 30,
       judgments: [],
     })
@@ -391,9 +469,19 @@ describe('E15-01 RED: ResultModal Flow', () => {
       { timeout: 9000 }
     )
 
-    expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'シェア画像を表示' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Xでシェアする' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Xでシェアする' }))
+    })
+
+    const [shareIntentUrl] = vi.mocked(window.open).mock.calls[0] as [string]
+    const shareUrl = new URL(shareIntentUrl)
+    expect(shareUrl.searchParams.get('text')).toBe(
+      '「範囲本文」\n\n💥 これ、あるあるすぎて刺さる。\n🏆 スコアは 58.4点！\n\n共感したらいいね＆シェアで応援してください！✨\n#RUNTEQ #RUNTEQポートフォリオ #あるあるアリーナ'
+    )
   }, 12000)
 
   it('60.1点のscored投稿では高得点演出を表示する', async () => {
@@ -407,6 +495,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       nickname: '高得点太郎',
       body: '高得点本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-03-14T00:00:00Z',
       average_score: 60.1,
       rank: 12,
@@ -440,6 +529,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       nickname: '境界太郎',
       body: '境界本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-03-14T00:00:00Z',
       average_score: 60.0,
       rank: 15,
@@ -484,7 +574,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
       expect(screen.getByRole('dialog', { name: '審査結果モーダル' })).toBeInTheDocument()
     })
 
-    expect(screen.queryByRole('button', { name: 'Xでシェア' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Xでシェアする' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'シェア画像を表示' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
   })
@@ -513,7 +603,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     ).toBeInTheDocument()
     expect(within(resultModal).queryByRole('button', { name: 'トップへ' })).not.toBeInTheDocument()
 
-    fireEvent.click(within(resultModal).getByRole('button', { name: 'ランキングへ戻る' }))
+    await act(async () => {
+      fireEvent.click(within(resultModal).getByRole('button', { name: 'ランキングへ戻る' }))
+    })
 
     const rankingDialog = await screen.findByRole('dialog', { name: 'ランキング' })
     expect(rankingDialog).toBeInTheDocument()
@@ -540,7 +632,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     render(<App />)
 
     await openRankingResultFromTopRanking()
-    fireEvent.click(await screen.findByRole('button', { name: '再試行' }))
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: '再試行' }))
+    })
 
     await waitFor(() => {
       expect(screen.getByText('スコア: 77.7')).toBeInTheDocument()
@@ -608,7 +702,9 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     const rejudgeButton = await screen.findByRole('button', {
       name: '再審査する',
     })
-    fireEvent.click(rejudgeButton)
+    await act(async () => {
+      fireEvent.click(rejudgeButton)
+    })
 
     await waitFor(() => {
       expect(rejudgeSpy).toHaveBeenCalledWith('rejudge-post-id', ['hiroyuki', 'dewi', 'nakao'])
@@ -634,7 +730,9 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     const rejudgeButton = await screen.findByRole('button', {
       name: '再審査する',
     })
-    fireEvent.click(rejudgeButton)
+    await act(async () => {
+      fireEvent.click(rejudgeButton)
+    })
 
     await waitFor(() => {
       expect(screen.queryByTestId('judging-screen')).not.toBeInTheDocument()

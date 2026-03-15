@@ -10,22 +10,37 @@ require 'uri'
 class JudgmentQueueService
   API_VERSION = '2012-11-05'
   CONTENT_TYPE = 'application/x-www-form-urlencoded; charset=utf-8'
+  JOB_TYPE_JUDGE_POST = 'judge_post'
+  JOB_TYPE_GENERATE_OGP = 'generate_ogp'
 
   class << self
-    delegate :enqueue, to: :new
+    delegate :enqueue, :enqueue_ogp_generation, to: :new
   end
 
   def enqueue(post_id)
     return execute_judgment_directly(post_id) if synchronous_mode?
     return register_for_local_worker(post_id) if local_worker_mode?
 
-    uri = URI.parse(queue_url)
-    request = build_request(uri, post_id)
-    apply_signed_headers!(request, sign_headers(uri, request))
-    validate_response!(send_request(uri, request))
+    enqueue_message(post_id, JOB_TYPE_JUDGE_POST)
+  end
+
+  def enqueue_ogp_generation(post_id)
+    # local_worker_mode? では enqueue で審査だけを待ち登録し、
+    # LocalJudgmentWorkerService は generate_ogp / JOB_TYPE_GENERATE_OGP を処理しない。
+    # そのため execute_ogp_generation_directly を使って OGP 生成だけ同期実行する。
+    return execute_ogp_generation_directly(post_id) if synchronous_mode? || local_worker_mode?
+
+    enqueue_message(post_id, JOB_TYPE_GENERATE_OGP)
   end
 
   private
+
+  def enqueue_message(post_id, job_type)
+    uri = URI.parse(queue_url)
+    request = build_request(uri, build_message_body(post_id, job_type))
+    apply_signed_headers!(request, sign_headers(uri, request))
+    validate_response!(send_request(uri, request))
+  end
 
   def synchronous_mode?
     Rails.env.development? && ENV['SYNCHRONOUS_JUDGE'] == 'true'
@@ -41,6 +56,12 @@ class JudgmentQueueService
     nil
   end
 
+  def execute_ogp_generation_directly(post_id)
+    Rails.logger.info("[JudgmentQueueService] 同期実行モードでOGP生成開始: post_id=#{post_id}")
+    ProcessOgpImageService.call(post_id)
+    nil
+  end
+
   def register_for_local_worker(post_id)
     return StartLocalJudgmentFallbackService.call(post_id) unless local_worker_available?
 
@@ -52,21 +73,21 @@ class JudgmentQueueService
     LocalJudgmentWorkerHeartbeatService.current_status['status'] == 'ok'
   end
 
-  def queue_url
-    ENV.fetch('SQS_QUEUE_URL') do
-      raise 'SQS_QUEUE_URL が設定されていません'
-    end
-  end
+  def queue_url = ENV.fetch('SQS_QUEUE_URL') { raise 'SQS_QUEUE_URL が設定されていません' }
 
-  def build_request(uri, post_id)
+  def build_request(uri, message_body)
     request = Net::HTTP::Post.new(uri.request_uri)
     request['Content-Type'] = CONTENT_TYPE
     request.body = URI.encode_www_form(
       'Action' => 'SendMessage',
       'Version' => API_VERSION,
-      'MessageBody' => { post_id: post_id }.to_json
+      'MessageBody' => message_body.to_json
     )
     request
+  end
+
+  def build_message_body(post_id, job_type)
+    { post_id: post_id, job_type: job_type }
   end
 
   def sign_headers(uri, request)

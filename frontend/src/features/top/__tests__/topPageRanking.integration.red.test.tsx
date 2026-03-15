@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { useRankings } from '../../../shared/hooks/useRankings'
-import { ApiClientError } from '../../../shared/services/api'
+import { ApiClientError, api } from '../../../shared/services/api'
 
 vi.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => <div data-testid="react-query-devtools" />,
@@ -29,6 +29,9 @@ describe('TopPage Ranking Integration RED', () => {
   }
 
   beforeEach(() => {
+    localStorage.clear()
+    vi.clearAllMocks()
+    vi.spyOn(api.rankings, 'list').mockResolvedValue({ rankings: [], total_count: 0 })
     mockedUseRankings.mockReturnValue({
       data: { rankings, total_count: 20 },
       isLoading: false,
