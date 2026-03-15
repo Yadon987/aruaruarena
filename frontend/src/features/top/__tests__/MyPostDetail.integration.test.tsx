@@ -117,4 +117,36 @@ describe('MyPostDetail Integration', () => {
     expect(await screen.findByRole('heading', { name: '自分の投稿' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '投稿詳細' })).not.toBeInTheDocument()
   })
+
+  it('モーダル外側クリックで自分の投稿モーダルを閉じる', async () => {
+    // 何を検証するか: モーダル余白クリックでも閉じること
+    localStorage.setItem('my_post_ids', JSON.stringify(['id-1']))
+
+    render(<App />)
+
+    const dialog = await openMyPostsDialog()
+    const wrapper = dialog.parentElement
+    expect(wrapper).not.toBeNull()
+
+    fireEvent.click(wrapper as HTMLElement)
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: '自分の投稿' })).not.toBeInTheDocument()
+    )
+  })
+
+  it('右上固定ボタンと干渉しにくい高さ制限付きレイアウトを持つ', async () => {
+    // 何を検証するか: モーダルが上部余白を確保し、内部スクロール前提の構造を持つこと
+    localStorage.setItem('my_post_ids', JSON.stringify(['id-1']))
+
+    render(<App />)
+
+    const dialog = await openMyPostsDialog()
+    const layoutRoot = dialog.parentElement?.parentElement
+    const list = screen.getByRole('list')
+
+    expect(layoutRoot).toHaveClass('items-start', 'pt-20', 'sm:pt-24', 'lg:items-center')
+    expect(dialog).toHaveClass('flex', 'flex-col', 'max-h-full')
+    expect(list).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto')
+  })
 })

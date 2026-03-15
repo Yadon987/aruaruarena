@@ -136,4 +136,20 @@ describe('TopPage Ranking Integration RED', () => {
 
     expect(await screen.findAllByTestId('ranking-item')).toHaveLength(20)
   })
+
+  it('モーダル外側クリックでランキングモーダルを閉じる', async () => {
+    // 何を検証するか: モーダル余白クリックでも閉じること
+    render(<App />)
+    await openRankingModal()
+
+    const dialog = screen.getByRole('dialog', { name: 'ランキング' })
+    const wrapper = dialog.parentElement
+    expect(wrapper).not.toBeNull()
+
+    fireEvent.click(wrapper as HTMLElement)
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'ランキング' })).not.toBeInTheDocument()
+    )
+  })
 })

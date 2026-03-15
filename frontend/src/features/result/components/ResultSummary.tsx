@@ -154,14 +154,17 @@ export function ResultSummary({
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <div
+          data-testid="result-summary-actions"
+          className="result-summary-actions mt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3"
+        >
           {canPreviewOgp && (
             <button
               type="button"
               onClick={() => setIsOgpPreviewVisible((prev) => !prev)}
               aria-expanded={isOgpPreviewVisible}
               aria-label={isOgpPreviewVisible ? 'シェア画像を閉じる' : 'シェア画像を表示'}
-              className="neon-button-base result-summary-back-button result-summary-share-image-button result-summary-share-image-button-enter mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
+              className="neon-button-base neon-button-compact-mobile result-summary-action-button result-summary-back-button result-summary-share-image-button result-summary-share-image-button-enter mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
             >
               <span aria-hidden="true" className="result-summary-back-icon">
                 📷
@@ -174,7 +177,7 @@ export function ResultSummary({
               type="button"
               disabled={true}
               aria-label="画像を準備中"
-              className="neon-button-base result-summary-back-button result-summary-share-pending-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
+              className="neon-button-base neon-button-compact-mobile result-summary-action-button result-summary-back-button result-summary-share-pending-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
             >
               <span aria-hidden="true" className="result-summary-share-spinner" />
               <span>画像を準備中</span>
@@ -185,7 +188,7 @@ export function ResultSummary({
               type="button"
               onClick={onShareToX}
               aria-label="Xでシェアする"
-              className="neon-button-base result-summary-back-button result-summary-x-share-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
+              className="neon-button-base neon-button-compact-mobile result-summary-action-button result-summary-back-button result-summary-x-share-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
             >
               <svg
                 aria-hidden="true"
@@ -203,7 +206,7 @@ export function ResultSummary({
               onClick={onRejudge}
               aria-label="再審査する"
               disabled={isRejudging}
-              className="neon-button-base neon-glow-pink px-7 py-3 text-base font-black tracking-wide disabled:cursor-not-allowed disabled:opacity-60 sm:px-8"
+              className="neon-button-base neon-button-compact-mobile result-summary-action-button neon-glow-pink px-7 py-3 text-base font-black tracking-wide disabled:cursor-not-allowed disabled:opacity-60 sm:px-8"
             >
               {isRejudging ? '再審査中...' : '再審査する'}
             </button>
@@ -212,7 +215,7 @@ export function ResultSummary({
             type="button"
             onClick={onClose}
             aria-label={resolvedCloseAriaLabel}
-            className="neon-button-base result-summary-back-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
+            className="neon-button-base neon-button-compact-mobile result-summary-action-button result-summary-back-button mt-0.5 px-6 py-2.5 text-sm sm:text-base font-black tracking-[0.07em]"
           >
             <span aria-hidden="true" className="result-summary-back-icon">
               {closeIcon}

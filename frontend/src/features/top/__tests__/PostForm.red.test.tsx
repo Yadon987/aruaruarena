@@ -212,7 +212,7 @@ describe('E12-01 RED: PostForm バリデーションと投稿', () => {
 
     await openPostDialog()
     fillPostForm({ nickname: 'てすと太郎', body: '二重送信テストです' })
-    const submitButton = screen.getByRole('button', { name: '投稿' })
+    const submitButton = screen.getByRole('button', { name: '審査開始' })
     fireEvent.click(submitButton)
     fireEvent.click(submitButton)
 

@@ -295,6 +295,7 @@ module Api
     # @return [void] JSONレスポンスをレンダリング
     def render_json_response
       post = Post.find(params[:id])
+      RecoverOgpGenerationService.call(post)
       judgments = Judgment.where(post_id: post.id).to_a
       rank = post.calculate_rank
       total_count = Post.total_scored_count

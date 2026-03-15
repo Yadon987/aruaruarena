@@ -19,7 +19,7 @@ describe('PostFormModal Refactor', () => {
     render(<PostFormModal isOpen={true} onClose={vi.fn()} onSubmit={vi.fn()} isLoading={false} />)
 
     const first = screen.getByRole('button', { name: '閉じる' })
-    const last = screen.getByRole('button', { name: '投稿' })
+    const last = screen.getByRole('button', { name: '審査開始' })
     last.focus()
     fireEvent.keyDown(document, { key: 'Tab' })
 
@@ -32,7 +32,7 @@ describe('PostFormModal Refactor', () => {
     render(<PostFormModal isOpen={true} onClose={vi.fn()} onSubmit={vi.fn()} isLoading={false} />)
 
     const first = screen.getByRole('button', { name: '閉じる' })
-    const last = screen.getByRole('button', { name: '投稿' })
+    const last = screen.getByRole('button', { name: '審査開始' })
     first.focus()
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
 

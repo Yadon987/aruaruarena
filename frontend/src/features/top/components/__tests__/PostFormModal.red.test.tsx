@@ -99,7 +99,7 @@ describe('E24-06 RED: PostFormModal', () => {
     fireEvent.change(screen.getByLabelText('あるある'), {
       target: { value: 'テストあるある' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    fireEvent.click(screen.getByRole('button', { name: '審査開始' }))
 
     expect(mockOnSubmit).toHaveBeenCalledWith({
       nickname: 'テストユーザー',
@@ -132,6 +132,6 @@ describe('E24-06 RED: PostFormModal', () => {
       <PostFormModal isOpen={true} onClose={mockOnClose} onSubmit={mockOnSubmit} isLoading={true} />
     )
 
-    expect(screen.getByRole('button', { name: /投稿/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /審査開始/ })).toBeDisabled()
   })
 })

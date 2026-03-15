@@ -113,6 +113,26 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
     expect(screen.getByLabelText('あるある')).toHaveValue('再投稿までの入力保持')
   })
 
+  it('バリデーションエラー時は再試行ガイドを表示しない', async () => {
+    vi.spyOn(api.posts, 'create').mockRejectedValue(
+      new ApiClientError('本文を入力してください', 'VALIDATION_ERROR', 422)
+    )
+    vi.spyOn(api.posts, 'get').mockImplementation(() => new Promise(() => {}))
+
+    render(<App />)
+    await openPostDialog()
+    fillPostForm({ nickname: '検証太郎', body: '入力あり' })
+    await submitPostForm({ waitForSubmit: () => Promise.resolve() })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: '投稿できませんでした' })).toBeInTheDocument()
+      expect(screen.getByText('本文を入力してください')).toBeInTheDocument()
+    })
+    expect(
+      screen.queryByText('通信状況をご確認のうえ、再度お試しください。')
+    ).not.toBeInTheDocument()
+  })
+
   it('再投稿導線からの再送信時にAPI呼び出しは1度に限定される', async () => {
     let resolveRetryRequest: ((value: { id: string; status: 'judging' }) => void) | undefined
     const retryRequest = new Promise<{ id: string; status: 'judging' }>((resolve) => {
@@ -160,7 +180,7 @@ describe('E12-XX RED: 楽観的投稿UI', () => {
     expect(screen.getByLabelText('ニックネーム')).toHaveValue('失敗太郎')
     expect(screen.getByLabelText('あるある')).toHaveValue('再投稿までの入力保持')
 
-    const repostButton = screen.getByRole('button', { name: '投稿' })
+    const repostButton = screen.getByRole('button', { name: '審査開始' })
     fireEvent.click(repostButton)
     fireEvent.click(repostButton)
 

@@ -127,8 +127,12 @@ async function request<T>(
   }
 
   try {
-    const { timeout: _timeout, headers: customHeaders, skipHttpError: _skip, ...restOptions } =
-      options ?? {}
+    const {
+      timeout: _timeout,
+      headers: customHeaders,
+      skipHttpError: _skip,
+      ...restOptions
+    } = options ?? {}
     const mergedHeaders = new Headers(customHeaders)
     const body = restOptions.body
     const isFormData = typeof FormData !== 'undefined' && body instanceof FormData

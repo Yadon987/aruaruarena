@@ -4,8 +4,8 @@
  * デフォルトハンドラーとエラーハンドラーをエクスポートします。
  */
 
-import { healthHandlers } from './health'
 import { errorHandlers } from './errors'
+import { healthHandlers } from './health'
 import { postsHandlers } from './posts'
 import { rankingsHandlers } from './rankings'
 

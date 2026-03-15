@@ -240,7 +240,7 @@ export function PostFormModal({
                     rows={3}
                     aria-describedby={bodyDescribedBy.join(' ')}
                     aria-invalid={validationErrors.bodyError.length > 0}
-                    placeholder="あるあるを入力"
+                    placeholder="日常の「あるある」な内容を入力して審査"
                   />
                 </div>
 
@@ -249,7 +249,7 @@ export function PostFormModal({
                   disabled={isLoading}
                   className="neon-button-base neon-glow-blue w-full px-4 py-2"
                 >
-                  {isLoading ? '投稿中...' : '投稿'}
+                  {isLoading ? '審査開始中...' : '審査開始'}
                 </button>
               </form>
             </motion.div>

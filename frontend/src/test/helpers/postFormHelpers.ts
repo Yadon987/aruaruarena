@@ -41,7 +41,7 @@ export function fillPostForm(options: PostFormOptions): void {
  */
 export async function submitPostForm(options: SubmitPostFormOptions = {}): Promise<void> {
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: '投稿' }))
+    fireEvent.click(screen.getByRole('button', { name: '審査開始' }))
     await options.waitForSubmit?.()
   })
 }

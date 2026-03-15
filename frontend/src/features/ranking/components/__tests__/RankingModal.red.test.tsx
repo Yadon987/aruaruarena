@@ -127,4 +127,20 @@ describe('RankingModal RED', () => {
     expect(screen.getByRole('region', { name: 'ランキング表示エリア' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^1位 user-1/ })).toBeInTheDocument()
   })
+
+  it('上部固定ボタンと干渉しにくいように高さ制限付きレイアウトを持つ', () => {
+    // 何を検証するか: モーダル本体が最大高内に収まり、一覧だけを内部スクロールできること
+    const onClose = vi.fn()
+    const { container } = render(
+      <RankingModal isOpen onClose={onClose} myPostIds={[]} onSelectRankingPost={vi.fn()} />
+    )
+
+    const dialog = screen.getByRole('dialog', { name: 'ランキング' })
+    const scrollArea = screen.getByRole('region', { name: 'ランキング表示エリア' }).parentElement
+    const layoutRoot = container.firstElementChild
+
+    expect(layoutRoot).toHaveClass('items-start', 'pt-20', 'sm:pt-24', 'lg:items-center')
+    expect(dialog).toHaveClass('flex', 'flex-col', 'max-h-[calc(100dvh-10rem)]')
+    expect(scrollArea).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto')
+  })
 })
