@@ -79,6 +79,7 @@ const JUDGING_POLLING_TIMEOUT_MS =
 const JUDGING_TRANSIENT_ERROR_MAX_RETRIES = 4
 const JUDGING_TRANSIENT_ERROR_MAX_DURATION_MS = 15000
 const RESULT_OGP_POLLING_INTERVAL_MS = 2000
+const RESULT_OGP_POLLING_MAX_ERRORS = 3
 const HEALTH_CHECK_TIMEOUT_MS = 3000
 const AI_TRANSIENT_ERROR_CODES = [
   'provider_error',
@@ -936,6 +937,7 @@ function App() {
 
     let isDisposed = false
     let isFetching = false
+    let consecutiveErrorCount = 0
     let timerId: ReturnType<typeof setInterval> | null = null
 
     const syncOgpStatus = async () => {
@@ -945,6 +947,7 @@ function App() {
       try {
         const response = await api.posts.get(shareableResultPost.id)
         if (isDisposed) return
+        consecutiveErrorCount = 0
 
         queryClient.setQueryData(queryKeys.posts.detail(shareableResultPost.id), response)
         setActiveResultPost(response)
@@ -957,7 +960,12 @@ function App() {
         }
       } catch (error) {
         if (!isDisposed) {
+          consecutiveErrorCount += 1
           console.error('OGP状態の取得に失敗しました', error)
+          if (consecutiveErrorCount >= RESULT_OGP_POLLING_MAX_ERRORS && timerId) {
+            clearInterval(timerId)
+            timerId = null
+          }
         }
       } finally {
         isFetching = false

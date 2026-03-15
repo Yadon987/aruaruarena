@@ -25,6 +25,9 @@ class JudgmentQueueService
   end
 
   def enqueue_ogp_generation(post_id)
+    # local_worker_mode? では enqueue で審査だけを待ち登録し、
+    # LocalJudgmentWorkerService は generate_ogp / JOB_TYPE_GENERATE_OGP を処理しない。
+    # そのため execute_ogp_generation_directly を使って OGP 生成だけ同期実行する。
     return execute_ogp_generation_directly(post_id) if synchronous_mode? || local_worker_mode?
 
     enqueue_message(post_id, JOB_TYPE_GENERATE_OGP)
@@ -83,7 +86,9 @@ class JudgmentQueueService
     request
   end
 
-  def build_message_body(post_id, job_type) = { post_id: post_id, job_type: job_type }
+  def build_message_body(post_id, job_type)
+    { post_id: post_id, job_type: job_type }
+  end
 
   def sign_headers(uri, request)
     signer.sign_request(
