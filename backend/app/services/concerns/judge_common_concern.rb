@@ -29,14 +29,11 @@ module JudgeCommonConcern
     end
   end
 
-  # OGP画像の事前生成を行う
-  # Postオブジェクトを直接渡すことで、DynamoDBの結果的整合性問題を回避
-  def upload_ogp_image(post)
-    return if UploadOgpImageService.call(post)
-
-    Rails.logger.warn("[#{self.class.name}] OGP画像の事前生成に失敗: post_id=#{post.id}")
+  def enqueue_ogp_generation(post)
+    JudgmentQueueService.enqueue_ogp_generation(post.id)
   rescue StandardError => e
-    Rails.logger.warn("[#{self.class.name}] OGP画像の事前生成で例外: post_id=#{post.id} error=#{e.class} - #{e.message}")
+    post.update_ogp_status!(Post::OGP_STATUS_FAILED)
+    Rails.logger.warn("[#{self.class.name}] OGP画像生成ジョブ投入で例外: post_id=#{post.id} error=#{e.class} - #{e.message}")
   end
 
   def update_scored_post!(post, successful_judgments, succeeded_count)
@@ -59,10 +56,10 @@ module JudgeCommonConcern
   end
 
   def persist_scored_post!(post)
-    # OGP生成時に最新ステータスを参照できるよう、永続化前にインメモリで反映する
+    post.ogp_status = Post::OGP_STATUS_PENDING
     post.status = Post::STATUS_SCORED
-    upload_ogp_image(post)
     post.update_status!(Post::STATUS_SCORED)
+    enqueue_ogp_generation(post)
   end
 
   def log_scored_post(post, succeeded_count)

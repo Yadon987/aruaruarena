@@ -84,7 +84,7 @@ RSpec.describe 'RejudgePostService', type: :service do
             comment: '再審査成功'
           )
         )
-        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation).with(instance_of(String))
 
         service_class.new(post_record.id, failed_personas: ['dewi']).execute
 
@@ -94,7 +94,7 @@ RSpec.describe 'RejudgePostService', type: :service do
 
         expect(personas).to include('hiroyuki', 'dewi')
         expect(post_record.status).to eq('scored')
-        expect(UploadOgpImageService).to have_received(:call).with(instance_of(Post))
+        expect(JudgmentQueueService).to have_received(:enqueue_ogp_generation).with(post_record.id)
       end
 
       # 何を検証するか: 複数personaの再審査成功時に平均点を再計算してscoredになること
@@ -116,14 +116,14 @@ RSpec.describe 'RejudgePostService', type: :service do
             comment: '再審査成功'
           )
         )
-        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation).with(instance_of(String))
 
         service_class.new(post_record.id, failed_personas: %w[dewi nakao]).execute
 
         post_record.reload
         expect(post_record.status).to eq('scored')
         expect(post_record.average_score).to be_present
-        expect(UploadOgpImageService).to have_received(:call).with(instance_of(Post))
+        expect(JudgmentQueueService).to have_received(:enqueue_ogp_generation).with(post_record.id)
       end
 
       it '採点誘導文を含む投稿の再審査でも合計点を60点以下に制限する' do
@@ -137,7 +137,7 @@ RSpec.describe 'RejudgePostService', type: :service do
             comment: '再審査成功'
           )
         )
-        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation).with(instance_of(String))
 
         service_class.new(post_record.id, failed_personas: ['dewi']).execute
 
@@ -156,13 +156,13 @@ RSpec.describe 'RejudgePostService', type: :service do
 
         allow_any_instance_of(DewiAdapter).to receive(:judge).and_return(create_timeout_response)
         allow_any_instance_of(OpenAiAdapter).to receive(:judge).and_return(create_timeout_response)
-        allow(UploadOgpImageService).to receive(:call)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation)
 
         service_class.new(post_record.id, failed_personas: %w[dewi nakao]).execute
 
         post_record.reload
         expect(post_record.status).to eq('failed')
-        expect(UploadOgpImageService).not_to have_received(:call)
+        expect(JudgmentQueueService).not_to have_received(:enqueue_ogp_generation)
       end
 
       # 何を検証するか: Post更新失敗時にJudgmentとPostが実行前状態へ復元されること

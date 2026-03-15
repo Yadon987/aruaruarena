@@ -53,6 +53,6 @@ test.describe('E15-02 RED: 結果モーダルアクション', () => {
 
     await page.getByTestId('ranking-item').first().click()
 
-    await expect(page.getByRole('button', { name: 'Xでシェア' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Xでシェアする' })).toBeVisible()
   })
 })

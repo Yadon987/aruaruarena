@@ -30,6 +30,16 @@ class Post
   STATUS_SCORED = 'scored'
   STATUS_FAILED = 'failed'
   STATUSES = [STATUS_JUDGING, STATUS_SCORED, STATUS_FAILED].freeze
+  OGP_STATUS_PENDING = 'pending'
+  OGP_STATUS_GENERATING = 'generating'
+  OGP_STATUS_READY = 'ready'
+  OGP_STATUS_FAILED = 'failed'
+  OGP_STATUSES = [
+    OGP_STATUS_PENDING,
+    OGP_STATUS_GENERATING,
+    OGP_STATUS_READY,
+    OGP_STATUS_FAILED
+  ].freeze
   CLAIM_FIELD = 'judging_claimed_at'
 
   # スコア計算定数
@@ -54,6 +64,7 @@ class Post
   field :judges_count,  :integer, default: JUDGES_COUNT_MIN
   field :score_key,     :string
   field :created_at,    :string # UnixTimestamp（数値として扱うがString型で保存）
+  field :ogp_status,    :string, default: OGP_STATUS_PENDING
 
   # Global Secondary Index: RankingIndex
   # status=scored の投稿のみ対象（スパースインデックス）
@@ -81,6 +92,9 @@ class Post
                              less_than_or_equal_to: JUDGES_COUNT_MAX
                            }
   validates :created_at, presence: { message: 'を入力してください' } # String型でUnixTimestampを保存
+  validates :ogp_status,
+            inclusion: { in: OGP_STATUSES },
+            allow_nil: true
 
   # 本文のgrapheme数をバリデーション
   validate :body_grapheme_length
@@ -152,11 +166,23 @@ class Post
       created_at: created_at,
       average_score: average_score&.to_f,
       status: status,
+      ogp_status: ogp_status_for_api,
       judges_count: judges_count,
       rank: rank,
       total_count: total_count,
       judgments: judgments.map(&:to_judgment_json)
     }
+  end
+
+  def update_ogp_status!(new_ogp_status)
+    self.ogp_status = new_ogp_status
+    save!
+  end
+
+  def ogp_status_for_api
+    return OGP_STATUS_READY if status == STATUS_SCORED && ogp_status.blank?
+
+    ogp_status
   end
 
   # ランキングAPI用のJSON形式を返す

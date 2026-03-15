@@ -70,7 +70,7 @@ RSpec.describe JudgePostService do
       # 何を検証するか: 3人全員成功時にstatus: scoredになること
       it '3人全員成功時にstatus: scoredになること' do
         mock_all_adapters_success
-        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation).with(instance_of(String))
         allow(LogOgpGenerationEventService).to receive(:call)
 
         service.execute
@@ -78,7 +78,8 @@ RSpec.describe JudgePostService do
         post.reload
         expect(post.status).to eq('scored')
         expect(post.judges_count).to eq(3)
-        expect(UploadOgpImageService).to have_received(:call).with(instance_of(Post))
+        expect(post.ogp_status).to eq(Post::OGP_STATUS_PENDING)
+        expect(JudgmentQueueService).to have_received(:enqueue_ogp_generation).with(post.id)
         expect(LogOgpGenerationEventService).to have_received(:call).with(
           event: 'post_scored_saved',
           post: instance_of(Post),
@@ -86,12 +87,12 @@ RSpec.describe JudgePostService do
         )
       end
 
-      it 'OGP画像生成が完了するまでscoredを保存しないこと' do
+      it 'scored保存後にOGP生成ジョブを投入すること' do
         mock_all_adapters_success
-        allow(UploadOgpImageService).to receive(:call) do |post_for_upload|
-          expect(post_for_upload.status).to eq('scored')
-          expect(Post.find(post.id).status).to eq('judging')
-          true
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation) do |post_id|
+          persisted_post = Post.find(post_id)
+          expect(persisted_post.status).to eq('scored')
+          expect(persisted_post.ogp_status).to eq(Post::OGP_STATUS_PENDING)
         end
 
         service.execute
@@ -104,14 +105,14 @@ RSpec.describe JudgePostService do
       it '2人成功時にstatus: scoredになること' do
         mock_all_adapters_success
         mock_adapter_failure(OpenAiAdapter)
-        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation).with(instance_of(String))
 
         service.execute
 
         post.reload
         expect(post.status).to eq('scored')
         expect(post.judges_count).to eq(2)
-        expect(UploadOgpImageService).to have_received(:call).with(instance_of(Post))
+        expect(JudgmentQueueService).to have_received(:enqueue_ogp_generation).with(post.id)
       end
 
       # 何を検証するか: 平均点が小数第1位に丸められること
@@ -129,7 +130,7 @@ RSpec.describe JudgePostService do
           create_success_response(scores: { empathy: 15, humor: 15, brevity: 15, originality: 15, expression: 15 },
                                   comment: 'test')
         )
-        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(true)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation).with(instance_of(String))
 
         service.execute
 
@@ -175,14 +176,14 @@ RSpec.describe JudgePostService do
         mock_adapter_failure(GeminiAdapter)
         mock_adapter_failure(DewiAdapter)
         mock_adapter_failure(OpenAiAdapter)
-        allow(UploadOgpImageService).to receive(:call)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation)
 
         service.execute
 
         post.reload
         expect(post.status).to eq('failed')
         expect(post.judges_count).to eq(0)
-        expect(UploadOgpImageService).not_to have_received(:call)
+        expect(JudgmentQueueService).not_to have_received(:enqueue_ogp_generation)
       end
 
       # 何を検証するか: 1人成功時にstatus: failedになること
@@ -190,14 +191,14 @@ RSpec.describe JudgePostService do
         mock_all_adapters_success
         mock_adapter_failure(DewiAdapter)
         mock_adapter_failure(OpenAiAdapter)
-        allow(UploadOgpImageService).to receive(:call)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation)
 
         service.execute
 
         post.reload
         expect(post.status).to eq('failed')
         expect(post.judges_count).to eq(1)
-        expect(UploadOgpImageService).not_to have_received(:call)
+        expect(JudgmentQueueService).not_to have_received(:enqueue_ogp_generation)
       end
 
       # 何を検証するか: Postがnilの場合は何もしないこと
@@ -268,16 +269,19 @@ RSpec.describe JudgePostService do
         expect(timeout_judgment.error_code).to eq('timeout')
       end
 
-      it 'OGP生成に失敗しても審査結果はscoredのまま継続すること' do
+      it 'OGP生成ジョブ投入に失敗しても審査結果はscoredのまま継続すること' do
         mock_all_adapters_success
-        allow(UploadOgpImageService).to receive(:call).with(instance_of(Post)).and_return(false)
-        expect(Rails.logger).to receive(:warn).with(/\[JudgePostService\] OGP画像の事前生成に失敗: post_id=#{post.id}/)
+        allow(JudgmentQueueService).to receive(:enqueue_ogp_generation).and_raise(StandardError, 'queue failed')
+        expect(Rails.logger).to receive(:warn).with(
+          /\[JudgePostService\] OGP画像生成ジョブ投入で例外: post_id=#{post.id} error=StandardError - queue failed/
+        )
 
         service.execute
 
         post.reload
         expect(post.status).to eq('scored')
         expect(post.judges_count).to eq(3)
+        expect(post.ogp_status).to eq(Post::OGP_STATUS_FAILED)
       end
 
       # 何を検証するか: 混合パターンで正しくステータスが決まること
