@@ -16,7 +16,7 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 imagemagick fonts-droid-fallback fonts-dejavu-core && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 imagemagick fontconfig fonts-droid-fallback fonts-dejavu-core fonts-noto-cjk && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment

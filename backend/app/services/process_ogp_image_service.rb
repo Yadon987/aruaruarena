@@ -13,7 +13,10 @@ class ProcessOgpImageService
     return false unless processable_post?
 
     mark_generating!
-    finalize_upload_result(UploadOgpImageService.call(@post))
+    uploaded = UploadOgpImageService.call(@post)
+    return mark_ready_result if uploaded
+
+    mark_failed_result
   rescue StandardError => e
     mark_ogp_failed! if @post
     Rails.logger.error("[ProcessOgpImageService] OGP画像生成に失敗: post_id=#{@post&.id} error=#{e.class} - #{e.message}")
@@ -48,10 +51,15 @@ class ProcessOgpImageService
     @post.update_ogp_status!(Post::OGP_STATUS_FAILED)
   end
 
-  def finalize_upload_result(uploaded)
-    return mark_ogp_ready! || true if uploaded
+  # rubocop:disable Naming/PredicateMethod
+  def mark_ready_result
+    mark_ogp_ready!
+    true
+  end
 
+  def mark_failed_result
     mark_ogp_failed!
     false
   end
+  # rubocop:enable Naming/PredicateMethod
 end

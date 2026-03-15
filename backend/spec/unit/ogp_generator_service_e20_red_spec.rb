@@ -39,6 +39,14 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     it 'FONT_SIZES定数に審査員関連キーが含まれないこと' do
       expect(described_class::FONT_SIZES.keys).not_to include(:judge_score, :judge_comment)
     end
+
+    it '日本語描画にはDroid Sans Fallbackを優先すること' do
+      expect(described_class::FONT_PATH_CANDIDATES).to include(described_class::SYSTEM_NOTO_CJK_FONT_PATH.to_s)
+      expect(described_class::FONT_PATH_CANDIDATES).to include(described_class::SYSTEM_DROID_FONT_PATH.to_s)
+      expect(described_class::FONT_BOLD_PATH_CANDIDATES)
+        .to include(described_class::SYSTEM_NOTO_CJK_BOLD_FONT_PATH.to_s)
+      expect(described_class::NUMBER_FONT_PATH).to eq(described_class::SYSTEM_NUMBER_FONT_PATH)
+    end
   end
 
   describe 'E20 RED: 初期化処理' do
