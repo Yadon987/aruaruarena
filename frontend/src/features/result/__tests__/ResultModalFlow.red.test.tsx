@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 import { api } from '../../../shared/services/api'
@@ -38,6 +38,8 @@ describe('E15-01 RED: ResultModal Flow', () => {
   })
 
   afterEach(() => {
+    cleanup()
+    vi.clearAllTimers()
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })
