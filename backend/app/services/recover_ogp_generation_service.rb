@@ -61,6 +61,13 @@ class RecoverOgpGenerationService
   def retry_pending!
     return false unless post_age_seconds >= PENDING_RETRY_SECONDS
 
+    moved = @post.update_ogp_status_if_current(
+      from: Post::OGP_STATUS_PENDING,
+      to: Post::OGP_STATUS_GENERATING,
+      required_status: Post::STATUS_SCORED
+    )
+    return false unless moved
+
     enqueue_retry!('pending_retry')
   end
 
