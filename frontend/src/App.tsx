@@ -446,12 +446,33 @@ async function resolveJudgingPollingErrorMessage(reason: 'timeout' | 'generic'):
   return MESSAGE_JUDGING_FETCH_FAILED
 }
 
+function isValidationErrorMessage(message: string): boolean {
+  if (!message) return false
+  if (message === MESSAGE_JUDGING_CLIENT_ERROR) return true
+
+  const prefixes = [
+    '投稿頻度が高すぎます',
+    '同じ内容の投稿があります',
+    'リクエスト形式が正しくありません',
+    'Content-Type は application/json を指定してください',
+    'ニックネーム',
+    '本文',
+  ]
+  if (prefixes.some((prefix) => message.startsWith(prefix))) return true
+
+  const keywords = ['入力してください', '文字で入力してください']
+  return keywords.some((keyword) => message.includes(keyword))
+}
+
 function resolveJudgingErrorGuide(message: string): string {
   if (message === MESSAGE_JUDGING_BACKEND_NOT_RUNNING) {
     return MESSAGE_JUDGING_BACKEND_GUIDE
   }
   if (message === MESSAGE_JUDGING_LOCAL_WORKER_NOT_RUNNING) {
     return MESSAGE_JUDGING_LOCAL_WORKER_GUIDE
+  }
+  if (isValidationErrorMessage(message)) {
+    return ''
   }
   return MESSAGE_JUDGING_RETRY_GUIDE
 }
@@ -475,6 +496,9 @@ function resolveJudgingSubmitErrorMessage(error: unknown): string {
     }
     if (SERVER_ERROR_STATUSES.includes(error.status)) {
       return MESSAGE_JUDGING_SERVER_ERROR
+    }
+    if (error.status === 422 && error.message) {
+      return error.message
     }
     if (
       error.status >= HTTP_STATUS.BAD_REQUEST &&
@@ -945,7 +969,8 @@ function App() {
       isShareReady ||
       isShareFailed ||
       isSharePollingExhausted
-    ) return
+    )
+      return
 
     let isDisposed = false
     let isFetching = false
@@ -2031,12 +2056,16 @@ function App() {
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-base font-bold text-slate-900 sm:text-lg">
-                    読み込みに失敗しました
+                    {isValidationErrorMessage(judgingErrorMessage)
+                      ? '投稿できませんでした'
+                      : '読み込みに失敗しました'}
                   </h2>
                   <p className="text-sm leading-relaxed text-slate-700">{judgingErrorMessage}</p>
-                  <p className="text-xs text-slate-500">
-                    {resolveJudgingErrorGuide(judgingErrorMessage)}
-                  </p>
+                  {resolveJudgingErrorGuide(judgingErrorMessage) && (
+                    <p className="text-xs text-slate-500">
+                      {resolveJudgingErrorGuide(judgingErrorMessage)}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -2140,22 +2169,31 @@ function App() {
                     Boolean(shareableResultPost) && !isShareFailed && !isSharePollingExhausted
                   }
                   ogpStatus={shareableResultPost?.ogp_status ?? null}
-                  onShareToX={shareableResultPost && isShareReady ? handleResultShareToX : undefined}
-                  ogpPreviewUrl={shareableResultPost && isShareReady ? buildOgpPreviewUrl(shareableResultPost.id) : undefined}
+                  onShareToX={
+                    shareableResultPost && isShareReady ? handleResultShareToX : undefined
+                  }
+                  ogpPreviewUrl={
+                    shareableResultPost && isShareReady
+                      ? buildOgpPreviewUrl(shareableResultPost.id)
+                      : undefined
+                  }
                 />
               )}
           </div>
         )}
 
         {viewMode !== 'judging' && isMyPostsOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pb-4 pt-20 sm:px-6 sm:pb-6 sm:pt-24 lg:items-center lg:py-8">
             <button
               type="button"
               aria-label="自分の投稿を閉じる"
               className="modal-overlay-gorgeous absolute inset-0"
               onClick={() => closeMyPosts()}
             />
-            <div className="relative flex h-full w-full items-center justify-center">
+            <div
+              className="relative flex h-full w-full items-start justify-center lg:items-center"
+              onClick={() => closeMyPosts()}
+            >
               <motion.div
                 ref={myPostsModalRef}
                 initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
@@ -2165,17 +2203,19 @@ function App() {
                 aria-modal="true"
                 aria-label="自分の投稿"
                 tabIndex={-1}
-                className="modal-gorgeous-base relative z-10 w-full max-w-[95vw] rounded-2xl p-4 text-slate-100 sm:max-w-2xl lg:max-w-3xl"
+                className="modal-gorgeous-base relative z-10 flex max-h-full w-full max-w-[95vw] flex-col rounded-2xl p-4 text-slate-100 sm:max-w-2xl lg:max-w-3xl"
                 onClick={(event) => event.stopPropagation()}
               >
                 {selectedPost ? (
-                  <MyPostDetail
-                    post={selectedPost}
-                    onBack={() => setSelectedPost(null)}
-                    onClose={closeMyPosts}
-                  />
+                  <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                    <MyPostDetail
+                      post={selectedPost}
+                      onBack={() => setSelectedPost(null)}
+                      onClose={closeMyPosts}
+                    />
+                  </div>
                 ) : (
-                  <>
+                  <div className="min-h-0 flex flex-1 flex-col">
                     <div className="modal-header-gorgeous flex items-center justify-between gap-4">
                       <div className="space-y-1">
                         <h2 className="gold-text text-lg font-semibold">自分の投稿</h2>
@@ -2210,12 +2250,12 @@ function App() {
                         投稿するとここに表示されます
                       </div>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="min-h-0 flex flex-1 flex-col space-y-4">
                         <div className="flex items-center justify-between gap-3 text-sm text-slate-300/90">
                           <p>{displayMyPostIds.length}件の投稿を表示中</p>
                           <p>カードを押すと詳細を確認できます</p>
                         </div>
-                        <ul className="modal-scroll-area max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+                        <ul className="modal-scroll-area min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                           {displayMyPostIds.map((postId) => {
                             const post = myPostDetails[postId]
                             const isLoading = loadingMyPostIds.includes(postId)
@@ -2320,7 +2360,7 @@ function App() {
                         </ul>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </motion.div>
             </div>

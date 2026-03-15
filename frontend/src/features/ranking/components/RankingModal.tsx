@@ -18,8 +18,8 @@ const KEY_TAB = 'Tab'
 const FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 const DIALOG_CONTAINER_CLASS =
-  'modal-gorgeous-base w-full max-w-[95vw] rounded-2xl p-4 text-slate-100 sm:max-w-2xl lg:max-w-3xl'
-const SCROLLABLE_SECTION_CLASS = 'modal-scroll-area max-h-[70vh] overflow-y-auto pr-2'
+  'modal-gorgeous-base flex max-h-[calc(100dvh-10rem)] w-full max-w-[95vw] flex-col overflow-hidden rounded-2xl p-4 text-slate-100 sm:max-h-[calc(100dvh-12rem)] sm:max-w-2xl lg:max-w-3xl'
+const SCROLLABLE_SECTION_CLASS = 'modal-scroll-area min-h-0 flex-1 overflow-y-auto pr-2'
 
 export function RankingModal({
   isOpen,
@@ -97,7 +97,7 @@ export function RankingModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex h-full items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex h-full items-start justify-center px-4 pb-4 pt-20 sm:px-6 sm:pb-6 sm:pt-24 lg:items-center lg:py-8">
       <button
         type="button"
         aria-label="ランキングモーダルを閉じる"
@@ -105,7 +105,10 @@ export function RankingModal({
         data-testid="ranking-modal-overlay"
         onClick={handleClose}
       />
-      <div className="relative flex h-full w-full items-center justify-center">
+      <div
+        className="relative flex h-full w-full items-start justify-center lg:items-center"
+        onClick={handleClose}
+      >
         <motion.div
           initial={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
           animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}

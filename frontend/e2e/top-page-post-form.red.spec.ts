@@ -19,17 +19,24 @@ async function dismissOnboardingModal(page: Page) {
   const startButton = page.getByRole('button', { name: 'はじめる' })
   const dialog = page.getByRole('dialog', { name: '遊び方ガイド' })
 
-  if ((await startButton.count()) === 0) return
-  if (await startButton.isVisible()) {
-    await startButton.click()
-    await dialog.waitFor({ state: 'detached', timeout: 2000 })
+  try {
+    await dialog.waitFor({ state: 'visible', timeout: 2000 })
+  } catch {
+    return
   }
+
+  await startButton.click()
+  await dialog.waitFor({ state: 'detached', timeout: 2000 })
 }
 
-async function openPostForm(page: Page) {
+async function dismissInitialModals(page: Page) {
   await dismissAudioConsentModal(page)
   await dismissOnboardingModal(page)
   await dismissAudioConsentModal(page)
+}
+
+async function openPostForm(page: Page) {
+  await dismissInitialModals(page)
   await page.getByRole('button', { name: '投稿する' }).click()
   await expect(page.getByRole('dialog', { name: '投稿フォーム' })).toBeVisible()
 }
@@ -49,9 +56,7 @@ test.describe('E12-01 RED: トップ画面と投稿フォーム', () => {
   test('トップ画面の主要要素が表示される', async ({ page }) => {
     // 何を検証するか: 投稿導線と主要セクションの表示
     await page.goto('/')
-    await dismissAudioConsentModal(page)
-    await dismissOnboardingModal(page)
-    await dismissAudioConsentModal(page)
+    await dismissInitialModals(page)
 
     await expect(page.getByRole('button', { name: '投稿する' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'ランキング' })).toBeVisible()
