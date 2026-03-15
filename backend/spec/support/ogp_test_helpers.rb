@@ -115,7 +115,7 @@ module OgpTestHelpers
 
   # ImageMagick の利用可否を判定する
   def self.imagemagick_available?
-    system('which mogrify > /dev/null 2>&1')
+    system('which', 'mogrify', out: File::NULL, err: File::NULL)
   end
 end
 

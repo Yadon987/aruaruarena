@@ -2,6 +2,8 @@
 
 require 'rails_helper'
 require 'timeout'
+require 'cgi'
+require 'json'
 
 RSpec.describe JudgmentQueueService, dynamodb: false do
   shared_context 'SQS mocks' do
@@ -32,14 +34,19 @@ RSpec.describe JudgmentQueueService, dynamodb: false do
     include_context 'SQS mocks'
 
     it 'post_id を含む JSON を SQS へ送信すること' do
+      signed_payload = nil
+      allow(signer).to receive(:sign_request) do |request|
+        signed_payload = request[:body]
+        signed_request
+      end
+
       described_class.enqueue('post-123')
 
-      expect(signer).to have_received(:sign_request).with(
-        hash_including(
-          body: include(
-            'MessageBody=%7B%22post_id%22%3A%22post-123%22%2C%22job_type%22%3A%22judge_post%22%7D'
-          )
-        )
+      message_body = CGI.parse(signed_payload).fetch('MessageBody').first
+      message_json = JSON.parse(message_body)
+      expect(message_json).to include(
+        'post_id' => 'post-123',
+        'job_type' => 'judge_post'
       )
       expect(http_client).to have_received(:request).with(instance_of(Net::HTTP::Post))
     end
@@ -88,14 +95,19 @@ RSpec.describe JudgmentQueueService, dynamodb: false do
     include_context 'SQS mocks'
 
     it 'OGP生成ジョブを SQS へ送信すること' do
+      signed_payload = nil
+      allow(signer).to receive(:sign_request) do |request|
+        signed_payload = request[:body]
+        signed_request
+      end
+
       described_class.enqueue_ogp_generation('post-123')
 
-      expect(signer).to have_received(:sign_request).with(
-        hash_including(
-          body: include(
-            'MessageBody=%7B%22post_id%22%3A%22post-123%22%2C%22job_type%22%3A%22generate_ogp%22%7D'
-          )
-        )
+      message_body = CGI.parse(signed_payload).fetch('MessageBody').first
+      message_json = JSON.parse(message_body)
+      expect(message_json).to include(
+        'post_id' => 'post-123',
+        'job_type' => 'generate_ogp'
       )
     end
 

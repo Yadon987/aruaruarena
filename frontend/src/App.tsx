@@ -531,6 +531,7 @@ function App() {
   const [isRejudgeModalOpen, setIsRejudgeModalOpen] = useState(false)
   const [isRejudging, setIsRejudging] = useState(false)
   const [rejudgeErrorMessage, setRejudgeErrorMessage] = useState('')
+  const [isSharePollingExhausted, setIsSharePollingExhausted] = useState(false)
   const [isJudgingPollingReady, setIsJudgingPollingReady] = useState(false)
   const [judgingTransientErrorCount, setJudgingTransientErrorCount] = useState(0)
   const [footerReservedSpace, setFooterReservedSpace] = useState(FIXED_FOOTER_MIN_RESERVED_PX)
@@ -668,6 +669,11 @@ function App() {
   }, [activeResultPost, resultViewSource])
   const isShareReady = shareableResultPost?.ogp_status === 'ready'
   const isShareFailed = shareableResultPost?.ogp_status === 'failed'
+
+  useEffect(() => {
+    setIsSharePollingExhausted(false)
+  }, [shareableResultPost?.id, viewMode])
+
   const audioScene = resultAudioScene ?? (viewMode === 'result' ? 'top' : viewMode)
   const shouldAutoOpenOnboarding =
     viewMode === 'top' &&
@@ -933,7 +939,13 @@ function App() {
   }, [isRankingModalOpen])
 
   useEffect(() => {
-    if (viewMode !== 'result' || !shareableResultPost || isShareReady || isShareFailed) return
+    if (
+      viewMode !== 'result' ||
+      !shareableResultPost ||
+      isShareReady ||
+      isShareFailed ||
+      isSharePollingExhausted
+    ) return
 
     let isDisposed = false
     let isFetching = false
@@ -965,6 +977,7 @@ function App() {
           if (consecutiveErrorCount >= RESULT_OGP_POLLING_MAX_ERRORS && timerId) {
             clearInterval(timerId)
             timerId = null
+            setIsSharePollingExhausted(true)
           }
         }
       } finally {
@@ -980,7 +993,7 @@ function App() {
       isDisposed = true
       if (timerId) clearInterval(timerId)
     }
-  }, [isShareFailed, isShareReady, shareableResultPost, viewMode])
+  }, [isShareFailed, isSharePollingExhausted, isShareReady, shareableResultPost, viewMode])
 
   useEffect(() => {
     if (viewMode === 'judging') {
@@ -2123,7 +2136,9 @@ function App() {
                   closeIcon={resultCloseButtonIcon}
                   isRejudging={isRejudging}
                   rejudgeErrorMessage={rejudgeErrorMessage}
-                  showShareActions={Boolean(shareableResultPost) && !isShareFailed}
+                  showShareActions={
+                    Boolean(shareableResultPost) && !isShareFailed && !isSharePollingExhausted
+                  }
                   ogpStatus={shareableResultPost?.ogp_status ?? null}
                   onShareToX={shareableResultPost && isShareReady ? handleResultShareToX : undefined}
                   ogpPreviewUrl={shareableResultPost && isShareReady ? buildOgpPreviewUrl(shareableResultPost.id) : undefined}

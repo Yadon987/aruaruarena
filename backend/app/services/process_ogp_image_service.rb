@@ -10,17 +10,14 @@ class ProcessOgpImageService
   end
 
   def execute
-    return false unless processable_post?
+    return false unless try_mark_generating!
 
-    mark_generating!
     uploaded = UploadOgpImageService.call(@post)
     return mark_ready_result if uploaded
 
     mark_failed_result
   rescue StandardError => e
-    mark_ogp_failed! if @post
-    Rails.logger.error("[ProcessOgpImageService] OGP画像生成に失敗: post_id=#{@post&.id} error=#{e.class} - #{e.message}")
-    false
+    handle_execution_error(e)
   end
 
   class << self
@@ -31,16 +28,15 @@ class ProcessOgpImageService
 
   private
 
-  def processable_post?
+  def try_mark_generating!
     return false if @post.nil?
     return false unless @post.status == Post::STATUS_SCORED
-    return false if [Post::OGP_STATUS_READY, Post::OGP_STATUS_GENERATING].include?(@post.ogp_status)
 
-    true
-  end
-
-  def mark_generating!
-    @post.update_ogp_status!(Post::OGP_STATUS_GENERATING)
+    @post.update_ogp_status_if_current(
+      from: [Post::OGP_STATUS_PENDING, Post::OGP_STATUS_FAILED],
+      to: Post::OGP_STATUS_GENERATING,
+      required_status: Post::STATUS_SCORED
+    )
   end
 
   def mark_ogp_ready!
@@ -62,4 +58,26 @@ class ProcessOgpImageService
     false
   end
   # rubocop:enable Naming/PredicateMethod
+
+  # rubocop:disable Naming/PredicateMethod
+  def handle_execution_error(error)
+    mark_failed_on_error
+    Rails.logger.error(
+      "[ProcessOgpImageService] OGP画像生成に失敗: post_id=#{@post&.id} " \
+      "error=#{error.class} - #{error.message}"
+    )
+    false
+  end
+  # rubocop:enable Naming/PredicateMethod
+
+  def mark_failed_on_error
+    return unless @post
+
+    mark_ogp_failed!
+  rescue StandardError => e
+    Rails.logger.error(
+      "[ProcessOgpImageService] ogp_status=failedの更新に失敗: post_id=#{@post.id} " \
+      "error=#{e.class} - #{e.message}"
+    )
+  end
 end

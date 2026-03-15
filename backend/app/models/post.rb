@@ -179,6 +179,29 @@ class Post
     save!
   end
 
+  # ogp_statusの条件付き更新を行う
+  # @param from [String, Array<String>] 更新可能な現在のogp_status
+  # @param to [String] 更新後のogp_status
+  # @param required_status [String, nil] statusの必須条件（任意）
+  # @return [Boolean] 更新に成功したらtrue
+  # rubocop:disable Naming/PredicateMethod
+  def update_ogp_status_if_current(from:, to:, required_status: nil)
+    return false if id.blank?
+
+    Array(from).each do |current|
+      conditions = { ogp_status: current }
+      conditions[:status] = required_status if required_status
+      updated = self.class.update_fields(id, { ogp_status: to }, { if: conditions })
+      if updated
+        self.ogp_status = updated.ogp_status
+        return true
+      end
+    end
+
+    false
+  end
+  # rubocop:enable Naming/PredicateMethod
+
   def ogp_status_for_api
     return OGP_STATUS_READY if status == STATUS_SCORED && ogp_status.blank?
 
