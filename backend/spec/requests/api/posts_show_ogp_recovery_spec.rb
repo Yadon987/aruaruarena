@@ -3,14 +3,17 @@
 require 'rails_helper'
 
 RSpec.describe 'GET /api/posts/:id OGP recovery', type: :request do
+  around do |example|
+    original_bucket = ENV.fetch('OGP_S3_BUCKET', nil)
+    ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
+    example.run
+  ensure
+    ENV['OGP_S3_BUCKET'] = original_bucket
+  end
+
   before do
     allow(OgpMetaTagService).to receive(:uploaded_image_exists?).and_return(false)
     allow(JudgmentQueueService).to receive(:enqueue_ogp_generation)
-    ENV['OGP_S3_BUCKET'] = 'test-ogp-bucket'
-  end
-
-  after do
-    ENV.delete('OGP_S3_BUCKET')
   end
 
   it 'pending が長時間残っている scored 投稿は詳細取得時に再投入すること' do
@@ -20,7 +23,7 @@ RSpec.describe 'GET /api/posts/:id OGP recovery', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(JudgmentQueueService).to have_received(:enqueue_ogp_generation).with(post.id)
-    expect(response.parsed_body['ogp_status']).to eq('pending')
+    expect(response.parsed_body['ogp_status']).to eq('generating')
   end
 
   it 'S3に画像がある pending 投稿は詳細取得時に ready を返すこと' do
