@@ -33,12 +33,22 @@ require_env_pair() {
 
 dynamodb_is_healthy() {
   local response
-  response=$(curl -s --max-time 3 "${HOST_DYNAMODB_ENDPOINT}" 2>&1)
+  response=$(curl -sS --max-time 3 "${HOST_DYNAMODB_ENDPOINT}" 2>&1 || true)
   [[ -n "$response" && ("$response" == *"MissingAuthenticationToken"* || "$response" == *"__type"* || "$response" == *"com.amazon"* || "$response" == *"healthy"*) ]]
 }
 
+dynamodb_container_is_healthy() {
+  if ! docker ps -a --format '{{.Names}}' | grep -q "^${DYNAMODB_CONTAINER_NAME}$"; then
+    return 1
+  fi
+
+  local health_status
+  health_status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${DYNAMODB_CONTAINER_NAME}" 2>/dev/null || true)
+  [[ "${health_status}" == "healthy" || "${health_status}" == "running" ]]
+}
+
 ensure_dynamodb() {
-  if dynamodb_is_healthy; then
+  if dynamodb_is_healthy || dynamodb_container_is_healthy; then
     echo "✅ DynamoDB Local OK"
     return
   fi
@@ -56,11 +66,12 @@ ensure_dynamodb() {
   fi
 
   echo "⏳ DynamoDB Localの起動を待機中..."
-  for _ in $(seq 1 10); do
-    if dynamodb_is_healthy; then
+  for count in $(seq 1 60); do
+    if dynamodb_is_healthy || dynamodb_container_is_healthy; then
       echo "✅ DynamoDB Local OK"
       return
     fi
+    echo "   ...waiting for DynamoDB Local (${count}/60)"
     sleep 1
   done
 

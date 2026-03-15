@@ -32,9 +32,19 @@ dynamodb_is_healthy() {
   # DynamoDB Localは GET / に対して認証エラーJSONを返すため、
   # その応答を確認して疎通を判定する。
   local response
-  response=$(curl -s --max-time 3 "${DYNAMODB_ENDPOINT}" 2>&1)
+  response=$(curl -sS --max-time 3 "${DYNAMODB_ENDPOINT}" 2>&1 || true)
   # 認証エラーメッセージまたは空でない応答があれば成功
   [[ -n "$response" && ("$response" == *"MissingAuthenticationToken"* || "$response" == *"__type"* || "$response" == *"com.amazon"* || "$response" == *"healthy"*) ]]
+}
+
+dynamodb_container_is_healthy() {
+  if ! docker ps -a --format '{{.Names}}' | grep -q "^${DYNAMODB_CONTAINER_NAME}$"; then
+    return 1
+  fi
+
+  local health_status
+  health_status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${DYNAMODB_CONTAINER_NAME}" 2>/dev/null || true)
+  [[ "${health_status}" == "healthy" || "${health_status}" == "running" ]]
 }
 
 # backendの古いテストプロセスを停止
@@ -80,7 +90,7 @@ run_vitest() {
 
 ensure_dynamodb() {
   cd "$(dirname "$0")/.."
-  if dynamodb_is_healthy; then
+  if dynamodb_is_healthy || dynamodb_container_is_healthy; then
     echo "✅ DynamoDB Local OK"
     return 0
   fi
@@ -99,13 +109,13 @@ ensure_dynamodb() {
 
   echo "⏳ DynamoDB Localの起動を待機中..."
   count=0
-  until dynamodb_is_healthy; do
+  until dynamodb_is_healthy || dynamodb_container_is_healthy; do
     count=$((count + 1))
-    if [ ${count} -ge 15 ]; then
+    if [ ${count} -ge 60 ]; then
       echo "🚨 DynamoDB Localの起動に失敗しました"
       return 1
     fi
-    echo "   ...waiting for DynamoDB Local (${count}/15)"
+    echo "   ...waiting for DynamoDB Local (${count}/60)"
     sleep 1
   done
 

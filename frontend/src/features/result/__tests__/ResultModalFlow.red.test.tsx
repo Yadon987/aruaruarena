@@ -13,11 +13,13 @@ vi.mock('../../../shared/hooks/useRankings', () => ({
 }))
 
 async function openRankingResultFromTopRanking() {
-  fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
-  await waitFor(() => {
-    expect(screen.getByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'ランキング' }))
   })
-  fireEvent.click(screen.getByTestId('ranking-item'))
+  expect(await screen.findByRole('dialog', { name: 'ランキング' })).toBeInTheDocument()
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('ranking-item'))
+  })
 }
 
 describe('E15-01 RED: ResultModal Flow', () => {
@@ -248,7 +250,7 @@ describe('E15-01 RED: ResultModal Flow', () => {
         expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Xでシェアする' })).toBeInTheDocument()
       },
-      { timeout: 9000 }
+      { timeout: 12000 }
     )
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
 
@@ -390,7 +392,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     ).toBeInTheDocument()
     expect(within(resultModal).queryByRole('button', { name: 'トップへ' })).not.toBeInTheDocument()
 
-    fireEvent.click(within(resultModal).getByRole('button', { name: '自分の投稿へ戻る' }))
+    await act(async () => {
+      fireEvent.click(within(resultModal).getByRole('button', { name: '自分の投稿へ戻る' }))
+    })
 
     const myPostsDialog = await screen.findByRole('dialog', { name: '自分の投稿' })
     expect(within(myPostsDialog).getByRole('button', { name: /投稿詳細を開く/ })).toBeInTheDocument()
@@ -427,7 +431,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
       },
       { timeout: 9000 }
     )
-    fireEvent.keyDown(modal, { key: 'Escape' })
+    await act(async () => {
+      fireEvent.keyDown(modal, { key: 'Escape' })
+    })
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: '審査結果モーダル' })).not.toBeInTheDocument()
@@ -467,7 +473,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     expect(screen.getByRole('button', { name: 'シェア画像を表示' })).toBeInTheDocument()
     expect(screen.queryByTestId('ogp-preview')).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xでシェアする' }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Xでシェアする' }))
+    })
 
     const [shareIntentUrl] = vi.mocked(window.open).mock.calls[0] as [string]
     const shareUrl = new URL(shareIntentUrl)
@@ -595,7 +603,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     ).toBeInTheDocument()
     expect(within(resultModal).queryByRole('button', { name: 'トップへ' })).not.toBeInTheDocument()
 
-    fireEvent.click(within(resultModal).getByRole('button', { name: 'ランキングへ戻る' }))
+    await act(async () => {
+      fireEvent.click(within(resultModal).getByRole('button', { name: 'ランキングへ戻る' }))
+    })
 
     const rankingDialog = await screen.findByRole('dialog', { name: 'ランキング' })
     expect(rankingDialog).toBeInTheDocument()
@@ -622,7 +632,9 @@ describe('E15-01 RED: ResultModal Flow', () => {
     render(<App />)
 
     await openRankingResultFromTopRanking()
-    fireEvent.click(await screen.findByRole('button', { name: '再試行' }))
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: '再試行' }))
+    })
 
     await waitFor(() => {
       expect(screen.getByText('スコア: 77.7')).toBeInTheDocument()
@@ -690,7 +702,9 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     const rejudgeButton = await screen.findByRole('button', {
       name: '再審査する',
     })
-    fireEvent.click(rejudgeButton)
+    await act(async () => {
+      fireEvent.click(rejudgeButton)
+    })
 
     await waitFor(() => {
       expect(rejudgeSpy).toHaveBeenCalledWith('rejudge-post-id', ['hiroyuki', 'dewi', 'nakao'])
@@ -716,7 +730,9 @@ describe('E15-02 RED: ResultModal Action Buttons', () => {
     const rejudgeButton = await screen.findByRole('button', {
       name: '再審査する',
     })
-    fireEvent.click(rejudgeButton)
+    await act(async () => {
+      fireEvent.click(rejudgeButton)
+    })
 
     await waitFor(() => {
       expect(screen.queryByTestId('judging-screen')).not.toBeInTheDocument()

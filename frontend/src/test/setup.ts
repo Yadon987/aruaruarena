@@ -45,6 +45,10 @@ vi.mock('howler', () => {
 // VitestのグローバルexpectにJest DOMのマッチャーを追加
 expect.extend(matchers)
 
+// React 19 の state update 警告を避けるため、テスト環境で act 対応を有効化する。
+;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
+  true
+
 beforeEach(() => {
   window.history.replaceState({}, '', ROOT_PATH)
 

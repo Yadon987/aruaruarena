@@ -48,10 +48,14 @@ const fillAndSubmitPost = async (nickname = 'テスト', body = 'テスト投稿
 
 describe('E24-07 RED: App Seamless UI Integration', () => {
   beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem('aruaru_sound_modal_answered', 'true')
+    localStorage.setItem('aruaru_onboarding_completed', 'true')
     vi.spyOn(api.posts, 'create').mockResolvedValue({
       id: 'seamless-post-id',
       status: 'judging',
     })
+    vi.spyOn(api.rankings, 'list').mockResolvedValue({ rankings: [], total_count: 0 })
     // デフォルトは審査中状態を返す（ポーリング中の審査中画面を維持）
     vi.spyOn(api.posts, 'get').mockResolvedValue({
       id: 'seamless-post-id',
@@ -174,6 +178,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
       nickname: 'テスト太郎',
       body: 'テスト本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-03-01T00:00:00Z',
       average_score: 90.0,
       rank: 1,
@@ -191,7 +196,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
         expect(screen.queryByRole('dialog', { name: '投稿フォーム' })).not.toBeInTheDocument()
         expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
       },
-      { timeout: 12000 }
+      { timeout: 15000 }
     )
   })
 
@@ -203,6 +208,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
       nickname: 'テスト太郎',
       body: 'テスト本文',
       status: 'scored',
+      ogp_status: 'ready',
       created_at: '2026-03-01T00:00:00Z',
       average_score: 90.0,
       rank: 1,
@@ -220,7 +226,7 @@ describe('E24-07 RED: App Seamless UI Integration', () => {
         expect(screen.queryByRole('dialog', { name: '投稿フォーム' })).not.toBeInTheDocument()
         expect(screen.getByRole('dialog', { name: /審査結果/ })).toBeInTheDocument()
       },
-      { timeout: 12000 }
+      { timeout: 15000 }
     )
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument()

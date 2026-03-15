@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
+import { api } from '../shared/services/api'
 
 vi.mock('../mocks/browser', () => ({
   worker: {
@@ -25,6 +26,7 @@ describe('App Game Show Layout Refactor', () => {
     vi.clearAllMocks()
     localStorage.clear()
     vi.unstubAllGlobals()
+    vi.spyOn(api.rankings, 'list').mockResolvedValue({ rankings: [], total_count: 0 })
     originalScrollIntoView = window.HTMLElement.prototype.scrollIntoView
   })
 
