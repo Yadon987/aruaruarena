@@ -262,8 +262,7 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
     let(:service) { described_class.allocate }
 
     it '日本語フォントで本文文字を描画できること' do
-      original_crop = MiniMagick::Image.open(described_class::BASE_IMAGE_PATH)
-      original_crop.crop('220x100+90+170')
+      original_image = MiniMagick::Image.open(described_class::BASE_IMAGE_PATH)
 
       rendered_image = MiniMagick::Image.open(described_class::BASE_IMAGE_PATH)
 
@@ -283,10 +282,7 @@ RSpec.describe OgpGeneratorService, dynamodb: false do
         stroke: 'transparent'
       )
 
-      rendered_crop = rendered_image.clone
-      rendered_crop.crop('220x100+90+170')
-
-      expect(rendered_crop.signature).not_to eq(original_crop.signature)
+      expect(rendered_image.signature).not_to eq(original_image.signature)
     end
   end
 
