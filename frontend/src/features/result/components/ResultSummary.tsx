@@ -57,6 +57,12 @@ export function ResultSummary({
   const isSharePreparing = showShareActions && ogpStatus !== 'ready'
   const canPreviewOgp =
     showShareActions && typeof ogpPreviewUrl === 'string' && ogpPreviewUrl.length > 0
+  const actionCount =
+    (canPreviewOgp ? 1 : 0) +
+    (isSharePreparing ? 1 : 0) +
+    (typeof onShareToX === 'function' ? 1 : 0) +
+    (canRejudge ? 1 : 0) +
+    1
   const rankLabel = status === 'scored' && isFiniteNumber(rank) ? `${rank}位` : FAILED_RANK_DISPLAY
   const averageLabel =
     status === 'scored' && isFiniteNumber(averageScore)
@@ -104,7 +110,7 @@ export function ResultSummary({
 
   return (
     <section
-      className={`glass-panel result-summary-shell relative z-20 mx-auto w-full max-w-xl rounded-2xl border border-amber-200/35 p-5 shadow-[0_18px_40px_rgba(8,15,40,0.35)] ${
+      className={`glass-panel result-summary-shell relative z-20 mx-auto w-full max-w-xl rounded-2xl border border-amber-200/35 p-4 lg:p-5 shadow-[0_18px_40px_rgba(8,15,40,0.35)] ${
         isHighScore ? 'result-summary-shell-high-score' : ''
       }`}
       aria-label="審査結果サマリー"
@@ -120,14 +126,14 @@ export function ResultSummary({
         </>
       )}
       <div className="result-summary-content relative z-20">
-        <h2 className="text-center text-2xl font-black text-white sm:text-3xl">
+        <h2 className="text-center text-2xl font-black text-white lg:text-3xl">
           ★ <span className="gold-text">{nickname}</span> ★
         </h2>
-        <p className="mt-3 text-center text-sm leading-relaxed text-slate-100 sm:text-base">
+        <p className="mt-3 text-center text-sm leading-relaxed text-slate-100 lg:text-base">
           「{body}」
         </p>
 
-        <div className="result-summary-stats mt-5">
+        <div className="result-summary-stats mt-4 lg:mt-5">
           <p className="result-summary-stat result-summary-rank-line">
             <span className="sr-only">{`順位 ${rankLabel}`}</span>
             <span className="result-summary-label">順位</span>
@@ -141,7 +147,7 @@ export function ResultSummary({
         </div>
 
         {canPreviewOgp && isOgpPreviewVisible && (
-          <div className="mt-6 rounded-2xl border border-cyan-200/30 bg-slate-950/35 p-4">
+          <div className="mt-5 rounded-2xl border border-cyan-200/30 bg-slate-950/35 p-4 lg:mt-6">
             <p className="mb-3 text-sm font-bold tracking-[0.08em] text-cyan-100">
               シェア画像プレビュー
             </p>
@@ -156,7 +162,7 @@ export function ResultSummary({
 
         <div
           data-testid="result-summary-actions"
-          className="result-summary-actions mt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3"
+          className={`result-summary-actions result-summary-actions-count-${actionCount} mt-5 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 lg:mt-6`}
         >
           {canPreviewOgp && (
             <button

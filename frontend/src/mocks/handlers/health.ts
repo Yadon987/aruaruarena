@@ -10,7 +10,7 @@ export const healthHandlers = [
     HttpResponse.json({
       status: 'ok',
       environment: 'test',
-      timestamp: '2026-03-15T00:00:00Z',
+      timestamp: new Date().toISOString(),
       worker: {
         mode: 'local_worker',
         status: 'ok',
