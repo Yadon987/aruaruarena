@@ -55,4 +55,14 @@ describe('analytics', () => {
     expect(window.dataLayer).toHaveLength(2)
     expect(window.dataLayer[1]).toEqual(['config', TEST_MEASUREMENT_ID])
   })
+
+  it('計測IDの形式が不正な場合は警告して初期化しない', () => {
+    initializeGoogleAnalytics('invalid-id')
+
+    expect(document.head.querySelector('#ga4-script')).toBeNull()
+    expect(window.dataLayer).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      'GA4計測IDの形式が想定と異なります: invalid-id。G-XXXXXXX 形式の計測IDを確認してください。'
+    )
+  })
 })

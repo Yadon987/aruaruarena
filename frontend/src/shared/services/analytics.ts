@@ -71,6 +71,7 @@ export function initializeGoogleAnalytics(measurementId: string | null = readMea
   }
 
   warnInvalidMeasurementId(measurementId)
+  if (!GA_MEASUREMENT_ID_PATTERN.test(measurementId)) return
 
   ensureDataLayer()
   createGtag()

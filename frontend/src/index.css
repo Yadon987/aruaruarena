@@ -1847,6 +1847,16 @@
     grid-column: span 2;
   }
 
+  .result-summary-actions.result-summary-actions-count-5
+    .result-summary-action-button:nth-child(4) {
+    grid-column: 2 / span 2;
+  }
+
+  .result-summary-actions.result-summary-actions-count-5
+    .result-summary-action-button:nth-child(5) {
+    grid-column: 4 / span 2;
+  }
+
   .result-summary-action-button {
     min-width: 0;
     width: 100%;
