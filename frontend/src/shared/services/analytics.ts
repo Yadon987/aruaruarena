@@ -1,5 +1,8 @@
 const GA_SCRIPT_ID = 'ga4-script'
-const TOP_PAGE_PATH = '/'
+const GA_MEASUREMENT_META_NAME = 'ga-measurement-id'
+const GA_MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]+$/i
+let hasWarnedMissingMeasurementId = false
+let hasWarnedInvalidMeasurementId = false
 
 declare global {
   interface Window {
@@ -10,7 +13,15 @@ declare global {
 
 function readMeasurementId(): string | null {
   const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim()
-  return measurementId && measurementId.length > 0 ? measurementId : null
+  if (measurementId && measurementId.length > 0) return measurementId
+  if (typeof document === 'undefined') return null
+
+  const meta = document.querySelector<HTMLMetaElement>(
+    `meta[name="${GA_MEASUREMENT_META_NAME}"]`
+  )
+  const metaValue = meta?.content?.trim()
+  if (!metaValue || metaValue.startsWith('%VITE_')) return null
+  return metaValue
 }
 
 function ensureDataLayer() {
@@ -35,24 +46,36 @@ function injectGaScript(measurementId: string) {
   document.head.appendChild(script)
 }
 
+function warnMissingMeasurementId() {
+  if (hasWarnedMissingMeasurementId) return
+  hasWarnedMissingMeasurementId = true
+  console.warn(
+    'GA4計測IDが未設定のため、Google Analyticsの計測をスキップしました。VITE_GA_MEASUREMENT_IDを設定してください。'
+  )
+}
+
+function warnInvalidMeasurementId(measurementId: string) {
+  if (hasWarnedInvalidMeasurementId) return
+  if (GA_MEASUREMENT_ID_PATTERN.test(measurementId)) return
+  hasWarnedInvalidMeasurementId = true
+  console.warn(
+    `GA4計測IDの形式が想定と異なります: ${measurementId}。G-XXXXXXX 形式の計測IDを確認してください。`
+  )
+}
+
 export function initializeGoogleAnalytics(measurementId: string | null = readMeasurementId()) {
-  if (!measurementId || typeof window === 'undefined' || typeof document === 'undefined') return
+  if (!measurementId) {
+    warnMissingMeasurementId()
+    return
+  }
+  if (typeof window === 'undefined' || typeof document === 'undefined') return
+
+  warnInvalidMeasurementId(measurementId)
 
   ensureDataLayer()
   createGtag()
   injectGaScript(measurementId)
 
   window.gtag?.('js', new Date())
-  window.gtag?.('config', measurementId, { send_page_view: false })
-}
-
-export function trackTopPageView(pathname: string = window.location.pathname) {
-  if (pathname !== TOP_PAGE_PATH) return
-  if (typeof window.gtag !== 'function') return
-
-  window.gtag('event', 'page_view', {
-    page_path: TOP_PAGE_PATH,
-    page_title: document.title,
-    page_location: window.location.href,
-  })
+  window.gtag?.('config', measurementId)
 }

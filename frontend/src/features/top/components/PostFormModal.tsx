@@ -240,7 +240,7 @@ export function PostFormModal({
                     rows={3}
                     aria-describedby={bodyDescribedBy.join(' ')}
                     aria-invalid={validationErrors.bodyError.length > 0}
-                    placeholder="日常の「あるある」な内容を入力して審査"
+                    placeholder="日常の「あるある」な内容を入力してください"
                   />
                 </div>
 

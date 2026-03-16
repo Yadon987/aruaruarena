@@ -1623,20 +1623,13 @@
 }
 
 .result-summary-actions {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 0.18rem;
-  scrollbar-width: none;
-}
-
-.result-summary-actions::-webkit-scrollbar {
-  display: none;
+  flex-wrap: wrap;
+  overflow-x: visible;
+  padding-bottom: 0;
 }
 
 .result-summary-action-button {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   white-space: nowrap;
 }
 
@@ -1827,15 +1820,34 @@
   }
 
   .result-summary-actions {
-    margin-left: -0.15rem;
-    margin-right: -0.15rem;
-    padding-left: 0.15rem;
-    padding-right: 0.15rem;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 0.45rem;
+  }
+
+  .result-summary-actions.result-summary-actions-count-1 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .result-summary-actions.result-summary-actions-count-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .result-summary-action-button {
-    min-width: max-content;
+    min-width: 0;
+    width: 100%;
+    justify-content: center;
+    padding: 0.48rem 0.38rem;
+    font-size: 0.68rem;
+    line-height: 0.95rem;
+    letter-spacing: 0;
+  }
+
+  .result-summary-actions.result-summary-actions-count-1 .result-summary-action-button {
+    max-width: 12rem;
+    margin-inline: auto;
   }
 
   .result-summary-stats {
@@ -1895,7 +1907,6 @@
 @media (min-width: 640px) {
   .result-summary-actions {
     justify-content: center;
-    overflow-x: visible;
     padding-bottom: 0;
   }
 

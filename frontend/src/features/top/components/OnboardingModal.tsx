@@ -76,7 +76,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
             animate={prefersReducedMotion ? {} : { opacity: 1, scale: SCALE.NORMAL }}
             exit={prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }}
             transition={{ duration: DURATION.MODAL }}
-            className="modal-gorgeous-base relative z-10 w-full max-w-lg rounded-2xl p-5 text-slate-100 shadow-2xl"
+            className="modal-gorgeous-base relative z-10 flex max-h-[calc(100dvh-6rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl p-5 text-slate-100 shadow-2xl sm:max-h-[calc(100dvh-10rem)]"
             role="dialog"
             aria-modal="true"
             aria-labelledby="onboarding-title"
@@ -104,28 +104,32 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
               </button>
             </div>
 
-            <p id="onboarding-description" className="mt-4 text-sm leading-6 text-slate-100/90">
-              まずは遊び方をチェック。
-            </p>
+            <div className="modal-scroll-area mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+              <p id="onboarding-description" className="text-sm leading-6 text-slate-100/90">
+                まずは遊び方をチェック。
+              </p>
 
-            <ol className="mt-5 space-y-3">
-              {ONBOARDING_STEPS.map((step, index) => (
-                <li
-                  key={step.title}
-                  className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.12)]"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-300/90 text-sm font-bold text-slate-900">
-                      {index + 1}
-                    </span>
-                    <div>
-                      <h3 className="text-base font-semibold text-amber-50">{step.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-100/85">{step.description}</p>
+              <ol className="mt-5 space-y-3">
+                {ONBOARDING_STEPS.map((step, index) => (
+                  <li
+                    key={step.title}
+                    className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.12)]"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-300/90 text-sm font-bold text-slate-900">
+                        {index + 1}
+                      </span>
+                      <div>
+                        <h3 className="text-base font-semibold text-amber-50">{step.title}</h3>
+                        <p className="mt-1 text-sm leading-6 text-slate-100/85">
+                          {step.description}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
+                  </li>
+                ))}
+              </ol>
+            </div>
 
             <div className="mt-6 flex justify-end">
               <button

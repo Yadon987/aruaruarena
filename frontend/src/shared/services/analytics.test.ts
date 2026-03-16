@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { initializeGoogleAnalytics, trackTopPageView } from './analytics'
+import { initializeGoogleAnalytics } from './analytics'
 
 const TEST_MEASUREMENT_ID = 'G-TEST12345'
 
@@ -7,8 +7,10 @@ describe('analytics', () => {
   const originalDataLayer = window.dataLayer
   const originalGtag = window.gtag
   const originalTitle = document.title
+  let warnSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     delete window.gtag
     window.dataLayer = []
     document.title = 'あるあるアリーナ'
@@ -30,9 +32,11 @@ describe('analytics', () => {
     }
     document.title = originalTitle
     document.head.querySelector('#ga4-script')?.remove()
+    warnSpy.mockRestore()
   })
 
-  it.each([null, undefined])('計測IDが%sの場合はGA4スクリプトを初期化しない', (measurementId) => {
+  it('計測IDがnullの場合はGA4スクリプトを初期化しない', () => {
+    const measurementId = null
     initializeGoogleAnalytics(measurementId)
 
     expect(document.head.querySelector('#ga4-script')).toBeNull()
@@ -49,29 +53,6 @@ describe('analytics', () => {
       `https://www.googletagmanager.com/gtag/js?id=${TEST_MEASUREMENT_ID}`
     )
     expect(window.dataLayer).toHaveLength(2)
-    expect(window.dataLayer[1]).toEqual(['config', TEST_MEASUREMENT_ID, { send_page_view: false }])
-  })
-
-  it('トップ画面ではpage_viewを送信する', () => {
-    initializeGoogleAnalytics(TEST_MEASUREMENT_ID)
-
-    trackTopPageView('/')
-
-    expect(window.dataLayer[2]).toEqual([
-      'event',
-      'page_view',
-      expect.objectContaining({
-        page_path: '/',
-        page_title: 'あるあるアリーナ',
-      }),
-    ])
-  })
-
-  it('トップ画面以外ではpage_viewを送信しない', () => {
-    initializeGoogleAnalytics(TEST_MEASUREMENT_ID)
-
-    trackTopPageView('/judging/test-id')
-
-    expect(window.dataLayer).toHaveLength(2)
+    expect(window.dataLayer[1]).toEqual(['config', TEST_MEASUREMENT_ID])
   })
 })
