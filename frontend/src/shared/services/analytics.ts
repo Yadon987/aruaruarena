@@ -64,11 +64,11 @@ function warnInvalidMeasurementId(measurementId: string) {
 }
 
 export function initializeGoogleAnalytics(measurementId: string | null = readMeasurementId()) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return
   if (!measurementId) {
     warnMissingMeasurementId()
     return
   }
-  if (typeof window === 'undefined' || typeof document === 'undefined') return
 
   warnInvalidMeasurementId(measurementId)
 

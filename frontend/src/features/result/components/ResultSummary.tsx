@@ -59,7 +59,7 @@ export function ResultSummary({
     showShareActions && typeof ogpPreviewUrl === 'string' && ogpPreviewUrl.length > 0
   const actionCount =
     (canPreviewOgp ? 1 : 0) +
-    (showShareActions && isSharePreparing ? 1 : 0) +
+    (isSharePreparing ? 1 : 0) +
     (typeof onShareToX === 'function' ? 1 : 0) +
     (canRejudge ? 1 : 0) +
     1

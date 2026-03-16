@@ -64,4 +64,26 @@ describe('E15-03 RED: ResultSummary', () => {
     expect(screen.getByRole('button', { name: 'Xでシェアする' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'トップへ' })).toBeInTheDocument()
   })
+
+  it('共有準備中かつ再審査ありでは5ボタン想定のクラスが付与される', () => {
+    render(
+      <ResultSummary
+        nickname="テスト太郎"
+        body="本文です"
+        status="failed"
+        onClose={() => {}}
+        onRejudge={() => {}}
+        showShareActions={true}
+        ogpStatus="pending"
+        ogpPreviewUrl="https://example.com/ogp.png"
+        onShareToX={() => {}}
+      />
+    )
+
+    const actions = screen.getByTestId('result-summary-actions')
+    const buttons = actions.querySelectorAll('.result-summary-action-button')
+
+    expect(actions.className).toMatch(/result-summary-actions-count-5/)
+    expect(buttons).toHaveLength(5)
+  })
 })

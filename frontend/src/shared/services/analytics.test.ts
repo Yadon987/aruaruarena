@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initializeGoogleAnalytics } from './analytics'
 
 const TEST_MEASUREMENT_ID = 'G-TEST12345'
