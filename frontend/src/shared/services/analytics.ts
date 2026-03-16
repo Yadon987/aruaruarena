@@ -54,9 +54,12 @@ function warnMissingMeasurementId() {
   )
 }
 
+function isValidMeasurementId(measurementId: string) {
+  return GA_MEASUREMENT_ID_PATTERN.test(measurementId)
+}
+
 function warnInvalidMeasurementId(measurementId: string) {
   if (hasWarnedInvalidMeasurementId) return
-  if (GA_MEASUREMENT_ID_PATTERN.test(measurementId)) return
   hasWarnedInvalidMeasurementId = true
   console.warn(
     `GA4計測IDの形式が想定と異なります: ${measurementId}。G-XXXXXXX 形式の計測IDを確認してください。`
@@ -70,8 +73,10 @@ export function initializeGoogleAnalytics(measurementId: string | null = readMea
     return
   }
 
-  warnInvalidMeasurementId(measurementId)
-  if (!GA_MEASUREMENT_ID_PATTERN.test(measurementId)) return
+  if (!isValidMeasurementId(measurementId)) {
+    warnInvalidMeasurementId(measurementId)
+    return
+  }
 
   ensureDataLayer()
   createGtag()
