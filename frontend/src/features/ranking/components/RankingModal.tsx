@@ -109,7 +109,10 @@ export function RankingModal({
 				data-testid="ranking-modal-overlay"
 				onClick={handleClose}
 			/>
-			<div className="relative flex h-full w-full items-start justify-center lg:items-center pointer-events-none">
+			<div
+				className="relative flex h-full w-full items-start justify-center lg:items-center pointer-events-none"
+				onClick={handleClose}
+			>
 				<motion.div
 					initial={
 						prefersReducedMotion ? {} : { opacity: 0, scale: SCALE.SHRUNK }
