@@ -280,11 +280,6 @@ RSpec.describe 'API::Posts Meta Tags', type: :request do
         # 何を検証するか: DynamoDBエラー時に適切にエラーレスポンスが返ること
         skip 'フェイルオープンの実装はRefactorフェーズで行う'
       end
-
-      it 'OGP画像が生成されていない投稿でクローラーとしてアクセスした場合、デフォルトOGP画像が設定されること' do
-        # 何を検証するか: OGP画像生成失敗時にデフォルト画像が使われること
-        skip 'フェイルオープンの実装はRefactorフェーズで行う'
-      end
     end
 
     context 'XSS対策' do
