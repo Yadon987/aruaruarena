@@ -788,7 +788,6 @@ MIT License
 ## 👥 作者
 
 - GitHub: [@yourusername](https://github.com/yourusername)
-- Contact: aruaruarena.official@gmail.com
 
 ---
 
