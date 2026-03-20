@@ -104,6 +104,9 @@ class OgpGeneratorService
     footer_text: 'あるあるアリーナ'
   }.freeze
 
+  FOOTER_X_OFFSET = -8
+  FOOTER_Y_OFFSET = -4
+
   def initialize(post_or_id)
     @post = post_or_id.is_a?(Post) ? post_or_id : Post.find(post_or_id)
   rescue Dynamoid::Errors::RecordNotFound, Dynamoid::Errors::MissingHashKey
@@ -305,7 +308,7 @@ class OgpGeneratorService
   end
 
   def footer_position_options
-    { x_offset: -8, y_offset: -4 }
+    { x_offset: FOOTER_X_OFFSET, y_offset: FOOTER_Y_OFFSET }
   end
 
   def pending_rank_item_options
