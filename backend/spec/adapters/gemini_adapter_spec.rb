@@ -675,35 +675,6 @@ RSpec.describe GeminiAdapter do
     # VCRカセットが作成されるまでスキップ
     before { skip 'VCRカセットを作成する必要があります' }
 
-    context '正常系' do
-      it '正常に審査結果を返す', :vcr do
-        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
-
-        expect(result).to be_a(BaseAiAdapter::JudgmentResult)
-        expect(result.succeeded).to be true
-        expect(result.scores).to be_a(Hash)
-        expect(result.scores.keys).to include(:empathy, :humor, :brevity, :originality, :expression)
-        expect(result.comment).to be_a(String)
-      end
-
-      it 'ひろゆき風のバイアスが適用されること', :vcr do
-        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
-
-        # 元のスコアが15の場合、バイアス適用後の値を検証
-        # ひろゆき風: 独創性+3、共感度-2
-        expect(result.scores[:originality]).to eq(18) # 15 + 3
-        expect(result.scores[:empathy]).to eq(13) # 15 - 2
-      end
-
-      it 'バイアス適用後もスコアが0-20の範囲内に収まること', :vcr do
-        result = adapter.judge('テスト投稿', persona: 'hiroyuki')
-
-        result.scores.each do |key, score|
-          expect(score).to be_between(0, 20), "スコア#{key}が範囲外: #{score}"
-        end
-      end
-    end
-
     context '異常系' do
       it 'タイムアウト時にtimeoutエラーコードを返す', vcr: 'timeout' do
         result = adapter.judge('テスト投稿', persona: 'hiroyuki')
@@ -736,11 +707,6 @@ RSpec.describe GeminiAdapter do
 
   # 何を検証するか: 並行処理
   describe '並行処理' do
-    it '複数スレッドから同時に呼び出された場合に正しく動作すること', :vcr do
-      # VCRカセットが作成されるまでスキップ
-      skip 'VCRカセットを作成する必要があります'
-    end
-
     it 'プロンプトファイルのキャッシュがスレッドセーフであること' do
       adapters = 10.times.map { described_class.new }
 

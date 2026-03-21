@@ -2384,7 +2384,10 @@ function App() {
 							className="modal-overlay-gorgeous absolute inset-0"
 							onClick={() => closeMyPosts()}
 						/>
-						<div className="relative flex h-full w-full items-start justify-center lg:items-center pointer-events-none">
+						<div
+							className="relative flex h-full w-full items-start justify-center lg:items-center pointer-events-none"
+							onClick={() => closeMyPosts()}
+						>
 							<motion.div
 								ref={myPostsModalRef}
 								initial={

@@ -104,6 +104,9 @@ class OgpGeneratorService
     footer_text: 'あるあるアリーナ'
   }.freeze
 
+  FOOTER_X_OFFSET = -8
+  FOOTER_Y_OFFSET = -4
+
   def initialize(post_or_id)
     @post = post_or_id.is_a?(Post) ? post_or_id : Post.find(post_or_id)
   rescue Dynamoid::Errors::RecordNotFound, Dynamoid::Errors::MissingHashKey
@@ -301,7 +304,11 @@ class OgpGeneratorService
       shadow: false,
       glow: footer_glow_options,
       center_in: :title_plate
-    }
+    }.merge(footer_position_options)
+  end
+
+  def footer_position_options
+    { x_offset: FOOTER_X_OFFSET, y_offset: FOOTER_Y_OFFSET }
   end
 
   def pending_rank_item_options
@@ -333,8 +340,9 @@ class OgpGeneratorService
 
   def left_text_item(layout_key, item_options)
     text = item_options[:text]
-    item_options[:x_position] = resolve_x_position(layout_key, text, item_options[:center_in])
-    item_options[:y_position] = LAYOUT[layout_key][:y]
+    item_options[:x_position] = resolve_x_position(layout_key, text, item_options[:center_in]) +
+                                item_options.fetch(:x_offset, 0)
+    item_options[:y_position] = LAYOUT[layout_key][:y] + item_options.fetch(:y_offset, 0)
     item_options[:font_size] = fitted_font_size(layout_key, text)
 
     build_text_item(text_item_attributes(layout_key, item_options))
